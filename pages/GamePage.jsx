@@ -1,5 +1,13 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { formatDuration, fetchRandomTitle, fetchDistinctRandomTitle, fetchRelatedTargetTitle, fetchSummary, fetchPageData, normalizeTitle } from "../services/wikiService";
+import { useLocation } from "react-router-dom";
+import {
+  fetchRandomTitle,
+  fetchDistinctRandomTitle,
+  fetchRelatedTargetTitle,
+  fetchSummary,
+  fetchPageData,
+  normalizeTitle,
+} from "../services/wikiService";
 import GameSetup from "../components/GameSetup";
 import CountdownOverlay from "../components/CountdownOverlay";
 import SuccessOverlay from "../components/SuccessOverlay";
@@ -9,13 +17,14 @@ import ScrollToTopButton from "../components/ScrollToTopButton";
 
 const PHASE = {
   SELECTING: "SELECTING",
-  READY: "READY",
   COUNTDOWN: "COUNTDOWN",
   PLAYING: "PLAYING",
-  SUCCESS: "SUCCESS"
+  SUCCESS: "SUCCESS",
 };
 
 export default function GamePage({ onGameComplete, onReturnMain }) {
+  const location = useLocation();
+
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -33,7 +42,9 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
+  const autoStarted = useRef(false);
 
+  /* ── 타이머 ── */
   useEffect(() => {
     if (phase === PHASE.PLAYING) {
       startTimeRef.current = Date.now() - elapsedSeconds * 1000;
@@ -46,74 +57,83 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [phase, elapsedSeconds]);
 
-  const checkWin = useCallback((pageTitle, targetTitle) => {
-    return pageTitle && targetTitle && normalizeTitle(pageTitle) === normalizeTitle(targetTitle);
+  const checkWin = useCallback((pageTitle, tgtTitle) => {
+    return pageTitle && tgtTitle && normalizeTitle(pageTitle) === normalizeTitle(tgtTitle);
   }, []);
 
-  const handleSetupComplete = async ({ mode, keyword }) => {
-    setIsLoading(true);
-    setError("");
+  /* ── 게임 준비 로직 (GameSetup + 메인 자동 시작 공통 사용) ── */
+  const handleSetupComplete = useCallback(
+    async ({ mode, keyword }) => {
+      setIsLoading(true);
+      setError("");
+      try {
+        let start = await fetchRandomTitle();
+        let targetTitle = "";
 
-    try {
-      let start = await fetchRandomTitle();
-      let targetTitle = "";
-
-      if (mode === "custom") {
-        targetTitle = await fetchRelatedTargetTitle(keyword);
-        if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
-          start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
+        if (mode === "custom") {
+          targetTitle = await fetchRelatedTargetTitle(keyword);
+          if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
+            start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
+          }
+        } else {
+          targetTitle = await fetchDistinctRandomTitle(new Set([normalizeTitle(start)]));
         }
-      } else {
-        targetTitle = await fetchDistinctRandomTitle(new Set([normalizeTitle(start)]));
+
+        const [targetSummaryData, startPage] = await Promise.all([
+          fetchSummary(targetTitle),
+          fetchPageData(start),
+        ]);
+
+        setStartTitle(startPage.title);
+        setTarget({
+          title: targetSummaryData.title,
+          summary: targetSummaryData.extract || "요약이 없습니다.",
+          requestedKeyword: mode === "custom" ? keyword : "",
+          mode,
+        });
+        setCurrentTitle(startPage.title);
+        setCurrentSummary(startPage.summary);
+        setCurrentDocumentHtml(startPage.documentHtml);
+        setLinks(startPage.links);
+        setElapsedSeconds(0);
+        setClickCount(0);
+
+        if (checkWin(startPage.title, targetSummaryData.title)) {
+          handleWin(startPage.title, targetSummaryData.title, 0, 0);
+        } else {
+          setPhase(PHASE.COUNTDOWN);
+        }
+      } catch (e) {
+        setError(e.message || "게임을 준비하는 중 오류가 발생했습니다.");
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [checkWin]
+  );
 
-      const [targetSummaryData, startPage] = await Promise.all([
-        fetchSummary(targetTitle),
-        fetchPageData(start)
-      ]);
-
-      setStartTitle(startPage.title);
-      setTarget({
-        title: targetSummaryData.title,
-        summary: targetSummaryData.extract || "요약이 없습니다.",
-        requestedKeyword: mode === "custom" ? keyword : "",
-        mode
-      });
-
-      setCurrentTitle(startPage.title);
-      setCurrentSummary(startPage.summary);
-      setCurrentDocumentHtml(startPage.documentHtml);
-      setLinks(startPage.links);
-      setElapsedSeconds(0);
-      setClickCount(0);
-
-      if (checkWin(startPage.title, targetSummaryData.title)) {
-        // Practically impossible but just in case
-        handleWin(startPage.title, targetSummaryData.title, 0, 0);
-      } else {
-        setPhase(PHASE.COUNTDOWN);
-      }
-    } catch (e) {
-      setError(e.message || "게임을 준비하는 중 오류가 발생했습니다.");
-    } finally {
-      setIsLoading(false);
+  /* ── 메인 빠른 시작: location.state에 mode가 있으면 자동 시작 ── */
+  useEffect(() => {
+    const state = location.state;
+    if (state?.mode && !autoStarted.current) {
+      autoStarted.current = true;
+      handleSetupComplete({ mode: state.mode, keyword: state.keyword ?? "" });
     }
-  };
+  }, [location.state, handleSetupComplete]);
 
+  /* ── 위키 클릭 이동 ── */
   const handleMove = async (nextTitle) => {
     if (phase !== PHASE.PLAYING || isLoading) return;
-
     setClickCount((prev) => prev + 1);
     setIsLoading(true);
     setError("");
-
     try {
       const page = await fetchPageData(nextTitle);
       setCurrentTitle(page.title);
       setCurrentSummary(page.summary);
       setCurrentDocumentHtml(page.documentHtml);
       setLinks(page.links);
-
+      window.scrollTo({ top: 0, behavior: "smooth" });
       if (checkWin(page.title, target.title)) {
         handleWin(page.title, target.title, elapsedSeconds, clickCount + 1);
       }
@@ -135,6 +155,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     <div className="wiki-game-page">
       {error && <div className="state-text error">{error}</div>}
 
+      {/* 직접 /game 진입 시에만 GameSetup 표시 */}
       {phase === PHASE.SELECTING && (
         <GameSetup onStart={handleSetupComplete} isLoading={isLoading} />
       )}
@@ -165,8 +186,8 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           clickCount={clickCount}
           onReturnToMain={onReturnMain}
         />
-
       )}
+
       {phase === PHASE.PLAYING && (
         <>
           <FloatingHud
@@ -180,4 +201,3 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     </div>
   );
 }
-

@@ -18,6 +18,23 @@ function formatDate(value) {
   }
 }
 
+/* 오늘의 도전: 날짜 기반으로 목록에서 하나 선택 */
+const DAILY_POOL = [
+  { keyword: "아인슈타인", hint: "물리학의 전설적 인물" },
+  { keyword: "제2차 세계 대전", hint: "인류 역사상 가장 큰 전쟁" },
+  { keyword: "머신러닝", hint: "AI 핵심 키워드" },
+  { keyword: "조선왕조", hint: "500년 역사의 왕조" },
+  { keyword: "올림픽", hint: "세계인의 스포츠 축제" },
+  { keyword: "히말라야", hint: "세계 최고 높이의 산맥" },
+  { keyword: "메소포타미아", hint: "인류 문명의 발상지" },
+];
+
+function getDailyChallenge() {
+  const today = new Date();
+  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  return DAILY_POOL[seed % DAILY_POOL.length];
+}
+
 export default function MainPage() {
   const navigate = useNavigate();
   const { user, logout, isSupabaseConfigured } = useAuth();
@@ -25,6 +42,9 @@ export default function MainPage() {
   const [weeklyTop, setWeeklyTop] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showKeywordModal, setShowKeywordModal] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const [dailyChallenge] = useState(getDailyChallenge);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,7 +103,7 @@ export default function MainPage() {
         <button
           type="button"
           className="quickstart-card quickstart-random"
-          onClick={() => navigate("/game")}
+          onClick={() => navigate("/game", { state: { mode: "random" } })}
         >
           <span className="qs-icon">🎲</span>
           <span className="qs-title">랜덤으로 시작</span>
@@ -92,13 +112,57 @@ export default function MainPage() {
         <button
           type="button"
           className="quickstart-card quickstart-custom"
-          onClick={() => navigate("/game?mode=custom")}
+          onClick={() => { setKeyword(""); setShowKeywordModal(true); }}
         >
           <span className="qs-icon">🎯</span>
           <span className="qs-title">키워드로 시작</span>
           <span className="qs-desc">내가 원하는 목표 문서를 직접 지정</span>
         </button>
       </section>
+
+      {/* ── 키워드 입력 모달 ── */}
+      {showKeywordModal && (
+        <div className="qs-modal-backdrop" onClick={() => setShowKeywordModal(false)}>
+          <div className="qs-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="qs-modal-title">🎯 목표 키워드</h3>
+            <p className="qs-modal-desc">도달할 위키 문서의 키워드를 입력하세요.</p>
+            <input
+              className="qs-modal-input"
+              autoFocus
+              placeholder="예: 아인슈타인, 조선왕조, 축구..."
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && keyword.trim()) {
+                  setShowKeywordModal(false);
+                  navigate("/game", { state: { mode: "custom", keyword: keyword.trim() } });
+                }
+                if (e.key === "Escape") setShowKeywordModal(false);
+              }}
+            />
+            <div className="qs-modal-actions">
+              <button
+                type="button"
+                className="app-btn app-btn-ghost"
+                onClick={() => setShowKeywordModal(false)}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="app-btn app-btn-primary"
+                disabled={!keyword.trim()}
+                onClick={() => {
+                  setShowKeywordModal(false);
+                  navigate("/game", { state: { mode: "custom", keyword: keyword.trim() } });
+                }}
+              >
+                시작
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 통계 카드 3개 ── */}
       <section className="dashboard-grid">
@@ -173,6 +237,23 @@ export default function MainPage() {
             ))}
           </ol>
         )}
+      </section>
+
+      {/* ── 오늘의 도전 ── */}
+      <section className="dashboard-card daily-card">
+        <div className="daily-head">
+          <span className="daily-badge">🗓️ TODAY’S CHALLENGE</span>
+          <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
+        </div>
+        <p className="daily-keyword">{dailyChallenge.keyword}</p>
+        <p className="daily-hint">{dailyChallenge.hint}</p>
+        <button
+          type="button"
+          className="app-btn app-btn-primary daily-btn"
+          onClick={() => navigate("/game", { state: { mode: "custom", keyword: dailyChallenge.keyword } })}
+        >
+          ★ 오늘의 도전에 참여하기
+        </button>
       </section>
 
     </div>

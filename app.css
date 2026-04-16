@@ -901,3 +901,117 @@ body {
     display: none;
   }
 }
+
+/* ── 키워드 입력 모달 ── */
+.qs-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: hudFadeIn 0.18s ease forwards;
+}
+
+.qs-modal {
+  background: var(--app-card);
+  border: 1px solid var(--app-line);
+  border-radius: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+  padding: 28px 28px 24px;
+  width: min(440px, 100%);
+  display: grid;
+  gap: 14px;
+}
+
+.qs-modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.qs-modal-desc {
+  margin: 0;
+  color: var(--app-dim);
+  font-size: 14px;
+}
+
+.qs-modal-input {
+  border: 1.5px solid var(--app-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.qs-modal-input:focus {
+  border-color: var(--app-brand);
+}
+
+.qs-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── 오늘의 도전 카드 ── */
+.daily-card {
+  padding: 20px 22px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  color: #fff;
+  border: none;
+}
+
+.daily-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.daily-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f0c040;
+}
+
+.daily-date {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.daily-keyword {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.daily-hint {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.daily-btn {
+  background: linear-gradient(135deg, #f0c040 0%, #e8920a 100%);
+  color: #1a1a2e;
+  font-weight: 800;
+  border: none;
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.daily-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
