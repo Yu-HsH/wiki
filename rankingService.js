@@ -49,7 +49,7 @@ export async function saveGameRecord(record) {
 }
 
 export async function fetchUserStats(userId) {
-  if (!userId) {
+  if (!userId || userId.startsWith("guest-")) {
     return { gamesPlayed: 0, bestTime: null, recentRecords: [] };
   }
 

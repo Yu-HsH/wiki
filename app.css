@@ -744,3 +744,160 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ========================================================
+   MAIN PAGE — GAME HUB EXTENSIONS
+   ======================================================== */
+
+/* ── 빠른 시작 카드 그리드 ── */
+.quickstart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .quickstart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quickstart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 22px;
+  border-radius: 20px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.quickstart-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+}
+
+.quickstart-random {
+  background: linear-gradient(135deg, #00a495 0%, #007d73 100%);
+  color: #fff;
+}
+
+.quickstart-custom {
+  background: linear-gradient(135deg, #f59e42 0%, #e07b10 100%);
+  color: #fff;
+}
+
+.qs-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.qs-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.qs-desc {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* ── 계정 값 말줄임 ── */
+.account-value {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* ── 최근 기록 아이템 개선 ── */
+.recent-item {
+  grid-template-columns: minmax(100px, 2fr) 80px 90px 90px;
+}
+
+.ri-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ri-time {
+  font-weight: 700;
+  color: var(--app-danger);
+}
+
+.ri-clicks,
+.ri-date {
+  color: var(--app-dim);
+  font-size: 13px;
+}
+
+/* ── 주간 TOP 3 카드 ── */
+.weekly-card {
+  padding: 16px;
+}
+
+.weekly-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.weekly-item {
+  display: grid;
+  grid-template-columns: 32px minmax(80px, 1fr) minmax(80px, 2fr) 80px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  font-size: 14px;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.weekly-item:hover {
+  background: rgba(0, 164, 149, 0.06);
+}
+
+.wi-medal {
+  font-size: 18px;
+  text-align: center;
+}
+
+.wi-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wi-target {
+  color: var(--app-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wi-time {
+  font-weight: 700;
+  color: var(--app-danger);
+  text-align: right;
+}
+
+@media (max-width: 480px) {
+  .weekly-item {
+    grid-template-columns: 28px 1fr 70px;
+  }
+  .wi-target {
+    display: none;
+  }
+}
