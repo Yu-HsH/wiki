@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";
 import { formatDuration } from "../services/wikiService";
 
 export default function SuccessOverlay({ targetTitle, elapsedSeconds, clickCount, onReturnToMain }) {
+  const { user } = useAuth();
   const [rankings, setRankings] = useState([]);
   const [myRankIndex, setMyRankIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +63,10 @@ export default function SuccessOverlay({ targetTitle, elapsedSeconds, clickCount
           ) : (
             <div>
               <p style={{ margin: "0 0 10px", fontWeight: "bold", color: "var(--brand-deep)" }}>
-                현재 기록은 {myRankIndex > 0 ? `전체 ${myRankIndex}등` : "순위권 외"} 입니다!
+                {user?.isGuest 
+                  ? "게스트 모드입니다. 로그인 시 랭킹에 등록할 수 있습니다."
+                  : `현재 기록은 ${myRankIndex > 0 ? `전체 ${myRankIndex}등` : "순위권 외"} 입니다!`
+                }
               </p>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "14px" }}>
                 {rankings.slice(0, 3).map((r, idx) => (

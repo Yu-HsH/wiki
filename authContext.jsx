@@ -120,6 +120,19 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const loginAsGuest = () => {
+    const guestId = "guest-" + Math.random().toString(36).substring(2, 9);
+    const guestUser = {
+      id: guestId,
+      email: null,
+      displayName: "게스트",
+      isGuest: true,
+      mode: "local",
+    };
+    writeLocalUser(guestUser);
+    setUser(guestUser);
+  };
+
   const value = useMemo(
     () => ({
       user,
@@ -129,6 +142,7 @@ export function AuthProvider({ children }) {
       signUp,
       demoLogin,
       logout,
+      loginAsGuest,
     }),
     [loading, user]
   );

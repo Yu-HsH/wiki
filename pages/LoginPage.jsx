@@ -28,7 +28,7 @@ function applyZodErrors(result, setError) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, signUp, demoLogin, isSupabaseConfigured } = useAuth();
+  const { login, signUp, demoLogin, isSupabaseConfigured, loginAsGuest } = useAuth();
   const [mode, setMode] = useState("signin");
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -154,6 +154,18 @@ export default function LoginPage() {
 
           <button type="submit" className="app-btn app-btn-primary" disabled={pending}>
             {pending ? "처리 중..." : isSupabaseConfigured ? (mode === "signin" ? "로그인" : "계정 만들기") : "시작하기"}
+          </button>
+
+          <button
+            type="button"
+            className="app-btn app-btn-secondary"
+            style={{ width: "100%", marginTop: "1rem" }}
+            onClick={() => {
+              loginAsGuest();
+              navigate("/main");
+            }}
+          >
+            게스트로 로그인
           </button>
         </form>
       </div>

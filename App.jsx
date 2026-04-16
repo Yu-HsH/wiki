@@ -39,6 +39,10 @@ function GameRoute() {
   const [saveStatus, setSaveStatus] = useState("");
 
   const handleSaveRecord = async (result) => {
+    if (user?.isGuest) {
+      alert("랭킹저장은 로그인 후 가능합니다.");
+      return;
+    }
     try {
       await saveGameRecord({
         userId: user.id,
