@@ -1,0 +1,366 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap");
+
+:root {
+  --bg: #efefef;
+  --bg-soft: #f8f9fa;
+  --card: #ffffff;
+  --text: #373a3c;
+  --text-dim: #777777;
+  --link: #0275d8;
+  --link-hover: #01447e;
+  --line: #cccccc;
+  --border-light: #e0e0e0;
+  --brand: #0275d8;
+  --danger: #d9534f;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --radius-lg: 4px;
+  --radius-md: 2px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "IBM Plex Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+}
+
+.wiki-game-page {
+  position: relative;
+  min-height: 100vh;
+  padding: 30px 15px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.countdown-number {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 120px;
+  line-height: 1;
+  animation: countdownPulse 0.58s ease both;
+  user-select: none;
+}
+
+.wiki-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.hero-card,
+.mission-card,
+.stat-card,
+.current-page-card,
+.links-card,
+.win-banner {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.hero-card {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 3px solid #545454;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.badge {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 3px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hero-card h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hero-subtitle {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.mode-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.mode-btn, .restart-btn, .target-start-btn {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.mode-btn:hover:enabled, .restart-btn:hover:enabled, .target-start-btn:hover:enabled {
+  background: #e2e2e2;
+}
+
+.mode-btn.active {
+  border-color: var(--text);
+  background: var(--text);
+  color: #fff;
+}
+
+.mode-btn:disabled, .restart-btn:disabled, .target-start-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.restart-btn {
+  border-color: var(--link);
+  color: var(--link);
+}
+
+.target-form {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.target-input {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  min-width: 250px;
+  font-size: 14px;
+}
+
+.mission-card {
+  padding: 20px 24px;
+}
+
+.mission-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.mission-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.timer-pill {
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.mission-card h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  color: var(--text);
+}
+
+.mission-card p {
+  margin: 0;
+  color: #444;
+  font-size: 14.5px;
+}
+
+.target-meta {
+  margin-bottom: 10px !important;
+  font-size: 13px !important;
+  color: var(--text-dim) !important;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.stat-card {
+  padding: 15px;
+  text-align: center;
+}
+
+.stat-label {
+  margin: 0 0 5px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.state-text {
+  font-size: 14px;
+  padding: 10px;
+  color: var(--text-dim);
+}
+.state-text.error { color: var(--danger); }
+.state-text.loading { color: var(--link); }
+
+.win-banner {
+  padding: 15px;
+  background: #e8f4f8;
+  border-left: 4px solid var(--brand);
+}
+
+.current-page-card {
+  padding: 24px;
+}
+
+.current-page-card h3 {
+  margin: 0 0 5px;
+  font-size: 26px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.article-head span {
+  display: block;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 15px;
+}
+
+.article-summary-preview {
+  margin: 0 0 20px;
+  padding: 15px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-light);
+  font-size: 14.5px;
+  color: #333;
+}
+
+.article-content {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.article-content h2,
+.article-content h3 {
+  margin: 1.5em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.article-content h2 { font-size: 22px; }
+.article-content h3 { font-size: 18px; }
+
+.article-content blockquote {
+  margin: 1em 0;
+  padding: 10px 15px;
+  border-left: 4px solid var(--line);
+  background: var(--bg-soft);
+}
+
+.wiki-inline-link {
+  color: var(--link);
+  text-decoration: none;
+}
+.wiki-inline-link:hover {
+  text-decoration: underline;
+  color: var(--link-hover);
+}
+
+.links-card {
+  padding: 20px 24px;
+}
+
+.links-header {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.links-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.links-count {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.links-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.link-chip {
+  border: 1px solid var(--border-light);
+  background: var(--card);
+  color: var(--link);
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+
+.link-chip:hover:enabled {
+  background: var(--bg-soft);
+  text-decoration: underline;
+}
+
+.link-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+@keyframes countdownPulse {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .wiki-shell { gap: 10px; }
+}
