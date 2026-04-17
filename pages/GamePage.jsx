@@ -50,6 +50,8 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const hasPresetMode = Boolean(location.state?.mode);
+
   const [target, setTarget] = useState({ title: "", summary: "", requestedKeyword: "", mode: "random" });
   const [startTitle, setStartTitle] = useState("");
 
@@ -186,8 +188,18 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       {error && <div className="state-text error">{error}</div>}
 
       {/* 직접 /game 진입 시에만 GameSetup 표시 */}
-      {phase === PHASE.SELECTING && (
+      {phase === PHASE.SELECTING && (!hasPresetMode || error) && (
         <GameSetup onStart={handleSetupComplete} isLoading={isLoading} />
+      )}
+
+      {/* Preset 모드로 매치 메이킹/준비 중일 때 보여줄 로딩 화면 */}
+      {phase === PHASE.SELECTING && hasPresetMode && !error && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginTop: "15vh", gap: "1rem", textAlign: "center" }}>
+          <h2 style={{ marginBottom: "0.5rem" }}>위키 문서를 준비하는 중...</h2>
+          <div style={{ width: "40px", height: "40px", border: "4px solid rgba(0,0,0,0.1)", borderTop: "4px solid #3498db", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <p style={{ color: "#666" }}>AI 타겟과 시작 문서를 불러오고 있습니다</p>
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        </div>
       )}
 
       {phase === PHASE.COUNTDOWN && (
