@@ -8,20 +8,21 @@ import {
   fetchPageData,
   normalizeTitle,
 } from "../services/wikiService";
+
 import GameSetup from "../components/GameSetup";
 import CountdownOverlay from "../components/CountdownOverlay";
 import SuccessOverlay from "../components/SuccessOverlay";
 import WikiViewer from "../components/WikiViewer";
 import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
-
+import { fetchRandomAiTarget, markAiTargetUsed } from "../services/targetService";
 const PHASE = {
   SELECTING: "SELECTING",
   COUNTDOWN: "COUNTDOWN",
   PLAYING: "PLAYING",
   SUCCESS: "SUCCESS",
 };
-
+const [selectedAiTargetId, setSelectedAiTargetId] = useState(null);
 export default function GamePage({ onGameComplete, onReturnMain }) {
   const location = useLocation();
 
@@ -76,7 +77,13 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
           }
         } else {
-          targetTitle = await fetchDistinctRandomTitle(new Set([normalizeTitle(start)]));
+          const aiTarget = await fetchRandomAiTarget();
+          targetTitle = aiTarget.title;
+          setSelectedAiTargetId(aiTarget.id);
+
+          if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
+            start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
+          }
         }
 
         const [targetSummaryData, startPage] = await Promise.all([
@@ -148,6 +155,9 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     setPhase(PHASE.SUCCESS);
     if (onGameComplete) {
       onGameComplete({ startTitle, targetTitle, elapsedSeconds: timeSec, clickCount: clicks, reachedTitle });
+    }
+    if (selectedAiTargetId && target.mode === "random") {
+      markAiTargetUsed(selectedAiTargetId);
     }
   };
 
