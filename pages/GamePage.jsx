@@ -15,14 +15,34 @@ import SuccessOverlay from "../components/SuccessOverlay";
 import WikiViewer from "../components/WikiViewer";
 import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
-import { fetchRandomAiTarget, markAiTargetUsed } from "../services/targetService";
+import { supabase } from "../supabaseClient";
+
+const pickDifficulty = () => {
+  const r = Math.random();
+  if (r < 0.5) return "easy";
+  if (r < 0.9) return "medium";
+  return "hard";
+};
+
+const fetchAiTargetTitle = async () => {
+  const difficulty = pickDifficulty();
+  const { data, error } = await supabase.functions.invoke("target-level", {
+    body: { difficulty },
+  });
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error("No data returned");
+
+  const randomIndex = Math.floor(Math.random() * data.length);
+  return data[randomIndex].title;
+};
+
 const PHASE = {
   SELECTING: "SELECTING",
   COUNTDOWN: "COUNTDOWN",
   PLAYING: "PLAYING",
   SUCCESS: "SUCCESS",
 };
-const [selectedAiTargetId, setSelectedAiTargetId] = useState(null);
+
 export default function GamePage({ onGameComplete, onReturnMain }) {
   const location = useLocation();
 
@@ -77,9 +97,12 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
           }
         } else {
-          const aiTarget = await fetchRandomAiTarget();
-          targetTitle = aiTarget.title;
-          setSelectedAiTargetId(aiTarget.id);
+          try {
+            targetTitle = await fetchAiTargetTitle();
+          } catch (err) {
+            console.error("AI Target fetch failed, falling back to Wikipedia random:", err);
+            targetTitle = await fetchDistinctRandomTitle(new Set([normalizeTitle(start)]));
+          }
 
           if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
             start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
@@ -155,9 +178,6 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     setPhase(PHASE.SUCCESS);
     if (onGameComplete) {
       onGameComplete({ startTitle, targetTitle, elapsedSeconds: timeSec, clickCount: clicks, reachedTitle });
-    }
-    if (selectedAiTargetId && target.mode === "random") {
-      markAiTargetUsed(selectedAiTargetId);
     }
   };
 
