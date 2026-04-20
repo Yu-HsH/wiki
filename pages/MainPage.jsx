@@ -93,9 +93,16 @@ export default function MainPage() {
               : "데모 모드로 실행 중"}
           </p>
         </div>
-        <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>
-          로그아웃
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          {!user.isGuest && (
+            <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
+              내 정보
+            </button>
+          )}
+          <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>
+            로그아웃
+          </button>
+        </div>
       </header>
 
       {/* ── 빠른 시작 카드 2개 ── */}
@@ -177,7 +184,7 @@ export default function MainPage() {
         <article className="dashboard-card">
           <p className="card-label">계정</p>
           <p className="card-value account-value">
-            {user.isGuest ? "게스트" : user.email || "로컬 데모"}
+            {user.isGuest ? "게스트" : user.username || user.displayName || "로컬 데모"}
           </p>
         </article>
       </section>

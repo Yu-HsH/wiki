@@ -6,6 +6,7 @@ import GamePage from "./pages/GamePage";
 import LoginPage from "./pages/LoginPage";
 import MainPage from "./pages/MainPage";
 import RankingPage from "./pages/RankingPage";
+import ProfilePage from "./pages/ProfilePage";
 import "./app.css";
 
 function ProtectedRoute({ children }) {
@@ -102,6 +103,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <RankingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

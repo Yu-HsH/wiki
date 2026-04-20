@@ -7,11 +7,14 @@ const AuthContext = createContext(null);
 
 function mapSupabaseUser(user) {
   if (!user) return null;
-  const fallbackName = user.email ? user.email.split("@")[0] : "Player";
+  const meta = user.user_metadata || {};
+  const fallbackName = meta.nickname || meta.username || (user.email ? user.email.split("@")[0] : "Player");
   return {
     id: user.id,
     email: user.email || "",
-    displayName: user.user_metadata?.display_name || fallbackName,
+    username: meta.username || "",
+    nickname: meta.nickname || "",
+    displayName: meta.nickname || meta.username || meta.display_name || fallbackName,
     mode: "supabase",
   };
 }
@@ -83,6 +86,20 @@ export function AuthProvider({ children }) {
     setUser(mapSupabaseUser(data.user));
   };
 
+  // username → synthetic email lookup, then signIn
+  const loginWithUsername = async ({ username, password }) => {
+    if (!isSupabaseConfigured) throw new Error("Supabase가 설정되지 않았습니다.");
+    const { data: fnData, error: fnError } = await supabase.functions.invoke("username-lookup", {
+      body: { username },
+    });
+    if (fnError) throw new Error(fnError.message || "사용자를 찾을 수 없습니다.");
+    const syntheticEmail = fnData?.email;
+    if (!syntheticEmail) throw new Error("사용자를 찾을 수 없습니다.");
+    const { data, error } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password });
+    if (error) throw error;
+    setUser(mapSupabaseUser(data.user));
+  };
+
   const signUp = async ({ email, password, displayName }) => {
     if (!isSupabaseConfigured) {
       throw new Error("Supabase is not configured. Use demo login instead.");
@@ -96,6 +113,18 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
     setUser(mapSupabaseUser(data.user));
+  };
+
+  // calls Edge Function which creates auth user + profile row
+  const signUpWithUsername = async ({ username, password, nickname }) => {
+    if (!isSupabaseConfigured) throw new Error("Supabase가 설정되지 않았습니다.");
+    const { data: fnData, error: fnError } = await supabase.functions.invoke("username-signup", {
+      body: { username, password, nickname },
+    });
+    if (fnError) throw new Error(fnError.message || "회원가입에 실패했습니다.");
+    if (fnData?.error) throw new Error(fnData.error);
+    // After signup, log in immediately
+    await loginWithUsername({ username, password });
   };
 
   const demoLogin = async ({ displayName }) => {
@@ -139,7 +168,9 @@ export function AuthProvider({ children }) {
       loading,
       isSupabaseConfigured,
       login,
+      loginWithUsername,
       signUp,
+      signUpWithUsername,
       demoLogin,
       logout,
       loginAsGuest,

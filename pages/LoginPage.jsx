@@ -4,17 +4,20 @@ import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 
-const loginSchema = z.object({
-  email: z.string().email("올바른 이메일 형식을 입력해주세요."),
+/* ── Zod schemas ── */
+const signinSchema = z.object({
+  username: z.string().min(2, "아이디는 2자 이상이어야 합니다."),
   password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다."),
 });
 
-const signUpSchema = loginSchema.extend({
-  displayName: z.string().min(2, "닉네임은 2자 이상이어야 합니다."),
+const signupSchema = z.object({
+  username: z.string().min(2, "아이디는 2자 이상이어야 합니다."),
+  password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다."),
+  nickname: z.string().min(2, "닉네임은 2자 이상이어야 합니다."),
 });
 
 const demoSchema = z.object({
-  displayName: z.string().min(2, "닉네임은 2자 이상이어야 합니다."),
+  nickname: z.string().min(2, "닉네임은 2자 이상이어야 합니다."),
 });
 
 function applyZodErrors(result, setError) {
@@ -28,7 +31,7 @@ function applyZodErrors(result, setError) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, signUp, demoLogin, isSupabaseConfigured, loginAsGuest } = useAuth();
+  const { loginWithUsername, signUpWithUsername, demoLogin, isSupabaseConfigured, loginAsGuest } = useAuth();
   const [mode, setMode] = useState("signin");
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -40,11 +43,7 @@ export default function LoginPage() {
     clearErrors,
     formState: { errors },
   } = useForm({
-    defaultValues: {
-      email: "",
-      password: "",
-      displayName: "",
-    },
+    defaultValues: { username: "", password: "", nickname: "" },
   });
 
   const onSubmit = handleSubmit(async (values) => {
@@ -54,35 +53,32 @@ export default function LoginPage() {
     try {
       setPending(true);
 
+      /* ── Demo mode (no Supabase) ── */
       if (!isSupabaseConfigured) {
         const parsed = demoSchema.safeParse(values);
-        if (!parsed.success) {
-          applyZodErrors(parsed, setError);
-          return;
-        }
-        await demoLogin({ displayName: parsed.data.displayName });
+        if (!parsed.success) { applyZodErrors(parsed, setError); return; }
+        await demoLogin({ displayName: parsed.data.nickname });
         navigate("/main");
         return;
       }
 
+      /* ── Sign-in ── */
       if (mode === "signin") {
-        const parsed = loginSchema.safeParse(values);
-        if (!parsed.success) {
-          applyZodErrors(parsed, setError);
-          return;
-        }
-        await login(parsed.data);
+        const parsed = signinSchema.safeParse(values);
+        if (!parsed.success) { applyZodErrors(parsed, setError); return; }
+        await loginWithUsername({ username: parsed.data.username, password: parsed.data.password });
         navigate("/main");
         return;
       }
 
-      const parsed = signUpSchema.safeParse(values);
-      if (!parsed.success) {
-        applyZodErrors(parsed, setError);
-        return;
-      }
-
-      await signUp(parsed.data);
+      /* ── Sign-up ── */
+      const parsed = signupSchema.safeParse(values);
+      if (!parsed.success) { applyZodErrors(parsed, setError); return; }
+      await signUpWithUsername({
+        username: parsed.data.username,
+        password: parsed.data.password,
+        nickname: parsed.data.nickname,
+      });
       navigate("/main");
     } catch (error) {
       setSubmitError(error?.message || "인증 처리 중 오류가 발생했습니다.");
@@ -99,7 +95,7 @@ export default function LoginPage() {
         <p className="auth-subtitle">
           {isSupabaseConfigured
             ? "플레이 기록을 남기고 랭킹 경쟁에 참여하세요."
-            : "Supabase 키가 설정되지 않아 데모 모드로 동작합니다. 로컬에서도 화면/기능 테스트는 가능합니다."}
+            : "Supabase 키가 설정되지 않아 데모 모드로 동작합니다."}
         </p>
 
         {isSupabaseConfigured && (
@@ -122,48 +118,63 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={onSubmit} className="auth-form">
+          {/* Username */}
+          <label className="auth-label">
+            아이디
+            <input
+              className="auth-input"
+              placeholder="사용할 아이디"
+              autoComplete="username"
+              {...register("username")}
+            />
+            {errors.username && <span className="auth-error">{errors.username.message}</span>}
+          </label>
+
+          {/* Nickname (signup + demo) */}
           {(!isSupabaseConfigured || mode === "signup") && (
             <label className="auth-label">
               닉네임
               <input
                 className="auth-input"
-                placeholder="사용할 닉네임"
-                {...register("displayName")}
+                placeholder="게임에서 표시될 이름"
+                {...register("nickname")}
               />
-              {errors.displayName && <span className="auth-error">{errors.displayName.message}</span>}
+              {errors.nickname && <span className="auth-error">{errors.nickname.message}</span>}
             </label>
           )}
 
+          {/* Password (Supabase only) */}
           {isSupabaseConfigured && (
-            <>
-              <label className="auth-label">
-                이메일
-                <input className="auth-input" placeholder="you@example.com" {...register("email")} />
-                {errors.email && <span className="auth-error">{errors.email.message}</span>}
-              </label>
-
-              <label className="auth-label">
-                비밀번호
-                <input type="password" className="auth-input" placeholder="******" {...register("password")} />
-                {errors.password && <span className="auth-error">{errors.password.message}</span>}
-              </label>
-            </>
+            <label className="auth-label">
+              비밀번호
+              <input
+                type="password"
+                className="auth-input"
+                placeholder="6자 이상"
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                {...register("password")}
+              />
+              {errors.password && <span className="auth-error">{errors.password.message}</span>}
+            </label>
           )}
 
           {submitError && <p className="auth-error auth-error-block">{submitError}</p>}
 
           <button type="submit" className="app-btn app-btn-primary" disabled={pending}>
-            {pending ? "처리 중..." : isSupabaseConfigured ? (mode === "signin" ? "로그인" : "계정 만들기") : "시작하기"}
+            {pending
+              ? "처리 중..."
+              : isSupabaseConfigured
+              ? mode === "signin"
+                ? "로그인"
+                : "계정 만들기"
+              : "시작하기"}
           </button>
 
           <button
             type="button"
             className="app-btn app-btn-secondary"
             style={{ width: "100%", marginTop: "1rem" }}
-            onClick={() => {
-              loginAsGuest();
-              navigate("/main");
-            }}
+            onClick={() => { loginAsGuest(); navigate("/main"); }}
           >
             게스트로 로그인
           </button>
