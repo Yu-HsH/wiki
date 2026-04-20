@@ -36,13 +36,12 @@ export default function MultiplayerPage() {
   };
 
   const handleJoinRoom = async () => {
+    const code = roomCodeInput.trim().toUpperCase();
+    if (!code) return;
     if (!user?.id) {
       setSubmitError("로그인이 필요합니다.");
       return;
     }
-
-    const code = roomCodeInput.trim().toUpperCase();
-    if (!code) return;
 
     try {
       setPending(true);
