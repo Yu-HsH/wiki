@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
+import { createRoom, findRoomByCode, joinRoom } from "../services/multiplayerService";
 
 /**
  * 멀티플레이어 로비 페이지
@@ -10,37 +11,51 @@ import { useAuth } from "../authContext";
 export default function MultiplayerPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [roomCode, setRoomCode] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
-  const [error, setError] = useState("");
+  const [roomCodeInput, setRoomCodeInput] = useState("");
+  const [pending, setPending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const handleCreateRoom = async () => {
-    setIsCreating(true);
-    setError("");
+    if (!user?.id) {
+      setSubmitError("로그인이 필요합니다.");
+      return;
+    }
+    // TODO: Supabase 연동 — 방 생성 후 roomId 반환
     try {
-      // TODO: Supabase 연동 — 방 생성 후 roomId 반환
-      const mockRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      navigate(`/multiplayer/room/${mockRoomId}`, { state: { role: "host" } });
-    } catch (e) {
-      setError(e.message || "방 생성에 실패했습니다.");
+      setPending(true);
+      setSubmitError("");
+
+      const room = await createRoom(user.id);
+
+      navigate(`/multiplayer/room/${room.id}`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "방 생성에 실패했습니다.");
     } finally {
-      setIsCreating(false);
+      setPending(false);
     }
   };
 
   const handleJoinRoom = async () => {
-    const code = roomCode.trim().toUpperCase();
+    if (!user?.id) {
+      setSubmitError("로그인이 필요합니다.");
+      return;
+    }
+
+    const code = roomCodeInput.trim().toUpperCase();
     if (!code) return;
-    setIsJoining(true);
-    setError("");
+
     try {
-      // TODO: Supabase 연동 — 방 존재 확인 후 참가
-      navigate(`/multiplayer/room/${code}`, { state: { role: "guest" } });
-    } catch (e) {
-      setError(e.message || "방 참가에 실패했습니다.");
+      setPending(true);
+      setSubmitError("");
+
+      const room = await findRoomByCode(code);
+      await joinRoom(room.id, user.id);
+
+      navigate(`/multiplayer/room/${room.id}`, { state: { role: "guest" } });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "방 참가에 실패했습니다.");
     } finally {
-      setIsJoining(false);
+      setPending(false);
     }
   };
 
@@ -88,10 +103,11 @@ export default function MultiplayerPage() {
             <button
               type="button"
               className="mp-action-btn mp-action-btn--primary"
-              disabled={isCreating}
+              disabled={pending}
               onClick={handleCreateRoom}
+            //onClick={handleCreateRoom}  
             >
-              {isCreating ? (
+              {pending ? (
                 <span className="mp-spinner" />
               ) : (
                 "⚔️ 방 생성"
@@ -112,8 +128,8 @@ export default function MultiplayerPage() {
                 type="text"
                 placeholder="방 코드 입력"
                 maxLength={8}
-                value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                value={roomCodeInput}
+                onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleJoinRoom();
                 }}
@@ -121,16 +137,17 @@ export default function MultiplayerPage() {
               <button
                 type="button"
                 className="mp-action-btn mp-action-btn--secondary"
-                disabled={!roomCode.trim() || isJoining}
+                disabled={!roomCodeInput.trim() || pending}
                 onClick={handleJoinRoom}
+              //onClick={handleJoinRoom}  
               >
-                {isJoining ? <span className="mp-spinner" /> : "참가"}
+                {pending ? <span className="mp-spinner" /> : "참가"}
               </button>
             </div>
           </div>
         </div>
 
-        {error && <p className="mp-error">{error}</p>}
+        {submitError && <p className="mp-error">{submitError}</p>}
 
         {/* 플레이어 정보 */}
         <div className="mp-player-info">
