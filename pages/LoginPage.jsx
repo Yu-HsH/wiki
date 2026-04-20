@@ -175,10 +175,10 @@ export default function LoginPage() {
             {pending
               ? "처리 중..."
               : isSupabaseConfigured
-              ? mode === "signin"
-                ? "로그인"
-                : "계정 만들기"
-              : "시작하기"}
+                ? mode === "signin"
+                  ? "로그인"
+                  : "계정 만들기"
+                : "시작하기"}
           </button>
 
           <button

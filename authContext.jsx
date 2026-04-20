@@ -114,7 +114,7 @@ export function AuthProvider({ children }) {
     });
     if (fnError) throw new Error(fnError.message || "사용자를 찾을 수 없습니다.");
     
-    const syntheticEmail = fnData?.email;
+    const syntheticEmail = fnData?.syntheticEmail;
     if (!syntheticEmail) throw new Error("사용자를 찾을 수 없습니다.");
     
     // 내부적으로 이메일을 사용하여 실제 로그인 처리
