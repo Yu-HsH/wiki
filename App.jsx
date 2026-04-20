@@ -9,6 +9,11 @@ import RankingPage from "./pages/RankingPage";
 import ProfilePage from "./pages/ProfilePage";
 import "./app.css";
 
+/**
+ * 로그인 여부에 따라 접근을 제어하는 래퍼 컴포넌트
+ * - 세션 확인 중일 때는 로딩 표시
+ * - 미로그인 시 로그인 페이지로 리다이렉트
+ */
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -78,6 +83,14 @@ function GameRoute() {
   );
 }
 
+/**
+ * 전체 라우팅 설정
+ * - /login: 로그인/회원가입
+ * - /main: 메인 대시보드 (인증 필수)
+ * - /game: 게임 화면 (인증 필수)
+ * - /ranking: 전체 랭킹 (인증 필수)
+ * - /profile: 내 프로필 (인증 필수)
+ */
 function AppRoutes() {
   return (
     <Routes>

@@ -4,22 +4,29 @@ import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 
-/* ── Zod schemas ── */
+/* ── Zod 유효성 검사 스키마 ── */
+
+// 로그인 시: 아이디(2자+), 비밀번호(6자+) 필수
 const signinSchema = z.object({
   username: z.string().min(2, "아이디는 2자 이상이어야 합니다."),
   password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다."),
 });
 
+// 회원가입 시: 아이디, 비밀번호, 닉네임(2자+) 필수
 const signupSchema = z.object({
   username: z.string().min(2, "아이디는 2자 이상이어야 합니다."),
   password: z.string().min(6, "비밀번호는 6자 이상이어야 합니다."),
   nickname: z.string().min(2, "닉네임은 2자 이상이어야 합니다."),
 });
 
+// 데모 모드 시: 닉네임만 입력받음
 const demoSchema = z.object({
   nickname: z.string().min(2, "닉네임은 2자 이상이어야 합니다."),
 });
 
+/**
+ * Zod 검증 에러를 React Hook Form의 setError에 적용하는 도우미 함수
+ */
 function applyZodErrors(result, setError) {
   result.error.issues.forEach((issue) => {
     const field = issue.path[0];
@@ -46,6 +53,9 @@ export default function LoginPage() {
     defaultValues: { username: "", password: "", nickname: "" },
   });
 
+  /**
+   * 폼 제출 핸들러 (로그인/회원가입/데모 통합 처리)
+   */
   const onSubmit = handleSubmit(async (values) => {
     clearErrors();
     setSubmitError("");
@@ -53,7 +63,7 @@ export default function LoginPage() {
     try {
       setPending(true);
 
-      /* ── Demo mode (no Supabase) ── */
+      /* ── 데모 모드 처리 (Supabase 미설정 시) ── */
       if (!isSupabaseConfigured) {
         const parsed = demoSchema.safeParse(values);
         if (!parsed.success) { applyZodErrors(parsed, setError); return; }
@@ -62,7 +72,7 @@ export default function LoginPage() {
         return;
       }
 
-      /* ── Sign-in ── */
+      /* ── 로그인 처리 ── */
       if (mode === "signin") {
         const parsed = signinSchema.safeParse(values);
         if (!parsed.success) { applyZodErrors(parsed, setError); return; }
@@ -71,7 +81,7 @@ export default function LoginPage() {
         return;
       }
 
-      /* ── Sign-up ── */
+      /* ── 회원가입 처리 ── */
       const parsed = signupSchema.safeParse(values);
       if (!parsed.success) { applyZodErrors(parsed, setError); return; }
       await signUpWithUsername({
@@ -81,6 +91,7 @@ export default function LoginPage() {
       });
       navigate("/main");
     } catch (error) {
+      // API 호출 중 발생한 에러 처리
       setSubmitError(error?.message || "인증 처리 중 오류가 발생했습니다.");
     } finally {
       setPending(false);

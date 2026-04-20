@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
 
+/**
+ * 프로필 관리 페이지 컴포넌트
+ * - 유저의 아이디(조회용), 닉네임, 프로필 이미지를 보여줍니다.
+ * - 닉네임을 수정하여 public.profiles 테이블에 반영할 수 있습니다.
+ */
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -15,7 +20,7 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
 
-  /* ── fetch profile from public.profiles ── */
+  /* ── 프로필 데이터 동기화 (public.profiles 테이블) ── */
   useEffect(() => {
     if (!user || user.isGuest) { setLoading(false); return; }
 
@@ -36,6 +41,10 @@ export default function ProfilePage() {
   const displayNickname = profile?.nickname || user?.nickname || user?.displayName || "-";
   const avatarUrl = profile?.profile_image_url;
 
+  /**
+   * 닉네임 변경 저장 핸들러
+   * public.profiles 테이블의 nickname 컬럼을 업데이트합니다.
+   */
   const handleSaveNickname = async () => {
     if (!nicknameInput.trim() || nicknameInput.trim().length < 2) {
       setSaveError("닉네임은 2자 이상이어야 합니다.");

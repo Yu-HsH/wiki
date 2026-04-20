@@ -3,6 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchUserStats, fetchRankings } from "../rankingService";
 
+/**
+ * 메인 대시보드 페이지 컴포넌트
+ * - 유저 통계(총 플레이, 최고 기록) 및 최근 기록 표시
+ * - 게임 모드 선택 (랜덤/키워드) 및 오늘의 도전 제공
+ * - 상단 헤더를 통해 프로필 이동 및 로그아웃 가능
+ */
+
 function formatDuration(totalSeconds) {
   if (typeof totalSeconds !== "number") return "-";
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -93,6 +100,7 @@ export default function MainPage() {
               : "데모 모드로 실행 중"}
           </p>
         </div>
+        {/* 상단 액션 버튼 그룹 */}
         <div style={{ display: "flex", gap: "0.5rem" }}>
           {!user.isGuest && (
             <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
@@ -184,6 +192,7 @@ export default function MainPage() {
         <article className="dashboard-card">
           <p className="card-label">계정</p>
           <p className="card-value account-value">
+            {/* 게스트가 아닐 경우 아이디(username)를 우선적으로 표시합니다. */}
             {user.isGuest ? "게스트" : user.username || user.displayName || "로컬 데모"}
           </p>
         </article>

@@ -1,7 +1,16 @@
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
+/**
+ * 게임 기록 및 랭킹 관리 서비스
+ * - 온라인 서비스(Supabase)와 로컬 모드(LocalStorage)를 모두 지원합니다.
+ */
+
 const LOCAL_RECORDS_KEY = "wiki_game_records";
 
+/**
+ * 기록 목록을 소요 시간순(오름차순)으로 정렬하는 도우미 함수
+ * 시간이 같다면 생성일(created_at) 순으로 정렬합니다.
+ */
 function sortByBestTime(records) {
   return [...records].sort((a, b) => {
     if (a.elapsed_seconds !== b.elapsed_seconds) {
@@ -24,6 +33,10 @@ function writeLocalRecords(records) {
   localStorage.setItem(LOCAL_RECORDS_KEY, JSON.stringify(records));
 }
 
+/**
+ * 새로운 게임 완료 기록을 저장합니다.
+ * @param {Object} record - {userId, playerName, startTitle, targetTitle, elapsedSeconds, clickCount}
+ */
 export async function saveGameRecord(record) {
   if (!record?.userId) return;
 
@@ -37,6 +50,7 @@ export async function saveGameRecord(record) {
     created_at: new Date().toISOString(),
   };
 
+  // 1. 데모 모드 전용 (로컬 스토리지에 저장)
   if (!isSupabaseConfigured) {
     const localRecords = readLocalRecords();
     localRecords.push({ id: crypto.randomUUID(), ...payload });
@@ -44,15 +58,20 @@ export async function saveGameRecord(record) {
     return;
   }
 
+  // 2. 온라인 모드 (Supabase game_records 테이블에 삽입)
   const { error } = await supabase.from("game_records").insert(payload);
   if (error) throw error;
 }
 
+/**
+ * 특정 유저의 플레이 통계(총 플레이 횟수, 최고 기록 등)를 가져옵니다.
+ */
 export async function fetchUserStats(userId) {
   if (!userId || userId.startsWith("guest-")) {
     return { gamesPlayed: 0, bestTime: null, recentRecords: [] };
   }
 
+  // 로컬 데모 모드 통계 계산
   if (!isSupabaseConfigured) {
     const records = readLocalRecords().filter((record) => record.user_id === userId);
     const bestTime = records.length > 0 ? Math.min(...records.map((r) => r.elapsed_seconds)) : null;
@@ -72,6 +91,7 @@ export async function fetchUserStats(userId) {
     };
   }
 
+  // Supabase로부터 유저 데이터 조회
   const { data, error } = await supabase
     .from("game_records")
     .select("target_title, elapsed_seconds, click_count, created_at")
@@ -94,7 +114,12 @@ export async function fetchUserStats(userId) {
   };
 }
 
+/**
+ * 전체 랭킹 또는 주간 TOP 랭킹을 가져옵니다.
+ * @param {Object} options - {weekly: boolean, limit: number}
+ */
 export async function fetchRankings({ weekly = false, limit = 50 } = {}) {
+  // 로컬 데모 모드 랭킹 산출
   if (!isSupabaseConfigured) {
     let records = readLocalRecords();
     if (weekly) {
@@ -114,6 +139,7 @@ export async function fetchRankings({ weekly = false, limit = 50 } = {}) {
       }));
   }
 
+  // Supabase 서버로부터 랭킹 데이터 조회
   let query = supabase
     .from("game_records")
     .select("id, user_id, player_name, target_title, elapsed_seconds, click_count, created_at")
