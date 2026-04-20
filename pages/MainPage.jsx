@@ -133,6 +133,15 @@ export default function MainPage() {
           <span className="qs-title">키워드로 시작</span>
           <span className="qs-desc">내가 원하는 목표 문서를 직접 지정</span>
         </button>
+        <button
+          type="button"
+          className="quickstart-card quickstart-pvp"
+          onClick={() => navigate("/multiplayer")}
+        >
+          <span className="qs-icon">⚔️</span>
+          <span className="qs-title">1 VS 1 대전</span>
+          <span className="qs-desc">친구와 실시간 위키 레이스 대결</span>
+        </button>
       </section>
 
       {/* ── 키워드 입력 모달 ── */}

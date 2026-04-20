@@ -789,6 +789,11 @@ body {
   color: #fff;
 }
 
+.quickstart-pvp {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: #fff;
+}
+
 .qs-icon {
   font-size: 28px;
   line-height: 1;

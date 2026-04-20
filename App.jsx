@@ -7,7 +7,11 @@ import LoginPage from "./pages/LoginPage";
 import MainPage from "./pages/MainPage";
 import RankingPage from "./pages/RankingPage";
 import ProfilePage from "./pages/ProfilePage";
+import MultiplayerPage from "./pages/MultiplayerPage";
+import RoomPage from "./pages/RoomPage";
+import MultiplayerGamePage from "./pages/MultiplayerGamePage";
 import "./app.css";
+import "./multiplayer.css";
 
 /**
  * 로그인 여부에 따라 접근을 제어하는 래퍼 컴포넌트
@@ -124,6 +128,30 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/multiplayer"
+        element={
+          <ProtectedRoute>
+            <MultiplayerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/multiplayer/room/:roomId"
+        element={
+          <ProtectedRoute>
+            <RoomPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/multiplayer/game/:roomId"
+        element={
+          <ProtectedRoute>
+            <MultiplayerGamePage />
           </ProtectedRoute>
         }
       />
