@@ -107,16 +107,16 @@ export function AuthProvider({ children }) {
    */
   const loginWithUsername = async ({ username, password }) => {
     if (!isSupabaseConfigured) throw new Error("Supabase가 설정되지 않았습니다.");
-    
+
     // 아이디를 이메일로 변환하는 RPC(커스텀 엣지 펑션) 호출
     const { data: fnData, error: fnError } = await supabase.functions.invoke("username-lookup", {
       body: { username },
     });
     if (fnError) throw new Error(fnError.message || "사용자를 찾을 수 없습니다.");
-    
+
     const syntheticEmail = fnData?.syntheticEmail;
     if (!syntheticEmail) throw new Error("사용자를 찾을 수 없습니다.");
-    
+
     // 내부적으로 이메일을 사용하여 실제 로그인 처리
     const { data, error } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password });
     if (error) throw error;
@@ -144,14 +144,14 @@ export function AuthProvider({ children }) {
    */
   const signUpWithUsername = async ({ username, password, nickname }) => {
     if (!isSupabaseConfigured) throw new Error("Supabase가 설정되지 않았습니다.");
-    
+
     const { data: fnData, error: fnError } = await supabase.functions.invoke("username-signup", {
       body: { username, password, nickname },
     });
-    
+
     if (fnError) throw new Error(fnError.message || "회원가입에 실패했습니다.");
     if (fnData?.error) throw new Error(fnData.error);
-    
+
     // 가입 성공 후 즉시 로그인을 수행하여 세션을 활성화합니다.
     await loginWithUsername({ username, password });
   };
@@ -210,7 +210,11 @@ export function AuthProvider({ children }) {
     [loading, user]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 /**
