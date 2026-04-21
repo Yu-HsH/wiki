@@ -52,6 +52,8 @@ export default function MultiplayerGamePage() {
   const [error, setError] = useState("");
 
   const [phase, setPhase] = useState("LOADING");
+  const gameEndHandledRef = useRef(false);
+  const exitTimeoutRef = useRef(null);
   // LOADING → PLAYING → SUCCESS / OPPONENT_WIN
 
   // ----------------------------
@@ -233,6 +235,7 @@ export default function MultiplayerGamePage() {
         });
 
         setPhase("SUCCESS");
+        handleGameEnd("win");
       }
     } catch (err) {
       setError(err.message);
@@ -247,8 +250,16 @@ export default function MultiplayerGamePage() {
     if (myPlayer?.has_finished) return;
 
     setPhase("OPPONENT_WIN");
+    handleGameEnd("lose");
   }, [opponentPlayer?.has_finished]);
 
+  useEffect(() => {
+    return () => {
+      if (exitTimeoutRef.current) {
+        clearTimeout(exitTimeoutRef.current);
+      }
+    };
+  }, []);
   // ----------------------------
   // UI
   // ----------------------------
@@ -288,3 +299,46 @@ export default function MultiplayerGamePage() {
     </div>
   );
 }
+const handleGameEnd = async (result) => {
+  if (gameEndHandledRef.current) return;
+  gameEndHandledRef.current = true;
+
+  console.log("게임 종료 처리 시작:", result);
+
+  // phase 이미 SUCCESS / OPPONENT_WIN으로 되어 있음
+
+  exitTimeoutRef.current = setTimeout(async () => {
+    try {
+      console.log("방 나가기 시작");
+
+      // 🔥 room_players에서 나 제거
+      await supabase
+        .from("room_players")
+        .delete()
+        .eq("room_id", roomId)
+        .eq("user_id", user.id);
+
+      // 🔥 남은 인원 확인
+      const { data: remain } = await supabase
+        .from("room_players")
+        .select("user_id")
+        .eq("room_id", roomId);
+
+      console.log("남은 인원:", remain);
+
+      // 🔥 아무도 없으면 방 삭제
+      if (!remain || remain.length === 0) {
+        await supabase
+          .from("game_rooms")
+          .delete()
+          .eq("id", roomId);
+
+        console.log("방 삭제 완료");
+      }
+    } catch (err) {
+      console.error("종료 처리 에러:", err);
+    } finally {
+      navigate("/lobby");
+    }
+  }, 2000);
+};
