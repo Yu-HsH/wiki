@@ -320,3 +320,66 @@ export async function startRoomGame(roomId, userId) {
     if (error) throw error;
     return data;
 }
+/**
+ * 게임 진행 중 내 상태 업데이트
+ * - current_title
+ * - move_count
+ * - has_finished
+ * - finished_at
+ * - start_title
+ */
+export async function updateMyGameProgress(roomId, userId, updates) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("room_players")
+        .update(updates)
+        .eq("room_id", roomId)
+        .eq("user_id", userId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+/**
+ * 게임 방 상태 업데이트
+ * - starting -> playing
+ * - playing -> finished
+ */
+export async function updateGameRoomStatus(roomId, updates) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("game_rooms")
+        .update(updates)
+        .eq("id", roomId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+/**
+ * 매치 결과 저장
+ */
+export async function createMatchHistory(payload) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("match_history")
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
