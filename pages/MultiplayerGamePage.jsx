@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -17,32 +17,26 @@ import {
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 
-// 이미 싱글플레이에서 쓰고 있는 컴포넌트 재사용
 import CountdownOverlay from "../components/CountdownOverlay";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import WikiViewer from "../components/WikiViewer";
-
-// 새로 추가한 VS 인트로 컴포넌트
 import VsIntroOverlay from "../components/VsIntroOverlay";
 
 /**
  * 멀티플레이 게임 페이지
  *
- * 현재 역할:
- * 1) room / room_players 실시간 반영
- * 2) 각 플레이어 시작 문서(start_title) 생성
- * 3) current_title / move_count 반영
- * 4) 목표 도달 시 승패 처리
- * 5) VS 인트로 -> 카운트다운 -> 플레이 순서 연출
+ * 현재 프로젝트 기준 동작:
+ * 1) room / room_players를 읽고 실시간 반영
+ * 2) 내 start_title / current_title이 없으면 시작 문서를 생성
+ * 3) 상대가 정한 target_title을 내가 푸는 목표로 사용
+ * 4) WikiViewer가 요구하는 props 형식에 맞춰 전달
+ * 5) VS 인트로 -> 카운트다운 -> 플레이 -> 승패 처리
  */
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ----------------------------
-  // 게임 진행 phase
-  // ----------------------------
   const PHASE = {
     LOADING: "LOADING",
     VS_INTRO: "VS_INTRO",
@@ -53,16 +47,21 @@ export default function MultiplayerGamePage() {
   };
 
   // ----------------------------
-  // 상태
+  // 기본 상태
   // ----------------------------
   const [room, setRoom] = useState(null);
   const [players, setPlayers] = useState([]);
   const [pageData, setPageData] = useState(null);
 
   const [pending, setPending] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [phase, setPhase] = useState(PHASE.LOADING);
+
+  // 경과 시간용
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startedAtRef = useRef(null);
 
   // ----------------------------
   // players 기반 파생값
@@ -79,11 +78,24 @@ export default function MultiplayerGamePage() {
 
   /**
    * 중요:
-   * - 내가 풀어야 할 목표는 상대가 대기실에서 적은 target_title
-   * - 상대가 풀어야 할 목표는 내가 적은 target_title
+   * - 내가 풀어야 할 목표 = 상대가 대기실에서 입력한 target_title
+   * - 상대가 풀어야 할 목표 = 내가 입력한 target_title
    */
-  const myTarget = opponentPlayer?.target_title || "";
-  const opponentTarget = myPlayer?.target_title || "";
+  const myTargetTitle = opponentPlayer?.target_title || "";
+  const opponentTargetTitle = myPlayer?.target_title || "";
+
+  /**
+   * WikiViewer는 target.title / target.summary / target.requestedKeyword 를 기대함
+   * 그래서 멀티에서도 target 객체를 맞춰서 만들어 줌
+   */
+  const targetForViewer = useMemo(
+    () => ({
+      title: myTargetTitle || "목표 문서",
+      summary: "",
+      requestedKeyword: myTargetTitle || "",
+    }),
+    [myTargetTitle]
+  );
 
   // ----------------------------
   // Realtime 구독
@@ -93,8 +105,6 @@ export default function MultiplayerGamePage() {
 
     const channel = supabase
       .channel(`game:${roomId}`)
-
-      // 방 상태 변경 감지
       .on(
         "postgres_changes",
         {
@@ -112,8 +122,6 @@ export default function MultiplayerGamePage() {
           }
         }
       )
-
-      // 플레이어 상태 변경 감지
       .on(
         "postgres_changes",
         {
@@ -131,7 +139,6 @@ export default function MultiplayerGamePage() {
           }
         }
       )
-
       .subscribe();
 
     return () => {
@@ -163,17 +170,13 @@ export default function MultiplayerGamePage() {
           throw new Error("플레이어 정보를 찾지 못했습니다.");
         }
 
-        const targetToSolve = opponent.target_title;
-        if (!targetToSolve) {
+        if (!opponent.target_title) {
           throw new Error("상대 목표 문서가 설정되지 않았습니다.");
         }
 
-        /**
-         * 아직 내 시작 문서가 없으면 여기서 생성
-         * - 내가 풀어야 할 목표와 같은 문서는 제외
-         */
+        // 내 시작 문서가 없으면 여기서 생성
         if (!me.start_title || !me.current_title) {
-          const excluded = new Set([normalizeTitle(targetToSolve)]);
+          const excluded = new Set([normalizeTitle(opponent.target_title)]);
           const startTitle = await fetchDistinctRandomTitle(excluded);
 
           await updateMyGameProgress(roomId, user.id, {
@@ -192,11 +195,15 @@ export default function MultiplayerGamePage() {
             throw new Error("시작 문서를 설정하지 못했습니다.");
           }
 
+          setIsPageLoading(true);
           const firstPage = await fetchPageData(refreshedMe.current_title);
           setPageData(firstPage);
+          setIsPageLoading(false);
         } else {
+          setIsPageLoading(true);
           const firstPage = await fetchPageData(me.current_title);
           setPageData(firstPage);
+          setIsPageLoading(false);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "게임 초기화에 실패했습니다.");
@@ -209,8 +216,8 @@ export default function MultiplayerGamePage() {
   }, [roomId, user?.id]);
 
   // ----------------------------
-  // 양쪽 초기화 완료되면:
-  // starting -> VS_INTRO -> COUNTDOWN -> PLAYING
+  // 양쪽 다 시작 문서가 잡히면 playing 전환
+  // 그 후 VS 인트로부터 시작
   // ----------------------------
   useEffect(() => {
     if (!room || !myPlayer || !opponentPlayer) return;
@@ -223,13 +230,11 @@ export default function MultiplayerGamePage() {
 
     if (!bothInitialized) return;
 
-    // 아직 starting 상태면 playing 으로 전환
     if (room.status === "starting") {
       updateGameRoomStatus(roomId, { status: "playing" }).catch(console.error);
       return;
     }
 
-    // 이미 playing이면 VS 인트로부터 시작
     if (room.status === "playing" && phase === PHASE.LOADING) {
       setPhase(PHASE.VS_INTRO);
     }
@@ -249,26 +254,45 @@ export default function MultiplayerGamePage() {
   }, [phase]);
 
   // ----------------------------
-  // 링크 클릭 시 이동 처리
+  // 실제 플레이 시작 시점 기록
+  // ----------------------------
+  useEffect(() => {
+    if (phase !== PHASE.PLAYING) return;
+
+    if (!startedAtRef.current) {
+      startedAtRef.current = Date.now();
+    }
+
+    const interval = setInterval(() => {
+      if (!startedAtRef.current) return;
+      setElapsedSeconds(Math.floor((Date.now() - startedAtRef.current) / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [phase]);
+
+  // ----------------------------
+  // 링크 클릭 시 문서 이동 처리
   // ----------------------------
   const handleMove = async (nextTitle) => {
     if (!roomId || !user?.id || phase !== PHASE.PLAYING) return;
 
     try {
+      setError("");
+      setIsPageLoading(true);
+
       const nextPage = await fetchPageData(nextTitle);
       setPageData(nextPage);
 
       const nextMoveCount = (myPlayer?.move_count || 0) + 1;
 
-      // 현재 문서 / 이동 횟수 반영
       await updateMyGameProgress(roomId, user.id, {
         current_title: nextPage.title,
         move_count: nextMoveCount,
       });
 
-      // 목표 도달 체크
       const solved =
-        normalizeTitle(nextPage.title) === normalizeTitle(myTarget);
+        normalizeTitle(nextPage.title) === normalizeTitle(myTargetTitle);
 
       if (solved) {
         const finishedAt = new Date().toISOString();
@@ -287,18 +311,19 @@ export default function MultiplayerGamePage() {
 
         setPhase(PHASE.SUCCESS);
 
-        // 잠시 뒤 메인으로 복귀
         setTimeout(() => {
-          navigate("/");
+          navigate("/main");
         }, 2200);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "문서 이동에 실패했습니다.");
+    } finally {
+      setIsPageLoading(false);
     }
   };
 
   // ----------------------------
-  // 상대가 먼저 도착했는지 감지
+  // 상대가 먼저 도착한 경우
   // ----------------------------
   useEffect(() => {
     if (!opponentPlayer?.has_finished) return;
@@ -307,12 +332,12 @@ export default function MultiplayerGamePage() {
     setPhase(PHASE.OPPONENT_WIN);
 
     setTimeout(() => {
-      navigate("/");
+      navigate("/main");
     }, 2200);
   }, [opponentPlayer?.has_finished, myPlayer?.has_finished, navigate]);
 
   // ----------------------------
-  // 로딩 / 에러 화면
+  // 로딩 / 에러
   // ----------------------------
   if (pending) {
     return (
@@ -322,7 +347,7 @@ export default function MultiplayerGamePage() {
     );
   }
 
-  if (error) {
+  if (error && !pageData) {
     return (
       <div className="mp-game-page">
         <div className="mp-game-error">에러: {error}</div>
@@ -332,14 +357,16 @@ export default function MultiplayerGamePage() {
 
   return (
     <div className="mp-game-page">
-      {/* VS 인트로 */}
+      {/* 시작 전 VS 인트로 */}
       {phase === PHASE.VS_INTRO && (
         <VsIntroOverlay
           myName={myPlayer?.nickname_snapshot || "나"}
           opponentName={opponentPlayer?.nickname_snapshot || "상대"}
-          myTarget={myTarget}
-          opponentTarget={opponentTarget}
-          myInitial={(myPlayer?.nickname_snapshot || "나").charAt(0).toUpperCase()}
+          myTarget={myTargetTitle}
+          opponentTarget={opponentTargetTitle}
+          myInitial={(myPlayer?.nickname_snapshot || "나")
+            .charAt(0)
+            .toUpperCase()}
           opponentInitial={(opponentPlayer?.nickname_snapshot || "상대")
             .charAt(0)
             .toUpperCase()}
@@ -351,11 +378,11 @@ export default function MultiplayerGamePage() {
         <CountdownOverlay onComplete={() => setPhase(PHASE.PLAYING)} />
       )}
 
-      {/* 상단 HUD */}
+      {/* 상단 간단 상태 */}
       <div className="mp-game-topbar">
         <div className="mp-game-goal">
           <span className="mp-game-goal-label">내 목표</span>
-          <span className="mp-game-goal-value">{myTarget || "..."}</span>
+          <span className="mp-game-goal-value">{myTargetTitle || "..."}</span>
         </div>
 
         <div className="mp-game-status">
@@ -368,15 +395,18 @@ export default function MultiplayerGamePage() {
       <div className="mp-game-layout">
         {/* 메인 문서 영역 */}
         <div className="mp-game-main">
-          {pageData && (
-            <WikiViewer
-              title={pageData.title}
-              contentHtml={pageData.contentHtml}
-              links={pageData.links}
-              onLinkClick={handleMove}
-              disabled={phase !== PHASE.PLAYING}
-            />
-          )}
+          <WikiViewer
+            target={targetForViewer}
+            currentTitle={pageData?.title || myPlayer?.current_title || ""}
+            currentSummary={pageData?.summary || ""}
+            currentDocumentHtml={pageData?.documentHtml || ""}
+            links={pageData?.links || []}
+            isLoading={isPageLoading}
+            elapsedSeconds={elapsedSeconds}
+            clickCount={myPlayer?.move_count || 0}
+            startTitle={myPlayer?.start_title || ""}
+            onLinkClick={handleMove}
+          />
         </div>
 
         {/* 상대 상태 패널 */}
@@ -401,7 +431,7 @@ export default function MultiplayerGamePage() {
           <div className="mp-opponent-box">
             <div className="mp-opponent-label">상대 목표</div>
             <div className="mp-opponent-value">
-              {opponentTarget || "설정 중..."}
+              {opponentTargetTitle || "설정 중..."}
             </div>
           </div>
 
@@ -440,7 +470,8 @@ export default function MultiplayerGamePage() {
         </div>
       )}
 
-      <ScrollToTopButton />
+      {/* pageData 로딩 이후에만 표시 */}
+      {pageData && <ScrollToTopButton />}
     </div>
   );
 }
