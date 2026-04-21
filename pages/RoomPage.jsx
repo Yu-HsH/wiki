@@ -13,12 +13,12 @@ import { useAuth } from "../authContext";
  * - 방 코드 표시
  * - 호스트 / 게스트 패널
  * - 각 플레이어가 목표 문서를 독립적으로 설정
- * - 준비 완료 버튼 (현재는 로컬 상태만 반영)
+ * - 준비 완료 버튼
  *
- * 주의:
+ * 현재 단계:
+ * - room / room_players 실제 조회
+ * - target_title / is_ready 실제 DB 저장
  * - 아직 Realtime 미적용
- * - 아직 target / ready DB 저장 미적용
- * - 지금 단계에서는 실제 room / players 조회까지만 연결
  */
 export default function RoomPage() {
   const { roomId } = useParams();
@@ -30,14 +30,12 @@ export default function RoomPage() {
   const [pending, setPending] = useState(true);
   const [submitError, setSubmitError] = useState("");
 
-  // 아직 DB 저장 전이라 내 목표/준비 상태는 로컬로만 유지
   const [myTarget, setMyTarget] = useState("");
   const [myReady, setMyReady] = useState(false);
   const [starting, setStarting] = useState(false);
 
   /**
    * 방 정보 + 참가자 목록 불러오기
-   * - 직접 URL로 들어왔을 때 waiting 상태면 join 시도
    */
   useEffect(() => {
     const loadRoom = async () => {
@@ -49,7 +47,7 @@ export default function RoomPage() {
 
         const roomData = await fetchRoom(roomId);
 
-        // waiting 방에 직접 들어온 경우 guest join 시도
+        // 혹시 직접 URL로 들어온 guest면 join 시도
         if (roomData.status === "waiting") {
           await joinRoom(roomId, user.id).catch(() => { });
         }
@@ -72,6 +70,7 @@ export default function RoomPage() {
 
   /**
    * players 기반 파생값
+   * - Hook은 항상 return보다 위에 있어야 함
    */
   const hostPlayer = useMemo(
     () => players.find((player) => player.role === "host"),
@@ -95,15 +94,27 @@ export default function RoomPage() {
 
   const isHost = myPlayer?.role === "host";
   const hasGuest = !!guestPlayer;
-
-  // 현재 단계에서는 내 로컬 ready + 상대 DB ready를 섞지 않고
-  // "상대가 room_players.is_ready=true 인지"만 참고
   const opponentReady = !!opponentPlayer?.is_ready;
   const allReady = myReady && opponentReady;
 
   /**
-   * 양쪽 준비 완료 시 임시 시작 연출
-   * - 아직 실제 게임 데이터 저장/시작 로직 전
+   * DB 값 -> 로컬 UI 상태 동기화
+   * - 새로고침해도 내 목표/준비 상태 복원
+   */
+  useEffect(() => {
+    if (!myPlayer) return;
+
+    if (myPlayer.is_ready) {
+      setMyReady(true);
+    }
+    if (myPlayer.target_title) {
+      setMyTarget(myPlayer.target_title);
+    }
+  }, [myPlayer]);
+
+  /**
+   * 양쪽 모두 준비되면 임시 시작 연출 후 게임 페이지 이동
+   * - 아직 실제 게임 시작 데이터 저장 전
    */
   useEffect(() => {
     if (!allReady || starting) return;
@@ -123,8 +134,8 @@ export default function RoomPage() {
   }, [allReady, starting, navigate, roomId, myTarget, opponentPlayer?.nickname_snapshot]);
 
   /**
-   * 현재 단계의 준비 버튼
-   * - DB 저장 로직 추가
+   * 준비 완료
+   * - 내 target_title, is_ready를 DB에 저장
    */
   const handleReady = async () => {
     if (!myTarget.trim() || !roomId || !user?.id) return;
@@ -152,6 +163,9 @@ export default function RoomPage() {
     navigator.clipboard?.writeText(room?.room_code ?? roomId ?? "");
   };
 
+  /**
+   * 모든 Hook 선언 후에만 조건부 return
+   */
   if (pending) {
     return (
       <div className="mp-page">
@@ -205,21 +219,13 @@ export default function RoomPage() {
       </div>
     );
   }
-  useEffect(() => {
-    if (myPlayer?.is_ready) {
-      setMyReady(true);
-    }
-    if (myPlayer?.target_title) {
-      setMyTarget(myPlayer.target_title);
-    }
-  }, [myPlayer?.is_ready, myPlayer?.target_title]);
+
   return (
     <div className="mp-page">
       <div className="mp-glow mp-glow--1" />
       <div className="mp-glow mp-glow--2" />
 
       <div className="mp-container">
-        {/* 상단 */}
         <header className="mp-header">
           <button
             type="button"
@@ -230,7 +236,6 @@ export default function RoomPage() {
           </button>
         </header>
 
-        {/* 방 코드 */}
         <div className="room-code-banner">
           <span className="room-code-label">ROOM CODE</span>
           <button
@@ -244,7 +249,6 @@ export default function RoomPage() {
           </button>
         </div>
 
-        {/* 상태 표시 */}
         <div className="room-status">
           {!hasGuest && (
             <div className="room-status-pill room-status--waiting">
@@ -272,9 +276,7 @@ export default function RoomPage() {
           )}
         </div>
 
-        {/* 플레이어 패널 */}
         <div className="room-players">
-          {/* 내 패널 */}
           <div className={`room-player-card ${myReady ? "room-player--ready" : ""}`}>
             <div className="room-player-role">
               {isHost ? "👑 HOST" : "⚔️ GUEST"}
@@ -319,10 +321,8 @@ export default function RoomPage() {
             )}
           </div>
 
-          {/* VS */}
           <div className="room-vs">VS</div>
 
-          {/* 상대 패널 */}
           <div
             className={`room-player-card room-player--opponent ${opponentPlayer?.is_ready ? "room-player--ready" : ""
               } ${!opponentPlayer ? "room-player--empty" : ""}`}
