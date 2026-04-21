@@ -7,6 +7,7 @@ import {
   updateMyRoomPlayer,
 } from "../services/multiplayerService";
 import { useAuth } from "../authContext";
+import { supabase } from "../supabaseClient";
 
 /**
  * 대전 대기실 페이지
@@ -18,7 +19,8 @@ import { useAuth } from "../authContext";
  * 현재 단계:
  * - room / room_players 실제 조회
  * - target_title / is_ready 실제 DB 저장
- * - 아직 Realtime 미적용
+ * - room_players Realtime 구독으로 상태 반영
+ * - 아직 실제 게임 시작 데이터 저장 미적용상태
  */
 export default function RoomPage() {
   const { roomId } = useParams();
@@ -31,7 +33,6 @@ export default function RoomPage() {
   const [submitError, setSubmitError] = useState("");
 
   const [myTarget, setMyTarget] = useState("");
-  const [myReady, setMyReady] = useState(false);
   const [starting, setStarting] = useState(false);
 
   /**
@@ -94,8 +95,9 @@ export default function RoomPage() {
 
   const isHost = myPlayer?.role === "host";
   const hasGuest = !!guestPlayer;
+  const myReadyState = !!myPlayer?.is_ready;
   const opponentReady = !!opponentPlayer?.is_ready;
-  const allReady = myReady && opponentReady;
+  const allReady = myReadyState && opponentReady;
 
   /**
    * DB 값 -> 로컬 UI 상태 동기화
@@ -104,9 +106,6 @@ export default function RoomPage() {
   useEffect(() => {
     if (!myPlayer) return;
 
-    if (myPlayer.is_ready) {
-      setMyReady(true);
-    }
     if (myPlayer.target_title) {
       setMyTarget(myPlayer.target_title);
     }
@@ -148,8 +147,6 @@ export default function RoomPage() {
         is_ready: true,
       });
 
-      setMyReady(true);
-
       const playerData = await fetchRoomPlayers(roomId);
       setPlayers(playerData);
     } catch (error) {
@@ -162,7 +159,34 @@ export default function RoomPage() {
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(room?.room_code ?? roomId ?? "");
   };
+  useEffect(() => {
+    if (!roomId || !supabase) return;
 
+    const channel = supabase
+      .channel(`room_players:${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "room_players",
+          filter: `room_id=eq.${roomId}`,
+        },
+        async () => {
+          try {
+            const playerData = await fetchRoomPlayers(roomId);
+            setPlayers(playerData);
+          } catch (error) {
+            console.error("room_players realtime refresh failed:", error);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId]);
   /**
    * 모든 Hook 선언 후에만 조건부 return
    */
@@ -277,7 +301,7 @@ export default function RoomPage() {
         </div>
 
         <div className="room-players">
-          <div className={`room-player-card ${myReady ? "room-player--ready" : ""}`}>
+          <div className={`room-player-card ${myReadyState ? "room-player--ready" : ""}`}>
             <div className="room-player-role">
               {isHost ? "👑 HOST" : "⚔️ GUEST"}
             </div>
@@ -299,7 +323,7 @@ export default function RoomPage() {
                 type="text"
                 placeholder="예: 아인슈타인"
                 value={myTarget}
-                disabled={myReady}
+                disabled={myReadyState}
                 onChange={(e) => setMyTarget(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleReady();
@@ -307,7 +331,7 @@ export default function RoomPage() {
               />
             </div>
 
-            {!myReady ? (
+            {!myReadyState ? (
               <button
                 type="button"
                 className="mp-action-btn mp-action-btn--primary room-ready-btn"
