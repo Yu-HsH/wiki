@@ -351,18 +351,18 @@ export async function updateMyGameProgress(roomId, userId, updates) {
  * - playing -> finished
  */
 export async function updateGameRoomStatus(roomId, updates) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
     const { data, error } = await supabase
         .from("game_rooms")
         .update(updates)
         .eq("id", roomId)
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+        throw new Error("game_rooms 업데이트 결과가 없습니다. RLS policy를 확인하세요.");
+    }
+
     return data;
 }
 
