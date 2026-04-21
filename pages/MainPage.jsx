@@ -46,6 +46,7 @@ export default function MainPage() {
   const navigate = useNavigate();
   const { user, logout, isSupabaseConfigured } = useAuth();
   const [stats, setStats] = useState({ gamesPlayed: 0, bestTime: null, recentRecords: [] });
+  const [showHelp, setShowHelp] = useState(false);
   const [weeklyTop, setWeeklyTop] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -101,7 +102,10 @@ export default function MainPage() {
           </p>
         </div>
         {/* 상단 액션 버튼 그룹 */}
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <button type="button" className="help-button" onClick={() => setShowHelp(true)} aria-label="게임 설명">
+            ?
+          </button>
           {!user.isGuest && (
             <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
               내 정보
@@ -271,6 +275,39 @@ export default function MainPage() {
           ★ 오늘의 도전에 참여하기
         </button>
       </section>
+
+      {/* ── 도움말 모달 ── */}
+      {showHelp && (
+        <div className="help-backdrop" onClick={() => setShowHelp(false)}>
+          <div className="help-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--app-line)", paddingBottom: "0.75rem" }}>
+              <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Wiki Race (위키 레이스)</h2>
+              <button type="button" className="text-btn" onClick={() => setShowHelp(false)} style={{ fontSize: "1.5rem", lineHeight: 1 }}>
+                &times;
+              </button>
+            </div>
+            
+            <p>위키 레이스는 링크를 따라 이동하며 목표 문서에 도달하는 게임입니다.</p>
+            
+            <h3>플레이 방법:</h3>
+            <ul>
+              <li>문서 안의 링크를 클릭하며 이동합니다</li>
+              <li>목표 문서에 도달하면 성공입니다</li>
+            </ul>
+            
+            <h3>모드:</h3>
+            <ul>
+              <li><strong>혼자서 플레이:</strong> 목표를 설정하고 도전</li>
+              <li><strong>1 vs 1 대전:</strong> 상대보다 먼저 도착하면 승리</li>
+            </ul>
+            
+            <h3>기록:</h3>
+            <ul>
+              <li>시간과 이동 횟수로 랭킹이 결정됩니다</li>
+            </ul>
+          </div>
+        </div>
+      )}
 
     </div>
   );
