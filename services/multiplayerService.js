@@ -77,7 +77,7 @@ export async function createRoom(userId) {
             user_id: userId,
             role: "host",
             nickname_snapshot: profile.nickname,
-            profile_image_snapshot: profile.profile_image_url,
+            profile_image_snapshot: null,//profile.profile_image_url,
             is_ready: false,
             move_count: 0,
             has_finished: false,
