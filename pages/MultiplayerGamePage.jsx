@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -17,29 +17,40 @@ import {
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 
-/**
- * ===============================
- * MultiplayerGamePage
- * ===============================
- *
- * 역할:
- * 1. 게임 시작 시 각 플레이어 start_title 설정
- * 2. current_title / move_count 실시간 동기화
- * 3. 목표 도달 시 승패 처리
- * 4. Realtime으로 상대 상태 반영
- *
- * 핵심 DB 컬럼:
- * - start_title
- * - current_title
- * - move_count
- * - has_finished
- * - finished_at
- */
+// 이미 싱글플레이에서 쓰고 있는 컴포넌트 재사용
+import CountdownOverlay from "../components/CountdownOverlay";
+import ScrollToTopButton from "../components/ScrollToTopButton";
+import WikiViewer from "../components/WikiViewer";
 
+// 새로 추가한 VS 인트로 컴포넌트
+import VsIntroOverlay from "../components/VsIntroOverlay";
+
+/**
+ * 멀티플레이 게임 페이지
+ *
+ * 현재 역할:
+ * 1) room / room_players 실시간 반영
+ * 2) 각 플레이어 시작 문서(start_title) 생성
+ * 3) current_title / move_count 반영
+ * 4) 목표 도달 시 승패 처리
+ * 5) VS 인트로 -> 카운트다운 -> 플레이 순서 연출
+ */
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // ----------------------------
+  // 게임 진행 phase
+  // ----------------------------
+  const PHASE = {
+    LOADING: "LOADING",
+    VS_INTRO: "VS_INTRO",
+    COUNTDOWN: "COUNTDOWN",
+    PLAYING: "PLAYING",
+    SUCCESS: "SUCCESS",
+    OPPONENT_WIN: "OPPONENT_WIN",
+  };
 
   // ----------------------------
   // 상태
@@ -51,13 +62,10 @@ export default function MultiplayerGamePage() {
   const [pending, setPending] = useState(true);
   const [error, setError] = useState("");
 
-  const [phase, setPhase] = useState("LOADING");
-  const gameEndHandledRef = useRef(false);
-  const exitTimeoutRef = useRef(null);
-  // LOADING → PLAYING → SUCCESS / OPPONENT_WIN
+  const [phase, setPhase] = useState(PHASE.LOADING);
 
   // ----------------------------
-  // 파생값
+  // players 기반 파생값
   // ----------------------------
   const myPlayer = useMemo(
     () => players.find((p) => p.user_id === user?.id),
@@ -69,7 +77,11 @@ export default function MultiplayerGamePage() {
     [players, user?.id]
   );
 
-  // 🔥 중요: 상대가 설정한 target이 내가 풀어야 할 문제
+  /**
+   * 중요:
+   * - 내가 풀어야 할 목표는 상대가 대기실에서 적은 target_title
+   * - 상대가 풀어야 할 목표는 내가 적은 target_title
+   */
   const myTarget = opponentPlayer?.target_title || "";
   const opponentTarget = myPlayer?.target_title || "";
 
@@ -77,12 +89,12 @@ export default function MultiplayerGamePage() {
   // Realtime 구독
   // ----------------------------
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !supabase) return;
 
     const channel = supabase
       .channel(`game:${roomId}`)
 
-      // 방 상태 변경
+      // 방 상태 변경 감지
       .on(
         "postgres_changes",
         {
@@ -92,12 +104,16 @@ export default function MultiplayerGamePage() {
           filter: `id=eq.${roomId}`,
         },
         async () => {
-          const latest = await fetchRoom(roomId);
-          setRoom(latest);
+          try {
+            const latestRoom = await fetchRoom(roomId);
+            setRoom(latestRoom);
+          } catch (err) {
+            console.error("game_rooms realtime refresh failed:", err);
+          }
         }
       )
 
-      // 플레이어 상태 변경
+      // 플레이어 상태 변경 감지
       .on(
         "postgres_changes",
         {
@@ -107,25 +123,32 @@ export default function MultiplayerGamePage() {
           filter: `room_id=eq.${roomId}`,
         },
         async () => {
-          const latest = await fetchRoomPlayers(roomId);
-          setPlayers(latest);
+          try {
+            const latestPlayers = await fetchRoomPlayers(roomId);
+            setPlayers(latestPlayers);
+          } catch (err) {
+            console.error("room_players realtime refresh failed:", err);
+          }
         }
       )
 
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [roomId]);
 
   // ----------------------------
-  // 초기 로딩 + 시작 문서 설정
+  // 초기 로드 + 시작 문서 세팅
   // ----------------------------
   useEffect(() => {
-    const init = async () => {
+    const initGame = async () => {
       if (!roomId || !user?.id) return;
 
       try {
         setPending(true);
+        setError("");
 
         const roomData = await fetchRoom(roomId);
         const playerData = await fetchRoomPlayers(roomId);
@@ -137,15 +160,20 @@ export default function MultiplayerGamePage() {
         const opponent = playerData.find((p) => p.user_id !== user.id);
 
         if (!me || !opponent) {
-          throw new Error("플레이어 정보 없음");
+          throw new Error("플레이어 정보를 찾지 못했습니다.");
         }
 
         const targetToSolve = opponent.target_title;
+        if (!targetToSolve) {
+          throw new Error("상대 목표 문서가 설정되지 않았습니다.");
+        }
 
-        // 🔥 아직 시작 안한 경우 → start_title 생성
+        /**
+         * 아직 내 시작 문서가 없으면 여기서 생성
+         * - 내가 풀어야 할 목표와 같은 문서는 제외
+         */
         if (!me.start_title || !me.current_title) {
           const excluded = new Set([normalizeTitle(targetToSolve)]);
-
           const startTitle = await fetchDistinctRandomTitle(excluded);
 
           await updateMyGameProgress(roomId, user.id, {
@@ -156,185 +184,263 @@ export default function MultiplayerGamePage() {
             finished_at: null,
           });
 
-          // 다시 불러오기
-          const refreshed = await fetchRoomPlayers(roomId);
-          setPlayers(refreshed);
+          const refreshedPlayers = await fetchRoomPlayers(roomId);
+          setPlayers(refreshedPlayers);
 
-          const me2 = refreshed.find((p) => p.user_id === user.id);
+          const refreshedMe = refreshedPlayers.find((p) => p.user_id === user.id);
+          if (!refreshedMe?.current_title) {
+            throw new Error("시작 문서를 설정하지 못했습니다.");
+          }
 
-          const firstPage = await fetchPageData(me2.current_title);
+          const firstPage = await fetchPageData(refreshedMe.current_title);
           setPageData(firstPage);
         } else {
           const firstPage = await fetchPageData(me.current_title);
           setPageData(firstPage);
         }
       } catch (err) {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : "게임 초기화에 실패했습니다.");
       } finally {
         setPending(false);
       }
     };
 
-    init();
+    initGame();
   }, [roomId, user?.id]);
 
   // ----------------------------
-  // 양쪽 준비 완료 → PLAYING 전환
+  // 양쪽 초기화 완료되면:
+  // starting -> VS_INTRO -> COUNTDOWN -> PLAYING
   // ----------------------------
   useEffect(() => {
     if (!room || !myPlayer || !opponentPlayer) return;
 
-    const ready =
-      myPlayer.start_title &&
-      opponentPlayer.start_title &&
-      myPlayer.current_title &&
-      opponentPlayer.current_title;
+    const bothInitialized =
+      !!myPlayer.start_title &&
+      !!myPlayer.current_title &&
+      !!opponentPlayer.start_title &&
+      !!opponentPlayer.current_title;
 
-    if (!ready) return;
+    if (!bothInitialized) return;
 
+    // 아직 starting 상태면 playing 으로 전환
     if (room.status === "starting") {
-      updateGameRoomStatus(roomId, { status: "playing" });
+      updateGameRoomStatus(roomId, { status: "playing" }).catch(console.error);
+      return;
     }
 
-    if (room.status === "playing") {
-      setPhase("PLAYING");
+    // 이미 playing이면 VS 인트로부터 시작
+    if (room.status === "playing" && phase === PHASE.LOADING) {
+      setPhase(PHASE.VS_INTRO);
     }
-  }, [room, myPlayer, opponentPlayer]);
+  }, [room, myPlayer, opponentPlayer, roomId, phase]);
 
   // ----------------------------
-  // 이동 처리
+  // VS 인트로 -> 카운트다운
   // ----------------------------
-  const handleMove = async (title) => {
-    if (phase !== "PLAYING") return;
+  useEffect(() => {
+    if (phase !== PHASE.VS_INTRO) return;
+
+    const timer = setTimeout(() => {
+      setPhase(PHASE.COUNTDOWN);
+    }, 1600);
+
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  // ----------------------------
+  // 링크 클릭 시 이동 처리
+  // ----------------------------
+  const handleMove = async (nextTitle) => {
+    if (!roomId || !user?.id || phase !== PHASE.PLAYING) return;
 
     try {
-      const next = await fetchPageData(title);
-      setPageData(next);
+      const nextPage = await fetchPageData(nextTitle);
+      setPageData(nextPage);
 
-      const nextCount = (myPlayer?.move_count || 0) + 1;
+      const nextMoveCount = (myPlayer?.move_count || 0) + 1;
 
+      // 현재 문서 / 이동 횟수 반영
       await updateMyGameProgress(roomId, user.id, {
-        current_title: next.title,
-        move_count: nextCount,
+        current_title: nextPage.title,
+        move_count: nextMoveCount,
       });
 
-      // 🔥 목표 도달 체크
-      if (normalizeTitle(next.title) === normalizeTitle(myTarget)) {
-        const now = new Date().toISOString();
+      // 목표 도달 체크
+      const solved =
+        normalizeTitle(nextPage.title) === normalizeTitle(myTarget);
+
+      if (solved) {
+        const finishedAt = new Date().toISOString();
 
         await updateMyGameProgress(roomId, user.id, {
-          current_title: next.title,
-          move_count: nextCount,
+          current_title: nextPage.title,
+          move_count: nextMoveCount,
           has_finished: true,
-          finished_at: now,
+          finished_at: finishedAt,
         });
 
         await updateGameRoomStatus(roomId, {
           status: "finished",
-          finished_at: now,
+          finished_at: finishedAt,
         });
 
-        setPhase("SUCCESS");
-        handleGameEnd("win");
+        setPhase(PHASE.SUCCESS);
+
+        // 잠시 뒤 메인으로 복귀
+        setTimeout(() => {
+          navigate("/");
+        }, 2200);
       }
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "문서 이동에 실패했습니다.");
     }
   };
-  const handleGameEnd = async (result) => {
-    if (gameEndHandledRef.current) return;
-    gameEndHandledRef.current = true;
 
-    console.log("게임 종료 처리 시작:", result);
-
-    // phase 이미 SUCCESS / OPPONENT_WIN으로 되어 있음
-
-    exitTimeoutRef.current = setTimeout(async () => {
-      try {
-        console.log("방 나가기 시작");
-
-        // 🔥 room_players에서 나 제거
-        await supabase
-          .from("room_players")
-          .delete()
-          .eq("room_id", roomId)
-          .eq("user_id", user.id);
-
-        // 🔥 남은 인원 확인
-        const { data: remain } = await supabase
-          .from("room_players")
-          .select("user_id")
-          .eq("room_id", roomId);
-
-        console.log("남은 인원:", remain);
-
-        // 🔥 아무도 없으면 방 삭제
-        if (!remain || remain.length === 0) {
-          if (user.id === room.host_id) {
-            await supabase.from("game_rooms").delete().eq("id", roomId);
-          }
-        }
-      } catch (err) {
-        console.error("종료 처리 에러:", err);
-      } finally {
-        navigate("/lobby");
-      }
-    }, 2000);
-  };
   // ----------------------------
-  // 상대 승리 감지
+  // 상대가 먼저 도착했는지 감지
   // ----------------------------
   useEffect(() => {
     if (!opponentPlayer?.has_finished) return;
     if (myPlayer?.has_finished) return;
 
-    setPhase("OPPONENT_WIN");
-    handleGameEnd("lose");
-  }, [opponentPlayer?.has_finished]);
+    setPhase(PHASE.OPPONENT_WIN);
 
-  useEffect(() => {
-    return () => {
-      if (exitTimeoutRef.current) {
-        clearTimeout(exitTimeoutRef.current);
-      }
-    };
-  }, []);
+    setTimeout(() => {
+      navigate("/");
+    }, 2200);
+  }, [opponentPlayer?.has_finished, myPlayer?.has_finished, navigate]);
+
   // ----------------------------
-  // UI
+  // 로딩 / 에러 화면
   // ----------------------------
-  if (pending) return <div>로딩중...</div>;
-  if (error) return <div>에러: {error}</div>;
+  if (pending) {
+    return (
+      <div className="mp-game-page">
+        <div className="mp-game-loading">게임 준비 중...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mp-game-page">
+        <div className="mp-game-error">에러: {error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>멀티플레이 게임</h2>
+    <div className="mp-game-page">
+      {/* VS 인트로 */}
+      {phase === PHASE.VS_INTRO && (
+        <VsIntroOverlay
+          myName={myPlayer?.nickname_snapshot || "나"}
+          opponentName={opponentPlayer?.nickname_snapshot || "상대"}
+          myTarget={myTarget}
+          opponentTarget={opponentTarget}
+          myInitial={(myPlayer?.nickname_snapshot || "나").charAt(0).toUpperCase()}
+          opponentInitial={(opponentPlayer?.nickname_snapshot || "상대")
+            .charAt(0)
+            .toUpperCase()}
+        />
+      )}
 
-      <p>내 목표: {myTarget}</p>
-      <p>상대 목표: {opponentTarget}</p>
+      {/* 기존 카운트다운 재사용 */}
+      {phase === PHASE.COUNTDOWN && (
+        <CountdownOverlay onComplete={() => setPhase(PHASE.PLAYING)} />
+      )}
 
-      <p>내 이동 수: {myPlayer?.move_count || 0}</p>
-      <p>상대 이동 수: {opponentPlayer?.move_count || 0}</p>
+      {/* 상단 HUD */}
+      <div className="mp-game-topbar">
+        <div className="mp-game-goal">
+          <span className="mp-game-goal-label">내 목표</span>
+          <span className="mp-game-goal-value">{myTarget || "..."}</span>
+        </div>
 
-      <hr />
+        <div className="mp-game-status">
+          {phase === PHASE.PLAYING && "레이스 진행 중"}
+          {phase === PHASE.SUCCESS && "승리!"}
+          {phase === PHASE.OPPONENT_WIN && "패배"}
+        </div>
+      </div>
 
-      {phase === "SUCCESS" && <h2>🎉 승리!</h2>}
-      {phase === "OPPONENT_WIN" && <h2>😢 패배...</h2>}
+      <div className="mp-game-layout">
+        {/* 메인 문서 영역 */}
+        <div className="mp-game-main">
+          {pageData && (
+            <WikiViewer
+              title={pageData.title}
+              contentHtml={pageData.contentHtml}
+              links={pageData.links}
+              onLinkClick={handleMove}
+              disabled={phase !== PHASE.PLAYING}
+            />
+          )}
+        </div>
 
-      {pageData && (
-        <div>
-          <h3>{pageData.title}</h3>
+        {/* 상대 상태 패널 */}
+        <aside className="mp-opponent-panel">
+          <div className="mp-opponent-header">
+            <div className="mp-opponent-avatar">
+              {(opponentPlayer?.nickname_snapshot || "상대")
+                .charAt(0)
+                .toUpperCase()}
+            </div>
 
-          <ul>
-            {pageData.links.slice(0, 20).map((link) => (
-              <li key={link}>
-                <button onClick={() => handleMove(link)}>
-                  {link}
-                </button>
-              </li>
-            ))}
-          </ul>
+            <div>
+              <div className="mp-opponent-name">
+                {opponentPlayer?.nickname_snapshot || "상대"}
+              </div>
+              <div className="mp-opponent-sub">
+                {opponentPlayer?.has_finished ? "도착 완료!" : "레이싱 중..."}
+              </div>
+            </div>
+          </div>
+
+          <div className="mp-opponent-box">
+            <div className="mp-opponent-label">상대 목표</div>
+            <div className="mp-opponent-value">
+              {opponentTarget || "설정 중..."}
+            </div>
+          </div>
+
+          <div className="mp-opponent-box">
+            <div className="mp-opponent-label">현재 문서</div>
+            <div className="mp-opponent-value">
+              {opponentPlayer?.current_title || "준비 중..."}
+            </div>
+          </div>
+
+          <div className="mp-opponent-box">
+            <div className="mp-opponent-label">이동 횟수</div>
+            <div className="mp-opponent-value">
+              {opponentPlayer?.move_count || 0}회
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {/* 결과 오버레이 */}
+      {phase === PHASE.SUCCESS && (
+        <div className="mp-result-overlay">
+          <div className="mp-result-card">
+            <h2>🎉 승리!</h2>
+            <p>목표 문서에 먼저 도착했습니다.</p>
+          </div>
         </div>
       )}
+
+      {phase === PHASE.OPPONENT_WIN && (
+        <div className="mp-result-overlay">
+          <div className="mp-result-card">
+            <h2>😢 패배</h2>
+            <p>상대가 먼저 목표 문서에 도착했습니다.</p>
+          </div>
+        </div>
+      )}
+
+      <ScrollToTopButton />
     </div>
   );
 }
