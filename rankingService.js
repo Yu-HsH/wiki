@@ -47,6 +47,7 @@ export async function saveGameRecord(record) {
     target_title: record.targetTitle,
     elapsed_seconds: record.elapsedSeconds,
     click_count: record.clickCount,
+    path_titles: record.pathTitles ?? [],
     created_at: new Date().toISOString(),
   };
 
@@ -142,7 +143,7 @@ export async function fetchRankings({ weekly = false, limit = 50 } = {}) {
   // Supabase 서버로부터 랭킹 데이터 조회
   let query = supabase
     .from("game_records")
-    .select("id, user_id, player_name, target_title, elapsed_seconds, click_count, created_at")
+    .select("id, user_id, player_name, target_title, elapsed_seconds, click_count, path_titles, created_at")
     .order("elapsed_seconds", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(limit);
@@ -161,6 +162,7 @@ export async function fetchRankings({ weekly = false, limit = 50 } = {}) {
     targetTitle: record.target_title,
     elapsedSeconds: record.elapsed_seconds,
     clickCount: record.click_count,
+    pathTitles: record.path_titles ?? [],
     createdAt: record.created_at,
     userId: record.user_id,
   }));

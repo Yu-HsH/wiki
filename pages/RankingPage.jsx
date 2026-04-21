@@ -24,6 +24,7 @@ export default function RankingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [records, setRecords] = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +82,7 @@ export default function RankingPage() {
           >
             Weekly
           </button>
+
         </div>
       </section>
 
@@ -102,20 +104,45 @@ export default function RankingPage() {
                   <th>Time</th>
                   <th>Clicks</th>
                   <th>Date</th>
+                  <th>Path</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((record, index) => {
                   const isMine = record.userId === user.id;
+                  const isExpanded = expandedId === record.id;
+                  const rowKey = record.id || `${record.userId}-${record.createdAt}-${index}`;
+                  
                   return (
-                    <tr key={record.id || `${record.userId}-${record.createdAt}-${index}`} className={isMine ? "mine" : ""}>
-                      <td>{index + 1}</td>
-                      <td>{record.playerName || "Unknown"}</td>
-                      <td>{record.targetTitle}</td>
-                      <td>{formatDuration(record.elapsedSeconds)}</td>
-                      <td>{record.clickCount}</td>
-                      <td>{formatDate(record.createdAt)}</td>
-                    </tr>
+                    <React.Fragment key={rowKey}>
+                      <tr className={isMine ? "mine" : ""}>
+                        <td>{index + 1}</td>
+                        <td>{record.playerName || "Unknown"}</td>
+                        <td>{record.targetTitle}</td>
+                        <td>{formatDuration(record.elapsedSeconds)}</td>
+                        <td>{record.clickCount}</td>
+                        <td>{formatDate(record.createdAt)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="text-btn ranking-path-toggle"
+                            onClick={() => setExpandedId((prev) => (prev === record.id ? null : record.id))}
+                          >
+                            {isExpanded ? "닫기" : "경로 보기"}
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className={isMine ? "mine ranking-path-row" : "ranking-path-row"}>
+                          <td colSpan="7" className="ranking-path-detail" style={{ padding: "12px 16px", backgroundColor: "rgba(0,0,0,0.02)", fontSize: "14px", lineHeight: "1.5" }}>
+                            <strong>이동 경로:</strong>{" "}
+                            {record.pathTitles && record.pathTitles.length > 0
+                              ? record.pathTitles.join(" ➔ ")
+                              : <span className="app-muted">경로 기록이 없습니다.</span>}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

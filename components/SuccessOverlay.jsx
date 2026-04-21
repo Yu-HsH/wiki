@@ -3,7 +3,13 @@ import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";
 import { formatDuration } from "../services/wikiService";
 
-export default function SuccessOverlay({ targetTitle, elapsedSeconds, clickCount, onReturnToMain }) {
+export default function SuccessOverlay({
+  targetTitle,
+  elapsedSeconds,
+  clickCount,
+  pathTitles = [],
+  onReturnToMain,
+}) {
   const { user } = useAuth();
   const [rankings, setRankings] = useState([]);
   const [myRankIndex, setMyRankIndex] = useState(-1);
@@ -31,7 +37,7 @@ export default function SuccessOverlay({ targetTitle, elapsedSeconds, clickCount
     };
 
     checkRankings();
-  }, [elapsedSeconds, clickCount, targetTitle]);
+  }, [elapsedSeconds, clickCount, targetTitle, pathTitles]);
 
   return (
     <div style={overlayStyle}>
@@ -53,7 +59,20 @@ export default function SuccessOverlay({ targetTitle, elapsedSeconds, clickCount
             <p className="stat-value">{clickCount} 회</p>
           </div>
         </div>
+        {pathTitles.length > 0 && (
+          <div style={pathBoxStyle}>
+            <h3 style={pathTitleStyle}>이동 경로</h3>
 
+            <ol style={pathListStyle}>
+              {pathTitles.map((title, index) => (
+                <li key={`${title}-${index}`} style={pathItemStyle}>
+                  {title}
+                </li>
+              ))}
+            </ol>
+          </div>
+
+        )}
         <div style={{ background: "var(--bg)", padding: "15px", borderRadius: "var(--radius-lg)", marginBottom: "20px" }}>
           <h3 style={{ margin: "0 0 10px", fontSize: "16px", borderBottom: "1px solid var(--line)", paddingBottom: "5px" }}>
             🏆 나의 기록 요약
@@ -63,7 +82,7 @@ export default function SuccessOverlay({ targetTitle, elapsedSeconds, clickCount
           ) : (
             <div>
               <p style={{ margin: "0 0 10px", fontWeight: "bold", color: "var(--brand-deep)" }}>
-                {user?.isGuest 
+                {user?.isGuest
                   ? "게스트 모드입니다. 로그인 시 랭킹에 등록할 수 있습니다."
                   : `현재 기록은 ${myRankIndex > 0 ? `전체 ${myRankIndex}등` : "순위권 외"} 입니다!`
                 }
@@ -86,7 +105,7 @@ export default function SuccessOverlay({ targetTitle, elapsedSeconds, clickCount
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 
@@ -106,4 +125,30 @@ const modalContentStyle = {
   width: "100%",
   maxWidth: "500px",
   boxShadow: "0 10px 30px rgba(0,0,0,0.15)"
+};
+const pathBoxStyle = {
+  marginTop: "18px",
+  padding: "14px 16px",
+  borderRadius: "16px",
+  background: "rgba(255,255,255,0.7)",
+  border: "1px solid rgba(0,0,0,0.06)",
+  textAlign: "left",
+  maxHeight: "220px",
+  overflowY: "auto",
+};
+
+const pathTitleStyle = {
+  margin: "0 0 10px",
+  fontSize: "16px",
+  fontWeight: 800,
+};
+
+const pathListStyle = {
+  margin: 0,
+  paddingLeft: "20px",
+};
+
+const pathItemStyle = {
+  marginBottom: "6px",
+  lineHeight: 1.45,
 };

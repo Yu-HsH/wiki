@@ -54,7 +54,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
   const [target, setTarget] = useState({ title: "", summary: "", requestedKeyword: "", mode: "random" });
   const [startTitle, setStartTitle] = useState("");
-
+  const [pathTitles, setPathTitles] = useState([]);
   const [currentTitle, setCurrentTitle] = useState("");
   const [currentSummary, setCurrentSummary] = useState("");
   const [currentDocumentHtml, setCurrentDocumentHtml] = useState("");
@@ -129,6 +129,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setLinks(startPage.links);
         setElapsedSeconds(0);
         setClickCount(0);
+        setPathTitles([startPage.title]);
 
         if (checkWin(startPage.title, targetSummaryData.title)) {
           handleWin(startPage.title, targetSummaryData.title, 0, 0);
@@ -165,6 +166,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       setCurrentSummary(page.summary);
       setCurrentDocumentHtml(page.documentHtml);
       setLinks(page.links);
+      setPathTitles((prev) => [...prev, page.title]);
       window.scrollTo({ top: 0, behavior: "smooth" });
       if (checkWin(page.title, target.title)) {
         handleWin(page.title, target.title, elapsedSeconds, clickCount + 1);
@@ -179,7 +181,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const handleWin = (reachedTitle, targetTitle, timeSec, clicks) => {
     setPhase(PHASE.SUCCESS);
     if (onGameComplete) {
-      onGameComplete({ startTitle, targetTitle, elapsedSeconds: timeSec, clickCount: clicks, reachedTitle });
+      onGameComplete({ startTitle, targetTitle, elapsedSeconds: timeSec, clickCount: clicks, reachedTitle, pathTitles });
     }
   };
 
@@ -226,6 +228,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           targetTitle={target.title}
           elapsedSeconds={elapsedSeconds}
           clickCount={clickCount}
+          pathTitles={pathTItles}
           onReturnToMain={onReturnMain}
         />
       )}
