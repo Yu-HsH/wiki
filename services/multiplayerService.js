@@ -250,3 +250,73 @@ export async function leaveRoom(roomId, userId) {
         if (deleteRoomError) throw deleteRoomError;
     }
 }
+export async function updateRoom(roomId, updates) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("game_rooms")
+        .update(updates)
+        .eq("id", roomId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+export async function startRoomGame(roomId, userId) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data: room, error: roomError } = await supabase
+        .from("game_rooms")
+        .select("*")
+        .eq("id", roomId)
+        .single();
+
+    if (roomError) throw roomError;
+
+    if (room.host_user_id !== userId) {
+        throw new Error("호스트만 게임을 시작할 수 있습니다.");
+    }
+
+    if (room.status !== "waiting") {
+        throw new Error("이미 시작되었거나 종료된 방입니다.");
+    }
+
+    const { data: players, error: playerError } = await supabase
+        .from("room_players")
+        .select("*")
+        .eq("room_id", roomId);
+
+    if (playerError) throw playerError;
+
+    if (!players || players.length < 2) {
+        throw new Error("상대 플레이어가 입장해야 시작할 수 있습니다.");
+    }
+
+    const allReady = players.every(
+        (p) => p.is_ready && p.target_title && p.target_title.trim()
+    );
+
+    if (!allReady) {
+        throw new Error("모든 플레이어가 목표 문서를 설정하고 준비해야 합니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("game_rooms")
+        .update({
+            status: "starting",
+            started_at: new Date().toISOString(),
+        })
+        .eq("id", roomId)
+        .eq("host_user_id", userId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
