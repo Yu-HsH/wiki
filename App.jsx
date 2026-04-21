@@ -62,6 +62,7 @@ function GameRoute() {
         targetTitle: result.targetTitle,
         elapsedSeconds: result.elapsedSeconds,
         clickCount: result.clickCount,
+        pathTitles: result.pathTitles,
       });
       setSaveStatus("랭킹에 기록이 저장되었습니다.");
     } catch (error) {

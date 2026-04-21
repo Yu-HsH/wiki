@@ -129,10 +129,11 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setLinks(startPage.links);
         setElapsedSeconds(0);
         setClickCount(0);
-        setPathTitles([startPage.title]);
+        const newPath = [startPage.title];
+        setPathTitles(newPath);
 
         if (checkWin(startPage.title, targetSummaryData.title)) {
-          handleWin(startPage.title, targetSummaryData.title, 0, 0);
+          handleWin(startPage.title, targetSummaryData.title, 0, 0, newPath);
         } else {
           setPhase(PHASE.COUNTDOWN);
         }
@@ -166,10 +167,11 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       setCurrentSummary(page.summary);
       setCurrentDocumentHtml(page.documentHtml);
       setLinks(page.links);
-      setPathTitles((prev) => [...prev, page.title]);
+      const newPath = [...pathTitles, page.title];
+      setPathTitles(newPath);
       window.scrollTo({ top: 0, behavior: "smooth" });
       if (checkWin(page.title, target.title)) {
-        handleWin(page.title, target.title, elapsedSeconds, clickCount + 1);
+        handleWin(page.title, target.title, elapsedSeconds, clickCount + 1, newPath);
       }
     } catch (e) {
       setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
@@ -178,10 +180,10 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     }
   };
 
-  const handleWin = (reachedTitle, targetTitle, timeSec, clicks) => {
+  const handleWin = (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
     setPhase(PHASE.SUCCESS);
     if (onGameComplete) {
-      onGameComplete({ startTitle, targetTitle, elapsedSeconds: timeSec, clickCount: clicks, reachedTitle, pathTitles });
+      onGameComplete({ startTitle, targetTitle, elapsedSeconds: timeSec, clickCount: clicks, reachedTitle, pathTitles: finalPath });
     }
   };
 
@@ -228,7 +230,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           targetTitle={target.title}
           elapsedSeconds={elapsedSeconds}
           clickCount={clickCount}
-          pathTitles={pathTItles}
+          pathTitles={pathTitles}
           onReturnToMain={onReturnMain}
         />
       )}
