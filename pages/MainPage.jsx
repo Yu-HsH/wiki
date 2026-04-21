@@ -80,7 +80,7 @@ export default function MainPage() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate("/");
   };
 
   const rankMedal = (i) => ["🥇", "🥈", "🥉"][i] ?? `${i + 1}.`;
@@ -103,9 +103,6 @@ export default function MainPage() {
         </div>
         {/* 상단 액션 버튼 그룹 */}
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <button type="button" className="help-button" onClick={() => setShowHelp(true)} aria-label="게임 설명">
-            ?
-          </button>
           {!user.isGuest && (
             <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
               내 정보
@@ -275,6 +272,11 @@ export default function MainPage() {
           ★ 오늘의 도전에 참여하기
         </button>
       </section>
+
+      {/* 플로팅 도움말 버튼 */}
+      <button type="button" className="help-button floating" onClick={() => setShowHelp(true)} aria-label="게임 설명">
+        ?
+      </button>
 
       {/* ── 도움말 모달 ── */}
       {showHelp && (
