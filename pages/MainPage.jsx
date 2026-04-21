@@ -96,8 +96,8 @@ export default function MainPage() {
             {user.isGuest
               ? "게스트 모드로 접속 중입니다. 로그인하면 기록이 저장됩니다."
               : isSupabaseConfigured
-              ? "온라인 랭킹 모드 활성화 중"
-              : "데모 모드로 실행 중"}
+                ? "온라인 랭킹 모드 활성화 중"
+                : "데모 모드로 실행 중"}
           </p>
         </div>
         {/* 상단 액션 버튼 그룹 */}
@@ -117,21 +117,12 @@ export default function MainPage() {
       <section className="quickstart-grid">
         <button
           type="button"
-          className="quickstart-card quickstart-random"
-          onClick={() => navigate("/game", { state: { mode: "random" } })}
-        >
-          <span className="qs-icon">🎲</span>
-          <span className="qs-title">랜덤으로 시작</span>
-          <span className="qs-desc">무작위 위키 출발 → 무작위 목표</span>
-        </button>
-        <button
-          type="button"
           className="quickstart-card quickstart-custom"
           onClick={() => { setKeyword(""); setShowKeywordModal(true); }}
         >
           <span className="qs-icon">🎯</span>
-          <span className="qs-title">키워드로 시작</span>
-          <span className="qs-desc">내가 원하는 목표 문서를 직접 지정</span>
+          <span className="qs-title">혼자서 플레이</span>
+          <span className="qs-desc">내가 원하는 목표 문서를 직접 찾아가기</span>
         </button>
         <button
           type="button"
