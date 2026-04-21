@@ -10,6 +10,7 @@ import {
 } from "../services/multiplayerService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
+import { resolveWikiTitle } from "../services/wikiService";
 
 /**
  * 대전 대기실 페이지
@@ -207,8 +208,18 @@ export default function RoomPage() {
     try {
       setSubmitError("");
 
+      //입력 키워드 검증 + 보정
+      const resolvedTitle = await resolveWikiTitle(myTarget.trim());
+
+      if (!resolvedTitle) {
+        setSubmitError("존재하지 않는 문서입니다. 다시 입력해주세요.");
+        return;
+      }
+
+      setMyTarget(resolvedTitle);
+
       await updateMyRoomPlayer(roomId, user.id, {
-        target_title: myTarget.trim(),
+        target_title: resolvedTitle,
         is_ready: true,
       });
 

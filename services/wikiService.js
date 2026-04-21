@@ -224,3 +224,17 @@ export async function fetchPageData(title, MAX_LINKS = 20) {
     documentHtml: sanitizeWikiDocumentHtml(rawDocumentHtml),
   };
 }
+export async function resolveWikiTitle(input) {
+  const url = `https://ko.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+    input
+  )}&format=json&origin=*`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const first = data?.query?.search?.[0];
+
+  if (!first) return null;
+
+  return first.title;
+}
