@@ -24,7 +24,7 @@ export async function fetchMyProfile(userId) {
 
     const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, nickname, profile_image_url")
+        .select("id, nickname")
         .eq("id", userId)
         .single();
 
