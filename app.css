@@ -902,6 +902,7 @@ body {
   .weekly-item {
     grid-template-columns: 28px 1fr 70px;
   }
+
   .wi-target {
     display: none;
   }
@@ -1019,4 +1020,148 @@ body {
 .daily-btn:hover {
   opacity: 0.92;
   transform: translateY(-1px);
+}
+
+/* =========================
+   Intro Page
+   ========================= */
+
+.intro-page {
+  position: relative;
+  min-height: 100vh;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  color: white;
+}
+
+.intro-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.62)),
+    linear-gradient(180deg, rgba(6, 10, 20, 0.12), rgba(6, 10, 20, 0.68));
+}
+
+.intro-content {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.intro-logo-badge {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.intro-title {
+  margin: 0;
+  font-size: clamp(42px, 7vw, 88px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.intro-subtitle {
+  margin: 0;
+  font-size: clamp(15px, 2vw, 20px);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.intro-press-start {
+  margin-top: 18px;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  animation: introBlink 1.2s infinite alternate;
+}
+
+@keyframes introBlink {
+  from {
+    opacity: 0.45;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.intro-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 8, 16, 0.64);
+  backdrop-filter: blur(10px);
+}
+
+.intro-modal-card {
+  width: min(100%, 460px);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 28px;
+  background: rgba(13, 18, 33, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  animation: introModalPop 0.25s ease;
+}
+
+@keyframes introModalPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.intro-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1020;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* LoginPage를 모달 안에 넣었을 때 여백 정리 */
+.login-page-shell {
+  padding: 28px 24px;
+}
+
+@media (max-width: 640px) {
+  .intro-title {
+    font-size: 44px;
+  }
+
+  .intro-modal-card {
+    border-radius: 22px;
+  }
+
+  .login-page-shell {
+    padding: 22px 18px;
+  }
 }

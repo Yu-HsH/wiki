@@ -12,6 +12,7 @@ import RoomPage from "./pages/RoomPage";
 import MultiplayerGamePage from "./pages/MultiplayerGamePage";
 import "./app.css";
 import "./multiplayer.css";
+import "./pages/IntroPage";
 
 /**
  * 로그인 여부에 따라 접근을 제어하는 래퍼 컴포넌트
@@ -79,9 +80,9 @@ function GameRoute() {
         </button>
       </div>
       {saveStatus && <div className="save-status">{saveStatus}</div>}
-      <GamePage 
-        onGameComplete={handleSaveRecord} 
-        onReturnMain={() => navigate("/main")} 
+      <GamePage
+        onGameComplete={handleSaveRecord}
+        onReturnMain={() => navigate("/main")}
       />
     </>
   );
@@ -98,7 +99,12 @@ function GameRoute() {
 function AppRoutes() {
   return (
     <Routes>
+      {/* 시작 화면 */}
+      <Route path="/" element={<IntroPage />} />
+
+      {/* 기존 로그인 페이지도 유지 가능 */}
       <Route path="/login" element={<LoginRoute />} />
+
       <Route
         path="/main"
         element={
@@ -107,6 +113,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/game"
         element={
@@ -115,6 +122,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/ranking"
         element={
@@ -123,6 +131,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/profile"
         element={
@@ -131,6 +140,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/multiplayer"
         element={
@@ -139,6 +149,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/multiplayer/room/:roomId"
         element={
@@ -147,6 +158,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/multiplayer/game/:roomId"
         element={
@@ -155,7 +167,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/main" replace />} />
     </Routes>
   );
 }

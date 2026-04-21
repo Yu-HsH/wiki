@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 
 /* ── Zod 유효성 검사 스키마 ── */
-
+<div className="login-page-shell login-page-shell--embedded"></div>
 // 로그인 시: 아이디(2자+), 비밀번호(6자+) 필수
 const signinSchema = z.object({
   username: z.string().min(2, "아이디는 2자 이상이어야 합니다."),
@@ -99,97 +99,99 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <p className="auth-badge">Wiki Race</p>
-        <h1>{isSupabaseConfigured ? "로그인하고 레이스 시작하기" : "데모 모드로 시작하기"}</h1>
-        <p className="auth-subtitle">
-          {isSupabaseConfigured
-            ? "플레이 기록을 남기고 랭킹 경쟁에 참여하세요."
-            : "Supabase 키가 설정되지 않아 데모 모드로 동작합니다."}
-        </p>
+    <div className="login-page-shell">
+      <div className="auth-page">
+        <div className="auth-card">
+          <p className="auth-badge">Wiki Race</p>
+          <h1>{isSupabaseConfigured ? "로그인하고 레이스 시작하기" : "데모 모드로 시작하기"}</h1>
+          <p className="auth-subtitle">
+            {isSupabaseConfigured
+              ? "플레이 기록을 남기고 랭킹 경쟁에 참여하세요."
+              : "Supabase 키가 설정되지 않아 데모 모드로 동작합니다."}
+          </p>
 
-        {isSupabaseConfigured && (
-          <div className="auth-tabs">
-            <button
-              type="button"
-              className={mode === "signin" ? "auth-tab active" : "auth-tab"}
-              onClick={() => setMode("signin")}
-            >
-              로그인
-            </button>
-            <button
-              type="button"
-              className={mode === "signup" ? "auth-tab active" : "auth-tab"}
-              onClick={() => setMode("signup")}
-            >
-              회원가입
-            </button>
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} className="auth-form">
-          {/* Username */}
-          <label className="auth-label">
-            아이디
-            <input
-              className="auth-input"
-              placeholder="사용할 아이디"
-              autoComplete="username"
-              {...register("username")}
-            />
-            {errors.username && <span className="auth-error">{errors.username.message}</span>}
-          </label>
-
-          {/* Nickname (signup + demo) */}
-          {(!isSupabaseConfigured || mode === "signup") && (
-            <label className="auth-label">
-              닉네임
-              <input
-                className="auth-input"
-                placeholder="게임에서 표시될 이름"
-                {...register("nickname")}
-              />
-              {errors.nickname && <span className="auth-error">{errors.nickname.message}</span>}
-            </label>
-          )}
-
-          {/* Password (Supabase only) */}
           {isSupabaseConfigured && (
-            <label className="auth-label">
-              비밀번호
-              <input
-                type="password"
-                className="auth-input"
-                placeholder="6자 이상"
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                {...register("password")}
-              />
-              {errors.password && <span className="auth-error">{errors.password.message}</span>}
-            </label>
+            <div className="auth-tabs">
+              <button
+                type="button"
+                className={mode === "signin" ? "auth-tab active" : "auth-tab"}
+                onClick={() => setMode("signin")}
+              >
+                로그인
+              </button>
+              <button
+                type="button"
+                className={mode === "signup" ? "auth-tab active" : "auth-tab"}
+                onClick={() => setMode("signup")}
+              >
+                회원가입
+              </button>
+            </div>
           )}
 
-          {submitError && <p className="auth-error auth-error-block">{submitError}</p>}
+          <form onSubmit={onSubmit} className="auth-form">
+            {/* Username */}
+            <label className="auth-label">
+              아이디
+              <input
+                className="auth-input"
+                placeholder="사용할 아이디"
+                autoComplete="username"
+                {...register("username")}
+              />
+              {errors.username && <span className="auth-error">{errors.username.message}</span>}
+            </label>
 
-          <button type="submit" className="app-btn app-btn-primary" disabled={pending}>
-            {pending
-              ? "처리 중..."
-              : isSupabaseConfigured
-                ? mode === "signin"
-                  ? "로그인"
-                  : "계정 만들기"
-                : "시작하기"}
-          </button>
+            {/* Nickname (signup + demo) */}
+            {(!isSupabaseConfigured || mode === "signup") && (
+              <label className="auth-label">
+                닉네임
+                <input
+                  className="auth-input"
+                  placeholder="게임에서 표시될 이름"
+                  {...register("nickname")}
+                />
+                {errors.nickname && <span className="auth-error">{errors.nickname.message}</span>}
+              </label>
+            )}
 
-          <button
-            type="button"
-            className="app-btn app-btn-secondary"
-            style={{ width: "100%", marginTop: "1rem" }}
-            onClick={() => { loginAsGuest(); navigate("/main"); }}
-          >
-            게스트로 로그인
-          </button>
-        </form>
+            {/* Password (Supabase only) */}
+            {isSupabaseConfigured && (
+              <label className="auth-label">
+                비밀번호
+                <input
+                  type="password"
+                  className="auth-input"
+                  placeholder="6자 이상"
+                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  {...register("password")}
+                />
+                {errors.password && <span className="auth-error">{errors.password.message}</span>}
+              </label>
+            )}
+
+            {submitError && <p className="auth-error auth-error-block">{submitError}</p>}
+
+            <button type="submit" className="app-btn app-btn-primary" disabled={pending}>
+              {pending
+                ? "처리 중..."
+                : isSupabaseConfigured
+                  ? mode === "signin"
+                    ? "로그인"
+                    : "계정 만들기"
+                  : "시작하기"}
+            </button>
+
+            <button
+              type="button"
+              className="app-btn app-btn-secondary"
+              style={{ width: "100%", marginTop: "1rem" }}
+              onClick={() => { loginAsGuest(); navigate("/main"); }}
+            >
+              게스트로 로그인
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
