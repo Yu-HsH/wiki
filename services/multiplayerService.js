@@ -217,3 +217,36 @@ export async function updateMyRoomPlayer(roomId, userId, updates) {
     if (error) throw error;
     return data;
 }
+
+export async function leaveRoom(roomId, userId) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    // 1. 내 room_players row 삭제
+    const { error: deletePlayerError } = await supabase
+        .from("room_players")
+        .delete()
+        .eq("room_id", roomId)
+        .eq("user_id", userId);
+
+    if (deletePlayerError) throw deletePlayerError;
+
+    // 2. 남은 플레이어 수 확인
+    const { data: remainingPlayers, error: remainingError } = await supabase
+        .from("room_players")
+        .select("id")
+        .eq("room_id", roomId);
+
+    if (remainingError) throw remainingError;
+
+    // 3. 아무도 안 남았으면 room도 삭제
+    if (!remainingPlayers || remainingPlayers.length === 0) {
+        const { error: deleteRoomError } = await supabase
+            .from("game_rooms")
+            .delete()
+            .eq("id", roomId);
+
+        if (deleteRoomError) throw deleteRoomError;
+    }
+}

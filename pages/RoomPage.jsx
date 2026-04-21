@@ -5,6 +5,7 @@ import {
   fetchRoomPlayers,
   joinRoom,
   updateMyRoomPlayer,
+  leaveRoom,
 } from "../services/multiplayerService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
@@ -159,6 +160,22 @@ export default function RoomPage() {
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(room?.room_code ?? roomId ?? "");
   };
+
+  const handleLeaveRoom = async () => {
+    if (!roomId || !user?.id) {
+      navigate("/multiplayer");
+      return;
+    }
+
+    try {
+      await leaveRoom(roomId, user.id);
+    } catch (error) {
+      console.error("leaveRoom failed:", error);
+    } finally {
+      navigate("/multiplayer");
+    }
+  };
+
   useEffect(() => {
     if (!roomId || !supabase) return;
 
@@ -201,7 +218,7 @@ export default function RoomPage() {
             <button
               type="button"
               className="mp-back-btn"
-              onClick={() => navigate("/multiplayer")}
+              onClick={handleLeaveRoom}
             >
               ← 로비로
             </button>
