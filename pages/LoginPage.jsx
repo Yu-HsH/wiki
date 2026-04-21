@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 
 /* ── Zod 유효성 검사 스키마 ── */
-<div className="login-page-shell login-page-shell--embedded"></div>
 // 로그인 시: 아이디(2자+), 비밀번호(6자+) 필수
 const signinSchema = z.object({
   username: z.string().min(2, "아이디는 2자 이상이어야 합니다."),
@@ -36,7 +35,7 @@ function applyZodErrors(result, setError) {
   });
 }
 
-export default function LoginPage() {
+export default function LoginPage({ isEmbedded = false }) {
   const navigate = useNavigate();
   const { loginWithUsername, signUpWithUsername, demoLogin, isSupabaseConfigured, loginAsGuest } = useAuth();
   const [mode, setMode] = useState("signin");
@@ -99,9 +98,9 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="login-page-shell">
-      <div className="auth-page">
-        <div className="auth-card">
+    <div className={isEmbedded ? "" : "login-page-shell"}>
+      <div className={isEmbedded ? "" : "auth-page"}>
+        <div className="auth-card" style={isEmbedded ? { border: "none", boxShadow: "none", background: "transparent" } : {}}>
           <p className="auth-badge">Wiki Race</p>
           <h1>{isSupabaseConfigured ? "로그인하고 레이스 시작하기" : "데모 모드로 시작하기"}</h1>
           <p className="auth-subtitle">

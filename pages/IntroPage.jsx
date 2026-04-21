@@ -3,11 +3,8 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import LoginPage from "./LoginPage";
 
-// Opening.png 실제 위치에 맞게 이 경로만 맞춰주세요.
-// 예시 1) pages 폴더 안이면: ./Opening.png
-// 예시 2) src/assets 안이면: ../assets/Opening.png
-// 예시 3) public 폴더면 import 없이 backgroundImage: 'url(/Opening.png)'
-import openingBg from "../wiki/Opening.png";
+// c:\Users\황성현\Desktop\game\wiki\Opening.png 에 위치하므로 경로 수정
+import openingBg from "../Opening.png";
 
 /**
  * 첫 시작 화면
@@ -72,7 +69,7 @@ export default function IntroPage() {
                         className="intro-modal-card"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <LoginPage />
+                        <LoginPage isEmbedded />
                     </div>
                 </div>
             )}

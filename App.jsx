@@ -12,7 +12,7 @@ import RoomPage from "./pages/RoomPage";
 import MultiplayerGamePage from "./pages/MultiplayerGamePage";
 import "./app.css";
 import "./multiplayer.css";
-import "./pages/IntroPage";
+import IntroPage from "./pages/IntroPage";
 
 /**
  * 로그인 여부에 따라 접근을 제어하는 래퍼 컴포넌트
