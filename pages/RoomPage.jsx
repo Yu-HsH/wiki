@@ -21,7 +21,7 @@ import { supabase } from "../supabaseClient";
  * - room / room_players 실제 조회
  * - target_title / is_ready 실제 DB 저장
  * - room_players Realtime 구독으로 상태 반영
- * - 아직 실제 게임 시작 데이터 저장 미적용상태
+ * - 아직 실제 게임 시작 데이터(start_title 등) 저장은 미적용
  */
 export default function RoomPage() {
   const { roomId } = useParams();
@@ -49,7 +49,7 @@ export default function RoomPage() {
 
         const roomData = await fetchRoom(roomId);
 
-        // 혹시 직접 URL로 들어온 guest면 join 시도
+        // waiting 상태 방에 직접 진입했을 때 guest join 시도
         if (roomData.status === "waiting") {
           await joinRoom(roomId, user.id).catch(() => { });
         }
@@ -71,111 +71,9 @@ export default function RoomPage() {
   }, [roomId, user?.id]);
 
   /**
-   * players 기반 파생값
-   * - Hook은 항상 return보다 위에 있어야 함
+   * room_players Realtime 구독
+   * - 누가 입장/준비/목표저장해도 자동으로 다시 players 조회
    */
-  const hostPlayer = useMemo(
-    () => players.find((player) => player.role === "host"),
-    [players]
-  );
-
-  const guestPlayer = useMemo(
-    () => players.find((player) => player.role === "guest"),
-    [players]
-  );
-
-  const myPlayer = useMemo(
-    () => players.find((player) => player.user_id === user?.id),
-    [players, user?.id]
-  );
-
-  const opponentPlayer = useMemo(
-    () => players.find((player) => player.user_id !== user?.id),
-    [players, user?.id]
-  );
-
-  const isHost = myPlayer?.role === "host";
-  const hasGuest = !!guestPlayer;
-  const myReadyState = !!myPlayer?.is_ready;
-  const opponentReady = !!opponentPlayer?.is_ready;
-  const allReady = myReadyState && opponentReady;
-
-  /**
-   * DB 값 -> 로컬 UI 상태 동기화
-   * - 새로고침해도 내 목표/준비 상태 복원
-   */
-  useEffect(() => {
-    if (!myPlayer) return;
-
-    if (myPlayer.target_title) {
-      setMyTarget(myPlayer.target_title);
-    }
-  }, [myPlayer]);
-
-  /**
-   * 양쪽 모두 준비되면 임시 시작 연출 후 게임 페이지 이동
-   * - 아직 실제 게임 시작 데이터 저장 전
-   */
-  useEffect(() => {
-    if (!allReady || starting) return;
-
-    setStarting(true);
-
-    const timer = setTimeout(() => {
-      navigate(`/multiplayer/game/${roomId}`, {
-        state: {
-          myTarget,
-          opponentName: opponentPlayer?.nickname_snapshot || "상대",
-        },
-      });
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [allReady, starting, navigate, roomId, myTarget, opponentPlayer?.nickname_snapshot]);
-
-  /**
-   * 준비 완료
-   * - 내 target_title, is_ready를 DB에 저장
-   */
-  const handleReady = async () => {
-    if (!myTarget.trim() || !roomId || !user?.id) return;
-
-    try {
-      setSubmitError("");
-
-      await updateMyRoomPlayer(roomId, user.id, {
-        target_title: myTarget.trim(),
-        is_ready: true,
-      });
-
-      const playerData = await fetchRoomPlayers(roomId);
-      setPlayers(playerData);
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "준비 상태 저장에 실패했습니다."
-      );
-    }
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard?.writeText(room?.room_code ?? roomId ?? "");
-  };
-
-  const handleLeaveRoom = async () => {
-    if (!roomId || !user?.id) {
-      navigate("/multiplayer");
-      return;
-    }
-
-    try {
-      await leaveRoom(roomId, user.id);
-    } catch (error) {
-      console.error("leaveRoom failed:", error);
-    } finally {
-      navigate("/multiplayer");
-    }
-  };
-
   useEffect(() => {
     if (!roomId || !supabase) return;
 
@@ -204,6 +102,125 @@ export default function RoomPage() {
       supabase.removeChannel(channel);
     };
   }, [roomId]);
+
+  /**
+   * players 기반 파생값
+   */
+  const hostPlayer = useMemo(
+    () => players.find((player) => player.role === "host"),
+    [players]
+  );
+
+  const guestPlayer = useMemo(
+    () => players.find((player) => player.role === "guest"),
+    [players]
+  );
+
+  const myPlayer = useMemo(
+    () => players.find((player) => player.user_id === user?.id),
+    [players, user?.id]
+  );
+
+  const opponentPlayer = useMemo(
+    () => players.find((player) => player.user_id !== user?.id),
+    [players, user?.id]
+  );
+
+  const isHost = myPlayer?.role === "host";
+  const hasGuest = !!guestPlayer;
+
+  // 준비 상태는 로컬 state가 아니라 DB 값 기준으로만 판단
+  const myReadyState = !!myPlayer?.is_ready;
+  const opponentReady = !!opponentPlayer?.is_ready;
+  const allReady = myReadyState && opponentReady;
+
+  /**
+   * DB 값 -> 로컬 입력 상태 동기화
+   * - 새로고침해도 내가 저장한 target_title 복원
+   */
+  useEffect(() => {
+    if (!myPlayer) return;
+
+    if (myPlayer.target_title) {
+      setMyTarget(myPlayer.target_title);
+    }
+  }, [myPlayer]);
+
+  /**
+   * 양쪽 모두 준비되면 임시 시작 연출 후 게임 페이지 이동
+   * - 아직 start_title/current_title 저장 전
+   */
+  useEffect(() => {
+    if (!allReady || starting) return;
+
+    setStarting(true);
+
+    const timer = setTimeout(() => {
+      navigate(`/multiplayer/game/${roomId}`, {
+        state: {
+          myTarget: myPlayer?.target_title || myTarget,
+          opponentName: opponentPlayer?.nickname_snapshot || "상대",
+        },
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [
+    allReady,
+    starting,
+    navigate,
+    roomId,
+    myPlayer?.target_title,
+    myTarget,
+    opponentPlayer?.nickname_snapshot,
+  ]);
+
+  /**
+   * 준비 완료
+   * - 내 target_title, is_ready를 DB에 저장
+   */
+  const handleReady = async () => {
+    if (!myTarget.trim() || !roomId || !user?.id) return;
+
+    try {
+      setSubmitError("");
+
+      await updateMyRoomPlayer(roomId, user.id, {
+        target_title: myTarget.trim(),
+        is_ready: true,
+      });
+
+      // 즉시 한번 더 당겨와서 내 화면도 바로 갱신
+      const playerData = await fetchRoomPlayers(roomId);
+      setPlayers(playerData);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "준비 상태 저장에 실패했습니다."
+      );
+    }
+  };
+
+  /**
+   * 대기실 나가기
+   * - 내 player row 삭제
+   * - 남은 사람 없으면 room 삭제
+   */
+  const handleLeaveRoom = async () => {
+    try {
+      if (roomId && user?.id) {
+        await leaveRoom(roomId, user.id);
+      }
+    } catch (error) {
+      console.error("leaveRoom failed:", error);
+    } finally {
+      navigate("/multiplayer");
+    }
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard?.writeText(room?.room_code ?? roomId ?? "");
+  };
+
   /**
    * 모든 Hook 선언 후에만 조건부 return
    */
@@ -245,7 +262,7 @@ export default function RoomPage() {
             <button
               type="button"
               className="mp-back-btn"
-              onClick={() => navigate("/multiplayer")}
+              onClick={handleLeaveRoom}
             >
               ← 로비로
             </button>
@@ -271,7 +288,7 @@ export default function RoomPage() {
           <button
             type="button"
             className="mp-back-btn"
-            onClick={() => navigate("/multiplayer")}
+            onClick={handleLeaveRoom}
           >
             ← 로비로
           </button>
@@ -318,6 +335,7 @@ export default function RoomPage() {
         </div>
 
         <div className="room-players">
+          {/* 내 패널 */}
           <div className={`room-player-card ${myReadyState ? "room-player--ready" : ""}`}>
             <div className="room-player-role">
               {isHost ? "👑 HOST" : "⚔️ GUEST"}
@@ -364,6 +382,7 @@ export default function RoomPage() {
 
           <div className="room-vs">VS</div>
 
+          {/* 상대 패널 */}
           <div
             className={`room-player-card room-player--opponent ${opponentPlayer?.is_ready ? "room-player--ready" : ""
               } ${!opponentPlayer ? "room-player--empty" : ""}`}
@@ -387,8 +406,8 @@ export default function RoomPage() {
                 <div className="room-target-section">
                   <label className="room-target-label">목표 문서</label>
                   <div className="room-target-display">
-                    {opponentPlayer.is_ready
-                      ? opponentPlayer.target_title || "목표 설정 완료"
+                    {opponentPlayer.target_title
+                      ? opponentPlayer.target_title
                       : "설정 중..."}
                   </div>
                 </div>
