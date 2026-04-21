@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { fetchRoom, fetchRoomPlayers, joinRoom } from "../services/multiplayerService";
+import {
+  fetchRoom,
+  fetchRoomPlayers,
+  joinRoom,
+  updateMyRoomPlayer,
+} from "../services/multiplayerService";
 import { useAuth } from "../authContext";
 
 /**
@@ -119,11 +124,28 @@ export default function RoomPage() {
 
   /**
    * 현재 단계의 준비 버튼
-   * - 아직 DB 저장 전이라 로컬 ready만 변경
+   * - DB 저장 로직 추가
    */
-  const handleReady = () => {
-    if (!myTarget.trim()) return;
-    setMyReady(true);
+  const handleReady = async () => {
+    if (!myTarget.trim() || !roomId || !user?.id) return;
+
+    try {
+      setSubmitError("");
+
+      await updateMyRoomPlayer(roomId, user.id, {
+        target_title: myTarget.trim(),
+        is_ready: true,
+      });
+
+      setMyReady(true);
+
+      const playerData = await fetchRoomPlayers(roomId);
+      setPlayers(playerData);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "준비 상태 저장에 실패했습니다."
+      );
+    }
   };
 
   const handleCopyCode = () => {
@@ -183,7 +205,14 @@ export default function RoomPage() {
       </div>
     );
   }
-
+  useEffect(() => {
+    if (myPlayer?.is_ready) {
+      setMyReady(true);
+    }
+    if (myPlayer?.target_title) {
+      setMyTarget(myPlayer.target_title);
+    }
+  }, [myPlayer?.is_ready, myPlayer?.target_title]);
   return (
     <div className="mp-page">
       <div className="mp-glow mp-glow--1" />

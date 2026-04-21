@@ -197,3 +197,23 @@ export async function fetchRoom(roomId) {
     if (error) throw error;
     return data;
 }
+/**
+ * 
+ * 현재 로그인 플레이어의 room_playes rows를 업데이트
+ */
+export async function updateMyRoomPlayer(roomId, userId, updates) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("room_players")
+        .update(updates)
+        .eq("room_id", roomId)
+        .eq("user_id", userId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
