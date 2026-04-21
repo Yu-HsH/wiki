@@ -8,9 +8,12 @@ import {
   leaveRoom,
   startRoomGame,
 } from "../services/multiplayerService";
+import {
+  checkExactWikiTitleExists,
+  searchWikiTitleCandidates,
+} from "../services/wikiService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
-import { resolveWikiTitle } from "../services/wikiService";
 
 /**
  * 대전 대기실 페이지
@@ -23,9 +26,10 @@ import { resolveWikiTitle } from "../services/wikiService";
  * 5) 호스트가 게임 시작 버튼을 누르면 game_rooms.status = 'starting'
  * 6) 모든 플레이어는 room.status === 'starting' 을 감지하면 게임 화면으로 이동
  *
- * 주의:
- * - "둘 다 준비 완료되면 자동 이동" 방식은 제거
- * - 멀티 시작 기준은 반드시 DB의 room.status 로 통일
+ * 목표 문서 입력 정책
+ * - 자동으로 다른 제목으로 치환하지 않음
+ * - 정확히 존재하는 제목이면 그대로 저장
+ * - 정확한 제목이 없으면 후보 리스트를 보여주고 사용자가 직접 선택
  */
 export default function RoomPage() {
   const { roomId } = useParams();
@@ -43,13 +47,14 @@ export default function RoomPage() {
   // 내 입력값
   const [myTarget, setMyTarget] = useState("");
 
-  // 버튼 로딩용 상태
+  // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
+
+  // 목표 문서 추천 후보
+  const [targetSuggestions, setTargetSuggestions] = useState([]);
 
   // ----------------------------
   // 초기 로드
-  // - 방 정보 / 참가자 정보 조회
-  // - waiting 방이면 guest 자동 join 시도
   // ----------------------------
   useEffect(() => {
     const loadRoom = async () => {
@@ -61,8 +66,7 @@ export default function RoomPage() {
 
         const roomData = await fetchRoom(roomId);
 
-        // waiting 상태에서 직접 URL 진입한 경우
-        // guest라면 room_players row 가 없을 수 있으므로 join 시도
+        // waiting 상태에서 직접 URL 진입한 경우 guest join 시도
         if (roomData.status === "waiting") {
           await joinRoom(roomId, user.id).catch(() => { });
         }
@@ -85,8 +89,6 @@ export default function RoomPage() {
 
   // ----------------------------
   // Realtime 구독
-  // - game_rooms: 시작 상태 변경 감지
-  // - room_players: 입장/준비/목표 변경 감지
   // ----------------------------
   useEffect(() => {
     if (!roomId || !supabase) return;
@@ -160,14 +162,13 @@ export default function RoomPage() {
   const isHost = myPlayer?.role === "host";
   const hasGuest = !!guestPlayer;
 
-  // 준비 상태 판단은 로컬이 아니라 DB 기준
+  // 준비 상태는 DB 기준
   const myReadyState = !!myPlayer?.is_ready;
   const opponentReady = !!opponentPlayer?.is_ready;
   const allReady = myReadyState && opponentReady;
 
   // ----------------------------
   // DB -> 로컬 입력값 동기화
-  // - 새로고침 후에도 내 target_title 복원
   // ----------------------------
   useEffect(() => {
     if (!myPlayer) return;
@@ -176,8 +177,6 @@ export default function RoomPage() {
 
   // ----------------------------
   // room.status 기반 시작
-  // - 호스트가 game_rooms.status='starting'으로 바꾸면
-  //   모든 클라이언트가 이 값을 보고 이동
   // ----------------------------
   useEffect(() => {
     if (!room || room.status !== "starting") return;
@@ -200,30 +199,40 @@ export default function RoomPage() {
 
   // ----------------------------
   // 준비 완료
-  // - 내 target_title / is_ready 저장
+  // 1) exact title 존재 여부 확인
+  // 2) 없으면 추천 후보 표시
+  // 3) 있으면 그대로 저장
   // ----------------------------
   const handleReady = async () => {
     if (!myTarget.trim() || !roomId || !user?.id) return;
 
     try {
       setSubmitError("");
+      setTargetSuggestions([]);
 
-      //입력 키워드 검증 + 보정
-      const resolvedTitle = await resolveWikiTitle(myTarget.trim());
+      const normalizedTitle = myTarget.trim();
 
-      if (!resolvedTitle) {
-        setSubmitError("존재하지 않는 문서입니다. 다시 입력해주세요.");
+      // 정확한 제목 존재 여부 확인
+      const exactExists = await checkExactWikiTitleExists(normalizedTitle);
+
+      if (!exactExists) {
+        const candidates = await searchWikiTitleCandidates(normalizedTitle);
+
+        setSubmitError(
+          candidates.length > 0
+            ? "정확히 일치하는 문서를 찾지 못했습니다. 아래 후보 중에서 선택해주세요."
+            : "정확히 일치하는 문서를 찾지 못했습니다. 제목을 다시 입력해주세요."
+        );
+
+        setTargetSuggestions(candidates);
         return;
       }
 
-      setMyTarget(resolvedTitle);
-
       await updateMyRoomPlayer(roomId, user.id, {
-        target_title: resolvedTitle,
+        target_title: normalizedTitle,
         is_ready: true,
       });
 
-      // 저장 직후 내 화면에도 즉시 반영
       const playerData = await fetchRoomPlayers(roomId);
       setPlayers(playerData);
     } catch (error) {
@@ -235,14 +244,13 @@ export default function RoomPage() {
 
   // ----------------------------
   // 준비 해제
-  // - target_title 은 유지하고 is_ready만 false
-  // - 필요 없으면 이 함수는 빼도 됨
   // ----------------------------
   const handleUnready = async () => {
     if (!roomId || !user?.id) return;
 
     try {
       setSubmitError("");
+      setTargetSuggestions([]);
 
       await updateMyRoomPlayer(roomId, user.id, {
         is_ready: false,
@@ -259,8 +267,6 @@ export default function RoomPage() {
 
   // ----------------------------
   // 호스트 게임 시작
-  // - DB 상태를 'starting'으로 바꾸는 것이 핵심
-  // - 실제 페이지 이동은 위 useEffect(room.status)에서 처리
   // ----------------------------
   const handleStartGame = async () => {
     if (!roomId || !user?.id) return;
@@ -300,6 +306,16 @@ export default function RoomPage() {
   };
 
   // ----------------------------
+  // 추천 후보 클릭
+  // - 자동 ready 하지 않고 input에만 채움
+  // ----------------------------
+  const handleSelectSuggestion = (title) => {
+    setMyTarget(title);
+    setSubmitError("");
+    setTargetSuggestions([]);
+  };
+
+  // ----------------------------
   // 로딩 화면
   // ----------------------------
   if (pending) {
@@ -332,7 +348,7 @@ export default function RoomPage() {
   }
 
   // ----------------------------
-  // 에러 화면
+  // 초기 로드 실패 화면
   // ----------------------------
   if (submitError && !room) {
     return (
@@ -420,7 +436,6 @@ export default function RoomPage() {
           )}
         </div>
 
-        {/* 상단 에러 메시지는 페이지 전체를 막지 않고 안내만 표시 */}
         {submitError && room && (
           <div className="mp-error" style={{ marginBottom: "16px" }}>
             {submitError}
@@ -448,14 +463,18 @@ export default function RoomPage() {
             </div>
 
             <div className="room-target-section">
-              <label className="room-target-label">목표 문서</label>
+              <label className="room-target-label">상대가 풀 목표 문서</label>
               <input
                 className="room-target-input"
                 type="text"
-                placeholder="예: 아인슈타인"
+                placeholder="예: 알베르트 아인슈타인"
                 value={myTarget}
                 disabled={myReadyState || room?.status !== "waiting"}
-                onChange={(e) => setMyTarget(e.target.value)}
+                onChange={(e) => {
+                  setMyTarget(e.target.value);
+                  setSubmitError("");
+                  setTargetSuggestions([]);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !myReadyState) {
                     handleReady();
@@ -463,6 +482,40 @@ export default function RoomPage() {
                 }}
               />
             </div>
+
+            {/* 추천 후보 목록 */}
+            {!myReadyState && targetSuggestions.length > 0 && (
+              <div className="room-target-suggestions" style={{ marginTop: "12px" }}>
+                <div
+                  style={{
+                    marginBottom: "8px",
+                    fontSize: "13px",
+                    opacity: 0.8,
+                  }}
+                >
+                  추천 문서
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                  }}
+                >
+                  {targetSuggestions.map((title) => (
+                    <button
+                      key={title}
+                      type="button"
+                      className="mp-action-btn"
+                      onClick={() => handleSelectSuggestion(title)}
+                    >
+                      {title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {!myReadyState ? (
               <button
@@ -477,7 +530,6 @@ export default function RoomPage() {
               <>
                 <div className="room-ready-badge">READY</div>
 
-                {/* 준비 해제 버튼이 필요하면 유지, 아니면 삭제 가능 */}
                 {room?.status === "waiting" && (
                   <button
                     type="button"
@@ -516,7 +568,7 @@ export default function RoomPage() {
                 </div>
 
                 <div className="room-target-section">
-                  <label className="room-target-label">목표 문서</label>
+                  <label className="room-target-label">내가 풀 목표 문서</label>
                   <div className="room-target-display">
                     {opponentPlayer.target_title
                       ? opponentPlayer.target_title
@@ -543,7 +595,6 @@ export default function RoomPage() {
           </div>
         </div>
 
-        {/* 하단 시작 영역 */}
         <div style={{ marginTop: "24px", textAlign: "center" }}>
           {isHost && hasGuest && allReady && room?.status === "waiting" && (
             <button
@@ -557,7 +608,9 @@ export default function RoomPage() {
           )}
 
           {!isHost && hasGuest && allReady && room?.status === "waiting" && (
-            <p className="mp-subtitle">호스트가 게임을 시작할 때까지 기다려주세요.</p>
+            <p className="mp-subtitle">
+              호스트가 게임을 시작할 때까지 기다려주세요.
+            </p>
           )}
         </div>
       </div>

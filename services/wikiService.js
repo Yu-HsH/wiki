@@ -238,3 +238,55 @@ export async function resolveWikiTitle(input) {
 
   return first.title;
 }
+/**
+ * 입력한 제목과 정확히 일치하는 위키백과 문서가 존재하는지 확인
+ * - 자동 치환하지 않음
+ * - 문서가 실제로 있으면 true, 없으면 false
+ */
+export async function checkExactWikiTitleExists(title) {
+  const trimmed = title?.trim();
+  if (!trimmed) return false;
+
+  const url = `https://ko.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(
+    trimmed
+  )}&format=json&origin=*`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("위키백과 문서 확인에 실패했습니다.");
+  }
+
+  const data = await response.json();
+  const pages = data?.query?.pages;
+
+  if (!pages) return false;
+
+  const firstPage = Object.values(pages)[0];
+  return !!firstPage && !("missing" in firstPage);
+}
+
+/**
+ * 입력값으로 위키백과 검색 후보를 가져옴
+ * - 자동 저장용이 아니라 사용자 선택용
+ * - 최대 5개 정도만 보여주는 용도
+ */
+export async function searchWikiTitleCandidates(input) {
+  const trimmed = input?.trim();
+  if (!trimmed) return [];
+
+  const url = `https://ko.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+    trimmed
+  )}&format=json&origin=*`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("위키백과 검색 후보를 불러오지 못했습니다.");
+  }
+
+  const data = await response.json();
+
+  return (data?.query?.search || [])
+    .slice(0, 5)
+    .map((item) => item.title)
+    .filter(Boolean);
+}
