@@ -55,14 +55,26 @@ export default function ProfilePage() {
     setSaveError("");
     setSaveSuccess("");
 
-    const { error } = await supabase
+    // 1. public.profiles 테이블 업데이트
+    const { error: dbError } = await supabase
       .from("profiles")
       .update({ nickname: nicknameInput.trim(), updated_at: new Date().toISOString() })
       .eq("id", user.id);
 
+    if (dbError) {
+      setSaveError(dbError.message || "저장에 실패했습니다.");
+      setSaving(false);
+      return;
+    }
+
+    // 2. Auth 메타데이터 업데이트 (전역 상태 및 MainPage 반영을 위함)
+    const { error: authError } = await supabase.auth.updateUser({
+      data: { nickname: nicknameInput.trim() }
+    });
+
     setSaving(false);
-    if (error) {
-      setSaveError(error.message || "저장에 실패했습니다.");
+    if (authError) {
+      setSaveError("프로필은 저장되었으나, 화면 동기화에 일부 실패했습니다.");
     } else {
       setProfile((prev) => ({ ...prev, nickname: nicknameInput.trim() }));
       setSaveSuccess("닉네임이 저장되었습니다.");
@@ -85,7 +97,7 @@ export default function ProfilePage() {
       setSaveSuccess("");
 
       const fileExt = file.name.split(".").pop();
-      const fileName = `profile_${Date.now()}.${fileExt}`;
+      const fileName = `profile.${fileExt}`; // 고정된 파일명 사용 (upsert)
       const filePath = `${user.id}/${fileName}`;
 
       // 1. Storage 업로드
@@ -93,14 +105,20 @@ export default function ProfilePage() {
         .from("avatars")
         .upload(filePath, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        if (uploadError.message.includes("Bucket not found") || uploadError.message.includes("The resource was not found") || uploadError.message.includes("bucket")) {
+          throw new Error("스토리지 버킷 'avatars'가 존재하지 않습니다. Supabase 대시보드(Storage)에서 Public 속성으로 생성해주세요.");
+        }
+        throw uploadError;
+      }
 
       // 2. Public URL 가져오기
       const { data: urlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
 
-      const avatarUrl = urlData.publicUrl;
+      // 브라우저 이미지 캐싱 방지를 위해 쿼리스트링에 타임스탬프 추가
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
       // 3. profiles 테이블 업데이트
       const { error: updateError } = await supabase
