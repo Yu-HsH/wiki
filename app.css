@@ -1294,3 +1294,99 @@ body {
 .ranking-filter-tabs {
   margin-bottom: 4px;
 }
+
+/* ── Wiki Viewer Navigation Rail ── */
+.wiki-nav-rail {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 40;
+  padding: 16px 10px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 30px;
+  border: 1px solid var(--app-line);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.wiki-nav-item {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.wiki-nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--app-dim);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.wiki-nav-dot.level-2 {
+  width: 8px;
+  height: 8px;
+}
+
+.wiki-nav-item:hover .wiki-nav-dot,
+.wiki-nav-item.active .wiki-nav-dot {
+  background: var(--app-brand);
+  transform: scale(1.6);
+}
+
+.wiki-nav-item.active .wiki-nav-dot {
+  background: var(--app-brand-deep);
+}
+
+.wiki-nav-tooltip {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%) translateX(10px);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--app-text);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.wiki-nav-item:hover .wiki-nav-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* ── Find Block Toast ── */
+.wiki-find-block-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--app-danger);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(202, 42, 70, 0.4);
+  animation: introModalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@media (max-width: 1100px) {
+  .wiki-nav-rail {
+    display: none;
+  }
+}
