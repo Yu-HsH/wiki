@@ -91,23 +91,34 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 용량 제한 체크 (예: 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setSaveError("이미지 크기는 2MB를 초과할 수 없습니다.");
+      return;
+    }
+
     try {
       setUploading(true);
       setSaveError("");
       setSaveSuccess("");
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `profile.${fileExt}`; // 고정된 파일명 사용 (upsert)
+      const fileExt = file.name.split(".").pop() || 'png';
+      // 경로 규격화: {auth.uid()}/profile.{ext}
+      const fileName = `profile.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
-      // 1. Storage 업로드
+      // 1. Storage 업로드 (upsert: true 시 SELECT/UPDATE/INSERT 정책 모두 필요)
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type // 컨텐츠 타입 명시 추천
+        });
 
       if (uploadError) {
-        if (uploadError.message.includes("Bucket not found") || uploadError.message.includes("The resource was not found") || uploadError.message.includes("bucket")) {
-          throw new Error("스토리지 버킷 'avatars'가 존재하지 않습니다. Supabase 대시보드(Storage)에서 Public 속성으로 생성해주세요.");
+        // RLS 에러인 경우 사용자에게 좀 더 친절하게 설명
+        if (uploadError.message.includes("row-level security")) {
+          throw new Error("업로드 권한이 없습니다. Storage 정책(RLS)을 확인해주세요.");
         }
         throw uploadError;
       }
@@ -117,7 +128,6 @@ export default function ProfilePage() {
         .from("avatars")
         .getPublicUrl(filePath);
 
-      // 브라우저 이미지 캐싱 방지를 위해 쿼리스트링에 타임스탬프 추가
       const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
       // 3. profiles 테이블 업데이트
@@ -128,16 +138,17 @@ export default function ProfilePage() {
 
       if (updateError) throw updateError;
 
-      // 4. 상태 반영
       setProfile((prev) => ({ ...prev, profile_image_url: avatarUrl }));
-      setSaveSuccess("프로필 사진이 변경되었습니다.");
+      setSaveSuccess("프로필 사진이 성공적으로 변경되었습니다.");
     } catch (error) {
-      setSaveError(error.message || "프로필 사진 변경에 실패했습니다.");
+      console.error("Upload error:", error);
+      setSaveError(error.message || "업로드 중 오류가 발생했습니다.");
     } finally {
       setUploading(false);
-      e.target.value = null; // 초기화
+      e.target.value = null;
     }
   };
+
 
   if (loading) {
     return (
@@ -194,16 +205,16 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-          
+
           {/* 사진 변경 버튼 */}
           <label style={{ cursor: uploading || user?.isGuest ? "not-allowed" : "pointer" }}>
             <span style={{ fontSize: "0.85rem", color: "var(--app-brand-deep)", fontWeight: 600 }}>
               {user?.isGuest ? "게스트는 변경 불가" : "사진 변경"}
             </span>
-            <input 
-              type="file" 
-              accept="image/*" 
-              style={{ display: "none" }} 
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
               onChange={handleFileChange}
               disabled={uploading || user?.isGuest}
             />
