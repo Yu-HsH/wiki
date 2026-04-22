@@ -1373,26 +1373,21 @@ body {
   background: var(--app-brand-deep);
 }
 
-.wiki-nav-tooltip {
-  position: absolute;
-  right: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
+/* ── Floating Tooltip (Rail 외부에서 렌더링) ── */
+.wiki-nav-floating-tooltip {
+  position: fixed;
   pointer-events: none;
-  z-index: 35;
-
-  padding: 6px 10px;
+  z-index: 10000;
+  padding: 6px 12px;
   border-radius: 10px;
-  background: rgba(8, 12, 22, 0.92);
+  background: rgba(8, 12, 22, 0.95);
   color: white;
   font-size: 12px;
   font-weight: 600;
-}
-
-.wiki-nav-item:hover .wiki-nav-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-50%);
+  animation: introModalPop 0.15s ease-out forwards;
 }
 
 /* ── Find Block Toast ── */

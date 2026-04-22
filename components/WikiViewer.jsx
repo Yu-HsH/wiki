@@ -9,6 +9,7 @@ export default function WikiViewer({
   const [headings, setHeadings] = useState([]);
   const [showFindToast, setShowFindToast] = useState(false);
   const [activeId, setActiveId] = useState("");
+  const [hoveredHeading, setHoveredHeading] = useState(null); // { text, top, right }
 
   // 1. 페이지에서 찾기(Ctrl+F/Cmd+F) 및 우클릭 방지 (100% 차단은 불가능함을 주석으로 명시)
   useEffect(() => {
@@ -127,12 +128,33 @@ export default function WikiViewer({
               key={h.id} 
               className={`wiki-nav-item ${activeId === h.id ? 'active' : ''}`}
               onClick={() => scrollToHeading(h.id)}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredHeading({
+                  text: h.text,
+                  top: rect.top + rect.height / 2,
+                  right: window.innerWidth - rect.left + 8
+                });
+              }}
+              onMouseLeave={() => setHoveredHeading(null)}
             >
               <div className={`wiki-nav-dot level-${h.level}`} />
-              <div className="wiki-nav-tooltip">{h.text}</div>
             </div>
           ))}
         </nav>
+      )}
+
+      {/* 별도 레이어의 Floating 툴팁 (overflow 잘림 방지) */}
+      {hoveredHeading && (
+        <div 
+          className="wiki-nav-floating-tooltip"
+          style={{ 
+            top: hoveredHeading.top, 
+            right: hoveredHeading.right 
+          }}
+        >
+          {hoveredHeading.text}
+        </div>
       )}
       <section className="mission-card">
         <div className="mission-head">
