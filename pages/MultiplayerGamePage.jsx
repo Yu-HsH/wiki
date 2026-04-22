@@ -248,7 +248,7 @@ export default function MultiplayerGamePage() {
 
     const timer = setTimeout(() => {
       setPhase(PHASE.COUNTDOWN);
-    }, 10000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [phase]);
