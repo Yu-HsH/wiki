@@ -20,7 +20,7 @@ function formatDate(value) {
 export default function RankingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [weekly, setWeekly] = useState(false);
+  const [period, setPeriod] = useState("all"); // "all", "weekly", "daily"
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [records, setRecords] = useState([]);
@@ -33,7 +33,7 @@ export default function RankingPage() {
       try {
         setLoading(true);
         setError("");
-        const ranking = await fetchRankings({ weekly, limit: 50 });
+        const ranking = await fetchRankings({ period, limit: 50 });
         if (!cancelled) setRecords(ranking);
       } catch (fetchError) {
         if (!cancelled) setError(fetchError?.message || "Could not load ranking.");
@@ -46,7 +46,7 @@ export default function RankingPage() {
     return () => {
       cancelled = true;
     };
-  }, [weekly]);
+  }, [period]);
 
   return (
     <div className="dashboard-page">
@@ -67,22 +67,28 @@ export default function RankingPage() {
       </header>
 
       <section className="dashboard-card ranking-toolbar">
-        <div className="toggle-wrap">
+        <div className="toggle-wrap ranking-filter-tabs">
           <button
             type="button"
-            className={!weekly ? "toggle-btn active" : "toggle-btn"}
-            onClick={() => setWeekly(false)}
+            className={period === "daily" ? "toggle-btn active" : "toggle-btn"}
+            onClick={() => setPeriod("daily")}
           >
-            All Time
+            Daily
           </button>
           <button
             type="button"
-            className={weekly ? "toggle-btn active" : "toggle-btn"}
-            onClick={() => setWeekly(true)}
+            className={period === "weekly" ? "toggle-btn active" : "toggle-btn"}
+            onClick={() => setPeriod("weekly")}
           >
             Weekly
           </button>
-
+          <button
+            type="button"
+            className={period === "all" ? "toggle-btn active" : "toggle-btn"}
+            onClick={() => setPeriod("all")}
+          >
+            All Time
+          </button>
         </div>
       </section>
 
@@ -113,11 +119,24 @@ export default function RankingPage() {
                   const isExpanded = expandedId === record.id;
                   const rowKey = record.id || `${record.userId}-${record.createdAt}-${index}`;
                   
+                  // 이름 결정 로직 (프로필 닉네임 우선)
+                  const displayName = record.nickname || record.playerName || "Unknown";
+                  const initial = displayName.charAt(0).toUpperCase();
+
                   return (
                     <React.Fragment key={rowKey}>
                       <tr className={isMine ? "mine" : ""}>
                         <td>{index + 1}</td>
-                        <td>{record.playerName || "Unknown"}</td>
+                        <td className="ranking-player-cell">
+                          <div className="ranking-avatar">
+                            {record.profileImageUrl ? (
+                              <img src={record.profileImageUrl} alt="" className="ranking-avatar-img" />
+                            ) : (
+                              <div className="ranking-avatar-fallback">{initial}</div>
+                            )}
+                          </div>
+                          <span className="ranking-player-name">{displayName}</span>
+                        </td>
                         <td>{record.targetTitle}</td>
                         <td>{formatDuration(record.elapsedSeconds)}</td>
                         <td>{record.clickCount}</td>

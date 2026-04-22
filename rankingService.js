@@ -116,31 +116,40 @@ export async function fetchUserStats(userId) {
 }
 
 /**
- * 전체 랭킹 또는 주간 TOP 랭킹을 가져옵니다.
- * @param {Object} options - {weekly: boolean, limit: number}
+ * 일간/주간/전체 랭킹 데이터를 가져옵니다.
+ * @param {Object} options - {period: "daily"|"weekly"|"all", limit: number}
  */
-export async function fetchRankings({ weekly = false, limit = 50 } = {}) {
-  // 로컬 데모 모드 랭킹 산출
+export async function fetchRankings({ period = "all", limit = 50 } = {}) {
+  // 1. 로컬 데모 모드 랭킹 산출
   if (!isSupabaseConfigured) {
     let records = readLocalRecords();
-    if (weekly) {
-      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      records = records.filter((record) => new Date(record.created_at).getTime() >= sevenDaysAgo);
+    const now = Date.now();
+    
+    if (period === "daily") {
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      records = records.filter((r) => new Date(r.created_at).getTime() >= oneDayAgo);
+    } else if (period === "weekly") {
+      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+      records = records.filter((r) => new Date(r.created_at).getTime() >= sevenDaysAgo);
     }
+
     return sortByBestTime(records)
       .slice(0, limit)
       .map((record) => ({
         id: record.id,
+        userId: record.user_id,
         playerName: record.player_name,
         targetTitle: record.target_title,
         elapsedSeconds: record.elapsed_seconds,
         clickCount: record.click_count,
+        pathTitles: record.path_titles ?? [],
         createdAt: record.created_at,
-        userId: record.user_id,
+        profileImageUrl: null,
+        nickname: null
       }));
   }
 
-  // Supabase 서버로부터 랭킹 데이터 조회
+  // 2. Supabase 서버로부터 랭킹 데이터 조회
   let query = supabase
     .from("game_records")
     .select("id, user_id, player_name, target_title, elapsed_seconds, click_count, path_titles, created_at")
@@ -148,22 +157,48 @@ export async function fetchRankings({ weekly = false, limit = 50 } = {}) {
     .order("created_at", { ascending: true })
     .limit(limit);
 
-  if (weekly) {
+  if (period === "daily") {
+    const oneDayAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    query = query.gte("created_at", oneDayAgoIso);
+  } else if (period === "weekly") {
     const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     query = query.gte("created_at", sevenDaysAgoIso);
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
+  const { data: records, error: recordError } = await query;
+  if (recordError) throw recordError;
 
-  return (data || []).map((record) => ({
-    id: record.id,
-    playerName: record.player_name,
-    targetTitle: record.target_title,
-    elapsedSeconds: record.elapsed_seconds,
-    clickCount: record.click_count,
-    pathTitles: record.path_titles ?? [],
-    createdAt: record.created_at,
-    userId: record.user_id,
-  }));
+  const resultRecords = records || [];
+  if (resultRecords.length === 0) return [];
+
+  // 3. 연관된 프로필 정보 가져오기
+  const userIds = [...new Set(resultRecords.map(r => r.user_id).filter(Boolean))];
+  let profiles = [];
+  
+  if (userIds.length > 0) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("id, nickname, profile_image_url")
+      .in("id", userIds);
+    profiles = profileData || [];
+  }
+
+  const profileMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+
+  // 4. 결과 병합
+  return resultRecords.map((record) => {
+    const profile = profileMap[record.user_id];
+    return {
+      id: record.id,
+      userId: record.user_id,
+      playerName: record.player_name,
+      targetTitle: record.target_title,
+      elapsedSeconds: record.elapsed_seconds,
+      clickCount: record.click_count,
+      pathTitles: record.path_titles ?? [],
+      createdAt: record.created_at,
+      profileImageUrl: profile?.profile_image_url || null,
+      nickname: profile?.nickname || null
+    };
+  });
 }

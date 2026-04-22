@@ -1246,3 +1246,51 @@ body {
 .help-modal li {
   margin-bottom: 4px;
 }
+
+/* ── Ranking Page Extensions ── */
+.ranking-player-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 150px;
+}
+
+.ranking-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--app-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-line);
+}
+
+.ranking-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ranking-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--app-brand), var(--app-brand-deep));
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ranking-player-name {
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.ranking-filter-tabs {
+  margin-bottom: 4px;
+}
