@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const [editMode, setEditMode] = useState(false);
   const [nicknameInput, setNicknameInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
 
@@ -74,6 +75,52 @@ export default function ProfilePage() {
     navigate("/login");
   };
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      setSaveError("");
+      setSaveSuccess("");
+
+      const fileExt = file.name.split(".").pop();
+      const fileName = `profile_${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      // 1. Storage 업로드
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Public URL 가져오기
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      const avatarUrl = urlData.publicUrl;
+
+      // 3. profiles 테이블 업데이트
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ profile_image_url: avatarUrl, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      // 4. 상태 반영
+      setProfile((prev) => ({ ...prev, profile_image_url: avatarUrl }));
+      setSaveSuccess("프로필 사진이 변경되었습니다.");
+    } catch (error) {
+      setSaveError(error.message || "프로필 사진 변경에 실패했습니다.");
+    } finally {
+      setUploading(false);
+      e.target.value = null; // 초기화
+    }
+  };
+
   if (loading) {
     return (
       <div className="app-center">
@@ -98,25 +145,51 @@ export default function ProfilePage() {
         <p className="auth-badge">내 프로필</p>
 
         {/* Avatar */}
-        <div style={{ display: "flex", justifyContent: "center", margin: "1.25rem 0" }}>
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt="프로필 이미지"
-              style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border, #334155)" }}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "1.25rem 0" }}>
+          <div style={{ position: "relative", marginBottom: "0.5rem" }}>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="프로필 이미지"
+                style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border, #334155)" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 80, height: 80, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "2rem", color: "#fff",
+                }}
+              >
+                {displayNickname.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {/* 업로드 상태 오버레이 */}
+            {uploading && (
+              <div style={{
+                position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+                background: "rgba(0,0,0,0.5)", borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "0.8rem"
+              }}>
+                업로드...
+              </div>
+            )}
+          </div>
+          
+          {/* 사진 변경 버튼 */}
+          <label style={{ cursor: uploading || user?.isGuest ? "not-allowed" : "pointer" }}>
+            <span style={{ fontSize: "0.85rem", color: "var(--app-brand-deep)", fontWeight: 600 }}>
+              {user?.isGuest ? "게스트는 변경 불가" : "사진 변경"}
+            </span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              style={{ display: "none" }} 
+              onChange={handleFileChange}
+              disabled={uploading || user?.isGuest}
             />
-          ) : (
-            <div
-              style={{
-                width: 80, height: 80, borderRadius: "50%",
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "2rem", color: "#fff",
-              }}
-            >
-              {displayNickname.charAt(0).toUpperCase()}
-            </div>
-          )}
+          </label>
         </div>
 
         {/* Username (read-only) */}

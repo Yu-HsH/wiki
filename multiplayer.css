@@ -786,14 +786,26 @@
   color: #c9d1d9;
 }
 
+.mp-game-main .wiki-inline-link {
+  color: #38bdf8; /* 밝은 하늘색 */
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.mp-game-main .wiki-inline-link:hover {
+  text-decoration: underline;
+  color: #7dd3fc;
+}
+
 .mp-game-main .link-chip {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.1);
-  color: #58a6ff;
+  color: #38bdf8;
 }
 
 .mp-game-main .link-chip:hover:enabled {
-  background: rgba(88, 166, 255, 0.08);
+  background: rgba(56, 189, 248, 0.1);
+  color: #7dd3fc;
 }
 
 .mp-game-main .links-header {
