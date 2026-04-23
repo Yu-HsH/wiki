@@ -5,7 +5,8 @@
 .mp-page {
   position: relative;
   min-height: 100vh;
-  background: #0d1117;
+  background: var(--bg-app);
+  color: var(--text-main);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -614,7 +615,7 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* Empty opponent slot */
+/* Search Suggestions visibility (uses global classes in app.css) */
 .room-empty-icon {
   font-size: 40px;
   opacity: 0.5;

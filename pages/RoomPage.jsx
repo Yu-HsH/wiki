@@ -489,33 +489,16 @@ export default function RoomPage() {
 
             {/* 검색 결과 후보 */}
             {!myReadyState && targetSuggestions.length > 0 && (
-              <div
-                className="room-target-suggestions"
-                style={{
-                  marginTop: "12px",
-                  border: "1px solid var(--app-line, rgba(255,255,255,0.12))",
-                  borderRadius: "8px",
-                  overflow: "hidden",
-                }}
-              >
+              <div className="search-results-list" style={{ marginTop: "12px" }}>
                 {targetSuggestions.map((item) => (
                   <div
                     key={item.title}
                     onClick={() => handleSelectSuggestion(item)}
-                    style={{
-                      padding: "8px 12px",
-                      borderBottom: "1px solid var(--app-line, rgba(255,255,255,0.12))",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      backgroundColor:
-                        selectedTargetTitle === item.title
-                          ? "rgba(255,255,255,0.1)"
-                          : "rgba(255,255,255,0.05)",
-                    }}
+                    className={`search-item ${selectedTargetTitle === item.title ? "selected" : ""}`}
                   >
-                    <div style={{ fontWeight: "bold" }}>{item.title}</div>
+                    <div className="search-item-title">{item.title}</div>
                     <div
-                      style={{ fontSize: "0.8rem", opacity: 0.7 }}
+                      className="search-item-snippet"
                       dangerouslySetInnerHTML={{ __html: item.snippet || "" }}
                     />
                   </div>

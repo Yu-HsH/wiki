@@ -191,22 +191,20 @@ export default function MainPage() {
 
             {/* 검색 결과 목록 표시 */}
             {searchResults.length > 0 && (
-              <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid var(--app-line)", borderRadius: "8px", marginBottom: "1rem" }}>
+              <div className="search-results-list">
                 {searchResults.map((item) => (
                   <div
                     key={item.title}
                     onClick={() => setSelectedTarget(item)}
-                    style={{
-                      padding: "10px",
-                      borderBottom: "1px solid var(--app-line)",
-                      cursor: "pointer",
-                      backgroundColor: selectedTarget?.title === item.title ? "rgba(52, 152, 219, 0.1)" : "transparent",
-                    }}
+                    className={`search-item ${selectedTarget?.title === item.title ? "selected" : ""}`}
                   >
-                    <strong style={{ display: "block", color: selectedTarget?.title === item.title ? "var(--brand)" : "inherit" }}>
+                    <strong className="search-item-title">
                       {item.title}
                     </strong>
-                    <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }} dangerouslySetInnerHTML={{ __html: item.snippet }} />
+                    <div
+                      className="search-item-snippet"
+                      dangerouslySetInnerHTML={{ __html: item.snippet }}
+                    />
                   </div>
                 ))}
               </div>

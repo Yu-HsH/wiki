@@ -1,12 +1,36 @@
 :root {
-  --app-bg: #eef3f2;
-  --app-card: #ffffff;
-  --app-text: #172429;
-  --app-dim: #5f6f75;
-  --app-line: rgba(23, 36, 41, 0.12);
-  --app-brand: #00a495;
-  --app-brand-deep: #007d73;
-  --app-danger: #ca2a46;
+  /* New Semantic Variables */
+  --text-main: #172429;
+  --text-muted: #5f6f75;
+  --bg-app: #eef3f2;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --line-main: rgba(23, 36, 41, 0.12);
+  --brand: #00a495;
+  --brand-deep: #007d73;
+  --danger: #ca2a46;
+
+  /* Backward Compatibility */
+  --app-bg: var(--bg-app);
+  --app-card: var(--bg-card);
+  --app-text: var(--text-main);
+  --app-dim: var(--text-muted);
+  --app-line: var(--line-main);
+  --app-brand: var(--brand);
+  --app-brand-deep: var(--brand-deep);
+  --app-danger: var(--danger);
+}
+
+/* Dark Mode Overrides for specific containers */
+.intro-modal-card,
+.mp-page,
+[data-theme='dark'] {
+  --text-main: #f0f6fc;
+  --text-muted: #8b949e;
+  --bg-app: #0d1117;
+  --bg-card: #161b22;
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --line-main: rgba(240, 246, 252, 0.12);
 }
 
 * {
@@ -77,7 +101,8 @@ body {
 
 .auth-tab {
   border: 1px solid var(--app-line);
-  background: #fff;
+  background: var(--bg-input);
+  color: var(--text-main);
   border-radius: 10px;
   padding: 8px 12px;
   cursor: pointer;
@@ -102,10 +127,16 @@ body {
 
 .auth-input {
   border: 1px solid var(--app-line);
-  background: #fff;
+  background: var(--bg-input);
+  color: var(--text-main);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 15px;
+}
+
+.auth-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 
 .auth-error {
@@ -137,15 +168,15 @@ body {
 }
 
 .app-btn-secondary {
-  background: #fff;
+  background: var(--bg-input);
   border-color: rgba(0, 125, 115, 0.28);
-  color: var(--app-brand-deep);
+  color: var(--brand-deep);
 }
 
 .app-btn-ghost {
-  background: #fff;
+  background: var(--bg-input);
   border-color: var(--app-line);
-  color: var(--app-text);
+  color: var(--text-main);
 }
 
 .dashboard-page {
@@ -1118,8 +1149,8 @@ body {
   max-height: 90vh;
   overflow: auto;
   border-radius: 28px;
-  background: rgba(13, 18, 33, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-card);
+  border: 1px solid var(--app-line);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   animation: introModalPop 0.25s ease;
 }
@@ -1439,4 +1470,51 @@ body {
   .ad-banner-container {
     background: rgba(255, 255, 255, 0.05);
   }
+}
+
+/* ── Search Suggestions (Global) ── */
+.search-results-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background: var(--bg-card);
+}
+
+.search-item {
+  padding: 10px;
+  border-bottom: 1px solid var(--app-line);
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.search-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.search-item.selected {
+  background: rgba(0, 164, 149, 0.1);
+}
+
+.search-item-title {
+  display: block;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.search-item.selected .search-item-title {
+  color: var(--brand);
+}
+
+.search-item-snippet {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.search-item-snippet .searchmatch {
+  color: var(--brand);
+  font-weight: 700;
 }
