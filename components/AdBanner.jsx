@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 
 export default function AdBanner({
     adSlot = "YOUR_AD_SLOT_ID",
@@ -9,7 +9,7 @@ export default function AdBanner({
 }) {
     useEffect(() => {
         try {
-            if (window.adsbygoogle) {
+            if (typeof window !== "undefined" && window.adsbygoogle) {
                 window.adsbygoogle.push({});
             }
         } catch (error) {
@@ -29,11 +29,11 @@ export default function AdBanner({
             <ins
                 className="adsbygoogle"
                 style={style}
-                data-ad-client="ca-pub-7481197155"
+                data-ad-client="ca-pub-YOUR_PUBLISHER_ID"
                 data-ad-slot={adSlot}
                 data-ad-format={format}
                 data-full-width-responsive={responsive}
             />
         </div>
     );
-}           
+}
