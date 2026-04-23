@@ -16,17 +16,9 @@ import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import { supabase } from "../supabaseClient";
 
-import { generateInitialInventory } from "../data/items";
-import {
-  addEffect,
-  buildTimedEffect,
-  canUseItem as canUseItemBase,
-  clearExpiredEffects,
-  markItemUsed,
-  removeEffect,
-} from "../utils/itemSystem";
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
+import useItemSystem from "../hooks/useItemSystem";
 
 const pickDifficulty = () => {
   const r = Math.random();
@@ -40,6 +32,7 @@ const fetchAiTargetTitle = async () => {
   const { data, error } = await supabase.functions.invoke("target-level", {
     body: { difficulty },
   });
+
   if (error) throw error;
   if (!data || data.length === 0) throw new Error("No data returned");
 
@@ -80,31 +73,21 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [clickCount, setClickCount] = useState(0);
 
-  // ----------------------------
-  // 아이템 상태
-  // ----------------------------
-  const [inventory, setInventory] = useState([]);
-  const [activeEffects, setActiveEffects] = useState({ self: [], opponent: [] });
-  const [immunityUntil, setImmunityUntil] = useState({ self: 0, opponent: 0 });
-  const [translateCurrentPage, setTranslateCurrentPage] = useState(false);
-  const [historyStack, setHistoryStack] = useState([]);
-  const [searchAvailable, setSearchAvailable] = useState(false);
-  const [highlightedLinks, setHighlightedLinks] = useState([]);
-  const [floatingMessage, setFloatingMessage] = useState("");
-
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const autoStarted = useRef(false);
 
-  // ----------------------------
-  // 타이머
-  // ----------------------------
   const handleCountdownComplete = useCallback(() => {
     setPhase(PHASE.PLAYING);
   }, []);
+
+  // ----------------------------
+  // 타이머
+  // ----------------------------
   useEffect(() => {
     if (phase === PHASE.PLAYING) {
       startTimeRef.current = Date.now() - elapsedSeconds * 1000;
+
       timerRef.current = setInterval(() => {
         setElapsedSeconds(
           Math.floor((Date.now() - startTimeRef.current) / 1000)
@@ -119,18 +102,6 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     };
   }, [phase, elapsedSeconds]);
 
-  // 지속 효과 만료 정리
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveEffects((prev) => ({
-        self: clearExpiredEffects(prev.self),
-        opponent: clearExpiredEffects(prev.opponent),
-      }));
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, []);
-
   const checkWin = useCallback((pageTitle, tgtTitle) => {
     return (
       pageTitle &&
@@ -142,6 +113,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const handleWin = useCallback(
     (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
       setPhase(PHASE.SUCCESS);
+
       if (onGameComplete) {
         onGameComplete({
           startTitle,
@@ -155,6 +127,90 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     },
     [onGameComplete, startTitle]
   );
+
+  // ----------------------------
+  // 문서 이동
+  // ----------------------------
+  const handleMove = useCallback(
+    async (nextTitle) => {
+      if (phase !== PHASE.PLAYING || isLoading) return;
+
+      const previousTitle = currentTitle;
+
+      setClickCount((prev) => prev + 1);
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const page = await fetchPageData(nextTitle);
+
+        setCurrentTitle(page.title);
+        setCurrentSummary(page.summary);
+        setCurrentDocumentHtml(page.documentHtml);
+        setLinks(page.links);
+
+        const newPath = [...pathTitles, page.title];
+        setPathTitles(newPath);
+
+        if (previousTitle) {
+          itemSystem.pushHistory(previousTitle);
+        }
+
+        itemSystem.clearPageScopedEffects();
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        if (checkWin(page.title, target.title)) {
+          handleWin(
+            page.title,
+            target.title,
+            elapsedSeconds,
+            clickCount + 1,
+            newPath
+          );
+        }
+      } catch (e) {
+        setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      phase,
+      isLoading,
+      currentTitle,
+      pathTitles,
+      checkWin,
+      target.title,
+      elapsedSeconds,
+      clickCount,
+      handleWin,
+    ]
+  );
+
+  // ----------------------------
+  // 아이템 시스템
+  // ----------------------------
+  const itemSystem = useItemSystem({
+    mode: "single",
+    links,
+    onMove: async (title) => {
+      await handleMove(title);
+    },
+    onRandomTeleport: async () => {
+      const randomTitle = await fetchDistinctRandomTitle(
+        new Set([normalizeTitle(currentTitle)])
+      );
+      await handleMove(randomTitle);
+    },
+  });
+
+  // COUNTDOWN 진입 시 아이템 초기화
+  useEffect(() => {
+    if (phase === PHASE.COUNTDOWN) {
+      itemSystem.initializeItems({ total: 4, rareCount: 1 });
+    }
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----------------------------
   // 게임 준비
@@ -227,16 +283,6 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         const newPath = [startPage.title];
         setPathTitles(newPath);
 
-        // 아이템 초기화
-        setInventory(generateInitialInventory({ total: 4, rareCount: 1 }));
-        setActiveEffects({ self: [], opponent: [] });
-        setImmunityUntil({ self: 0, opponent: 0 });
-        setTranslateCurrentPage(false);
-        setHistoryStack([]);
-        setSearchAvailable(false);
-        setHighlightedLinks([]);
-        setFloatingMessage("");
-
         if (checkWin(startPage.title, targetSummaryData.title)) {
           handleWin(startPage.title, targetSummaryData.title, 0, 0, newPath);
         } else {
@@ -251,134 +297,20 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     [checkWin, handleWin, location.state]
   );
 
+  // ----------------------------
   // 메인 빠른 시작
+  // ----------------------------
   useEffect(() => {
     const state = location.state;
+
     if (state?.mode && !autoStarted.current) {
       autoStarted.current = true;
-      handleSetupComplete({ mode: state.mode, keyword: state.keyword ?? "" });
+      handleSetupComplete({
+        mode: state.mode,
+        keyword: state.keyword ?? "",
+      });
     }
   }, [location.state, handleSetupComplete]);
-
-  // ----------------------------
-  // 문서 이동
-  // ----------------------------
-  const handleMove = async (nextTitle) => {
-    if (phase !== PHASE.PLAYING || isLoading) return;
-
-    const previousTitle = currentTitle;
-
-    setClickCount((prev) => prev + 1);
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const page = await fetchPageData(nextTitle);
-
-      setCurrentTitle(page.title);
-      setCurrentSummary(page.summary);
-      setCurrentDocumentHtml(page.documentHtml);
-      setLinks(page.links);
-
-      const newPath = [...pathTitles, page.title];
-      setPathTitles(newPath);
-
-      // 이동 기록 저장
-      if (previousTitle) {
-        setHistoryStack((prev) => [...prev, previousTitle]);
-      }
-
-      // 현재 문서에만 적용되는 효과 해제
-      if (translateCurrentPage) {
-        setTranslateCurrentPage(false);
-      }
-
-      // 하이라이트는 현재 페이지 기준이라 이동 시 해제
-      setHighlightedLinks([]);
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
-
-      if (checkWin(page.title, target.title)) {
-        handleWin(page.title, target.title, elapsedSeconds, clickCount + 1, newPath);
-      }
-    } catch (e) {
-      setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ----------------------------
-  // 아이템 사용
-  // ----------------------------
-  const useItem = async (item) => {
-    const usable = canUseItemBase(item, { historyStack, links });
-    if (!usable || item.used) return;
-
-    setInventory((prev) => markItemUsed(prev, item.instanceId));
-
-    switch (item.id) {
-      case "blind": {
-        setActiveEffects((prev) => ({
-          ...prev,
-          self: addEffect(prev.self, buildTimedEffect("blind", item.duration)),
-        }));
-        setFloatingMessage("시야 가리기!");
-        break;
-      }
-
-      case "cleanse_shield": {
-        setActiveEffects((prev) => ({
-          ...prev,
-          self: removeEffect(removeEffect(prev.self, "blind"), "translate_current"),
-        }));
-        setImmunityUntil((prev) => ({
-          ...prev,
-          self: Date.now() + 10000,
-        }));
-        setFloatingMessage("방해 해제 + 10초 면역");
-        break;
-      }
-
-      case "search_once": {
-        setSearchAvailable(true);
-        setFloatingMessage("페이지 내 검색 1회 가능");
-        break;
-      }
-
-      case "go_back": {
-        if (!historyStack.length) break;
-        const previousTitle = historyStack[historyStack.length - 1];
-        setHistoryStack((prev) => prev.slice(0, -1));
-        await handleMove(previousTitle);
-        setFloatingMessage("뒤로가기 사용");
-        break;
-      }
-
-      case "highlight_links": {
-        const candidates = (links || []).slice(0, 3);
-        setHighlightedLinks(candidates);
-        setFloatingMessage("링크 하이라이트!");
-        break;
-      }
-
-      case "random_teleport": {
-        const randomTitle = await fetchDistinctRandomTitle(
-          new Set([normalizeTitle(currentTitle)])
-        );
-        await handleMove(randomTitle);
-        setFloatingMessage("랜덤 텔레포트!");
-        break;
-      }
-
-      default: {
-        setFloatingMessage(`${item.name} 사용`);
-        break;
-      }
-    }
-
-    setTimeout(() => setFloatingMessage(""), 1800);
-  };
 
   return (
     <div className="wiki-game-page">
@@ -438,8 +370,8 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             clickCount={clickCount}
             startTitle={startTitle}
             onLinkClick={handleMove}
-            highlightedLinks={highlightedLinks}
-            searchAvailable={searchAvailable}
+            highlightedLinks={itemSystem.highlightedLinks}
+            searchAvailable={itemSystem.searchAvailable}
           />
         )}
 
@@ -448,24 +380,17 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         phase === PHASE.SUCCESS) && (
           <>
             <ItemBar
-              inventory={inventory}
-              canUseItem={(item) =>
-                canUseItemBase(item, {
-                  historyStack,
-                  links,
-                })
-              }
-              onUseItem={(instanceId) => {
-                const item = inventory.find((i) => i.instanceId === instanceId);
-                if (!item) return;
-                useItem(item);
-              }}
+              inventory={itemSystem.inventory}
+              canUseItem={itemSystem.canUseItem}
+              onUseItem={itemSystem.useItem}
             />
 
             <EffectOverlay
-              blindActive={activeEffects.self.some((e) => e.id === "blind")}
-              floatingMessage={floatingMessage}
-              immune={Date.now() < immunityUntil.self}
+              blindActive={itemSystem.activeEffects.self.some(
+                (e) => e.id === "blind"
+              )}
+              floatingMessage={itemSystem.floatingMessage}
+              immune={Date.now() < itemSystem.immunityUntil.self}
             />
           </>
         )}

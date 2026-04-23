@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { formatDuration } from "../services/wikiService";
+import { useItemSystem } from "../hooks/useItemSystem";
+
+
 
 export default function WikiViewer({
   target,
@@ -101,6 +104,7 @@ export default function WikiViewer({
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [currentDocumentHtml, isLoading]);
+
 
   const scrollToHeading = (id) => {
     const el = document.getElementById(id);
