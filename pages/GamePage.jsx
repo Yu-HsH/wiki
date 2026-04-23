@@ -99,6 +99,9 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   // ----------------------------
   // 타이머
   // ----------------------------
+  const handleCountdownComplete = useCallback(() => {
+    setPhase(PHASE.PLAYING);
+  }, []);
   useEffect(() => {
     if (phase === PHASE.PLAYING) {
       startTimeRef.current = Date.now() - elapsedSeconds * 1000;
@@ -418,7 +421,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       )}
 
       {phase === PHASE.COUNTDOWN && (
-        <CountdownOverlay onComplete={() => setPhase(PHASE.PLAYING)} />
+        <CountdownOverlay onComplete={handleCountdownComplete} />
       )}
 
       {(phase === PHASE.PLAYING ||

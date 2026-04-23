@@ -1,13 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 const STEPS = [3, 2, 1, "시작!"];
 
 export default function CountdownOverlay({ onComplete }) {
   const [stepIndex, setStepIndex] = useState(0);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     if (stepIndex >= STEPS.length) {
-      onComplete();
+      onCompleteRef.current?.();
       return;
     }
 
@@ -17,7 +22,7 @@ export default function CountdownOverlay({ onComplete }) {
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [stepIndex, onComplete]);
+  }, [stepIndex]);
 
   if (stepIndex >= STEPS.length) return null;
 

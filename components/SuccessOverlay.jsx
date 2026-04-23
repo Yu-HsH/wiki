@@ -1,3 +1,4 @@
+import "./SuccessOverlay.css";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";
@@ -99,15 +100,16 @@ export default function SuccessOverlay({
             </div>
           )}
         </div>
-        {/* ⬇️ 버튼을 누르기 전 시선이 닿는 곳에 방해되지 않게 배치 */}
-        <div style={{ marginBottom: "20px" }}>
-          <AdBanner />
-        </div>
+
         <div style={{ display: "flex", justifyContent: "center" }}>
           <button className="restart-btn" onClick={onReturnToMain}>
             메인 화면으로 돌아가기
           </button>
         </div>
+      </div>
+      {/* ⬇️ 버튼을 누르기 전 시선이 닿는 곳에 방해되지 않게 배치 */}
+      <div style={{ marginBottom: "20px" }}>
+        <AdBanner />
       </div>
     </div >
   );
