@@ -8,28 +8,17 @@ import {
   leaveRoom,
   startRoomGame,
 } from "../services/multiplayerService";
-import {
-  checkExactWikiTitleExists,
-  searchWikiTitleCandidates,
-} from "../services/wikiService";
+import { searchWikiTitleCandidates } from "../services/wikiService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
 
 /**
  * 대전 대기실 페이지
  *
- * 현재 역할
- * 1) 방 정보(game_rooms) 조회
- * 2) 참가자 정보(room_players) 조회
- * 3) 내 목표 문서 / 준비 상태 저장
- * 4) Realtime으로 방 상태 / 참가자 상태 반영
- * 5) 호스트가 게임 시작 버튼을 누르면 game_rooms.status = 'starting'
- * 6) 모든 플레이어는 room.status === 'starting' 을 감지하면 게임 화면으로 이동
- *
- * 목표 문서 입력 정책
- * - 자동으로 다른 제목으로 치환하지 않음
- * - 정확히 존재하는 제목이면 그대로 저장
- * - 정확한 제목이 없으면 후보 리스트를 보여주고 사용자가 직접 선택
+ * 변경 포인트:
+ * - target 입력은 "검색 → 후보 선택 → 준비 완료" 방식
+ * - raw keyword(keywordInput)와 실제 target_title(selectedTargetTitle)를 분리
+ * - 자동 보정 / 자동 확정 제거
  */
 export default function RoomPage() {
   const { roomId } = useParams();
@@ -44,52 +33,14 @@ export default function RoomPage() {
   const [pending, setPending] = useState(true);
   const [submitError, setSubmitError] = useState("");
 
-  // 내 입력값
-  // 기존 myTarget 상태를 다음 3개로 세분화합니다.
+  // 입력 / 선택 상태 분리
   const [keywordInput, setKeywordInput] = useState("");
   const [selectedTargetTitle, setSelectedTargetTitle] = useState("");
+  const [targetSuggestions, setTargetSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  // DB -> 로컬 입력값 동기화 부분 수정
-  useEffect(() => {
-    if (!myPlayer) return;
-    if (myPlayer.target_title) {
-      setSelectedTargetTitle(myPlayer.target_title);
-      setKeywordInput(myPlayer.target_title);
-    }
-  }, [myPlayer]);
-
-  // 검색 버튼 또는 Enter 시 동작
-  const handleSearch = async () => {
-    if (!keywordInput.trim() || myReadyState) return;
-    try {
-      setIsSearching(true);
-      setSubmitError("");
-      const candidates = await searchWikiTitleCandidates(keywordInput.trim());
-      setTargetSuggestions(candidates);
-      setSelectedTargetTitle("");
-      if (candidates.length === 0) {
-        setSubmitError("검색 결과가 없습니다. 다른 키워드를 입력해 주세요.");
-      }
-    } catch (e) {
-      setSubmitError("검색 중 오류가 발생했습니다.");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleSelectSuggestion = (item) => {
-    setSelectedTargetTitle(item.title);
-    setKeywordInput(item.title);
-    setTargetSuggestions([]);
-    setSubmitError("");
-  };
 
   // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
-
-  // 목표 문서 추천 후보
-  const [targetSuggestions, setTargetSuggestions] = useState([]);
 
   // ----------------------------
   // 초기 로드
@@ -104,7 +55,7 @@ export default function RoomPage() {
 
         const roomData = await fetchRoom(roomId);
 
-        // waiting 상태에서 직접 URL 진입한 경우 guest join 시도
+        // waiting 방에 직접 진입한 guest면 join 시도
         if (roomData.status === "waiting") {
           await joinRoom(roomId, user.id).catch(() => { });
         }
@@ -200,17 +151,23 @@ export default function RoomPage() {
   const isHost = myPlayer?.role === "host";
   const hasGuest = !!guestPlayer;
 
-  // 준비 상태는 DB 기준
   const myReadyState = !!myPlayer?.is_ready;
   const opponentReady = !!opponentPlayer?.is_ready;
   const allReady = myReadyState && opponentReady;
 
   // ----------------------------
   // DB -> 로컬 입력값 동기화
+  // - 이미 저장된 target_title이 있으면 복원
   // ----------------------------
   useEffect(() => {
     if (!myPlayer) return;
-    setMyTarget(myPlayer.target_title || "");
+
+    if (myPlayer.target_title) {
+      setSelectedTargetTitle(myPlayer.target_title);
+      setKeywordInput(myPlayer.target_title);
+    } else {
+      setSelectedTargetTitle("");
+    }
   }, [myPlayer]);
 
   // ----------------------------
@@ -236,11 +193,48 @@ export default function RoomPage() {
   ]);
 
   // ----------------------------
+  // 위키 검색 실행
+  // ----------------------------
+  const handleSearch = async () => {
+    if (!keywordInput.trim() || myReadyState) return;
+
+    try {
+      setIsSearching(true);
+      setSubmitError("");
+      setTargetSuggestions([]);
+      setSelectedTargetTitle("");
+
+      const candidates = await searchWikiTitleCandidates(keywordInput.trim(), 5);
+      setTargetSuggestions(candidates);
+
+      if (candidates.length === 0) {
+        setSubmitError("검색 결과가 없습니다. 다른 키워드를 입력해 주세요.");
+      }
+    } catch (error) {
+      console.error(error);
+      setSubmitError("검색 중 오류가 발생했습니다.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // ----------------------------
+  // 후보 선택
+  // ----------------------------
+  const handleSelectSuggestion = (item) => {
+    setSelectedTargetTitle(item.title);
+    setKeywordInput(item.title);
+    setSubmitError("");
+    setTargetSuggestions([]);
+  };
+
+  // ----------------------------
   // 준비 완료
+  // - 반드시 사용자가 선택한 title만 저장
   // ----------------------------
   const handleReady = async () => {
     if (!selectedTargetTitle || !roomId || !user?.id) {
-      setSubmitError("먼저 목록에서 목표 문서를 확실히 선택해주세요.");
+      setSubmitError("먼저 검색 결과에서 목표 문서를 선택해주세요.");
       return;
     }
 
@@ -293,7 +287,6 @@ export default function RoomPage() {
     try {
       setSubmitError("");
       setStarting(true);
-
       await startRoomGame(roomId, user.id);
     } catch (error) {
       console.error("startRoomGame failed:", error);
@@ -325,13 +318,7 @@ export default function RoomPage() {
   };
 
   // ----------------------------
-  // 추천 후보 클릭
-  // - 자동 ready 하지 않고 input에만 채움
-  // ----------------------------
-  // (위에서 정의한 handleSelectSuggestion 사용)
-
-  // ----------------------------
-  // 로딩 화면
+  // 로딩
   // ----------------------------
   if (pending) {
     return (
@@ -341,11 +328,7 @@ export default function RoomPage() {
 
         <div className="mp-container">
           <header className="mp-header">
-            <button
-              type="button"
-              className="mp-back-btn"
-              onClick={handleLeaveRoom}
-            >
+            <button type="button" className="mp-back-btn" onClick={handleLeaveRoom}>
               ← 로비로
             </button>
           </header>
@@ -363,7 +346,7 @@ export default function RoomPage() {
   }
 
   // ----------------------------
-  // 초기 로드 실패 화면
+  // 초기 로드 실패
   // ----------------------------
   if (submitError && !room) {
     return (
@@ -373,11 +356,7 @@ export default function RoomPage() {
 
         <div className="mp-container">
           <header className="mp-header">
-            <button
-              type="button"
-              className="mp-back-btn"
-              onClick={handleLeaveRoom}
-            >
+            <button type="button" className="mp-back-btn" onClick={handleLeaveRoom}>
               ← 로비로
             </button>
           </header>
@@ -392,9 +371,6 @@ export default function RoomPage() {
     );
   }
 
-  // ----------------------------
-  // 본문
-  // ----------------------------
   return (
     <div className="mp-page">
       <div className="mp-glow mp-glow--1" />
@@ -402,11 +378,7 @@ export default function RoomPage() {
 
       <div className="mp-container">
         <header className="mp-header">
-          <button
-            type="button"
-            className="mp-back-btn"
-            onClick={handleLeaveRoom}
-          >
+          <button type="button" className="mp-back-btn" onClick={handleLeaveRoom}>
             ← 로비로
           </button>
         </header>
@@ -459,10 +431,7 @@ export default function RoomPage() {
 
         <div className="room-players">
           {/* 내 패널 */}
-          <div
-            className={`room-player-card ${myReadyState ? "room-player--ready" : ""
-              }`}
-          >
+          <div className={`room-player-card ${myReadyState ? "room-player--ready" : ""}`}>
             <div className="room-player-role">
               {isHost ? "👑 HOST" : "⚔️ GUEST"}
             </div>
@@ -479,6 +448,7 @@ export default function RoomPage() {
 
             <div className="room-target-section">
               <label className="room-target-label">상대가 풀 목표 문서 (검색 후 선택)</label>
+
               <div style={{ display: "flex", gap: "8px" }}>
                 <input
                   className="room-target-input"
@@ -489,41 +459,65 @@ export default function RoomPage() {
                   disabled={myReadyState || room?.status !== "waiting"}
                   onChange={(e) => {
                     setKeywordInput(e.target.value);
+                    setSubmitError("");
                     setTargetSuggestions([]);
                     setSelectedTargetTitle("");
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !myReadyState) handleSearch();
+                    if (e.key === "Enter" && !myReadyState) {
+                      handleSearch();
+                    }
                   }}
                 />
-                <button 
-                  type="button" 
-                  className="mp-action-btn" 
+                <button
+                  type="button"
+                  className="mp-action-btn"
                   disabled={myReadyState || room?.status !== "waiting" || isSearching}
                   onClick={handleSearch}
                 >
                   {isSearching ? "..." : "검색"}
                 </button>
               </div>
+
+              {/* 현재 선택된 문서 표시 */}
+              {selectedTargetTitle && !targetSuggestions.length && (
+                <div style={{ marginTop: "10px", fontSize: "13px", opacity: 0.85 }}>
+                  선택된 목표: <strong>{selectedTargetTitle}</strong>
+                </div>
+              )}
             </div>
 
-            {/* 추천 후보 목록 */}
+            {/* 검색 결과 후보 */}
             {!myReadyState && targetSuggestions.length > 0 && (
-              <div className="room-target-suggestions" style={{ marginTop: "12px", border: "1px solid var(--app-line)", borderRadius: "8px", overflow: "hidden" }}>
+              <div
+                className="room-target-suggestions"
+                style={{
+                  marginTop: "12px",
+                  border: "1px solid var(--app-line, rgba(255,255,255,0.12))",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                }}
+              >
                 {targetSuggestions.map((item) => (
                   <div
                     key={item.title}
                     onClick={() => handleSelectSuggestion(item)}
                     style={{
                       padding: "8px 12px",
-                      borderBottom: "1px solid var(--app-line)",
+                      borderBottom: "1px solid var(--app-line, rgba(255,255,255,0.12))",
                       cursor: "pointer",
                       textAlign: "left",
-                      backgroundColor: "rgba(255,255,255,0.05)"
+                      backgroundColor:
+                        selectedTargetTitle === item.title
+                          ? "rgba(255,255,255,0.1)"
+                          : "rgba(255,255,255,0.05)",
                     }}
                   >
                     <div style={{ fontWeight: "bold" }}>{item.title}</div>
-                    <div style={{ fontSize: "0.8rem", opacity: 0.7 }} dangerouslySetInnerHTML={{ __html: item.snippet }}></div>
+                    <div
+                      style={{ fontSize: "0.8rem", opacity: 0.7 }}
+                      dangerouslySetInnerHTML={{ __html: item.snippet || "" }}
+                    />
                   </div>
                 ))}
               </div>
@@ -583,9 +577,7 @@ export default function RoomPage() {
                 <div className="room-target-section">
                   <label className="room-target-label">내가 풀 목표 문서</label>
                   <div className="room-target-display">
-                    {opponentPlayer.target_title
-                      ? opponentPlayer.target_title
-                      : "설정 중..."}
+                    {opponentPlayer.target_title || "설정 중..."}
                   </div>
                 </div>
 
