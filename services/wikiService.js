@@ -265,12 +265,13 @@ export async function checkExactWikiTitleExists(title) {
   return !!firstPage && !("missing" in firstPage);
 }
 
+// 기존 searchWikiTitleCandidates 함수를 아래 내용으로 덮어쓰거나 교체하세요.
 /**
  * 입력값으로 위키백과 검색 후보를 가져옴
- * - 자동 저장용이 아니라 사용자 선택용
- * - 최대 5개 정도만 보여주는 용도
+ * - 자동 저장용이 아니라 사용자 선택용 리스트 반환
+ * - 제목(title)과 짧은 요약(snippet)을 함께 제공
  */
-export async function searchWikiTitleCandidates(input) {
+export async function searchWikiTitleCandidates(input, limit = 5) {
   const trimmed = input?.trim();
   if (!trimmed) return [];
 
@@ -286,7 +287,12 @@ export async function searchWikiTitleCandidates(input) {
   const data = await response.json();
 
   return (data?.query?.search || [])
-    .slice(0, 5)
-    .map((item) => item.title)
-    .filter(Boolean);
+    .slice(0, limit)
+    .map((item) => ({
+      title: item.title,
+      snippet: item.snippet, // 검색어 강조 HTML <span> 태그 등이 포함된 짧은 설명
+    }))
+    .filter((item) => item.title);
 }
+
+// 주의: 이제 fetchRelatedTargetTitle 함수는 싱글플레이에서 사용하지 않으므로 삭제하거나 무시해도 됩니다.

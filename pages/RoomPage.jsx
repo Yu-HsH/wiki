@@ -45,7 +45,45 @@ export default function RoomPage() {
   const [submitError, setSubmitError] = useState("");
 
   // 내 입력값
-  const [myTarget, setMyTarget] = useState("");
+  // 기존 myTarget 상태를 다음 3개로 세분화합니다.
+  const [keywordInput, setKeywordInput] = useState("");
+  const [selectedTargetTitle, setSelectedTargetTitle] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // DB -> 로컬 입력값 동기화 부분 수정
+  useEffect(() => {
+    if (!myPlayer) return;
+    if (myPlayer.target_title) {
+      setSelectedTargetTitle(myPlayer.target_title);
+      setKeywordInput(myPlayer.target_title);
+    }
+  }, [myPlayer]);
+
+  // 검색 버튼 또는 Enter 시 동작
+  const handleSearch = async () => {
+    if (!keywordInput.trim() || myReadyState) return;
+    try {
+      setIsSearching(true);
+      setSubmitError("");
+      const candidates = await searchWikiTitleCandidates(keywordInput.trim());
+      setTargetSuggestions(candidates);
+      setSelectedTargetTitle("");
+      if (candidates.length === 0) {
+        setSubmitError("검색 결과가 없습니다. 다른 키워드를 입력해 주세요.");
+      }
+    } catch (e) {
+      setSubmitError("검색 중 오류가 발생했습니다.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectSuggestion = (item) => {
+    setSelectedTargetTitle(item.title);
+    setKeywordInput(item.title);
+    setTargetSuggestions([]);
+    setSubmitError("");
+  };
 
   // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
@@ -199,37 +237,18 @@ export default function RoomPage() {
 
   // ----------------------------
   // 준비 완료
-  // 1) exact title 존재 여부 확인
-  // 2) 없으면 추천 후보 표시
-  // 3) 있으면 그대로 저장
   // ----------------------------
   const handleReady = async () => {
-    if (!myTarget.trim() || !roomId || !user?.id) return;
+    if (!selectedTargetTitle || !roomId || !user?.id) {
+      setSubmitError("먼저 목록에서 목표 문서를 확실히 선택해주세요.");
+      return;
+    }
 
     try {
       setSubmitError("");
-      setTargetSuggestions([]);
-
-      const normalizedTitle = myTarget.trim();
-
-      // 정확한 제목 존재 여부 확인
-      const exactExists = await checkExactWikiTitleExists(normalizedTitle);
-
-      if (!exactExists) {
-        const candidates = await searchWikiTitleCandidates(normalizedTitle);
-
-        setSubmitError(
-          candidates.length > 0
-            ? "정확히 일치하는 문서를 찾지 못했습니다. 아래 후보 중에서 선택해주세요."
-            : "정확히 일치하는 문서를 찾지 못했습니다. 제목을 다시 입력해주세요."
-        );
-
-        setTargetSuggestions(candidates);
-        return;
-      }
 
       await updateMyRoomPlayer(roomId, user.id, {
-        target_title: normalizedTitle,
+        target_title: selectedTargetTitle,
         is_ready: true,
       });
 
@@ -309,11 +328,7 @@ export default function RoomPage() {
   // 추천 후보 클릭
   // - 자동 ready 하지 않고 input에만 채움
   // ----------------------------
-  const handleSelectSuggestion = (title) => {
-    setMyTarget(title);
-    setSubmitError("");
-    setTargetSuggestions([]);
-  };
+  // (위에서 정의한 handleSelectSuggestion 사용)
 
   // ----------------------------
   // 로딩 화면
@@ -463,57 +478,54 @@ export default function RoomPage() {
             </div>
 
             <div className="room-target-section">
-              <label className="room-target-label">상대가 풀 목표 문서</label>
-              <input
-                className="room-target-input"
-                type="text"
-                placeholder="예: 알베르트 아인슈타인"
-                value={myTarget}
-                disabled={myReadyState || room?.status !== "waiting"}
-                onChange={(e) => {
-                  setMyTarget(e.target.value);
-                  setSubmitError("");
-                  setTargetSuggestions([]);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !myReadyState) {
-                    handleReady();
-                  }
-                }}
-              />
+              <label className="room-target-label">상대가 풀 목표 문서 (검색 후 선택)</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  className="room-target-input"
+                  style={{ flex: 1, margin: 0 }}
+                  type="text"
+                  placeholder="예: 알베르트 아인슈타인"
+                  value={keywordInput}
+                  disabled={myReadyState || room?.status !== "waiting"}
+                  onChange={(e) => {
+                    setKeywordInput(e.target.value);
+                    setTargetSuggestions([]);
+                    setSelectedTargetTitle("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !myReadyState) handleSearch();
+                  }}
+                />
+                <button 
+                  type="button" 
+                  className="mp-action-btn" 
+                  disabled={myReadyState || room?.status !== "waiting" || isSearching}
+                  onClick={handleSearch}
+                >
+                  {isSearching ? "..." : "검색"}
+                </button>
+              </div>
             </div>
 
             {/* 추천 후보 목록 */}
             {!myReadyState && targetSuggestions.length > 0 && (
-              <div className="room-target-suggestions" style={{ marginTop: "12px" }}>
-                <div
-                  style={{
-                    marginBottom: "8px",
-                    fontSize: "13px",
-                    opacity: 0.8,
-                  }}
-                >
-                  추천 문서
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                  }}
-                >
-                  {targetSuggestions.map((title) => (
-                    <button
-                      key={title}
-                      type="button"
-                      className="mp-action-btn"
-                      onClick={() => handleSelectSuggestion(title)}
-                    >
-                      {title}
-                    </button>
-                  ))}
-                </div>
+              <div className="room-target-suggestions" style={{ marginTop: "12px", border: "1px solid var(--app-line)", borderRadius: "8px", overflow: "hidden" }}>
+                {targetSuggestions.map((item) => (
+                  <div
+                    key={item.title}
+                    onClick={() => handleSelectSuggestion(item)}
+                    style={{
+                      padding: "8px 12px",
+                      borderBottom: "1px solid var(--app-line)",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      backgroundColor: "rgba(255,255,255,0.05)"
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold" }}>{item.title}</div>
+                    <div style={{ fontSize: "0.8rem", opacity: 0.7 }} dangerouslySetInnerHTML={{ __html: item.snippet }}></div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -521,8 +533,9 @@ export default function RoomPage() {
               <button
                 type="button"
                 className="mp-action-btn mp-action-btn--primary room-ready-btn"
-                disabled={!myTarget.trim() || room?.status !== "waiting"}
+                disabled={!selectedTargetTitle || room?.status !== "waiting"}
                 onClick={handleReady}
+                style={{ marginTop: "16px" }}
               >
                 ✅ 준비 완료
               </button>

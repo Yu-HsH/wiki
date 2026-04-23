@@ -94,7 +94,10 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         let targetTitle = "";
 
         if (mode === "custom") {
-          targetTitle = await fetchRelatedTargetTitle(keyword);
+          targetTitle = location.state?.targetTitle;
+          if (!targetTitle) {
+            throw new Error("목표 문서가 선택되지 않았습니다. 메인 화면에서 다시 선택해주세요.");
+          }
           if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
             start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
           }

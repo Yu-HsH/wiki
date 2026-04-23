@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchUserStats, fetchRankings } from "../rankingService";
 import AdBanner from "../components/AdBanner";
+import { searchWikiTitleCandidates } from "../services/wikiService";
+
 /**
  * 메인 대시보드 페이지 컴포넌트
  * - 유저 통계(총 플레이, 최고 기록) 및 최근 기록 표시
@@ -52,8 +54,25 @@ export default function MainPage() {
   const [error, setError] = useState("");
   const [showKeywordModal, setShowKeywordModal] = useState(false);
   const [keyword, setKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedTarget, setSelectedTarget] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
   const [dailyChallenge] = useState(getDailyChallenge);
 
+  // ⬇️ 검색 실행 핸들러 추가
+  const handleSearchKeyword = async () => {
+    if (!keyword.trim()) return;
+    setIsSearching(true);
+    try {
+      const results = await searchWikiTitleCandidates(keyword.trim(), 5);
+      setSearchResults(results);
+      setSelectedTarget(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearching(false);
+    }
+  };
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -136,49 +155,92 @@ export default function MainPage() {
         </button>
       </section>
 
-      {/* ── 키워드 입력 모달 ── */}
+      {/* ── 키워드 입력 및 검색 모달 ── */}
       {showKeywordModal && (
         <div className="qs-modal-backdrop" onClick={() => setShowKeywordModal(false)}>
           <div className="qs-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="qs-modal-title">🎯 목표 키워드</h3>
-            <p className="qs-modal-desc">도달할 위키 문서의 키워드를 입력하세요.</p>
-            <input
-              className="qs-modal-input"
-              autoFocus
-              placeholder="예: 아인슈타인, 조선왕조, 축구..."
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && keyword.trim()) {
-                  setShowKeywordModal(false);
-                  navigate("/game", { state: { mode: "custom", keyword: keyword.trim() } });
-                }
-                if (e.key === "Escape") setShowKeywordModal(false);
-              }}
-            />
-            <div className="qs-modal-actions">
+            <h3 className="qs-modal-title">🎯 목표 문서 확정</h3>
+            <p className="qs-modal-desc">위키백과에서 도달할 정확한 문서를 검색하고 선택하세요.</p>
+
+            <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
+              <input
+                className="qs-modal-input"
+                style={{ flex: 1, margin: 0 }}
+                autoFocus
+                placeholder="예: 아인슈타인, 조선왕조..."
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value);
+                  setSearchResults([]);
+                  setSelectedTarget(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && keyword.trim()) handleSearchKeyword();
+                  if (e.key === "Escape") setShowKeywordModal(false);
+                }}
+              />
               <button
                 type="button"
-                className="app-btn app-btn-ghost"
-                onClick={() => setShowKeywordModal(false)}
+                className="app-btn app-btn-secondary"
+                onClick={handleSearchKeyword}
+                disabled={isSearching || !keyword.trim()}
               >
-                취소
+                {isSearching ? "검색 중..." : "검색"}
               </button>
+            </div>
+
+            {/* 검색 결과 목록 표시 */}
+            {searchResults.length > 0 && (
+              <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid var(--app-line)", borderRadius: "8px", marginBottom: "1rem" }}>
+                {searchResults.map((item) => (
+                  <div
+                    key={item.title}
+                    onClick={() => setSelectedTarget(item)}
+                    style={{
+                      padding: "10px",
+                      borderBottom: "1px solid var(--app-line)",
+                      cursor: "pointer",
+                      backgroundColor: selectedTarget?.title === item.title ? "rgba(52, 152, 219, 0.1)" : "transparent",
+                    }}
+                  >
+                    <strong style={{ display: "block", color: selectedTarget?.title === item.title ? "var(--brand)" : "inherit" }}>
+                      {item.title}
+                    </strong>
+                    <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }} dangerouslySetInnerHTML={{ __html: item.snippet }} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {searchResults.length === 0 && keyword.trim() && !isSearching && (
+              <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "1rem" }}>검색 후 아래에서 문서를 선택해주세요.</p>
+            )}
+
+            <div className="qs-modal-actions">
+              <button type="button" className="app-btn app-btn-ghost" onClick={() => setShowKeywordModal(false)}>취소</button>
               <button
                 type="button"
                 className="app-btn app-btn-primary"
-                disabled={!keyword.trim()}
+                disabled={!selectedTarget}
                 onClick={() => {
                   setShowKeywordModal(false);
-                  navigate("/game", { state: { mode: "custom", keyword: keyword.trim() } });
+                  // rawKeyword와 실제 확정된 targetTitle을 분리해서 전달
+                  navigate("/game", {
+                    state: {
+                      mode: "custom",
+                      rawKeyword: keyword.trim(),
+                      targetTitle: selectedTarget.title
+                    }
+                  });
                 }}
               >
-                시작
+                {selectedTarget ? `'${selectedTarget.title}' 시작` : "목표를 선택하세요"}
               </button>
             </div>
           </div>
         </div>
       )}
+
 
       {/* ── 통계 카드 3개 ── */}
       <section className="dashboard-grid">
