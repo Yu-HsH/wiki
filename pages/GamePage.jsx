@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import {
   fetchRandomTitle,
   fetchDistinctRandomTitle,
-  fetchRelatedTargetTitle,
   fetchSummary,
   fetchPageData,
   normalizeTitle,
@@ -17,42 +16,17 @@ import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import { supabase } from "../supabaseClient";
 
-
-import { useRef } from "react";
 import { generateInitialInventory } from "../data/items";
 import {
   addEffect,
   buildTimedEffect,
   canUseItem as canUseItemBase,
   clearExpiredEffects,
-  getInitialItemState,
   markItemUsed,
   removeEffect,
 } from "../utils/itemSystem";
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
-
-const itemStateRef = useRef(getInitialItemState());
-
-const [inventory, setInventory] = useState([]);
-const [activeEffects, setActiveEffects] = useState({ self: [], opponent: [] });
-const [immunityUntil, setImmunityUntil] = useState({ self: 0, opponent: 0 });
-const [translateCurrentPage, setTranslateCurrentPage] = useState(false);
-const [historyStack, setHistoryStack] = useState([]);
-const [searchAvailable, setSearchAvailable] = useState(false);
-const [highlightedLinks, setHighlightedLinks] = useState([]);
-const [floatingMessage, setFloatingMessage] = useState("");
-
-
-// setup complete 직후
-setInventory(generateInitialInventory({ total: 4, rareCount: 1 }));
-setActiveEffects({ self: [], opponent: [] });
-setImmunityUntil({ self: 0, opponent: 0 });
-setTranslateCurrentPage(false);
-setHistoryStack([]);
-setSearchAvailable(false);
-setHighlightedLinks([]);
-setFloatingMessage("");
 
 const pickDifficulty = () => {
   const r = Math.random();
@@ -89,7 +63,13 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
   const hasPresetMode = Boolean(location.state?.mode);
 
-  const [target, setTarget] = useState({ title: "", summary: "", requestedKeyword: "", mode: "random" });
+  const [target, setTarget] = useState({
+    title: "",
+    summary: "",
+    requestedKeyword: "",
+    mode: "random",
+  });
+
   const [startTitle, setStartTitle] = useState("");
   const [pathTitles, setPathTitles] = useState([]);
   const [currentTitle, setCurrentTitle] = useState("");
@@ -100,54 +80,123 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [clickCount, setClickCount] = useState(0);
 
+  // ----------------------------
+  // 아이템 상태
+  // ----------------------------
+  const [inventory, setInventory] = useState([]);
+  const [activeEffects, setActiveEffects] = useState({ self: [], opponent: [] });
+  const [immunityUntil, setImmunityUntil] = useState({ self: 0, opponent: 0 });
+  const [translateCurrentPage, setTranslateCurrentPage] = useState(false);
+  const [historyStack, setHistoryStack] = useState([]);
+  const [searchAvailable, setSearchAvailable] = useState(false);
+  const [highlightedLinks, setHighlightedLinks] = useState([]);
+  const [floatingMessage, setFloatingMessage] = useState("");
+
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const autoStarted = useRef(false);
 
-  /* ── 타이머 ── */
+  // ----------------------------
+  // 타이머
+  // ----------------------------
   useEffect(() => {
     if (phase === PHASE.PLAYING) {
       startTimeRef.current = Date.now() - elapsedSeconds * 1000;
       timerRef.current = setInterval(() => {
-        setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        setElapsedSeconds(
+          Math.floor((Date.now() - startTimeRef.current) / 1000)
+        );
       }, 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [phase, elapsedSeconds]);
 
-  const checkWin = useCallback((pageTitle, tgtTitle) => {
-    return pageTitle && tgtTitle && normalizeTitle(pageTitle) === normalizeTitle(tgtTitle);
+  // 지속 효과 만료 정리
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveEffects((prev) => ({
+        self: clearExpiredEffects(prev.self),
+        opponent: clearExpiredEffects(prev.opponent),
+      }));
+    }, 500);
+
+    return () => clearInterval(interval);
   }, []);
 
-  /* ── 게임 준비 로직 (GameSetup + 메인 자동 시작 공통 사용) ── */
+  const checkWin = useCallback((pageTitle, tgtTitle) => {
+    return (
+      pageTitle &&
+      tgtTitle &&
+      normalizeTitle(pageTitle) === normalizeTitle(tgtTitle)
+    );
+  }, []);
+
+  const handleWin = useCallback(
+    (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
+      setPhase(PHASE.SUCCESS);
+      if (onGameComplete) {
+        onGameComplete({
+          startTitle,
+          targetTitle,
+          elapsedSeconds: timeSec,
+          clickCount: clicks,
+          reachedTitle,
+          pathTitles: finalPath,
+        });
+      }
+    },
+    [onGameComplete, startTitle]
+  );
+
+  // ----------------------------
+  // 게임 준비
+  // ----------------------------
   const handleSetupComplete = useCallback(
     async ({ mode, keyword }) => {
       setIsLoading(true);
       setError("");
+
       try {
         let start = await fetchRandomTitle();
         let targetTitle = "";
 
         if (mode === "custom") {
-          targetTitle = location.state?.targetTitle;
+          const state = location.state || {};
+          targetTitle = state.targetTitle;
+
           if (!targetTitle) {
-            throw new Error("목표 문서가 선택되지 않았습니다. 메인 화면에서 다시 선택해주세요.");
+            throw new Error(
+              "목표 문서가 선택되지 않았습니다. 메인 화면에서 다시 선택해주세요."
+            );
           }
+
           if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
-            start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
+            start = await fetchDistinctRandomTitle(
+              new Set([normalizeTitle(targetTitle)])
+            );
           }
         } else {
           try {
             targetTitle = await fetchAiTargetTitle();
           } catch (err) {
-            console.error("AI Target fetch failed, falling back to Wikipedia random:", err);
-            targetTitle = await fetchDistinctRandomTitle(new Set([normalizeTitle(start)]));
+            console.error(
+              "AI Target fetch failed, falling back to Wikipedia random:",
+              err
+            );
+            targetTitle = await fetchDistinctRandomTitle(
+              new Set([normalizeTitle(start)])
+            );
           }
 
           if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
-            start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
+            start = await fetchDistinctRandomTitle(
+              new Set([normalizeTitle(targetTitle)])
+            );
           }
         }
 
@@ -163,14 +212,27 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           requestedKeyword: mode === "custom" ? keyword : "",
           mode,
         });
+
         setCurrentTitle(startPage.title);
         setCurrentSummary(startPage.summary);
         setCurrentDocumentHtml(startPage.documentHtml);
         setLinks(startPage.links);
+
         setElapsedSeconds(0);
         setClickCount(0);
+
         const newPath = [startPage.title];
         setPathTitles(newPath);
+
+        // 아이템 초기화
+        setInventory(generateInitialInventory({ total: 4, rareCount: 1 }));
+        setActiveEffects({ self: [], opponent: [] });
+        setImmunityUntil({ self: 0, opponent: 0 });
+        setTranslateCurrentPage(false);
+        setHistoryStack([]);
+        setSearchAvailable(false);
+        setHighlightedLinks([]);
+        setFloatingMessage("");
 
         if (checkWin(startPage.title, targetSummaryData.title)) {
           handleWin(startPage.title, targetSummaryData.title, 0, 0, newPath);
@@ -183,10 +245,10 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setIsLoading(false);
       }
     },
-    [checkWin]
+    [checkWin, handleWin, location.state]
   );
 
-  /* ── 메인 빠른 시작: location.state에 mode가 있으면 자동 시작 ── */
+  // 메인 빠른 시작
   useEffect(() => {
     const state = location.state;
     if (state?.mode && !autoStarted.current) {
@@ -195,67 +257,162 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     }
   }, [location.state, handleSetupComplete]);
 
-  /* ── 위키 클릭 이동 ── */
+  // ----------------------------
+  // 문서 이동
+  // ----------------------------
   const handleMove = async (nextTitle) => {
     if (phase !== PHASE.PLAYING || isLoading) return;
+
+    const previousTitle = currentTitle;
+
     setClickCount((prev) => prev + 1);
     setIsLoading(true);
     setError("");
+
     try {
       const page = await fetchPageData(nextTitle);
+
       setCurrentTitle(page.title);
       setCurrentSummary(page.summary);
       setCurrentDocumentHtml(page.documentHtml);
       setLinks(page.links);
+
       const newPath = [...pathTitles, page.title];
       setPathTitles(newPath);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      if (checkWin(page.title, target.title)) {
-        handleWin(page.title, target.title, elapsedSeconds, clickCount + 1, newPath);
-      }
-      // 이동 전 현재 문서를 history에 저장
-      setHistoryStack((prev) => [...prev, currentTitle]);
 
-      // 언어변경은 "현재 문서만"이므로 이동 시 해제
+      // 이동 기록 저장
+      if (previousTitle) {
+        setHistoryStack((prev) => [...prev, previousTitle]);
+      }
+
+      // 현재 문서에만 적용되는 효과 해제
       if (translateCurrentPage) {
         setTranslateCurrentPage(false);
       }
 
-      // 하이라이트는 현재 페이지 기준이므로 이동 시 초기화
+      // 하이라이트는 현재 페이지 기준이라 이동 시 해제
       setHighlightedLinks([]);
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      if (checkWin(page.title, target.title)) {
+        handleWin(page.title, target.title, elapsedSeconds, clickCount + 1, newPath);
+      }
     } catch (e) {
       setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
   };
-  // active effect 만료 정리
-  setActiveEffects((prev) => ({
-    self: clearExpiredEffects(prev.self),
-    opponent: clearExpiredEffects(prev.opponent),
-  }));
-  const handleWin = (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
-    setPhase(PHASE.SUCCESS);
-    if (onGameComplete) {
-      onGameComplete({ startTitle, targetTitle, elapsedSeconds: timeSec, clickCount: clicks, reachedTitle, pathTitles: finalPath });
+
+  // ----------------------------
+  // 아이템 사용
+  // ----------------------------
+  const useItem = async (item) => {
+    const usable = canUseItemBase(item, { historyStack, links });
+    if (!usable || item.used) return;
+
+    setInventory((prev) => markItemUsed(prev, item.instanceId));
+
+    switch (item.id) {
+      case "blind": {
+        setActiveEffects((prev) => ({
+          ...prev,
+          self: addEffect(prev.self, buildTimedEffect("blind", item.duration)),
+        }));
+        setFloatingMessage("시야 가리기!");
+        break;
+      }
+
+      case "cleanse_shield": {
+        setActiveEffects((prev) => ({
+          ...prev,
+          self: removeEffect(removeEffect(prev.self, "blind"), "translate_current"),
+        }));
+        setImmunityUntil((prev) => ({
+          ...prev,
+          self: Date.now() + 10000,
+        }));
+        setFloatingMessage("방해 해제 + 10초 면역");
+        break;
+      }
+
+      case "search_once": {
+        setSearchAvailable(true);
+        setFloatingMessage("페이지 내 검색 1회 가능");
+        break;
+      }
+
+      case "go_back": {
+        if (!historyStack.length) break;
+        const previousTitle = historyStack[historyStack.length - 1];
+        setHistoryStack((prev) => prev.slice(0, -1));
+        await handleMove(previousTitle);
+        setFloatingMessage("뒤로가기 사용");
+        break;
+      }
+
+      case "highlight_links": {
+        const candidates = (links || []).slice(0, 3);
+        setHighlightedLinks(candidates);
+        setFloatingMessage("링크 하이라이트!");
+        break;
+      }
+
+      case "random_teleport": {
+        const randomTitle = await fetchDistinctRandomTitle(
+          new Set([normalizeTitle(currentTitle)])
+        );
+        await handleMove(randomTitle);
+        setFloatingMessage("랜덤 텔레포트!");
+        break;
+      }
+
+      default: {
+        setFloatingMessage(`${item.name} 사용`);
+        break;
+      }
     }
+
+    setTimeout(() => setFloatingMessage(""), 1800);
   };
 
   return (
     <div className="wiki-game-page">
       {error && <div className="state-text error">{error}</div>}
 
-      {/* 직접 /game 진입 시에만 GameSetup 표시 */}
+      {/* 직접 /game 진입 시 */}
       {phase === PHASE.SELECTING && (!hasPresetMode || error) && (
         <GameSetup onStart={handleSetupComplete} isLoading={isLoading} />
       )}
 
-      {/* Preset 모드로 매치 메이킹/준비 중일 때 보여줄 로딩 화면 */}
+      {/* preset 모드 준비 중 */}
       {phase === PHASE.SELECTING && hasPresetMode && !error && (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginTop: "15vh", gap: "1rem", textAlign: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: "15vh",
+            gap: "1rem",
+            textAlign: "center",
+          }}
+        >
           <h2 style={{ marginBottom: "0.5rem" }}>위키 문서를 준비하는 중...</h2>
-          <div style={{ width: "40px", height: "40px", border: "4px solid rgba(0,0,0,0.1)", borderTop: "4px solid #3498db", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-          <p style={{ color: "#666" }}>AI 타겟과 시작 문서를 불러오고 있습니다</p>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              border: "4px solid rgba(0,0,0,0.1)",
+              borderTop: "4px solid #3498db",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <p style={{ color: "#666" }}>
+            AI 타겟과 시작 문서를 불러오고 있습니다
+          </p>
           <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
         </div>
       )}
@@ -264,40 +421,52 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         <CountdownOverlay onComplete={() => setPhase(PHASE.PLAYING)} />
       )}
 
-      {(phase === PHASE.PLAYING || phase === PHASE.COUNTDOWN || phase === PHASE.SUCCESS) && (
-        <WikiViewer
-          target={target}
-          currentTitle={currentTitle}
-          currentSummary={currentSummary}
-          currentDocumentHtml={currentDocumentHtml}
-          links={links}
-          isLoading={isLoading}
-          elapsedSeconds={elapsedSeconds}
-          clickCount={clickCount}
-          startTitle={startTitle}
-          onLinkClick={handleMove}
-        />
-      )}
-      <ItemBar
-        inventory={inventory}
-        canUseItem={(item) =>
-          canUseItemBase(item, {
-            historyStack,
-            links,
-          })
-        }
-        onUseItem={(instanceId) => {
-          const item = inventory.find((i) => i.instanceId === instanceId);
-          if (!item) return;
-          useItem(item);
-        }}
-      />
+      {(phase === PHASE.PLAYING ||
+        phase === PHASE.COUNTDOWN ||
+        phase === PHASE.SUCCESS) && (
+          <WikiViewer
+            target={target}
+            currentTitle={currentTitle}
+            currentSummary={currentSummary}
+            currentDocumentHtml={currentDocumentHtml}
+            links={links}
+            isLoading={isLoading}
+            elapsedSeconds={elapsedSeconds}
+            clickCount={clickCount}
+            startTitle={startTitle}
+            onLinkClick={handleMove}
+            highlightedLinks={highlightedLinks}
+            searchAvailable={searchAvailable}
+          />
+        )}
 
-      <EffectOverlay
-        blindActive={activeEffects.self.some((e) => e.id === "blind")}
-        floatingMessage={floatingMessage}
-        immune={Date.now() < immunityUntil.self}
-      />
+      {(phase === PHASE.PLAYING ||
+        phase === PHASE.COUNTDOWN ||
+        phase === PHASE.SUCCESS) && (
+          <>
+            <ItemBar
+              inventory={inventory}
+              canUseItem={(item) =>
+                canUseItemBase(item, {
+                  historyStack,
+                  links,
+                })
+              }
+              onUseItem={(instanceId) => {
+                const item = inventory.find((i) => i.instanceId === instanceId);
+                if (!item) return;
+                useItem(item);
+              }}
+            />
+
+            <EffectOverlay
+              blindActive={activeEffects.self.some((e) => e.id === "blind")}
+              floatingMessage={floatingMessage}
+              immune={Date.now() < immunityUntil.self}
+            />
+          </>
+        )}
+
       {phase === PHASE.SUCCESS && (
         <SuccessOverlay
           targetTitle={target.title}
