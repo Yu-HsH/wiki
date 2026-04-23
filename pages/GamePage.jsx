@@ -17,6 +17,43 @@ import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import { supabase } from "../supabaseClient";
 
+
+import { useRef } from "react";
+import { generateInitialInventory } from "../data/items";
+import {
+  addEffect,
+  buildTimedEffect,
+  canUseItem as canUseItemBase,
+  clearExpiredEffects,
+  getInitialItemState,
+  markItemUsed,
+  removeEffect,
+} from "../utils/itemSystem";
+import ItemBar from "../components/ItemBar";
+import EffectOverlay from "../components/EffectOverlay";
+
+const itemStateRef = useRef(getInitialItemState());
+
+const [inventory, setInventory] = useState([]);
+const [activeEffects, setActiveEffects] = useState({ self: [], opponent: [] });
+const [immunityUntil, setImmunityUntil] = useState({ self: 0, opponent: 0 });
+const [translateCurrentPage, setTranslateCurrentPage] = useState(false);
+const [historyStack, setHistoryStack] = useState([]);
+const [searchAvailable, setSearchAvailable] = useState(false);
+const [highlightedLinks, setHighlightedLinks] = useState([]);
+const [floatingMessage, setFloatingMessage] = useState("");
+
+
+// setup complete 직후
+setInventory(generateInitialInventory({ total: 4, rareCount: 1 }));
+setActiveEffects({ self: [], opponent: [] });
+setImmunityUntil({ self: 0, opponent: 0 });
+setTranslateCurrentPage(false);
+setHistoryStack([]);
+setSearchAvailable(false);
+setHighlightedLinks([]);
+setFloatingMessage("");
+
 const pickDifficulty = () => {
   const r = Math.random();
   if (r < 0.5) return "easy";
@@ -176,13 +213,27 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       if (checkWin(page.title, target.title)) {
         handleWin(page.title, target.title, elapsedSeconds, clickCount + 1, newPath);
       }
+      // 이동 전 현재 문서를 history에 저장
+      setHistoryStack((prev) => [...prev, currentTitle]);
+
+      // 언어변경은 "현재 문서만"이므로 이동 시 해제
+      if (translateCurrentPage) {
+        setTranslateCurrentPage(false);
+      }
+
+      // 하이라이트는 현재 페이지 기준이므로 이동 시 초기화
+      setHighlightedLinks([]);
     } catch (e) {
       setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
   };
-
+  // active effect 만료 정리
+  setActiveEffects((prev) => ({
+    self: clearExpiredEffects(prev.self),
+    opponent: clearExpiredEffects(prev.opponent),
+  }));
   const handleWin = (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
     setPhase(PHASE.SUCCESS);
     if (onGameComplete) {
@@ -227,7 +278,26 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           onLinkClick={handleMove}
         />
       )}
+      <ItemBar
+        inventory={inventory}
+        canUseItem={(item) =>
+          canUseItemBase(item, {
+            historyStack,
+            links,
+          })
+        }
+        onUseItem={(instanceId) => {
+          const item = inventory.find((i) => i.instanceId === instanceId);
+          if (!item) return;
+          useItem(item);
+        }}
+      />
 
+      <EffectOverlay
+        blindActive={activeEffects.self.some((e) => e.id === "blind")}
+        floatingMessage={floatingMessage}
+        immune={Date.now() < immunityUntil.self}
+      />
       {phase === PHASE.SUCCESS && (
         <SuccessOverlay
           targetTitle={target.title}
