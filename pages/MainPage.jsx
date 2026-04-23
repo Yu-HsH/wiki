@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchUserStats, fetchRankings } from "../rankingService";
-
+import AdBanner from "../components/AdBanner";
 /**
  * 메인 대시보드 페이지 컴포넌트
  * - 유저 통계(총 플레이, 최고 기록) 및 최근 기록 표시
@@ -288,21 +288,21 @@ export default function MainPage() {
                 &times;
               </button>
             </div>
-            
+
             <p>위키 레이스는 링크를 따라 이동하며 목표 문서에 도달하는 게임입니다.</p>
-            
+
             <h3>플레이 방법:</h3>
             <ul>
               <li>문서 안의 링크를 클릭하며 이동합니다</li>
               <li>목표 문서에 도달하면 성공입니다</li>
             </ul>
-            
+
             <h3>모드:</h3>
             <ul>
               <li><strong>혼자서 플레이:</strong> 목표를 설정하고 도전</li>
               <li><strong>1 vs 1 대전:</strong> 상대보다 먼저 도착하면 승리</li>
             </ul>
-            
+
             <h3>기록:</h3>
             <ul>
               <li>시간과 이동 횟수로 랭킹이 결정됩니다</li>
@@ -310,7 +310,10 @@ export default function MainPage() {
           </div>
         </div>
       )}
-
+      {/* ⬇️ 메인 메뉴 하단 가장 아래쪽에 자연스럽게 광고 배치 */}
+      <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
+        <AdBanner />
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { createRoom, findRoomByCode, joinRoom } from "../services/multiplayerService";
-
+import AdBanner from "../components/AdBanner";
 /**
  * 멀티플레이어 로비 페이지
  * - 1 VS 1 방 생성
@@ -152,6 +152,10 @@ export default function MultiplayerPage() {
         <div className="mp-player-info">
           <span className="mp-player-avatar">👤</span>
           <span className="mp-player-name">{user?.displayName || "Player"}</span>
+        </div>
+        {/* ⬇️ 플레이어 정보 아래, 컨테이너가 닫히기 직전에 추가 */}
+        <div style={{ marginTop: "2rem", width: "100%" }}>
+          <AdBanner />
         </div>
       </div>
     </div>

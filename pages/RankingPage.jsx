@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";
+import AdBanner from "../components/AdBanner";
 
 function formatDuration(totalSeconds) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -118,7 +119,7 @@ export default function RankingPage() {
                   const isMine = record.userId === user.id;
                   const isExpanded = expandedId === record.id;
                   const rowKey = record.id || `${record.userId}-${record.createdAt}-${index}`;
-                  
+
                   // 이름 결정 로직 (프로필 닉네임 우선)
                   const displayName = record.nickname || record.playerName || "Unknown";
                   const initial = displayName.charAt(0).toUpperCase();
@@ -169,6 +170,9 @@ export default function RankingPage() {
           </div>
         )}
       </section>
+      <div style={{ marginTop: "2rem", width: "100%" }}>
+        <AdBanner />
+      </div>
     </div>
   );
 }

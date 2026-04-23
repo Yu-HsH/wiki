@@ -1418,3 +1418,25 @@ body {
     background: rgba(18, 26, 45, 0.28);
   }
 }
+
+/* 구글 애드센스 배너 컨테이너 공통 스타일 */
+.ad-banner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 100px;
+  /* 반응형 광고의 최소 높이를 확보하여 레이아웃 시프트 방지 */
+  background: rgba(0, 0, 0, 0.03);
+  /* 광고가 로드되기 전이나 로컬 환경에서 표시될 자리 표시자 색상 */
+  border-radius: 8px;
+  /* 위키 레이스 둥근 UI와 일관성 유지 */
+  overflow: hidden;
+}
+
+/* 다크 모드를 사용 중이라면 아래 색상을 활용해 자연스럽게 섞이게 할 수 있습니다 */
+@media (prefers-color-scheme: dark) {
+  .ad-banner-container {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
