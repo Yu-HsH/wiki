@@ -2,8 +2,18 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { formatDuration } from "../services/wikiService";
 
 export default function WikiViewer({
-  target, currentTitle, currentSummary, currentDocumentHtml, links,
-  isLoading, elapsedSeconds, clickCount, startTitle, onLinkClick
+  target,
+  currentTitle,
+  currentSummary,
+  currentDocumentHtml,
+  links,
+  isLoading,
+  elapsedSeconds,
+  clickCount,
+  startTitle,
+  onLinkClick,
+  highlightedLinks = [],
+  searchAvailable = false,
 }) {
   const articleRef = useRef(null);
   const [headings, setHeadings] = useState([]);
@@ -21,7 +31,7 @@ export default function WikiViewer({
         setTimeout(() => setShowFindToast(false), 2000);
       }
     };
-    
+
     const handleContextMenu = (e) => {
       e.preventDefault();
       setShowFindToast(true);
@@ -30,7 +40,7 @@ export default function WikiViewer({
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     window.addEventListener("contextmenu", handleContextMenu);
-    
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown, { capture: true });
       window.removeEventListener("contextmenu", handleContextMenu);
@@ -58,7 +68,7 @@ export default function WikiViewer({
         element: el
       };
     });
-    
+
     // 빠른 이동 링크 영역도 네비게이션 마지막에 추가
     extracted.push({
       id: "quick-links-section",
@@ -124,8 +134,8 @@ export default function WikiViewer({
       {headings.length > 0 && (
         <nav className="wiki-nav-rail">
           {headings.map((h) => (
-            <div 
-              key={h.id} 
+            <div
+              key={h.id}
               className={`wiki-nav-item ${activeId === h.id ? 'active' : ''}`}
               onClick={() => scrollToHeading(h.id)}
               onMouseEnter={(e) => {
@@ -146,11 +156,11 @@ export default function WikiViewer({
 
       {/* 별도 레이어의 Floating 툴팁 (overflow 잘림 방지) */}
       {hoveredHeading && (
-        <div 
+        <div
           className="wiki-nav-floating-tooltip"
-          style={{ 
-            top: hoveredHeading.top, 
-            right: hoveredHeading.right 
+          style={{
+            top: hoveredHeading.top,
+            right: hoveredHeading.right
           }}
         >
           {hoveredHeading.text}
@@ -212,16 +222,20 @@ export default function WikiViewer({
           <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다.</p>
         )}
         <div className="links-grid">
-          {links.map((linkTitle) => (
-            <button
-              key={linkTitle}
-              className="link-chip"
-              onClick={() => onLinkClick(linkTitle)}
-              disabled={isLoading}
-            >
-              {linkTitle}
-            </button>
-          ))}
+          {links.map((linkTitle) => {
+            const isHighlighted = highlightedLinks.includes(linkTitle);
+
+            return (
+              <button
+                key={linkTitle}
+                className={`link-chip ${isHighlighted ? "wiki-link--highlighted" : ""}`}
+                onClick={() => onLinkClick(linkTitle)}
+                disabled={isLoading}
+              >
+                {linkTitle}
+              </button>
+            );
+          })}
         </div>
       </section>
     </div>
