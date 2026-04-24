@@ -29,13 +29,13 @@ function formatDate(value) {
 
 /* 오늘의 도전: 날짜 기반으로 목록에서 하나 선택 */
 const DAILY_POOL = [
-  { keyword: "아인슈타인", hint: "물리학의 전설적 인물" },
-  { keyword: "제2차 세계 대전", hint: "인류 역사상 가장 큰 전쟁" },
-  { keyword: "머신러닝", hint: "AI 핵심 키워드" },
-  { keyword: "조선왕조", hint: "500년 역사의 왕조" },
-  { keyword: "올림픽", hint: "세계인의 스포츠 축제" },
-  { keyword: "히말라야", hint: "세계 최고 높이의 산맥" },
-  { keyword: "메소포타미아", hint: "인류 문명의 발상지" },
+  { keyword: "벤치 프레스", hint: "웨이트 트레이닝의 'Big 3'로 불리는 대표적인 근력 운동 중 하나" },
+  { keyword: "고래상어", hint: "현존 가장 큰 어류" },
+  { keyword: "GPT (언어 모델)", hint: "AI 미국의 인공지능 단체 오픈AI가 2018년 선보인 대형 언어 모델" },
+  { keyword: "교황 프란치스코", hint: "아르헨티나 출신으로 제266대 로마 가톨릭교회의 교황" },
+  { keyword: "SQL", hint: "관계형 데이터베이스 관리 시스템(RDBMS)의 데이터를 조작하고 정의하기 위해 설계된 프로그래밍 언어" },
+  { keyword: "백준 온라인 저지", hint: "알고리즘 문제 풀이 사이트" },
+  { keyword: "생맥주", hint: "전 세계적으로 사랑받는 술" },
 ];
 
 function getDailyChallenge() {
