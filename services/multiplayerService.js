@@ -236,3 +236,55 @@ export async function startRoomGame(roomId, userId) {
     if (error) throw error;
     return data;
 }
+export async function updateGameRoomStatus(roomId, updates) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("game_rooms")
+        .update(updates)
+        .eq("id", roomId)
+        .select()
+        .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+        throw new Error("game_rooms 업데이트 결과가 없습니다. RLS policy를 확인하세요.");
+    }
+
+    return data;
+}
+
+export async function updateMyGameProgress(roomId, userId, updates) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("room_players")
+        .update(updates)
+        .eq("room_id", roomId)
+        .eq("user_id", userId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+export async function createMatchHistory(payload) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("match_history")
+        .insert(payload)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
