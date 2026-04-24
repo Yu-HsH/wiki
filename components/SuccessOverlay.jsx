@@ -1,4 +1,4 @@
-import "./SuccessOverlay.css";
+
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";

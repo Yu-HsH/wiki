@@ -1,43 +1,51 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
-import { createRoom, findRoomByCode, joinRoom } from "../services/multiplayerService";
+import {
+  createRoom,
+  findRoomByCode,
+  joinRoom,
+} from "../services/multiplayerService";
+import {
+  createGroupRoom,
+  findGroupRoomByCode,
+  joinGroupRoom,
+} from "../services/groupMultiplayerService";
 import AdBanner from "../components/AdBanner";
-/**
- * 멀티플레이어 로비 페이지
- * - 1 VS 1 방 생성
- * - 방 코드 입력 후 참가
- */
+
 export default function MultiplayerPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [roomCodeInput, setRoomCodeInput] = useState("");
+
+  const [duelRoomCodeInput, setDuelRoomCodeInput] = useState("");
+  const [groupRoomCodeInput, setGroupRoomCodeInput] = useState("");
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const handleCreateRoom = async () => {
+  const handleCreateDuelRoom = async () => {
     if (!user?.id) {
       setSubmitError("로그인이 필요합니다.");
       return;
     }
-    // TODO: Supabase 연동 — 방 생성 후 roomId 반환
+
     try {
       setPending(true);
       setSubmitError("");
-
       const room = await createRoom(user.id);
-
       navigate(`/multiplayer/room/${room.id}`);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "방 생성에 실패했습니다.");
+      setSubmitError(
+        error instanceof Error ? error.message : "1 vs 1 방 생성에 실패했습니다."
+      );
     } finally {
       setPending(false);
     }
   };
 
-  const handleJoinRoom = async () => {
-    const code = roomCodeInput.trim().toUpperCase();
+  const handleJoinDuelRoom = async () => {
+    const code = duelRoomCodeInput.trim().toUpperCase();
     if (!code) return;
+
     if (!user?.id) {
       setSubmitError("로그인이 필요합니다.");
       return;
@@ -46,13 +54,61 @@ export default function MultiplayerPage() {
     try {
       setPending(true);
       setSubmitError("");
-
       const room = await findRoomByCode(code);
       await joinRoom(room.id, user.id);
-
       navigate(`/multiplayer/room/${room.id}`, { state: { role: "guest" } });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "방 참가에 실패했습니다.");
+      setSubmitError(
+        error instanceof Error ? error.message : "1 vs 1 방 참가에 실패했습니다."
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleCreateGroupRoom = async () => {
+    if (!user?.id) {
+      setSubmitError("로그인이 필요합니다.");
+      return;
+    }
+
+    try {
+      setPending(true);
+      setSubmitError("");
+      const room = await createGroupRoom(user.id, {
+        minPlayers: 3,
+        maxPlayers: 6,
+        finishRankLimit: 3,
+      });
+      navigate(`/multiplayer/group/room/${room.id}`);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "단체모드 방 생성에 실패했습니다."
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleJoinGroupRoom = async () => {
+    const code = groupRoomCodeInput.trim().toUpperCase();
+    if (!code) return;
+
+    if (!user?.id) {
+      setSubmitError("로그인이 필요합니다.");
+      return;
+    }
+
+    try {
+      setPending(true);
+      setSubmitError("");
+      const room = await findGroupRoomByCode(code);
+      await joinGroupRoom(room.id, user.id);
+      navigate(`/multiplayer/group/room/${room.id}`);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "단체모드 방 참가에 실패했습니다."
+      );
     } finally {
       setPending(false);
     }
@@ -60,12 +116,10 @@ export default function MultiplayerPage() {
 
   return (
     <div className="mp-page">
-      {/* 배경 글로우 */}
       <div className="mp-glow mp-glow--1" />
       <div className="mp-glow mp-glow--2" />
 
       <div className="mp-container">
-        {/* 헤더 */}
         <header className="mp-header">
           <button
             type="button"
@@ -76,87 +130,105 @@ export default function MultiplayerPage() {
           </button>
         </header>
 
-        {/* 타이틀 영역 */}
         <div className="mp-title-block">
-          <span className="mp-badge">MULTIPLAYER</span>
-          <h1 className="mp-title">
-            <span className="mp-title-accent">1</span>
-            <span className="mp-title-vs">VS</span>
-            <span className="mp-title-accent">1</span>
-            <span className="mp-title-sub">WIKI RACE</span>
-          </h1>
+          <span className="mp-badge">ONLINE PLAY</span>
+          <h1 className="mp-title">온라인 플레이</h1>
           <p className="mp-subtitle">
-            상대보다 빠르게 목표 위키 문서에 도달하세요
+            1 vs 1 대전 또는 여러 명이 함께하는 단체모드를 선택하세요.
           </p>
         </div>
 
-        {/* 카드 그리드 */}
-        <div className="mp-cards">
-          {/* 방 만들기 카드 */}
-          <div className="mp-card mp-card--create">
-            <div className="mp-card-icon">🏠</div>
-            <h2 className="mp-card-title">방 만들기</h2>
-            <p className="mp-card-desc">
-              새로운 대전 방을 만들고 친구를 초대하세요
+        {submitError && (
+          <div className="mp-error" style={{ marginBottom: "18px" }}>
+            {submitError}
+          </div>
+        )}
+
+        <div className="mp-card-grid">
+          <section className="mp-card">
+            <h2>1 vs 1 방 만들기</h2>
+            <p>친구 한 명과 빠르게 위키 레이스를 시작합니다.</p>
+            <button
+              type="button"
+              className="mp-action-btn mp-action-btn--primary"
+              onClick={handleCreateDuelRoom}
+              disabled={pending}
+            >
+              {pending ? "생성 중..." : "⚔️ 1 vs 1 방 생성"}
+            </button>
+          </section>
+
+          <section className="mp-card">
+            <h2>1 vs 1 방 참가</h2>
+            <p>방 코드를 입력해 1 vs 1 대전에 참가합니다.</p>
+            <input
+              className="mp-room-input"
+              value={duelRoomCodeInput}
+              placeholder="1 vs 1 방 코드"
+              onChange={(e) =>
+                setDuelRoomCodeInput(e.target.value.toUpperCase())
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleJoinDuelRoom();
+              }}
+            />
+            <button
+              type="button"
+              className="mp-action-btn"
+              onClick={handleJoinDuelRoom}
+              disabled={pending || !duelRoomCodeInput.trim()}
+            >
+              {pending ? "참가 중..." : "참가"}
+            </button>
+          </section>
+
+          <section className="mp-card mp-card--group">
+            <h2>단체모드 방 만들기</h2>
+            <p>
+              3명 이상이 함께 시작합니다. 먼저 도착한 3명이 순위에
+              오릅니다.
             </p>
             <button
               type="button"
               className="mp-action-btn mp-action-btn--primary"
+              onClick={handleCreateGroupRoom}
               disabled={pending}
-              onClick={handleCreateRoom}
-            //onClick={handleCreateRoom}  
             >
-              {pending ? (
-                <span className="mp-spinner" />
-              ) : (
-                "⚔️ 방 생성"
-              )}
+              {pending ? "생성 중..." : "👥 단체모드 방 생성"}
             </button>
-          </div>
+          </section>
 
-          {/* 방 참가 카드 */}
-          <div className="mp-card mp-card--join">
-            <div className="mp-card-icon">🔗</div>
-            <h2 className="mp-card-title">방 참가</h2>
-            <p className="mp-card-desc">
-              방 코드를 입력하여 대전에 참가하세요
-            </p>
-            <div className="mp-join-row">
-              <input
-                className="mp-code-input"
-                type="text"
-                placeholder="방 코드 입력"
-                maxLength={8}
-                value={roomCodeInput}
-                onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleJoinRoom();
-                }}
-              />
-              <button
-                type="button"
-                className="mp-action-btn mp-action-btn--secondary"
-                disabled={!roomCodeInput.trim() || pending}
-                onClick={handleJoinRoom}
-              //onClick={handleJoinRoom}  
-              >
-                {pending ? <span className="mp-spinner" /> : "참가"}
-              </button>
-            </div>
-          </div>
+          <section className="mp-card mp-card--group">
+            <h2>단체모드 방 참가</h2>
+            <p>방 코드를 입력해 단체모드 방에 참가합니다.</p>
+            <input
+              className="mp-room-input"
+              value={groupRoomCodeInput}
+              placeholder="단체모드 방 코드"
+              onChange={(e) =>
+                setGroupRoomCodeInput(e.target.value.toUpperCase())
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleJoinGroupRoom();
+              }}
+            />
+            <button
+              type="button"
+              className="mp-action-btn"
+              onClick={handleJoinGroupRoom}
+              disabled={pending || !groupRoomCodeInput.trim()}
+            >
+              {pending ? "참가 중..." : "참가"}
+            </button>
+          </section>
         </div>
 
-        {submitError && <p className="mp-error">{submitError}</p>}
+        <div className="mp-player-mini">
+          <span className="mp-player-label">PLAYER</span>
+          <strong>{user?.displayName || "Player"}</strong>
+        </div>
 
-        {/* 플레이어 정보 */}
-        <div className="mp-player-info">
-          <span className="mp-player-avatar">👤</span>
-          <span className="mp-player-name">{user?.displayName || "Player"}</span>
-        </div>
-        {/* ⬇️ 플레이어 정보 아래, 컨테이너가 닫히기 직전에 추가 */}
-        <div style={{ marginTop: "2rem", width: "100%" }}>
-          <AdBanner />
-        </div>
+        <AdBanner />
       </div>
     </div>
   );

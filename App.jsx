@@ -10,10 +10,11 @@ import ProfilePage from "./pages/ProfilePage";
 import MultiplayerPage from "./pages/MultiplayerPage";
 import RoomPage from "./pages/RoomPage";
 import MultiplayerGamePage from "./pages/MultiplayerGamePage";
-import "./app.css";
-import "./multiplayer.css";
-import IntroPage from "./pages/IntroPage";
 
+
+import IntroPage from "./pages/IntroPage";
+import GroupRoomPage from "./pages/GroupRoomPage";
+import GroupGamePage from "./pages/GroupGamePage";
 /**
  * 로그인 여부에 따라 접근을 제어하는 래퍼 컴포넌트
  * - 세션 확인 중일 때는 로딩 표시
@@ -168,6 +169,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/multiplayer/group/room/:roomId" element={<GroupRoomPage />} />
+      <Route path="/multiplayer/group/game/:roomId" element={<GroupGamePage />} />
     </Routes>
   );
 }

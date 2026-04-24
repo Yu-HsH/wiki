@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import "./wiki.css";
+
 
 const WIKI_API = "https://ko.wikipedia.org/w/api.php";
 const SUMMARY_API = "https://ko.wikipedia.org/api/rest_v1/page/summary";
