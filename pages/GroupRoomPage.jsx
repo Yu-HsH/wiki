@@ -37,7 +37,7 @@ export default function GroupRoomPage() {
     const isHost = room?.host_user_id === user?.id;
     const readyCount = players.filter((player) => player.is_ready).length;
     const minPlayers = room?.min_players ?? 3;
-    const maxPlayers = room?.max_players ?? 6;
+    const maxPlayers = room?.max_players ?? 30;
     const canStart =
         isHost &&
         room?.status === "waiting" &&
