@@ -2,7 +2,6 @@ import { supabase, isSupabaseConfigured } from "../supabaseClient";
 
 /**
  * 방 코드 생성
- * - 너무 길지 않고 사람이 입력하기 쉬운 형태
  */
 function generateRoomCode(length = 6) {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -14,28 +13,21 @@ function generateRoomCode(length = 6) {
 }
 
 /**
- * 현재 로그인한 사용자의 프로필 조회
- * - room_players에 닉네임 snapshot을 저장할 때 사용
+ * 내 프로필 조회
  */
-const { error } = await supabase.from("room_players").insert({
-    room_id: roomId,
-    user_id: userId,
-    role: "guest",
-    nickname_snapshot: profile.nickname || "참가자",
-    profile_image_snapshot: profile.profile_image_url || null,
-    is_ready: false,
-    move_count: 0,
-    has_finished: false,
-});
+async function fetchMyProfile(userId) {
+    const { data, error } = await supabase
+        .from("profiles")
+        .select("id, nickname, profile_image_url")
+        .eq("id", userId)
+        .single();
 
-if (error) throw error;
-
-return await fetchRoom(roomId);
+    if (error) throw error;
+    return data;
+}
 
 /**
  * 방 생성
- * 1. game_rooms 생성
- * 2. room_players에 host 추가
  */
 export async function createRoom(userId) {
     if (!isSupabaseConfigured || !supabase) {
@@ -46,7 +38,6 @@ export async function createRoom(userId) {
 
     let roomCode = generateRoomCode();
 
-    // 중복 room_code 방지용 간단 재시도
     for (let i = 0; i < 3; i += 1) {
         const { data: existing } = await supabase
             .from("game_rooms")
@@ -70,18 +61,16 @@ export async function createRoom(userId) {
 
     if (roomError) throw roomError;
 
-    const { error: playerError } = await supabase
-        .from("room_players")
-        .insert({
-            room_id: room.id,
-            user_id: userId,
-            role: "host",
-            nickname_snapshot: profile.nickname,
-            profile_image_snapshot: null,//profile.profile_image_url,
-            is_ready: false,
-            move_count: 0,
-            has_finished: false,
-        });
+    const { error: playerError } = await supabase.from("room_players").insert({
+        room_id: room.id,
+        user_id: userId,
+        role: "host",
+        nickname_snapshot: profile.nickname || "방장",
+        profile_image_snapshot: profile.profile_image_url || null,
+        is_ready: false,
+        move_count: 0,
+        has_finished: false,
+    });
 
     if (playerError) throw playerError;
 
@@ -89,13 +78,9 @@ export async function createRoom(userId) {
 }
 
 /**
- * 방 코드로 방 찾기
+ * 방 찾기
  */
 export async function findRoomByCode(roomCode) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
     const normalized = roomCode.trim().toUpperCase();
 
     const { data, error } = await supabase
@@ -109,67 +94,52 @@ export async function findRoomByCode(roomCode) {
 }
 
 /**
- * 방 입장
- * - 이미 참가 중이면 기존 row 재사용
- * - 아니면 guest row 추가
+ * 방 참가 (🔥 핵심 수정 완료)
  */
 export async function joinRoom(roomId, userId) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
     const profile = await fetchMyProfile(userId);
 
-    // 이미 참가 중인지 확인
-    const { data: existingPlayer, error: existingError } = await supabase
+    // 이미 참가 여부
+    const { data: existingPlayer } = await supabase
         .from("room_players")
         .select("*")
         .eq("room_id", roomId)
         .eq("user_id", userId)
         .maybeSingle();
 
-    if (existingError) throw existingError;
     if (existingPlayer) return existingPlayer;
 
-    // guest 슬롯이 이미 차 있는지 확인
-    const { data: players, error: playersError } = await supabase
+    // 인원 제한
+    const { data: players } = await supabase
         .from("room_players")
-        .select("id, role")
+        .select("id")
         .eq("room_id", roomId);
-
-    if (playersError) throw playersError;
 
     if ((players ?? []).length >= 2) {
         throw new Error("이미 가득 찬 방입니다.");
     }
 
-    const { data, error } = await supabase
-        .from("room_players")
-        .insert({
-            room_id: roomId,
-            user_id: userId,
-            role: "guest",
-            nickname_snapshot: profile.nickname,
-            profile_image_snapshot: profile.profile_image_url,
-            is_ready: false,
-            move_count: 0,
-            has_finished: false,
-        })
-        .select()
-        .single();
+    // ✅ 중요: select 제거
+    const { error } = await supabase.from("room_players").insert({
+        room_id: roomId,
+        user_id: userId,
+        role: "guest",
+        nickname_snapshot: profile.nickname || "참가자",
+        profile_image_snapshot: profile.profile_image_url || null,
+        is_ready: false,
+        move_count: 0,
+        has_finished: false,
+    });
 
     if (error) throw error;
-    return data;
+
+    return await fetchRoom(roomId);
 }
 
 /**
- * 방 참가자 조회
+ * 방 플레이어 조회
  */
 export async function fetchRoomPlayers(roomId) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
     const { data, error } = await supabase
         .from("room_players")
         .select("*")
@@ -184,10 +154,6 @@ export async function fetchRoomPlayers(roomId) {
  * 방 정보 조회
  */
 export async function fetchRoom(roomId) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
     const { data, error } = await supabase
         .from("game_rooms")
         .select("*")
@@ -197,15 +163,11 @@ export async function fetchRoom(roomId) {
     if (error) throw error;
     return data;
 }
+
 /**
- * 
- * 현재 로그인 플레이어의 room_playes rows를 업데이트
+ * 내 상태 업데이트
  */
 export async function updateMyRoomPlayer(roomId, userId, updates) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
     const { data, error } = await supabase
         .from("room_players")
         .update(updates)
@@ -218,92 +180,47 @@ export async function updateMyRoomPlayer(roomId, userId, updates) {
     return data;
 }
 
+/**
+ * 방 나가기
+ */
 export async function leaveRoom(roomId, userId) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
-    // 1. 내 room_players row 삭제
-    const { error: deletePlayerError } = await supabase
+    await supabase
         .from("room_players")
         .delete()
         .eq("room_id", roomId)
         .eq("user_id", userId);
 
-    if (deletePlayerError) throw deletePlayerError;
-
-    // 2. 남은 플레이어 수 확인
-    const { data: remainingPlayers, error: remainingError } = await supabase
+    const { data: remaining } = await supabase
         .from("room_players")
         .select("id")
         .eq("room_id", roomId);
 
-    if (remainingError) throw remainingError;
-
-    // 3. 아무도 안 남았으면 room도 삭제
-    if (!remainingPlayers || remainingPlayers.length === 0) {
-        const { error: deleteRoomError } = await supabase
-            .from("game_rooms")
-            .delete()
-            .eq("id", roomId);
-
-        if (deleteRoomError) throw deleteRoomError;
+    if (!remaining || remaining.length === 0) {
+        await supabase.from("game_rooms").delete().eq("id", roomId);
     }
 }
-export async function updateRoom(roomId, updates) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
 
-    const { data, error } = await supabase
-        .from("game_rooms")
-        .update(updates)
-        .eq("id", roomId)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return data;
-}
-
+/**
+ * 게임 시작
+ */
 export async function startRoomGame(roomId, userId) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
-    const { data: room, error: roomError } = await supabase
+    const { data: room } = await supabase
         .from("game_rooms")
         .select("*")
         .eq("id", roomId)
         .single();
 
-    if (roomError) throw roomError;
-
     if (room.host_user_id !== userId) {
-        throw new Error("호스트만 게임을 시작할 수 있습니다.");
+        throw new Error("호스트만 시작 가능");
     }
 
-    if (room.status !== "waiting") {
-        throw new Error("이미 시작되었거나 종료된 방입니다.");
-    }
-
-    const { data: players, error: playerError } = await supabase
+    const { data: players } = await supabase
         .from("room_players")
         .select("*")
         .eq("room_id", roomId);
 
-    if (playerError) throw playerError;
-
     if (!players || players.length < 2) {
-        throw new Error("상대 플레이어가 입장해야 시작할 수 있습니다.");
-    }
-
-    const allReady = players.every(
-        (p) => p.is_ready && p.target_title && p.target_title.trim()
-    );
-
-    if (!allReady) {
-        throw new Error("모든 플레이어가 목표 문서를 설정하고 준비해야 합니다.");
+        throw new Error("상대 필요");
     }
 
     const { data, error } = await supabase
@@ -313,70 +230,6 @@ export async function startRoomGame(roomId, userId) {
             started_at: new Date().toISOString(),
         })
         .eq("id", roomId)
-        .eq("host_user_id", userId)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return data;
-}
-/**
- * 게임 진행 중 내 상태 업데이트
- * - current_title
- * - move_count
- * - has_finished
- * - finished_at
- * - start_title
- */
-export async function updateMyGameProgress(roomId, userId, updates) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
-    const { data, error } = await supabase
-        .from("room_players")
-        .update(updates)
-        .eq("room_id", roomId)
-        .eq("user_id", userId)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return data;
-}
-
-/**
- * 게임 방 상태 업데이트
- * - starting -> playing
- * - playing -> finished
- */
-export async function updateGameRoomStatus(roomId, updates) {
-    const { data, error } = await supabase
-        .from("game_rooms")
-        .update(updates)
-        .eq("id", roomId)
-        .select()
-        .maybeSingle();
-
-    if (error) throw error;
-    if (!data) {
-        throw new Error("game_rooms 업데이트 결과가 없습니다. RLS policy를 확인하세요.");
-    }
-
-    return data;
-}
-
-/**
- * 매치 결과 저장
- */
-export async function createMatchHistory(payload) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
-
-    const { data, error } = await supabase
-        .from("match_history")
-        .insert(payload)
         .select()
         .single();
 
