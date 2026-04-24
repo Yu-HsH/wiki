@@ -17,20 +17,20 @@ function generateRoomCode(length = 6) {
  * 현재 로그인한 사용자의 프로필 조회
  * - room_players에 닉네임 snapshot을 저장할 때 사용
  */
-export async function fetchMyProfile(userId) {
-    if (!isSupabaseConfigured || !supabase) {
-        throw new Error("Supabase가 설정되지 않았습니다.");
-    }
+const { error } = await supabase.from("room_players").insert({
+    room_id: roomId,
+    user_id: userId,
+    role: "guest",
+    nickname_snapshot: profile.nickname || "참가자",
+    profile_image_snapshot: profile.profile_image_url || null,
+    is_ready: false,
+    move_count: 0,
+    has_finished: false,
+});
 
-    const { data, error } = await supabase
-        .from("profiles")
-        .select("id, nickname")
-        .eq("id", userId)
-        .single();
+if (error) throw error;
 
-    if (error) throw error;
-    return data;
-}
+return await fetchRoom(roomId);
 
 /**
  * 방 생성
