@@ -287,7 +287,7 @@ export default function GroupRoomPage() {
             <div className="mp-glow mp-glow--1" />
             <div className="mp-glow mp-glow--2" />
 
-            <div className="mp-container">
+            <div className="mp-container" style={{ width: "min(1000px, 100%)" }}>
                 <header className="mp-header">
                     <button type="button" className="mp-back-btn" onClick={handleLeave}>
                         ← 온라인 플레이
@@ -312,8 +312,6 @@ export default function GroupRoomPage() {
                     <h1 className="mp-title">단체모드 대기실</h1>
                     <p className="mp-subtitle">
                         최소 {minPlayers}명, 최대 {maxPlayers}명까지 참가할 수 있습니다.
-                        모든 참가자가 목표 문서를 제출하고 준비하면 방장이 시작할 수
-                        있습니다.
                     </p>
                 </div>
 
@@ -336,21 +334,40 @@ export default function GroupRoomPage() {
                     </div>
                 )}
 
-                <div className="mp-card-grid">
-                    <section className="mp-card">
-                        <h2>내 목표 문서 제출</h2>
-                        <p>
-                            검색 결과에서 문서를 선택하세요. 참가자들이 제출한 문서 중에서
-                            시작 문서와 목표 문서가 랜덤으로 결정됩니다.
+                <div className="group-room-layout">
+                    {/* 왼쪽: 내 설정 카드 */}
+                    <section className="mp-card group-my-card">
+                        <div className="group-my-profile">
+                            <div className="room-player-avatar" style={{ width: 44, height: 44 }}>
+                                {user?.photoURL ? (
+                                    <img
+                                        src={user.photoURL}
+                                        alt="me"
+                                        style={{ width: "100%", height: "100%", borderRadius: "999px" }}
+                                    />
+                                ) : (
+                                    (user?.displayName || "U").charAt(0).toUpperCase()
+                                )}
+                            </div>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: "18px" }}>{user?.displayName || "나"}</h2>
+                                <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
+                                    내 목표 문서 제출
+                                </p>
+                            </div>
+                        </div>
+
+                        <p className="mp-card-desc" style={{ textAlign: "left", fontSize: "12px" }}>
+                            참가자들이 제출한 문서 중 하나가 시작/목표로 랜덤 결정됩니다.
                         </p>
 
-                        <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
+                        <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
                             <input
                                 className="mp-room-input"
-                                style={{ flex: 1 }}
+                                style={{ flex: 1, textAlign: "left", fontSize: "14px" }}
                                 value={keywordInput}
                                 disabled={myPlayer?.is_ready || room?.status !== "waiting"}
-                                placeholder="예: 거북이, 알베르트 아인슈타인"
+                                placeholder="목표 문서 검색"
                                 onChange={(e) => {
                                     setKeywordInput(e.target.value);
                                     setSelectedTarget(null);
@@ -361,78 +378,36 @@ export default function GroupRoomPage() {
                                     if (e.key === "Enter") handleSearch();
                                 }}
                             />
-
                             <button
                                 type="button"
                                 className="mp-action-btn"
+                                style={{ padding: "0 16px" }}
                                 onClick={handleSearch}
-                                disabled={
-                                    isSearching ||
-                                    myPlayer?.is_ready ||
-                                    room?.status !== "waiting" ||
-                                    !keywordInput.trim()
-                                }
+                                disabled={isSearching || myPlayer?.is_ready || !keywordInput.trim()}
                             >
-                                {isSearching ? "검색 중..." : "검색"}
+                                {isSearching ? "..." : "검색"}
                             </button>
                         </div>
 
                         {targetSuggestions.length > 0 && (
-                            <div
-                                className="room-target-suggestions"
-                                style={{
-                                    marginTop: "12px",
-                                    border: "1px solid var(--line-main, rgba(255,255,255,0.14))",
-                                    borderRadius: "12px",
-                                    overflow: "hidden",
-                                }}
-                            >
+                            <div className="room-target-suggestions group-suggestions">
                                 {targetSuggestions.map((item) => (
                                     <button
                                         key={item.title}
                                         type="button"
                                         onClick={() => handleSelectTarget(item)}
-                                        style={{
-                                            width: "100%",
-                                            padding: "10px 12px",
-                                            textAlign: "left",
-                                            border: "none",
-                                            borderBottom:
-                                                "1px solid var(--line-main, rgba(255,255,255,0.12))",
-                                            background:
-                                                selectedTarget?.title === item.title
-                                                    ? "rgba(96,165,250,0.18)"
-                                                    : "rgba(255,255,255,0.04)",
-                                            color: "var(--text-main, #fff)",
-                                            cursor: "pointer",
-                                        }}
+                                        className={selectedTarget?.title === item.title ? "active" : ""}
                                     >
-                                        <strong style={{ display: "block" }}>{item.title}</strong>
-                                        <span
-                                            style={{
-                                                display: "block",
-                                                marginTop: "4px",
-                                                color: "var(--text-muted, rgba(255,255,255,0.72))",
-                                                fontSize: "13px",
-                                            }}
-                                            dangerouslySetInnerHTML={{ __html: item.snippet || "" }}
-                                        />
+                                        <strong>{item.title}</strong>
+                                        <span dangerouslySetInnerHTML={{ __html: item.snippet || "" }} />
                                     </button>
                                 ))}
                             </div>
                         )}
 
                         {selectedTarget?.title && (
-                            <div
-                                style={{
-                                    marginTop: "12px",
-                                    padding: "10px 12px",
-                                    borderRadius: "12px",
-                                    background: "rgba(96,165,250,0.14)",
-                                    color: "var(--text-main, #fff)",
-                                }}
-                            >
-                                선택한 문서: <strong>{selectedTarget.title}</strong>
+                            <div className="group-selected-target">
+                                선택됨: <strong>{selectedTarget.title}</strong>
                             </div>
                         )}
 
@@ -440,7 +415,7 @@ export default function GroupRoomPage() {
                             <button
                                 type="button"
                                 className="mp-action-btn mp-action-btn--primary"
-                                style={{ marginTop: "16px", width: "100%" }}
+                                style={{ marginTop: "16px", width: "100%", height: "48px" }}
                                 onClick={handleReady}
                                 disabled={!selectedTarget?.title || room?.status !== "waiting"}
                             >
@@ -450,7 +425,12 @@ export default function GroupRoomPage() {
                             <button
                                 type="button"
                                 className="mp-action-btn"
-                                style={{ marginTop: "16px", width: "100%" }}
+                                style={{
+                                    marginTop: "16px",
+                                    width: "100%",
+                                    height: "48px",
+                                    background: "rgba(255,255,255,0.08)"
+                                }}
                                 onClick={handleUnready}
                                 disabled={room?.status !== "waiting"}
                             >
@@ -459,108 +439,64 @@ export default function GroupRoomPage() {
                         )}
                     </section>
 
-                    <section className="mp-card">
-                        <h2>참가자 목록</h2>
-                        <p>
-                            참가자들이 제출한 문서 중에서 게임의 시작 문서와 목표 문서가
-                            정해집니다.
-                        </p>
+                    {/* 오른쪽: 참가자 목록 */}
+                    <section className="mp-card group-player-list-card">
+                        <div className="group-player-list-header">
+                            <h2>참가자 목록</h2>
+                            <span>{players.length} / {maxPlayers}</span>
+                        </div>
 
-                        <div style={{ marginTop: "14px", display: "grid", gap: "10px" }}>
+                        <div className="group-player-list">
                             {players.map((player) => (
-                                <div
-                                    key={player.id}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        gap: "10px",
-                                        padding: "10px 12px",
-                                        borderRadius: "14px",
-                                        background: "rgba(255,255,255,0.06)",
-                                        border: "1px solid var(--line-main, rgba(255,255,255,0.12))",
-                                    }}
-                                >
-                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                        <div className="room-player-avatar" style={{ width: 36, height: 36 }}>
+                                <div key={player.id} className="group-player-row">
+                                    <div className="group-player-info">
+                                        <div className="room-player-avatar" style={{ width: 32, height: 32, fontSize: "14px" }}>
                                             {player.profile_image_snapshot ? (
                                                 <img
                                                     src={player.profile_image_snapshot}
-                                                    alt={player.nickname_snapshot || "player"}
-                                                    style={{
-                                                        width: "100%",
-                                                        height: "100%",
-                                                        borderRadius: "999px",
-                                                        objectFit: "cover",
-                                                    }}
+                                                    alt="avatar"
+                                                    style={{ width: "100%", height: "100%", borderRadius: "50%" }}
                                                 />
                                             ) : (
                                                 (player.nickname_snapshot || "U").charAt(0).toUpperCase()
                                             )}
                                         </div>
-
-                                        <div>
-                                            <strong>{player.nickname_snapshot || "참가자"}</strong>
-                                            <div
-                                                style={{
-                                                    fontSize: "12px",
-                                                    color: "var(--text-muted, rgba(255,255,255,0.72))",
-                                                }}
-                                            >
-                                                {player.role === "host" ? "방장" : "참가자"}
+                                        <div className="group-player-name-block">
+                                            <div className="group-player-name">
+                                                {player.nickname_snapshot || "참가자"}
+                                                {player.role === "host" && <span className="host-badge">HOST</span>}
+                                            </div>
+                                            <div className="group-player-doc">
+                                                {player.submitted_target_title || "문서 미선택"}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div style={{ textAlign: "right" }}>
-                                        <div
-                                            style={{
-                                                fontSize: "13px",
-                                                fontWeight: 800,
-                                                color: player.is_ready ? "#86efac" : "var(--text-muted)",
-                                            }}
-                                        >
-                                            {player.is_ready ? "READY" : "WAIT"}
-                                        </div>
-                                        <div
-                                            style={{
-                                                fontSize: "12px",
-                                                color: "var(--text-muted, rgba(255,255,255,0.72))",
-                                                maxWidth: "160px",
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                whiteSpace: "nowrap",
-                                            }}
-                                            title={player.submitted_target_title || ""}
-                                        >
-                                            {player.submitted_target_title || "문서 미선택"}
-                                        </div>
+                                    <div className={`group-player-status ${player.is_ready ? "ready" : ""}`}>
+                                        {player.is_ready ? "READY" : "WAIT"}
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </section>
-                </div>
 
-                <div style={{ marginTop: "24px", textAlign: "center" }}>
-                    {isHost ? (
-                        <button
-                            type="button"
-                            className="mp-action-btn mp-action-btn--primary"
-                            onClick={handleStart}
-                            disabled={!canStart || starting}
-                        >
-                            {starting
-                                ? "시작 중..."
-                                : canStart
-                                    ? "🚀 단체모드 시작"
-                                    : `최소 ${minPlayers}명 + 전원 준비 필요`}
-                        </button>
-                    ) : (
-                        <p className="mp-subtitle">
-                            모든 참가자가 준비하면 방장이 게임을 시작할 수 있습니다.
-                        </p>
-                    )}
+                        {/* 방장 시작 버튼은 목록 하단에 위치 */}
+                        {isHost && (
+                            <button
+                                type="button"
+                                className="mp-action-btn mp-action-btn--primary"
+                                style={{ marginTop: "20px", width: "100%", height: "48px" }}
+                                onClick={handleStart}
+                                disabled={!canStart || starting}
+                            >
+                                {starting ? "시작 중..." : canStart ? "🚀 게임 시작" : "대기 중..."}
+                            </button>
+                        )}
+                        {!isHost && !canStart && (
+                            <p style={{ marginTop: "16px", fontSize: "12px", color: "rgba(255,255,255,0.4)" }}>
+                                모든 참가자가 준비하면 방장이 게임을 시작합니다.
+                            </p>
+                        )}
+                    </section>
                 </div>
             </div>
         </div>
