@@ -150,8 +150,8 @@ export default function MainPage() {
           onClick={() => navigate("/multiplayer")}
         >
           <span className="qs-icon">⚔️</span>
-          <span className="qs-title">1 VS 1 대전</span>
-          <span className="qs-desc">친구와 실시간 위키 레이스 대결</span>
+          <span className="qs-title">온라인 플레이</span>
+          <span className="qs-desc">친구들과 실시간 위키 레이스 대결</span>
         </button>
       </section>
 
