@@ -372,6 +372,8 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             onLinkClick={handleMove}
             highlightedLinks={itemSystem.highlightedLinks}
             searchAvailable={itemSystem.searchAvailable}
+            onConsumeSearch={itemSystem.consumeSearchAvailable}
+
           />
         )}
 
