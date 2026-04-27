@@ -22,6 +22,10 @@ import ScrollToTopButton from "../components/ScrollToTopButton";
 import WikiViewer from "../components/WikiViewer";
 import VsIntroOverlay from "../components/VsIntroOverlay";
 
+import ItemBar from "../components/ItemBar";
+import EffectOverlay from "../components/EffectOverlay";
+import { ITEM_DEFS } from "../data/items";
+import { MULTI_ITEM_IDS } from "../data/itemPools";
 /**
  * 멀티플레이 게임 페이지
  *
@@ -75,7 +79,17 @@ export default function MultiplayerGamePage() {
     () => players.find((p) => p.user_id !== user?.id),
     [players, user?.id]
   );
+  const [status, setStatus] = useState({
+    blind: false,
+    immuneUntil: 0,
+    translateCurrent: false,
+  });
 
+  const [inventory, setInventory] = useState([]);
+  const [highlightRequestId, setHighlightRequestId] = useState(0);
+  const [searchAvailable, setSearchAvailable] = useState(false);
+  const [historyStack, setHistoryStack] = useState([]);
+  const [floatingMessage, setFloatingMessage] = useState("");
   /**
    * 중요:
    * - 내가 풀어야 할 목표 = 상대가 대기실에서 입력한 target_title
@@ -239,7 +253,169 @@ export default function MultiplayerGamePage() {
       setPhase(PHASE.VS_INTRO);
     }
   }, [room, myPlayer, opponentPlayer, roomId, phase]);
+  useEffect(() => {
+    if (phase !== PHASE.COUNTDOWN) return;
 
+    const pool = ITEM_DEFS.filter((item) => MULTI_ITEM_IDS.includes(item.id));
+    const rare = pool.filter((item) => item.rarity === "rare");
+    const normal = pool.filter((item) => item.rarity !== "rare");
+
+    const pick = (arr, count) => {
+      const copy = [...arr];
+      const result = [];
+
+      while (copy.length && result.length < count) {
+        const idx = Math.floor(Math.random() * copy.length);
+        result.push(copy.splice(idx, 1)[0]);
+      }
+
+      return result;
+    };
+
+    const selected = [...pick(rare, 1), ...pick(normal, 3)].map((item, index) => ({
+      ...item,
+      instanceId: `${item.id}-${Date.now()}-${index}`,
+      used: false,
+    }));
+
+    setInventory(selected);
+  }, [phase]);
+
+  const emitRoomEvent = async (eventType, payload = {}) => {
+    if (!roomId || !user?.id) return;
+
+    const { error } = await supabase.from("room_events").insert({
+      room_id: roomId,
+      user_id: user.id,
+      event_type: eventType,
+      payload,
+    });
+
+    if (error) {
+      console.error("room_events insert 실패:", error);
+    }
+  };
+  const showMessage = (message) => {
+    setFloatingMessage(message);
+    setTimeout(() => setFloatingMessage(""), 1800);
+  };
+
+  const markUsed = (instanceId) => {
+    setInventory((prev) =>
+      prev.map((item) =>
+        item.instanceId === instanceId ? { ...item, used: true } : item
+      )
+    );
+  };
+
+  const canUseItem = (item) => {
+    if (!item || item.used) return false;
+
+    if (item.useCondition === "has_links") {
+      return pageData?.links?.length > 0;
+    }
+
+    if (item.useCondition === "has_history") {
+      return historyStack.length > 0;
+    }
+
+    return true;
+  };
+
+  const handleUseItem = async (instanceId) => {
+    const item = inventory.find((i) => i.instanceId === instanceId);
+    if (!canUseItem(item)) return;
+
+    markUsed(instanceId);
+
+    switch (item.id) {
+      case "blind":
+        await emitRoomEvent("blind");
+        showMessage("상대에게 시야 방해!");
+        break;
+
+      case "double_blind":
+        applyBlind();
+        await emitRoomEvent("double_blind");
+        showMessage("서로 화면 가리기!");
+        break;
+
+      case "cleanse_shield":
+        applyCleanse();
+        showMessage("상태 해제 + 10초 면역");
+        break;
+
+      case "random_link_move":
+        await emitRoomEvent("random_link_move");
+        showMessage("상대 랜덤 이동!");
+        break;
+
+      case "highlight_links":
+        setHighlightRequestId((prev) => prev + 1);
+        showMessage("유망 링크 표시!");
+        break;
+
+      case "search_once":
+        setSearchAvailable(true);
+        showMessage("검색 1회 사용 가능");
+        break;
+
+      case "go_back": {
+        const prevTitle = historyStack[historyStack.length - 1];
+        if (!prevTitle) return;
+
+        setHistoryStack((prev) => prev.slice(0, -1));
+        await handleMove(prevTitle);
+        showMessage("뒤로가기 사용");
+        break;
+      }
+
+      case "random_teleport": {
+        const randomTitle = await fetchDistinctRandomTitle(
+          new Set([normalizeTitle(pageData?.title)])
+        );
+        await handleMove(randomTitle);
+        showMessage("랜덤 텔레포트!");
+        break;
+      }
+
+      case "translate_current":
+        await emitRoomEvent("translate_current");
+        showMessage("상대 현재 문서 언어 방해!");
+        break;
+
+      case "swap_current":
+        await emitRoomEvent("swap_current", {
+          senderCurrentTitle: pageData?.title,
+        });
+
+        if (opponentPlayer?.current_title) {
+          await handleMove(opponentPlayer.current_title);
+        }
+
+        showMessage("현재 문서 교환!");
+        break;
+
+      case "swap_target":
+        await supabase
+          .from("room_players")
+          .update({ target_title: opponentPlayer?.target_title })
+          .eq("room_id", roomId)
+          .eq("user_id", user.id);
+
+        await supabase
+          .from("room_players")
+          .update({ target_title: myPlayer?.target_title })
+          .eq("room_id", roomId)
+          .eq("user_id", opponentPlayer?.user_id);
+
+        showMessage("목표 문서 교환!");
+        break;
+
+      default:
+        showMessage(`${item.name} 사용`);
+    }
+  };
   // ----------------------------
   // VS 인트로 -> 카운트다운
   // ----------------------------
@@ -274,12 +450,23 @@ export default function MultiplayerGamePage() {
   // ----------------------------
   // 링크 클릭 시 문서 이동 처리
   // ----------------------------
+
   const handleMove = async (nextTitle) => {
     if (!roomId || !user?.id || phase !== PHASE.PLAYING) return;
 
     try {
       setError("");
       setIsPageLoading(true);
+      // 뒤로가기 아이템을 위해 현재 문서를 기록
+      if (pageData?.title && pageData.title !== nextTitle) {
+        setHistoryStack((prev) => [...prev, pageData.title]);
+      }
+
+      // 문서를 이동하면 현재 문서에만 적용되는 방해 효과 해제
+      setStatus((prev) => ({
+        ...prev,
+        translateCurrent: false,
+      }));
 
       const nextPage = await fetchPageData(nextTitle);
       setPageData(nextPage);
@@ -320,6 +507,106 @@ export default function MultiplayerGamePage() {
     } finally {
       setIsPageLoading(false);
     }
+  };
+  useEffect(() => {
+    if (!roomId) return;
+
+    const channel = supabase
+      .channel(`room-events-${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "room_events",
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          const event = payload.new;
+
+          // 내가 보낸 건 무시
+          if (event.user_id === user?.id) return;
+
+          handleIncomingEvent(event);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId]);
+  const handleIncomingEvent = async (event) => {
+    console.log("받은 room_event:", event);
+    const payload = event.payload || {};
+
+    switch (event.event_type) {
+      case "blind":
+        applyBlind();
+        break;
+
+      case "double_blind":
+        applyBlind();
+        break;
+
+      case "random_link_move": {
+        if (Date.now() < status.immuneUntil) return;
+
+        const links = pageData?.links || [];
+        if (!links.length) return;
+
+        const random = links[Math.floor(Math.random() * links.length)];
+        await handleMove(random);
+        break;
+      }
+
+      case "translate_current":
+        if (Date.now() < status.immuneUntil) return;
+
+        setStatus((prev) => ({
+          ...prev,
+          translateCurrent: true,
+        }));
+        break;
+
+      case "swap_current":
+        if (payload.senderCurrentTitle) {
+          await handleMove(payload.senderCurrentTitle);
+        }
+        break;
+
+      case "cleanse":
+        applyCleanse();
+        break;
+
+      default:
+        break;
+    }
+  };
+  const applyCleanse = () => {
+    setStatus((prev) => ({
+      ...prev,
+      blind: false,
+      immuneUntil: Date.now() + 10000, // 10초 면역
+    }));
+  };
+  const applyBlind = () => {
+    // 👉 면역 체크
+    if (Date.now() < status.immuneUntil) {
+      return;
+    }
+
+    setStatus((prev) => ({
+      ...prev,
+      blind: true,
+    }));
+
+    setTimeout(() => {
+      setStatus((prev) => ({
+        ...prev,
+        blind: false,
+      }));
+    }, 4000);
   };
 
   // ----------------------------
@@ -406,9 +693,28 @@ export default function MultiplayerGamePage() {
             clickCount={myPlayer?.move_count || 0}
             startTitle={myPlayer?.start_title || ""}
             onLinkClick={handleMove}
+            blindActive={status.blind}
+            highlightRequestId={highlightRequestId}
+            searchAvailable={searchAvailable}
+            onConsumeSearch={() => setSearchAvailable(false)}
+            status={status}
           />
         </div>
+        {phase === PHASE.PLAYING && (
+          <>
+            <ItemBar
+              inventory={inventory}
+              canUseItem={canUseItem}
+              onUseItem={handleUseItem}
+            />
 
+            <EffectOverlay
+              blindActive={status.blind}
+              floatingMessage={floatingMessage}
+              immune={Date.now() < status.immuneUntil}
+            />
+          </>
+        )}
         {/* 상대 상태 패널 */}
         <aside className="mp-opponent-panel">
           <div className="mp-opponent-header">
