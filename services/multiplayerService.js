@@ -55,6 +55,7 @@ export async function createRoom(userId) {
             room_code: roomCode,
             host_user_id: userId,
             status: "waiting",
+            use_items: PushSubscriptionOptions.useItems ?? true,
         })
         .select()
         .single();

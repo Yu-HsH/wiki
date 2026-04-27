@@ -80,7 +80,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const handleCountdownComplete = useCallback(() => {
     setPhase(PHASE.PLAYING);
   }, []);
-
+  const useItems = location.state?.useItems ?? true;
   // ----------------------------
   // 타이머
   // ----------------------------
@@ -194,6 +194,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const itemSystem = useItemSystem({
     mode: "single",
     links,
+    targetTitle: target.title,
     onMove: async (title) => {
       await handleMove(title);
     },
@@ -370,14 +371,17 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             clickCount={clickCount}
             startTitle={startTitle}
             onLinkClick={handleMove}
-            highlightedLinks={itemSystem.highlightedLinks}
+            highlightRequestId={itemSystem.highlightRequestId}
             searchAvailable={itemSystem.searchAvailable}
+            onConsumeSearch={itemSystem.consumeSearchAvailable}
+            status={itemSystem.status}
           />
         )}
 
-      {(phase === PHASE.PLAYING ||
-        phase === PHASE.COUNTDOWN ||
-        phase === PHASE.SUCCESS) && (
+      {useItems && itemSystem &&
+        (phase === PHASE.PLAYING ||
+          phase === PHASE.COUNTDOWN ||
+          phase === PHASE.SUCCESS) && (
           <>
             <ItemBar
               inventory={itemSystem.inventory}

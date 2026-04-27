@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { normalizeTitle } from "../services/wikiService";
 import { ITEM_DEFS } from "../data/items";
 import { SINGLE_ITEM_IDS, MULTI_ITEM_IDS } from "../data/itemPools";
 import {
@@ -24,6 +25,7 @@ import {
 export default function useItemSystem({
     mode = "single",
     links = [],
+    targetTitle = "",
     onMove,
     onRandomTeleport,
 }) {
@@ -51,7 +53,10 @@ export default function useItemSystem({
             setFloatingMessage("");
         }, duration);
     }, []);
-
+    const [status, setStatus] = useState({
+        blind: false,
+        immuneUntil: 0,
+    });
     useEffect(() => {
         return () => {
             if (messageTimerRef.current) {
@@ -144,7 +149,7 @@ export default function useItemSystem({
         },
         [historyStack, links]
     );
-
+    const [highlightRequestId, setHighlightRequestId] = useState(0);
     const useItem = useCallback(
         async (instanceId) => {
             const item = inventory.find((i) => i.instanceId === instanceId);
@@ -157,9 +162,8 @@ export default function useItemSystem({
 
             switch (item.id) {
                 case "highlight_links": {
-                    const candidates = (links || []).slice(0, 3);
-                    setHighlightedLinks(candidates);
-                    showMessage("링크 하이라이트!");
+                    setHighlightRequestId((prev) => prev + 1);
+                    showMessage("유망한 링크 표시!");
                     break;
                 }
 
@@ -197,33 +201,25 @@ export default function useItemSystem({
                 }
 
                 case "cleanse_shield": {
-                    setActiveEffects((prev) => ({
-                        ...prev,
-                        self: removeEffect(
-                            removeEffect(prev.self, "blind"),
-                            "translate_current"
-                        ),
-                    }));
-                    setImmunityUntil((prev) => ({
-                        ...prev,
-                        self: Date.now() + 10000,
-                    }));
-                    showMessage("방해 해제 + 10초 면역");
+                    setStatus({
+                        blind: false,
+                        immuneUntil: Date.now() + 10000,
+                    });
+
+                    showMessage("상태 해제 + 10초 면역");
                     break;
                 }
 
                 // 아래는 멀티용. 싱글에서는 인벤토리 풀에서 제외하는 것이 기본.
                 case "blind": {
-                    if (mode !== "multi") {
-                        showMessage("싱글에서는 사용할 수 없는 아이템입니다.");
-                        break;
-                    }
+                    await supabase.from("room_events").insert({
+                        room_id: roomId,
+                        user_id: myUserId,
+                        event_type: "blind",
+                        payload: {},
+                    });
 
-                    setActiveEffects((prev) => ({
-                        ...prev,
-                        self: addEffect(prev.self, buildTimedEffect("blind", item.duration)),
-                    }));
-                    showMessage("시야 가리기!");
+                    showMessage("상대에게 시야 방해!");
                     break;
                 }
 
@@ -253,6 +249,7 @@ export default function useItemSystem({
             onMove,
             onRandomTeleport,
             showMessage,
+            targetTitle,
         ]
     );
 
@@ -265,6 +262,8 @@ export default function useItemSystem({
         searchAvailable,
         highlightedLinks,
         floatingMessage,
+        highlightRequestId,
+
 
         initializeItems,
         pushHistory,

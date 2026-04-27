@@ -17,13 +17,19 @@ export default function WikiViewer({
   onLinkClick,
   highlightedLinks = [],
   searchAvailable = false,
+  onConsumeSearch,
+  highlightRequestId = 0,
+  status = {},
 }) {
   const articleRef = useRef(null);
   const [headings, setHeadings] = useState([]);
   const [showFindToast, setShowFindToast] = useState(false);
   const [activeId, setActiveId] = useState("");
   const [hoveredHeading, setHoveredHeading] = useState(null); // { text, top, right }
-
+  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMessage, setSearchMessage] = useState("");
+  const [articleHighlightedLinks, setArticleHighlightedLinks] = useState([]);
   // 1. 페이지에서 찾기(Ctrl+F/Cmd+F) 및 우클릭 방지 (100% 차단은 불가능함을 주석으로 명시)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -49,7 +55,13 @@ export default function WikiViewer({
       window.removeEventListener("contextmenu", handleContextMenu);
     };
   }, []);
-
+  useEffect(() => {
+    if (searchAvailable) {
+      setSearchPanelOpen(true);
+      setSearchQuery("");
+      setSearchMessage("검색어를 입력하고 찾기를 누르세요.");
+    }
+  }, [searchAvailable]);
   // 2. 문서 내 h2, h3 추출하여 네비게이션 바 생성
   useEffect(() => {
     if (!articleRef.current || isLoading) {
@@ -105,6 +117,64 @@ export default function WikiViewer({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [currentDocumentHtml, isLoading]);
 
+  useEffect(() => {
+    if (!highlightRequestId) return;
+    if (!articleRef.current) return;
+
+    const anchors = Array.from(
+      articleRef.current.querySelectorAll("a[data-wiki-title]")
+    );
+
+    const titles = anchors.map((a) =>
+      (a.getAttribute("data-wiki-title") || "").toLowerCase()
+    );
+
+    const targetText = target?.title?.toLowerCase() || "";
+
+    const scored = titles.map((title) => {
+      let score = 0;
+
+      if (title.includes(targetText)) score += 10;
+
+      const words = targetText.split(" ");
+      words.forEach((word) => {
+        if (word.length > 1 && title.includes(word)) {
+          score += 3;
+        }
+      });
+
+      score -= title.length * 0.01;
+
+      return { title, score };
+    });
+
+    const top = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((v) => v.title);
+
+    setArticleHighlightedLinks(top);
+  }, [highlightRequestId, currentDocumentHtml, target]);
+
+  useEffect(() => {
+    if (!articleRef.current) return;
+
+    const set = new Set(articleHighlightedLinks);
+
+    const anchors = Array.from(
+      articleRef.current.querySelectorAll("a[data-wiki-title]")
+    );
+
+    anchors.forEach((a) => {
+      const title = (a.getAttribute("data-wiki-title") || "").toLowerCase();
+
+      if (set.has(title)) {
+        a.classList.add("wiki-link--highlighted");
+      } else {
+        a.classList.remove("wiki-link--highlighted");
+      }
+    });
+  }, [articleHighlightedLinks, currentDocumentHtml]);
 
   const scrollToHeading = (id) => {
     const el = document.getElementById(id);
@@ -114,6 +184,7 @@ export default function WikiViewer({
     }
   };
   const handleDocumentClick = useCallback((event) => {
+
     const element = event.target instanceof Element ? event.target : null;
     if (!element) return;
     const link = element.closest("a[data-wiki-title]");
@@ -124,7 +195,126 @@ export default function WikiViewer({
     if (!nextTitle) return;
     onLinkClick(nextTitle);
   }, [onLinkClick]);
+  const escapeRegExp = (value) => {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  };
 
+  const clearSearchHighlights = useCallback(() => {
+    if (!articleRef.current) return;
+
+    const marks = Array.from(
+      articleRef.current.querySelectorAll("mark.game-search-highlight")
+    );
+
+    marks.forEach((mark) => {
+      const textNode = document.createTextNode(mark.textContent || "");
+      mark.replaceWith(textNode);
+    });
+
+    articleRef.current.normalize();
+  }, []);
+
+  const highlightTextInNode = (root, query) => {
+    const escaped = escapeRegExp(query.trim());
+    if (!escaped) return 0;
+
+    const regex = new RegExp(escaped, "gi");
+    let count = 0;
+
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (!node.nodeValue || !regex.test(node.nodeValue)) {
+            regex.lastIndex = 0;
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          const parent = node.parentElement;
+          if (
+            parent &&
+            ["SCRIPT", "STYLE", "MARK"].includes(parent.tagName)
+          ) {
+            regex.lastIndex = 0;
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          regex.lastIndex = 0;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      }
+    );
+
+    const textNodes = [];
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode);
+    }
+
+    textNodes.forEach((textNode) => {
+      const text = textNode.nodeValue;
+      const fragment = document.createDocumentFragment();
+
+      let lastIndex = 0;
+      text.replace(regex, (match, offset) => {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
+
+        const mark = document.createElement("mark");
+        mark.className = "game-search-highlight";
+        mark.textContent = match;
+        fragment.appendChild(mark);
+
+        lastIndex = offset + match.length;
+        count += 1;
+        return match;
+      });
+
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      textNode.replaceWith(fragment);
+    });
+
+    return count;
+  };
+
+  const handleGameSearch = useCallback(() => {
+    if (!articleRef.current) return;
+
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchMessage("검색어를 입력해주세요.");
+      return;
+    }
+
+    clearSearchHighlights();
+
+    const count = highlightTextInNode(articleRef.current, query);
+
+    if (count === 0) {
+      setSearchMessage(`"${query}" 검색 결과가 없습니다.`);
+      return;
+    }
+
+    const firstMatch = articleRef.current.querySelector(".game-search-highlight");
+    if (firstMatch) {
+      firstMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    setSearchMessage(`"${query}" ${count}개 발견`);
+    onConsumeSearch?.();
+  }, [searchQuery, clearSearchHighlights, onConsumeSearch]);
+
+  const handleCloseSearchPanel = useCallback(() => {
+    setSearchPanelOpen(false);
+    setSearchQuery("");
+    setSearchMessage("");
+    clearSearchHighlights();
+  }, [clearSearchHighlights]);
+  useEffect(() => {
+    setSearchPanelOpen(false);
+    setSearchQuery("");
+    setSearchMessage("");
+    setArticleHighlightedLinks([]);
+  }, [currentDocumentHtml]);
   return (
     <div className="wiki-shell">
       {/* 단축키 사용 시 토스트 안내 */}
@@ -168,6 +358,38 @@ export default function WikiViewer({
           }}
         >
           {hoveredHeading.text}
+        </div>
+
+      )}
+      {searchPanelOpen && (
+        <div className="game-search-panel">
+          <div className="game-search-panel__head">
+            <strong>아이템 검색</strong>
+            <button type="button" onClick={handleCloseSearchPanel}>
+              닫기
+            </button>
+          </div>
+
+          <div className="game-search-panel__body">
+            <input
+              type="text"
+              value={searchQuery}
+              placeholder="현재 문서에서 찾을 단어"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleGameSearch();
+              }}
+              autoFocus
+            />
+
+            <button type="button" onClick={handleGameSearch}>
+              찾기
+            </button>
+          </div>
+
+          {searchMessage && (
+            <p className="game-search-panel__message">{searchMessage}</p>
+          )}
         </div>
       )}
       <section className="mission-card">
@@ -227,7 +449,9 @@ export default function WikiViewer({
         )}
         <div className="links-grid">
           {links.map((linkTitle) => {
-            const isHighlighted = highlightedLinks.includes(linkTitle);
+            const isHighlighted = articleHighlightedLinks.includes(
+              linkTitle.trim().toLowerCase()
+            );
 
             return (
               <button
@@ -236,12 +460,19 @@ export default function WikiViewer({
                 onClick={() => onLinkClick(linkTitle)}
                 disabled={isLoading}
               >
+                {isHighlighted ? "⭐ " : ""}
                 {linkTitle}
               </button>
             );
           })}
         </div>
+        {status.blind && (
+          <div className="blind-overlay">
+            <div className="blind-text">시야 방해 중...</div>
+          </div>
+        )}
       </section>
     </div>
+
   );
 }

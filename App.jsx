@@ -169,8 +169,23 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/multiplayer/group/room/:roomId" element={<GroupRoomPage />} />
-      <Route path="/multiplayer/group/game/:roomId" element={<GroupGamePage />} />
+      <Route
+        path="/multiplayer/group/room/:roomId"
+        element={
+          <ProtectedRoute>
+            <GroupRoomPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/multiplayer/group/game/:roomId"
+        element={
+          <ProtectedRoute>
+            <GroupGamePage />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
