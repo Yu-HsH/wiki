@@ -240,6 +240,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1557,4 +1558,133 @@
   to {
     transform: scale(1.02);
   }
+}
+
+.ink-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+  animation: inkFadeOut 4s ease forwards;
+}
+
+.ink-splat {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(3px);
+  opacity: 0.9;
+  transform: scale(0);
+  animation: splatPop 0.45s ease-out forwards, splatWobble 1.6s ease-in-out infinite;
+}
+
+.splat-1 {
+  width: 360px;
+  height: 260px;
+  left: 8%;
+  top: 18%;
+  background: radial-gradient(circle, #111 0%, #000 45%, transparent 72%);
+  animation-delay: 0s;
+}
+
+.splat-2 {
+  width: 300px;
+  height: 220px;
+  right: 10%;
+  top: 12%;
+  background: radial-gradient(circle, #3b0764 0%, #111 50%, transparent 72%);
+  animation-delay: 0.12s;
+}
+
+.splat-3 {
+  width: 420px;
+  height: 300px;
+  left: 32%;
+  bottom: 10%;
+  background: radial-gradient(circle, #020617 0%, #000 48%, transparent 75%);
+  animation-delay: 0.22s;
+}
+
+.splat-4 {
+  width: 260px;
+  height: 200px;
+  right: 22%;
+  bottom: 28%;
+  background: radial-gradient(circle, #7f1d1d 0%, #111 45%, transparent 70%);
+  animation-delay: 0.32s;
+}
+
+.splat-5 {
+  width: 220px;
+  height: 180px;
+  left: 18%;
+  bottom: 6%;
+  background: radial-gradient(circle, #064e3b 0%, #050505 48%, transparent 72%);
+  animation-delay: 0.42s;
+}
+
+@keyframes splatPop {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.12) rotate(8deg);
+    opacity: 0.95;
+  }
+
+  100% {
+    transform: scale(1) rotate(-4deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes splatWobble {
+
+  0%,
+  100% {
+    border-radius: 50% 45% 55% 48%;
+  }
+
+  50% {
+    border-radius: 42% 58% 46% 54%;
+  }
+}
+
+@keyframes inkFadeOut {
+
+  0%,
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.floating-message {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  color: white;
+  font-weight: 700;
+}
+
+.immune-badge {
+  position: fixed;
+  top: 90px;
+  right: 24px;
+  z-index: 10000;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  font-weight: 800;
 }
