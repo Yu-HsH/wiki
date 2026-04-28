@@ -86,7 +86,13 @@ export default function MultiplayerGamePage() {
   const [historyStack, setHistoryStack] = useState([]);
   const [floatingMessage, setFloatingMessage] = useState("");
   const [miniGame, setMiniGame] = useState(null);
+  const [itemCooldownUntil, setItemCooldownUntil] = useState(0);
+  const [itemEffect, setItemEffect] = useState(null);
 
+  const showItemEffect = (text) => {
+    setItemEffect(text);
+    setTimeout(() => setItemEffect(null), 1200);
+  };
   const myTargetTitle = opponentPlayer?.target_title || "";
   const opponentTargetTitle = myPlayer?.target_title || "";
 
@@ -337,6 +343,10 @@ export default function MultiplayerGamePage() {
   const canUseItem = (item) => {
     if (!item || item.used) return false;
 
+    if (Date.now() < itemCooldownUntil) {
+      return false;
+    }
+
     if (item.useCondition === "has_links") {
       return pageData?.links?.length > 0;
     }
@@ -540,7 +550,9 @@ export default function MultiplayerGamePage() {
     const item = inventory.find((i) => i.instanceId === instanceId);
     if (!canUseItem(item)) return;
 
+    setItemCooldownUntil(Date.now() + 2500);
     markUsed(instanceId);
+    showItemEffect(item.name);
 
     switch (item.id) {
       case "blind":
@@ -983,7 +995,11 @@ export default function MultiplayerGamePage() {
               floatingMessage={floatingMessage}
               immune={Date.now() < status.immuneUntil}
             />
-
+            {itemEffect && (
+              <div className="item-effect-pop">
+                <span>{itemEffect}</span>
+              </div>
+            )}
             {miniGame && (
               <div className="mini-game-overlay">
                 <div className="mini-game-card">

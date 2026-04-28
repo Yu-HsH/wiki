@@ -1688,3 +1688,46 @@
   color: white;
   font-weight: 800;
 }
+
+.item-effect-pop {
+  position: fixed;
+  top: 22%;
+  left: 50%;
+  z-index: 13000;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: itemEffectPop 1.2s ease forwards;
+}
+
+.item-effect-pop span {
+  display: inline-block;
+  padding: 18px 32px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #111827, #7c3aed);
+  color: white;
+  font-size: 28px;
+  font-weight: 900;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes itemEffectPop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6) translateY(20px);
+  }
+
+  25% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.15) translateY(0);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9) translateY(-20px);
+  }
+}
