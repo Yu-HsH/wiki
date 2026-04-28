@@ -113,17 +113,7 @@ export const ITEM_DEFS = [
         category: ITEM_CATEGORY.JOKER,
         target: ITEM_TARGET.BOTH,
         duration: 1,
-        description: "짧은 미니게임 후 승자가 추가 효과를 획득합니다.",
-        useCondition: "always",
-    },
-    {
-        id: "swap_target",
-        name: "목표 문서 교환",
-        rarity: ITEM_RARITY.RARE,
-        category: ITEM_CATEGORY.JOKER,
-        target: ITEM_TARGET.BOTH,
-        duration: 1,
-        description: "서로의 목표 문서를 바꿉니다.",
+        description: "상대와 가위바위보를 해서 이긴 사람이 랜덤 아이템을 발동합니다.",
         useCondition: "always",
     },
     {

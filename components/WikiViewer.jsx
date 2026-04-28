@@ -15,11 +15,10 @@ export default function WikiViewer({
   clickCount,
   startTitle,
   onLinkClick,
-  highlightedLinks = [],
   searchAvailable = false,
   onConsumeSearch,
   highlightRequestId = 0,
-  status = {},
+  status,
 }) {
   const articleRef = useRef(null);
   const [headings, setHeadings] = useState([]);
@@ -116,7 +115,17 @@ export default function WikiViewer({
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [currentDocumentHtml, isLoading]);
-
+  {
+    status?.translateCurrent && (
+      <div className="language-chaos">
+        <div className="language-chaos-title">LANGUAGE CONFUSION</div>
+        <p>
+          Opponent changed your document language temporarily.
+          Read carefully and find the next link!
+        </p>
+      </div>
+    )
+  }
   useEffect(() => {
     if (!highlightRequestId) return;
     if (!articleRef.current) return;
@@ -317,6 +326,19 @@ export default function WikiViewer({
   }, [currentDocumentHtml]);
   return (
     <div className="wiki-shell">
+      {
+        status?.translateCurrent && (
+          <div className="language-chaos">
+            <div className="language-chaos-title">
+              LANGUAGE CONFUSION
+            </div>
+            <p>
+              This document has been temporarily translated by your opponent.
+              Find the next link carefully.
+            </p>
+          </div>
+        )
+      }
       {/* 단축키 사용 시 토스트 안내 */}
       {showFindToast && (
         <div className="wiki-find-block-toast">

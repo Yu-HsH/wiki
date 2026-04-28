@@ -16,6 +16,5 @@ export const MULTI_ITEM_IDS = [
     "random_teleport",
     "double_blind",
     "mini_game",
-    "swap_target",
     "swap_current",
 ];

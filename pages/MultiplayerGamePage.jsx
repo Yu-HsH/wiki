@@ -26,16 +26,7 @@ import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import { ITEM_DEFS } from "../data/items";
 import { MULTI_ITEM_IDS } from "../data/itemPools";
-/**
- * 멀티플레이 게임 페이지
- *
- * 현재 프로젝트 기준 동작:
- * 1) room / room_players를 읽고 실시간 반영
- * 2) 내 start_title / current_title이 없으면 시작 문서를 생성
- * 3) 상대가 정한 target_title을 내가 푸는 목표로 사용
- * 4) WikiViewer가 요구하는 props 형식에 맞춰 전달
- * 5) VS 인트로 -> 카운트다운 -> 플레이 -> 승패 처리
- */
+
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -50,26 +41,23 @@ export default function MultiplayerGamePage() {
     OPPONENT_WIN: "OPPONENT_WIN",
   };
 
-  // ----------------------------
-  // 기본 상태
-  // ----------------------------
   const [room, setRoom] = useState(null);
   const [players, setPlayers] = useState([]);
   const [pageData, setPageData] = useState(null);
+  const pageDataRef = useRef(null);
+
+  useEffect(() => {
+    pageDataRef.current = pageData;
+  }, [pageData]);
 
   const [pending, setPending] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [phase, setPhase] = useState(PHASE.LOADING);
 
-  // 경과 시간용
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startedAtRef = useRef(null);
 
-  // ----------------------------
-  // players 기반 파생값
-  // ----------------------------
   const myPlayer = useMemo(
     () => players.find((p) => p.user_id === user?.id),
     [players, user?.id]
@@ -79,29 +67,29 @@ export default function MultiplayerGamePage() {
     () => players.find((p) => p.user_id !== user?.id),
     [players, user?.id]
   );
+
   const [status, setStatus] = useState({
     blind: false,
     immuneUntil: 0,
     translateCurrent: false,
   });
 
+  const statusRef = useRef(status);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   const [inventory, setInventory] = useState([]);
   const [highlightRequestId, setHighlightRequestId] = useState(0);
   const [searchAvailable, setSearchAvailable] = useState(false);
   const [historyStack, setHistoryStack] = useState([]);
   const [floatingMessage, setFloatingMessage] = useState("");
-  /**
-   * 중요:
-   * - 내가 풀어야 할 목표 = 상대가 대기실에서 입력한 target_title
-   * - 상대가 풀어야 할 목표 = 내가 입력한 target_title
-   */
+  const [miniGame, setMiniGame] = useState(null);
+
   const myTargetTitle = opponentPlayer?.target_title || "";
   const opponentTargetTitle = myPlayer?.target_title || "";
 
-  /**
-   * WikiViewer는 target.title / target.summary / target.requestedKeyword 를 기대함
-   * 그래서 멀티에서도 target 객체를 맞춰서 만들어 줌
-   */
   const targetForViewer = useMemo(
     () => ({
       title: myTargetTitle || "목표 문서",
@@ -111,9 +99,59 @@ export default function MultiplayerGamePage() {
     [myTargetTitle]
   );
 
-  // ----------------------------
-  // Realtime 구독
-  // ----------------------------
+  const showMessage = (message) => {
+    setFloatingMessage(message);
+    setTimeout(() => setFloatingMessage(""), 1800);
+  };
+
+  const isImmune = () => Date.now() < statusRef.current.immuneUntil;
+
+  const emitRoomEvent = async (eventType, payload = {}) => {
+    if (!roomId || !user?.id) return;
+
+    const { error } = await supabase.from("room_events").insert({
+      room_id: roomId,
+      user_id: user.id,
+      event_type: eventType,
+      payload,
+    });
+
+    if (error) {
+      console.error("room_events insert 실패:", error);
+    }
+  };
+
+  const applyCleanse = () => {
+    setStatus((prev) => ({
+      ...prev,
+      blind: false,
+      translateCurrent: false,
+      immuneUntil: Date.now() + 7000,
+    }));
+
+    showMessage("방어 활성화! 7초 동안 방해 효과 면역");
+  };
+
+  const applyBlind = () => {
+    if (Date.now() < statusRef.current.immuneUntil) {
+      showMessage("방어 성공! 시야방해를 막았습니다");
+      console.log("면역 상태라 blind 무시");
+      return;
+    }
+
+    setStatus((prev) => ({
+      ...prev,
+      blind: true,
+    }));
+
+    setTimeout(() => {
+      setStatus((prev) => ({
+        ...prev,
+        blind: false,
+      }));
+    }, 4000);
+  };
+
   useEffect(() => {
     if (!roomId || !supabase) return;
 
@@ -160,9 +198,6 @@ export default function MultiplayerGamePage() {
     };
   }, [roomId]);
 
-  // ----------------------------
-  // 초기 로드 + 시작 문서 세팅
-  // ----------------------------
   useEffect(() => {
     const initGame = async () => {
       if (!roomId || !user?.id) return;
@@ -188,7 +223,6 @@ export default function MultiplayerGamePage() {
           throw new Error("상대 목표 문서가 설정되지 않았습니다.");
         }
 
-        // 내 시작 문서가 없으면 여기서 생성
         if (!me.start_title || !me.current_title) {
           const excluded = new Set([normalizeTitle(opponent.target_title)]);
           const startTitle = await fetchDistinctRandomTitle(excluded);
@@ -229,10 +263,6 @@ export default function MultiplayerGamePage() {
     initGame();
   }, [roomId, user?.id]);
 
-  // ----------------------------
-  // 양쪽 다 시작 문서가 잡히면 playing 전환
-  // 그 후 VS 인트로부터 시작
-  // ----------------------------
   useEffect(() => {
     if (!room || !myPlayer || !opponentPlayer) return;
 
@@ -253,6 +283,7 @@ export default function MultiplayerGamePage() {
       setPhase(PHASE.VS_INTRO);
     }
   }, [room, myPlayer, opponentPlayer, roomId, phase]);
+
   useEffect(() => {
     if (phase !== PHASE.COUNTDOWN) return;
 
@@ -281,25 +312,6 @@ export default function MultiplayerGamePage() {
     setInventory(selected);
   }, [phase]);
 
-  const emitRoomEvent = async (eventType, payload = {}) => {
-    if (!roomId || !user?.id) return;
-
-    const { error } = await supabase.from("room_events").insert({
-      room_id: roomId,
-      user_id: user.id,
-      event_type: eventType,
-      payload,
-    });
-
-    if (error) {
-      console.error("room_events insert 실패:", error);
-    }
-  };
-  const showMessage = (message) => {
-    setFloatingMessage(message);
-    setTimeout(() => setFloatingMessage(""), 1800);
-  };
-
   const markUsed = (instanceId) => {
     setInventory((prev) =>
       prev.map((item) =>
@@ -320,6 +332,186 @@ export default function MultiplayerGamePage() {
     }
 
     return true;
+  };
+
+  const handleMove = async (nextTitle) => {
+    if (!roomId || !user?.id || phase !== PHASE.PLAYING) return;
+
+    try {
+      setError("");
+      setIsPageLoading(true);
+
+      if (pageData?.title && pageData.title !== nextTitle) {
+        setHistoryStack((prev) => [...prev, pageData.title]);
+      }
+
+      setStatus((prev) => ({
+        ...prev,
+        translateCurrent: false,
+      }));
+
+      const nextPage = await fetchPageData(nextTitle);
+      setPageData(nextPage);
+
+      const nextMoveCount = (myPlayer?.move_count || 0) + 1;
+
+      await updateMyGameProgress(roomId, user.id, {
+        current_title: nextPage.title,
+        move_count: nextMoveCount,
+      });
+
+      const solved =
+        normalizeTitle(nextPage.title) === normalizeTitle(myTargetTitle);
+
+      if (solved) {
+        const finishedAt = new Date().toISOString();
+
+        await updateMyGameProgress(roomId, user.id, {
+          current_title: nextPage.title,
+          move_count: nextMoveCount,
+          has_finished: true,
+          finished_at: finishedAt,
+        });
+
+        await updateGameRoomStatus(roomId, {
+          status: "finished",
+          finished_at: finishedAt,
+        });
+
+        setPhase(PHASE.SUCCESS);
+
+        setTimeout(() => {
+          navigate("/main");
+        }, 2200);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "문서 이동에 실패했습니다.");
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
+  const forceMoveByItem = async (nextTitle) => {
+    if (!roomId || !user?.id) return;
+
+    try {
+      setError("");
+      setIsPageLoading(true);
+
+      setStatus((prev) => ({
+        ...prev,
+        translateCurrent: false,
+      }));
+
+      const nextPage = await fetchPageData(nextTitle);
+      setPageData(nextPage);
+
+      const nextMoveCount = (myPlayer?.move_count || 0) + 1;
+
+      await updateMyGameProgress(roomId, user.id, {
+        current_title: nextPage.title,
+        move_count: nextMoveCount,
+      });
+
+      showMessage(`${nextPage.title} 문서로 이동했습니다.`);
+    } catch (err) {
+      console.error("아이템 강제 이동 실패:", err);
+      setError(err instanceof Error ? err.message : "아이템 이동에 실패했습니다.");
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
+  const decideRpsWinner = (myChoice, opponentChoice) => {
+    if (myChoice === opponentChoice) return "draw";
+
+    const winMap = {
+      rock: "scissors",
+      scissors: "paper",
+      paper: "rock",
+    };
+
+    return winMap[myChoice] === opponentChoice ? "me" : "opponent";
+  };
+
+  const handleMiniGameChoice = async (choice) => {
+    if (!miniGame) return;
+    if (miniGame.myChoice) return;
+
+    setMiniGame((prev) => ({
+      ...prev,
+      myChoice: choice,
+    }));
+
+    await emitRoomEvent("mini_game_choice", {
+      gameId: miniGame.gameId,
+      choice,
+    });
+  };
+
+  const triggerRandomMiniGameReward = async () => {
+    const rewardIds = [
+      "blind",
+      "random_link_move",
+      "translate_current",
+      "swap_current",
+      "highlight_links",
+      "search_once",
+      "random_teleport",
+      "cleanse_shield",
+    ];
+
+    const randomId = rewardIds[Math.floor(Math.random() * rewardIds.length)];
+
+    showMessage(`🎲 미니게임 보상 발동: ${randomId}`);
+
+    switch (randomId) {
+      case "blind":
+        await emitRoomEvent("blind");
+        break;
+
+      case "random_link_move":
+        await emitRoomEvent("random_link_move");
+        break;
+
+      case "translate_current":
+        await emitRoomEvent("translate_current");
+        break;
+
+      case "swap_current":
+        await emitRoomEvent("swap_current", {
+          senderCurrentTitle: pageDataRef.current?.title,
+        });
+
+        if (opponentPlayer?.current_title) {
+          await forceMoveByItem(opponentPlayer.current_title);
+        }
+        break;
+
+      case "highlight_links":
+        setHighlightRequestId((prev) => prev + 1);
+        break;
+
+      case "search_once":
+        setSearchAvailable(true);
+        break;
+
+      case "random_teleport": {
+        const randomTitle = await fetchDistinctRandomTitle(
+          new Set([normalizeTitle(pageDataRef.current?.title)])
+        );
+
+        await forceMoveByItem(randomTitle);
+        break;
+      }
+
+      case "cleanse_shield":
+        applyCleanse();
+        break;
+
+      default:
+        break;
+    }
   };
 
   const handleUseItem = async (instanceId) => {
@@ -372,9 +564,9 @@ export default function MultiplayerGamePage() {
 
       case "random_teleport": {
         const randomTitle = await fetchDistinctRandomTitle(
-          new Set([normalizeTitle(pageData?.title)])
+          new Set([normalizeTitle(pageDataRef.current?.title)])
         );
-        await handleMove(randomTitle);
+        await forceMoveByItem(randomTitle);
         showMessage("랜덤 텔레포트!");
         break;
       }
@@ -386,39 +578,197 @@ export default function MultiplayerGamePage() {
 
       case "swap_current":
         await emitRoomEvent("swap_current", {
-          senderCurrentTitle: pageData?.title,
+          senderCurrentTitle: pageDataRef.current?.title,
         });
 
         if (opponentPlayer?.current_title) {
-          await handleMove(opponentPlayer.current_title);
+          await forceMoveByItem(opponentPlayer.current_title);
         }
 
-        showMessage("현재 문서 교환!");
+        showMessage("현재 문서 서로 교환!");
         break;
 
-      case "swap_target":
-        await supabase
-          .from("room_players")
-          .update({ target_title: opponentPlayer?.target_title })
-          .eq("room_id", roomId)
-          .eq("user_id", user.id);
+      case "mini_game": {
+        const gameId =
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random()}`;
 
-        await supabase
-          .from("room_players")
-          .update({ target_title: myPlayer?.target_title })
-          .eq("room_id", roomId)
-          .eq("user_id", opponentPlayer?.user_id);
+        setMiniGame({
+          gameId,
+          hostUserId: user.id,
+          myChoice: null,
+          opponentChoice: null,
+          status: "choosing",
+          resultMessage: "",
+        });
 
-        showMessage("목표 문서 교환!");
+        await emitRoomEvent("mini_game_start", {
+          gameId,
+          hostUserId: user.id,
+        });
+
+        showMessage("미니게임 시작!");
         break;
+      }
 
       default:
         showMessage(`${item.name} 사용`);
     }
   };
-  // ----------------------------
-  // VS 인트로 -> 카운트다운
-  // ----------------------------
+
+  const handleIncomingEvent = async (event) => {
+    console.log("받은 room_event:", event);
+
+    const eventType = event.event_type;
+    const payload = event.payload || {};
+
+    switch (eventType) {
+      case "blind":
+        if (isImmune()) {
+          showMessage("방어 성공! 시야방해를 막았습니다");
+          console.log("blind 방어됨");
+          return;
+        }
+
+        applyBlind();
+        break;
+
+      case "double_blind":
+        if (isImmune()) {
+          showMessage("방어 성공! 시야방해를 막았습니다");
+          return;
+        }
+
+        applyBlind();
+        break;
+
+      case "translate_current":
+        if (isImmune()) {
+          showMessage("방어 성공! 언어 변경을 막았습니다");
+          console.log("translate_current 방어됨");
+          return;
+        }
+
+        setStatus((prev) => ({
+          ...prev,
+          translateCurrent: true,
+        }));
+
+        showMessage("상대가 언어 변경을 사용했습니다!");
+        break;
+
+      case "swap_current":
+        console.log("swap_current 처리 진입:", payload);
+
+        if (isImmune()) {
+          showMessage("방어 성공! 현재 문서 교환을 막았습니다");
+          return;
+        }
+
+        if (!payload.senderCurrentTitle) {
+          console.log("senderCurrentTitle 없음");
+          return;
+        }
+
+        console.log("상대 문서로 이동 시도:", payload.senderCurrentTitle);
+
+        await forceMoveByItem(payload.senderCurrentTitle);
+
+        showMessage("상대와 현재 문서를 교환했습니다!");
+        break;
+
+      case "random_link_move": {
+        console.log("random_link_move 수신");
+
+        if (isImmune()) {
+          showMessage("방어 성공! 랜덤 이동을 막았습니다");
+          return;
+        }
+
+        const currentPageData = pageDataRef.current;
+        const links = currentPageData?.links || [];
+
+        console.log("현재 pageDataRef:", currentPageData);
+        console.log("현재 링크 개수:", links.length);
+
+        if (!links.length) {
+          console.log("이동할 링크 없음");
+          showMessage("이동 가능한 링크가 없습니다");
+          return;
+        }
+
+        const random = links[Math.floor(Math.random() * links.length)];
+
+        console.log("랜덤 이동 대상:", random);
+
+        await forceMoveByItem(random);
+
+        showMessage(`🌀 상대 아이템! ${random}로 이동`);
+        break;
+      }
+
+      case "mini_game_start": {
+        setMiniGame({
+          gameId: payload.gameId,
+          hostUserId: payload.hostUserId,
+          myChoice: null,
+          opponentChoice: null,
+          status: "choosing",
+          resultMessage: "",
+        });
+
+        showMessage("상대가 미니게임을 시작했습니다!");
+        break;
+      }
+
+      case "mini_game_choice": {
+        setMiniGame((prev) => {
+          if (!prev || prev.gameId !== payload.gameId) return prev;
+
+          return {
+            ...prev,
+            opponentChoice: payload.choice,
+          };
+        });
+
+        break;
+      }
+
+      default:
+        console.log("처리되지 않은 이벤트:", eventType);
+        break;
+    }
+  };
+
+  useEffect(() => {
+    if (!roomId || !user?.id) return;
+
+    const channel = supabase
+      .channel(`room-events-${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "room_events",
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          const event = payload.new;
+
+          if (event.user_id === user?.id) return;
+
+          handleIncomingEvent(event);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, user?.id]);
+
   useEffect(() => {
     if (phase !== PHASE.VS_INTRO) return;
 
@@ -429,9 +779,6 @@ export default function MultiplayerGamePage() {
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // ----------------------------
-  // 실제 플레이 시작 시점 기록
-  // ----------------------------
   useEffect(() => {
     if (phase !== PHASE.PLAYING) return;
 
@@ -447,171 +794,43 @@ export default function MultiplayerGamePage() {
     return () => clearInterval(interval);
   }, [phase]);
 
-  // ----------------------------
-  // 링크 클릭 시 문서 이동 처리
-  // ----------------------------
+  useEffect(() => {
+    if (!miniGame) return;
+    if (miniGame.status !== "choosing") return;
+    if (!miniGame.myChoice || !miniGame.opponentChoice) return;
 
-  const handleMove = async (nextTitle) => {
-    if (!roomId || !user?.id || phase !== PHASE.PLAYING) return;
+    const result = decideRpsWinner(
+      miniGame.myChoice,
+      miniGame.opponentChoice
+    );
 
-    try {
-      setError("");
-      setIsPageLoading(true);
-      // 뒤로가기 아이템을 위해 현재 문서를 기록
-      if (pageData?.title && pageData.title !== nextTitle) {
-        setHistoryStack((prev) => [...prev, pageData.title]);
-      }
-
-      // 문서를 이동하면 현재 문서에만 적용되는 방해 효과 해제
-      setStatus((prev) => ({
+    if (result === "draw") {
+      setMiniGame((prev) => ({
         ...prev,
-        translateCurrent: false,
+        status: "result",
+        resultMessage: "무승부! 아무 일도 일어나지 않았습니다.",
       }));
 
-      const nextPage = await fetchPageData(nextTitle);
-      setPageData(nextPage);
-
-      const nextMoveCount = (myPlayer?.move_count || 0) + 1;
-
-      await updateMyGameProgress(roomId, user.id, {
-        current_title: nextPage.title,
-        move_count: nextMoveCount,
-      });
-
-      const solved =
-        normalizeTitle(nextPage.title) === normalizeTitle(myTargetTitle);
-
-      if (solved) {
-        const finishedAt = new Date().toISOString();
-
-        await updateMyGameProgress(roomId, user.id, {
-          current_title: nextPage.title,
-          move_count: nextMoveCount,
-          has_finished: true,
-          finished_at: finishedAt,
-        });
-
-        await updateGameRoomStatus(roomId, {
-          status: "finished",
-          finished_at: finishedAt,
-        });
-
-        setPhase(PHASE.SUCCESS);
-
-        setTimeout(() => {
-          navigate("/main");
-        }, 2200);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "문서 이동에 실패했습니다.");
-    } finally {
-      setIsPageLoading(false);
-    }
-  };
-  useEffect(() => {
-    if (!roomId) return;
-
-    const channel = supabase
-      .channel(`room-events-${roomId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "room_events",
-          filter: `room_id=eq.${roomId}`,
-        },
-        (payload) => {
-          const event = payload.new;
-
-          // 내가 보낸 건 무시
-          if (event.user_id === user?.id) return;
-
-          handleIncomingEvent(event);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [roomId]);
-  const handleIncomingEvent = async (event) => {
-    console.log("받은 room_event:", event);
-    const payload = event.payload || {};
-
-    switch (event.event_type) {
-      case "blind":
-        applyBlind();
-        break;
-
-      case "double_blind":
-        applyBlind();
-        break;
-
-      case "random_link_move": {
-        if (Date.now() < status.immuneUntil) return;
-
-        const links = pageData?.links || [];
-        if (!links.length) return;
-
-        const random = links[Math.floor(Math.random() * links.length)];
-        await handleMove(random);
-        break;
-      }
-
-      case "translate_current":
-        if (Date.now() < status.immuneUntil) return;
-
-        setStatus((prev) => ({
-          ...prev,
-          translateCurrent: true,
-        }));
-        break;
-
-      case "swap_current":
-        if (payload.senderCurrentTitle) {
-          await handleMove(payload.senderCurrentTitle);
-        }
-        break;
-
-      case "cleanse":
-        applyCleanse();
-        break;
-
-      default:
-        break;
-    }
-  };
-  const applyCleanse = () => {
-    setStatus((prev) => ({
-      ...prev,
-      blind: false,
-      immuneUntil: Date.now() + 10000, // 10초 면역
-    }));
-  };
-  const applyBlind = () => {
-    // 👉 면역 체크
-    if (Date.now() < status.immuneUntil) {
+      setTimeout(() => setMiniGame(null), 1800);
       return;
     }
 
-    setStatus((prev) => ({
+    if (result === "me") {
+      triggerRandomMiniGameReward();
+    }
+
+    setMiniGame((prev) => ({
       ...prev,
-      blind: true,
+      status: "result",
+      resultMessage:
+        result === "me"
+          ? "승리! 랜덤 아이템이 발동됩니다."
+          : "패배! 상대의 랜덤 아이템이 발동됩니다.",
     }));
 
-    setTimeout(() => {
-      setStatus((prev) => ({
-        ...prev,
-        blind: false,
-      }));
-    }, 4000);
-  };
+    setTimeout(() => setMiniGame(null), 2200);
+  }, [miniGame]);
 
-  // ----------------------------
-  // 상대가 먼저 도착한 경우
-  // ----------------------------
   useEffect(() => {
     if (!opponentPlayer?.has_finished) return;
     if (myPlayer?.has_finished) return;
@@ -623,9 +842,6 @@ export default function MultiplayerGamePage() {
     }, 2200);
   }, [opponentPlayer?.has_finished, myPlayer?.has_finished, navigate]);
 
-  // ----------------------------
-  // 로딩 / 에러
-  // ----------------------------
   if (pending) {
     return (
       <div className="mp-game-page">
@@ -644,7 +860,6 @@ export default function MultiplayerGamePage() {
 
   return (
     <div className="mp-game-page">
-      {/* 시작 전 VS 인트로 */}
       {phase === PHASE.VS_INTRO && (
         <VsIntroOverlay
           myName={myPlayer?.nickname_snapshot || "나"}
@@ -660,12 +875,10 @@ export default function MultiplayerGamePage() {
         />
       )}
 
-      {/* 기존 카운트다운 재사용 */}
       {phase === PHASE.COUNTDOWN && (
         <CountdownOverlay onComplete={() => setPhase(PHASE.PLAYING)} />
       )}
 
-      {/* 상단 간단 상태 */}
       <div className="mp-game-topbar">
         <div className="mp-game-goal">
           <span className="mp-game-goal-label">내 목표</span>
@@ -680,7 +893,6 @@ export default function MultiplayerGamePage() {
       </div>
 
       <div className="mp-game-layout">
-        {/* 메인 문서 영역 */}
         <div className="mp-game-main">
           <WikiViewer
             target={targetForViewer}
@@ -700,6 +912,7 @@ export default function MultiplayerGamePage() {
             status={status}
           />
         </div>
+
         {phase === PHASE.PLAYING && (
           <>
             <ItemBar
@@ -713,9 +926,60 @@ export default function MultiplayerGamePage() {
               floatingMessage={floatingMessage}
               immune={Date.now() < status.immuneUntil}
             />
+
+            {miniGame && (
+              <div className="mini-game-overlay">
+                <div className="mini-game-card">
+                  <h2>🎲 미니게임</h2>
+                  <p>가위바위보에서 이긴 사람이 랜덤 아이템을 발동합니다.</p>
+
+                  {miniGame.status === "choosing" && (
+                    <>
+                      <div className="mini-game-buttons">
+                        <button
+                          type="button"
+                          disabled={!!miniGame.myChoice}
+                          onClick={() => handleMiniGameChoice("rock")}
+                        >
+                          ✊ 바위
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!!miniGame.myChoice}
+                          onClick={() => handleMiniGameChoice("scissors")}
+                        >
+                          ✌️ 가위
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!!miniGame.myChoice}
+                          onClick={() => handleMiniGameChoice("paper")}
+                        >
+                          ✋ 보
+                        </button>
+                      </div>
+
+                      <div className="mini-game-status-text">
+                        <p>내 선택: {miniGame.myChoice ? "완료" : "대기 중"}</p>
+                        <p>
+                          상대 선택:{" "}
+                          {miniGame.opponentChoice ? "완료" : "대기 중"}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {miniGame.status === "result" && (
+                    <h3>{miniGame.resultMessage}</h3>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
-        {/* 상대 상태 패널 */}
+
         <aside className="mp-opponent-panel">
           <div className="mp-opponent-header">
             <div className="mp-opponent-avatar">
@@ -757,7 +1021,6 @@ export default function MultiplayerGamePage() {
         </aside>
       </div>
 
-      {/* 결과 오버레이 */}
       {phase === PHASE.SUCCESS && (
         <div className="mp-result-overlay">
           <div className="mp-result-card">
@@ -776,7 +1039,6 @@ export default function MultiplayerGamePage() {
         </div>
       )}
 
-      {/* pageData 로딩 이후에만 표시 */}
       {pageData && <ScrollToTopButton />}
     </div>
   );

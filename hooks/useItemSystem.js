@@ -224,13 +224,14 @@ export default function useItemSystem({
                 }
 
                 case "translate_current": {
-                    if (mode !== "multi") {
-                        showMessage("싱글에서는 사용할 수 없는 아이템입니다.");
-                        break;
-                    }
+                    if (Date.now() < status.immuneUntil) return;
 
-                    setTranslateCurrentPage(true);
-                    showMessage("언어변경 효과 발동");
+                    setStatus((prev) => ({
+                        ...prev,
+                        translateCurrent: true,
+                    }));
+
+                    showMessage("현재 문서가 영어로 바뀌었습니다!");
                     break;
                 }
 
