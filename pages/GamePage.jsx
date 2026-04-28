@@ -100,6 +100,11 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     }
   }, []);
 
+  const clearSingleGameState = useCallback(() => {
+    localStorage.removeItem("wiki-single-game-state");
+    localStorage.removeItem("wiki-single-items");
+  }, []);
+
   const handleCountdownComplete = useCallback(() => {
     setPhase(PHASE.PLAYING);
   }, []);
@@ -137,7 +142,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
       setPhase(PHASE.SUCCESS);
 
-      localStorage.removeItem(storageKey);
+      clearSingleGameState();
 
       if (onGameComplete) {
         onGameComplete({
@@ -150,9 +155,15 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         });
       }
     },
-    [onGameComplete, startTitle]
+    [onGameComplete, startTitle, clearSingleGameState]
   );
+  const handleGiveUp = useCallback(() => {
+    clearSingleGameState();
 
+    if (onReturnMain) {
+      onReturnMain();
+    }
+  }, [clearSingleGameState, onReturnMain]);
   // ----------------------------
   // 문서 이동
   // ----------------------------
@@ -489,7 +500,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           elapsedSeconds={elapsedSeconds}
           clickCount={clickCount}
           pathTitles={pathTitles}
-          onReturnToMain={onReturnMain}
+          onReturnToMain={handleGiveUp}
         />
       )}
 
@@ -500,6 +511,15 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             elapsedSeconds={elapsedSeconds}
             clickCount={clickCount}
           />
+
+          <button
+            type="button"
+            className="single-giveup-button"
+            onClick={handleGiveUp}
+          >
+            포기하고 메인으로
+          </button>
+
           <ScrollToTopButton />
         </>
       )}

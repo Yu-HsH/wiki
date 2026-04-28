@@ -1613,3 +1613,23 @@ body {
   line-height: 1.35;
   color: #cbd5e1;
 }
+
+.single-giveup-button {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 9500;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.92);
+  color: white;
+  font-weight: 900;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.single-giveup-button:hover {
+  transform: translateY(-2px);
+  background: rgba(185, 28, 28, 0.96);
+}
