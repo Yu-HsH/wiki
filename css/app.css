@@ -1521,88 +1521,77 @@ body {
 
 .item-panel {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 9000;
-  width: 280px;
-  max-height: 70vh;
-  padding: 16px;
-  border-radius: 24px;
-  background: rgba(15, 23, 42, 0.92);
+}
+
+.item-panel-toggle {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.94);
   color: white;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(10px);
+  font-weight: 900;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
 }
 
-.item-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.item-panel__header strong {
-  font-size: 20px;
-}
-
-.item-panel__header span {
-  font-size: 12px;
-  color: #cbd5e1;
-}
-
-.item-panel__list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.item-panel__body {
+  position: absolute;
+  right: 0;
+  top: 52px;
+  width: 240px;
+  max-height: 52vh;
   overflow-y: auto;
-  max-height: 58vh;
-  padding-right: 4px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.94);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 
 .item-card {
   width: 100%;
-  padding: 14px;
+  margin-bottom: 8px;
+  padding: 10px;
   border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 18px;
-  background: rgba(30, 41, 59, 0.92);
+  border-radius: 14px;
+  background: rgba(30, 41, 59, 0.95);
   color: white;
   text-align: left;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 .item-card:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: rgba(129, 140, 248, 0.8);
-  background: rgba(51, 65, 85, 0.95);
 }
 
 .item-card:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
-  opacity: 0.55;
 }
 
 .item-card--used {
-  opacity: 0.4;
+  opacity: 0.35;
 }
 
 .item-card__top {
   display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
 .item-card__name {
+  font-size: 13px;
   font-weight: 900;
-  font-size: 15px;
 }
 
 .item-card__badge {
-  flex-shrink: 0;
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
 }
 
@@ -1619,14 +1608,8 @@ body {
 }
 
 .item-card__desc {
-  margin: 8px 0;
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
   color: #cbd5e1;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.item-card__state {
-  font-size: 12px;
-  font-weight: 800;
-  color: #93c5fd;
 }
