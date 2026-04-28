@@ -303,7 +303,11 @@ export default function MultiplayerGamePage() {
       return result;
     };
 
-    const selected = [...pick(rare, 1), ...pick(normal, 3)].map((item, index) => ({
+    const selected = [
+      ...pick(pool.filter((item) => item.type === "joker"), 1),
+      ...pick(pool.filter((item) => item.rarity === "rare" && item.type !== "joker"), 1),
+      ...pick(pool.filter((item) => item.rarity !== "rare" && item.type !== "joker"), 3),
+    ].map((item, index) => ({
       ...item,
       instanceId: `${item.id}-${Date.now()}-${index}`,
       used: false,
