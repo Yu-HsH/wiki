@@ -49,7 +49,15 @@ export default function MainPage() {
   const { user, logout, isSupabaseConfigured } = useAuth();
   const [stats, setStats] = useState({ gamesPlayed: 0, bestTime: null, recentRecords: [] });
   const [showHelp, setShowHelp] = useState(false);
-  const [weeklyTop, setWeeklyTop] = useState([]);
+  const [rankingTabs, setRankingTabs] = useState({
+    today: [],
+    weekly: [],
+    all: [],
+  });
+
+  const [rankingView, setRankingView] = useState("today");
+
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showKeywordModal, setShowKeywordModal] = useState(false);
@@ -79,13 +87,20 @@ export default function MainPage() {
       try {
         setLoading(true);
         setError("");
-        const [data, rankings] = await Promise.all([
+        const [data, todayRankings, weeklyRankings, allRankings] = await Promise.all([
           fetchUserStats(user.id),
+          fetchRankings({ period: "today", limit: 3 }),
           fetchRankings({ weekly: true, limit: 3 }),
+          fetchRankings({ limit: 3 }),
         ]);
+
         if (!cancelled) {
           setStats(data);
-          setWeeklyTop(rankings);
+          setRankingTabs({
+            today: todayRankings,
+            weekly: weeklyRankings,
+            all: allRankings,
+          });
         }
       } catch (e) {
         if (!cancelled) setError(e?.message || "통계를 불러오지 못했습니다.");
@@ -96,7 +111,18 @@ export default function MainPage() {
     load();
     return () => { cancelled = true; };
   }, [user.id]);
+  useEffect(() => {
+    const order = ["today", "weekly", "all"];
 
+    const timer = setInterval(() => {
+      setRankingView((prev) => {
+        const currentIndex = order.indexOf(prev);
+        return order[(currentIndex + 1) % order.length];
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, []);
   const handleLogout = async () => {
     await logout();
     navigate("/");
@@ -106,273 +132,315 @@ export default function MainPage() {
 
   return (
     <div className="dashboard-page">
+      <div className="dashboard-container">
 
-      {/* ── 헤더 ── */}
-      <header className="dashboard-header">
-        <div>
-          <p className="dashboard-badge">Wiki Race</p>
-          <h1>{user.displayName}님, 반가워요 👋</h1>
-          <p className="dashboard-muted">
-            {user.isGuest
-              ? "게스트 모드로 접속 중입니다. 로그인하면 기록이 저장됩니다."
-              : isSupabaseConfigured
-                ? "온라인 랭킹 모드 활성화 중"
-                : "데모 모드로 실행 중"}
-          </p>
-        </div>
-        {/* 상단 액션 버튼 그룹 */}
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          {!user.isGuest && (
-            <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
-              내 정보
-            </button>
-          )}
-          <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>
-            로그아웃
-          </button>
-        </div>
-      </header>
-
-      {/* ── 빠른 시작 카드 2개 ── */}
-      <section className="quickstart-grid">
-        <button
-          type="button"
-          className="quickstart-card quickstart-custom"
-          onClick={() => { setKeyword(""); setShowKeywordModal(true); }}
-        >
-          <span className="qs-icon">🎯</span>
-          <span className="qs-title">혼자서 플레이</span>
-          <span className="qs-desc">내가 원하는 목표 문서를 직접 찾아가기</span>
-        </button>
-        <button
-          type="button"
-          className="quickstart-card quickstart-pvp"
-          onClick={() => navigate("/multiplayer")}
-        >
-          <span className="qs-icon">⚔️</span>
-          <span className="qs-title">온라인 플레이</span>
-          <span className="qs-desc">친구들과 실시간 위키 레이스 대결</span>
-        </button>
-      </section>
-
-      {/* ── 키워드 입력 및 검색 모달 ── */}
-      {showKeywordModal && (
-        <div className="qs-modal-backdrop" onClick={() => setShowKeywordModal(false)}>
-          <div className="qs-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="qs-modal-title">🎯 목표 문서 확정</h3>
-            <p className="qs-modal-desc">위키백과에서 도달할 정확한 문서를 검색하고 선택하세요.</p>
-
-            <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
-              <input
-                className="qs-modal-input"
-                style={{ flex: 1, margin: 0 }}
-                autoFocus
-                placeholder="예: 아인슈타인, 조선왕조..."
-                value={keyword}
-                onChange={(e) => {
-                  setKeyword(e.target.value);
-                  setSearchResults([]);
-                  setSelectedTarget(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && keyword.trim()) handleSearchKeyword();
-                  if (e.key === "Escape") setShowKeywordModal(false);
-                }}
-              />
-              <button
-                type="button"
-                className="app-btn app-btn-secondary"
-                onClick={handleSearchKeyword}
-                disabled={isSearching || !keyword.trim()}
-              >
-                {isSearching ? "검색 중..." : "검색"}
+        {/* ── 헤더 ── */}
+        <header className="dashboard-header">
+          <div>
+            <p className="dashboard-badge">Wiki Race</p>
+            <h1>{user.displayName}님, 반가워요 👋</h1>
+            <p className="dashboard-muted">
+              {user.isGuest
+                ? "게스트 모드로 접속 중입니다. 로그인하면 기록이 저장됩니다."
+                : isSupabaseConfigured
+                  ? "온라인 랭킹 모드 활성화 중"
+                  : "데모 모드로 실행 중"}
+            </p>
+          </div>
+          {/* 상단 액션 버튼 그룹 */}
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            {!user.isGuest && (
+              <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
+                내 정보
               </button>
-            </div>
+            )}
+            <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>
+              로그아웃
+            </button>
+          </div>
+        </header>
 
-            {/* 검색 결과 목록 표시 */}
-            {searchResults.length > 0 && (
-              <div className="search-results-list">
-                {searchResults.map((item) => (
-                  <div
-                    key={item.title}
-                    onClick={() => setSelectedTarget(item)}
-                    className={`search-item ${selectedTarget?.title === item.title ? "selected" : ""}`}
-                  >
-                    <strong className="search-item-title">
-                      {item.title}
-                    </strong>
-                    <div
-                      className="search-item-snippet"
-                      dangerouslySetInnerHTML={{ __html: item.snippet }}
-                    />
-                  </div>
-                ))}
+        {/* ── 빠른 시작 카드 2개 ── */}
+        <section className="quickstart-grid">
+          <button
+            type="button"
+            className="quickstart-card quickstart-custom"
+            onClick={() => { setKeyword(""); setShowKeywordModal(true); }}
+          >
+            <span className="qs-icon">🎯</span>
+            <span className="qs-title">혼자서 플레이</span>
+            <span className="qs-desc">내가 원하는 목표 문서를 직접 찾아가기</span>
+          </button>
+          <button
+            type="button"
+            className="quickstart-card quickstart-pvp"
+            onClick={() => navigate("/multiplayer")}
+          >
+            <span className="qs-icon">⚔️</span>
+            <span className="qs-title">온라인 플레이</span>
+            <span className="qs-desc">친구들과 실시간 위키 레이스 대결</span>
+          </button>
+        </section>
+
+        {/* ── 키워드 입력 및 검색 모달 ── */}
+        {showKeywordModal && (
+          <div className="qs-modal-backdrop" onClick={() => setShowKeywordModal(false)}>
+            <div className="qs-modal" onClick={(e) => e.stopPropagation()}>
+              <h3 className="qs-modal-title">🎯 목표 문서 확정</h3>
+              <p className="qs-modal-desc">위키백과에서 도달할 정확한 문서를 검색하고 선택하세요.</p>
+
+              <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
+                <input
+                  className="qs-modal-input"
+                  style={{ flex: 1, margin: 0 }}
+                  autoFocus
+                  placeholder="예: 아인슈타인, 조선왕조..."
+                  value={keyword}
+                  onChange={(e) => {
+                    setKeyword(e.target.value);
+                    setSearchResults([]);
+                    setSelectedTarget(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && keyword.trim()) handleSearchKeyword();
+                    if (e.key === "Escape") setShowKeywordModal(false);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="app-btn app-btn-secondary"
+                  onClick={handleSearchKeyword}
+                  disabled={isSearching || !keyword.trim()}
+                >
+                  {isSearching ? "검색 중..." : "검색"}
+                </button>
               </div>
-            )}
 
-            {searchResults.length === 0 && keyword.trim() && !isSearching && (
-              <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "1rem" }}>검색 후 아래에서 문서를 선택해주세요.</p>
-            )}
+              {/* 검색 결과 목록 표시 */}
+              {searchResults.length > 0 && (
+                <div className="search-results-list">
+                  {searchResults.map((item) => (
+                    <div
+                      key={item.title}
+                      onClick={() => setSelectedTarget(item)}
+                      className={`search-item ${selectedTarget?.title === item.title ? "selected" : ""}`}
+                    >
+                      <strong className="search-item-title">
+                        {item.title}
+                      </strong>
+                      <div
+                        className="search-item-snippet"
+                        dangerouslySetInnerHTML={{ __html: item.snippet }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            <div className="qs-modal-actions">
-              <button type="button" className="app-btn app-btn-ghost" onClick={() => setShowKeywordModal(false)}>취소</button>
-              <button
-                type="button"
-                className="app-btn app-btn-primary"
-                disabled={!selectedTarget}
-                onClick={() => {
-                  setShowKeywordModal(false);
-                  // rawKeyword와 실제 확정된 targetTitle을 분리해서 전달
-                  navigate("/game", {
-                    state: {
-                      mode: "custom",
-                      rawKeyword: keyword.trim(),
-                      targetTitle: selectedTarget.title
-                    }
-                  });
-                }}
-              >
-                {selectedTarget ? `'${selectedTarget.title}' 시작` : "목표를 선택하세요"}
-              </button>
+              {searchResults.length === 0 && keyword.trim() && !isSearching && (
+                <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "1rem" }}>검색 후 아래에서 문서를 선택해주세요.</p>
+              )}
+
+              <div className="qs-modal-actions">
+                <button type="button" className="app-btn app-btn-ghost" onClick={() => setShowKeywordModal(false)}>취소</button>
+                <button
+                  type="button"
+                  className="app-btn app-btn-primary"
+                  disabled={!selectedTarget}
+                  onClick={() => {
+                    setShowKeywordModal(false);
+                    // rawKeyword와 실제 확정된 targetTitle을 분리해서 전달
+                    navigate("/game", {
+                      state: {
+                        mode: "custom",
+                        rawKeyword: keyword.trim(),
+                        targetTitle: selectedTarget.title
+                      }
+                    });
+                  }}
+                >
+                  {selectedTarget ? `'${selectedTarget.title}' 시작` : "목표를 선택하세요"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
 
-      {/* ── 통계 카드 3개 ── */}
-      <section className="dashboard-grid">
-        <article className="dashboard-card">
-          <p className="card-label">총 플레이</p>
-          <p className="card-value">{loading ? "…" : stats.gamesPlayed > 0 ? `${stats.gamesPlayed}회` : "-"}</p>
-        </article>
-        <article className="dashboard-card">
-          <p className="card-label">최고 기록</p>
-          <p className="card-value">{loading ? "…" : formatDuration(stats.bestTime)}</p>
-        </article>
-        <article className="dashboard-card">
-          <p className="card-label">계정</p>
-          <p className="card-value account-value">
-            {/* 게스트가 아닐 경우 아이디(username)를 우선적으로 표시합니다. */}
-            {user.isGuest ? "게스트" : user.username || user.displayName || "로컬 데모"}
-          </p>
-        </article>
-      </section>
+        {/* ── 통계 카드 3개 ── */}
+        <section className="dashboard-grid">
+          <article className="dashboard-card">
+            <p className="card-label">총 플레이</p>
+            <p className="card-value">{loading ? "…" : stats.gamesPlayed > 0 ? `${stats.gamesPlayed}회` : "-"}</p>
+          </article>
+          <article className="dashboard-card">
+            <p className="card-label">최고 기록</p>
+            <p className="card-value">{loading ? "…" : formatDuration(stats.bestTime)}</p>
+          </article>
+          <article className="dashboard-card">
+            <p className="card-label">계정</p>
+            <p className="card-value account-value">
+              {/* 게스트가 아닐 경우 아이디(username)를 우선적으로 표시합니다. */}
+              {user.isGuest ? "게스트" : user.username || user.displayName || "로컬 데모"}
+            </p>
+          </article>
+        </section>
 
-      {/* ── 최근 기록 (최대 3개) ── */}
-      <section className="dashboard-card recent-card">
-        <div className="recent-head">
-          <h2>최근 플레이 기록</h2>
-          {!user.isGuest && (
-            <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
-              전체 랭킹 →
-            </button>
+        {/* ── 최근 기록 (최대 3개) ── */}
+        <section className="dashboard-card recent-card">
+          <div className="recent-head">
+            <h2>최근 플레이 기록</h2>
+            {!user.isGuest && (
+              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
+                전체 랭킹 →
+              </button>
+            )}
+          </div>
+          {error && <p className="app-error">{error}</p>}
+          {!error && user.isGuest && (
+            <p className="dashboard-muted">
+              게스트 모드입니다. 기록 저장과 개인 통계는 로그인 후 이용할 수 있어요.
+            </p>
           )}
-        </div>
-        {error && <p className="app-error">{error}</p>}
-        {!error && user.isGuest && (
-          <p className="dashboard-muted">
-            게스트 모드입니다. 기록 저장과 개인 통계는 로그인 후 이용할 수 있어요.
-          </p>
-        )}
-        {!error && !user.isGuest && stats.recentRecords.length === 0 && (
-          <p className="dashboard-muted">첫 플레이를 시작해 기록을 남겨보세요.</p>
-        )}
-        {!user.isGuest && stats.recentRecords.length > 0 && (
-          <ul className="recent-list">
-            {stats.recentRecords.slice(0, 3).map((record, index) => (
-              <li key={`${record.createdAt}-${index}`} className="recent-item">
-                <span className="ri-title">{record.targetTitle}</span>
-                <span className="ri-time">{formatDuration(record.elapsedSeconds)}</span>
-                <span className="ri-clicks">{record.clickCount}회 클릭</span>
-                <span className="ri-date">{formatDate(record.createdAt)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          {!error && !user.isGuest && stats.recentRecords.length === 0 && (
+            <p className="dashboard-muted">첫 플레이를 시작해 기록을 남겨보세요.</p>
+          )}
+          {!user.isGuest && stats.recentRecords.length > 0 && (
+            <ul className="recent-list">
+              {stats.recentRecords.slice(0, 3).map((record, index) => (
+                <li key={`${record.createdAt}-${index}`} className="recent-item">
+                  <span className="ri-title">{record.targetTitle}</span>
+                  <span className="ri-time">{formatDuration(record.elapsedSeconds)}</span>
+                  <span className="ri-clicks">{record.clickCount}회 클릭</span>
+                  <span className="ri-date">{formatDate(record.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      {/* ── 주간 TOP 3 ── */}
-      <section className="dashboard-card weekly-card">
-        <div className="recent-head">
-          <h2>🏆 이번 주 TOP 3</h2>
-          <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
-            전체 보기 →
-          </button>
-        </div>
-        {weeklyTop.length === 0 ? (
-          <p className="dashboard-muted">이번 주 기록이 아직 없습니다. 첫 주인공이 되어 보세요!</p>
-        ) : (
-          <ol className="weekly-list">
-            {weeklyTop.map((r, i) => (
-              <li key={r.id ?? i} className="weekly-item">
-                <span className="wi-medal">{rankMedal(i)}</span>
-                <span className="wi-name">{r.playerName}</span>
-                <span className="wi-target">{r.targetTitle}</span>
-                <span className="wi-time">{formatDuration(r.elapsedSeconds)}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+        <section className="dashboard-card weekly-card">
+          <div className="recent-head">
+            <div>
+              <h2>
+                🏆{" "}
+                {rankingView === "today"
+                  ? "오늘 TOP 3"
+                  : rankingView === "weekly"
+                    ? "이번 주 TOP 3"
+                    : "전체 TOP 3"}
+              </h2>
 
-      {/* ── 오늘의 도전 ── */}
-      <section className="dashboard-card daily-card">
-        <div className="daily-head">
-          <span className="daily-badge">🗓️ TODAY’S CHALLENGE</span>
-          <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
-        </div>
-        <p className="daily-keyword">{dailyChallenge.keyword}</p>
-        <p className="daily-hint">{dailyChallenge.hint}</p>
-        <button
-          type="button"
-          className="app-btn app-btn-primary daily-btn"
-          onClick={() => navigate("/game", { state: { mode: "custom", keyword: dailyChallenge.keyword } })}
-        >
-          ★ 오늘의 도전에 참여하기
-        </button>
-      </section>
-
-      {/* 플로팅 도움말 버튼 */}
-      <button type="button" className="help-button floating" onClick={() => setShowHelp(true)} aria-label="게임 설명">
-        ?
-      </button>
-
-      {/* ── 도움말 모달 ── */}
-      {showHelp && (
-        <div className="help-backdrop" onClick={() => setShowHelp(false)}>
-          <div className="help-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--app-line)", paddingBottom: "0.75rem" }}>
-              <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Wiki Race (위키 레이스)</h2>
-              <button type="button" className="text-btn" onClick={() => setShowHelp(false)} style={{ fontSize: "1.5rem", lineHeight: 1 }}>
-                &times;
-              </button>
+              <div className="ranking-tabs">
+                <button
+                  type="button"
+                  className={rankingView === "today" ? "active" : ""}
+                  onClick={() => setRankingView("today")}
+                >
+                  오늘
+                </button>
+                <button
+                  type="button"
+                  className={rankingView === "weekly" ? "active" : ""}
+                  onClick={() => setRankingView("weekly")}
+                >
+                  이번 주
+                </button>
+                <button
+                  type="button"
+                  className={rankingView === "all" ? "active" : ""}
+                  onClick={() => setRankingView("all")}
+                >
+                  전체
+                </button>
+              </div>
             </div>
 
-            <p>위키 레이스는 링크를 따라 이동하며 목표 문서에 도달하는 게임입니다.</p>
-
-            <h3>플레이 방법:</h3>
-            <ul>
-              <li>문서 안의 링크를 클릭하며 이동합니다</li>
-              <li>목표 문서에 도달하면 성공입니다</li>
-            </ul>
-
-            <h3>모드:</h3>
-            <ul>
-              <li><strong>혼자서 플레이:</strong> 목표를 설정하고 도전</li>
-              <li><strong>1 vs 1 대전:</strong> 상대보다 먼저 도착하면 승리</li>
-            </ul>
-
-            <h3>기록:</h3>
-            <ul>
-              <li>시간과 이동 횟수로 랭킹이 결정됩니다</li>
-            </ul>
+            <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
+              전체 보기 →
+            </button>
           </div>
+
+          {rankingTabs[rankingView].length === 0 ? (
+            <p className="dashboard-muted">
+              {rankingView === "today"
+                ? "오늘 기록이 아직 없습니다."
+                : rankingView === "weekly"
+                  ? "이번 주 기록이 아직 없습니다."
+                  : "전체 기록이 아직 없습니다."}
+            </p>
+          ) : (
+            <ol className="weekly-list ranking-rotate-list">
+              {rankingTabs[rankingView].map((r, i) => (
+                <li key={r.id ?? `${rankingView}-${i}`} className="weekly-item">
+                  <span className="wi-medal">{rankMedal(i)}</span>
+                  <span className="wi-name">{r.playerName}</span>
+                  <span className="wi-target">{r.targetTitle}</span>
+                  <span className="wi-time">{formatDuration(r.elapsedSeconds)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        {/* ── 오늘의 도전 ── */}
+        <section className="dashboard-card daily-card">
+          <div className="daily-head">
+            <span className="daily-badge">🗓️ TODAY’S CHALLENGE</span>
+            <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
+          </div>
+          <p className="daily-keyword">{dailyChallenge.keyword}</p>
+          <p className="daily-hint">{dailyChallenge.hint}</p>
+          <button
+            type="button"
+            className="app-btn app-btn-primary daily-btn"
+            onClick={() => navigate("/game", { state: { mode: "custom", keyword: dailyChallenge.keyword } })}
+          >
+            ★ 오늘의 도전에 참여하기
+          </button>
+        </section>
+
+        {/* 플로팅 도움말 버튼 */}
+        <button type="button" className="help-button floating" onClick={() => setShowHelp(true)} aria-label="게임 설명">
+          ?
+        </button>
+
+        {/* ── 도움말 모달 ── */}
+        {showHelp && (
+          <div className="help-backdrop" onClick={() => setShowHelp(false)}>
+            <div className="help-modal" onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--app-line)", paddingBottom: "0.75rem" }}>
+                <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Wiki Race (위키 레이스)</h2>
+                <button type="button" className="text-btn" onClick={() => setShowHelp(false)} style={{ fontSize: "1.5rem", lineHeight: 1 }}>
+                  &times;
+                </button>
+              </div>
+
+              <p>위키 레이스는 링크를 따라 이동하며 목표 문서에 도달하는 게임입니다.</p>
+
+              <h3>플레이 방법:</h3>
+              <ul>
+                <li>문서 안의 링크를 클릭하며 이동합니다</li>
+                <li>목표 문서에 도달하면 성공입니다</li>
+              </ul>
+
+              <h3>모드:</h3>
+              <ul>
+                <li><strong>혼자서 플레이:</strong> 목표를 설정하고 도전</li>
+                <li><strong>1 vs 1 대전:</strong> 상대보다 먼저 도착하면 승리</li>
+              </ul>
+
+              <h3>기록:</h3>
+              <ul>
+                <li>시간과 이동 횟수로 랭킹이 결정됩니다</li>
+              </ul>
+            </div>
+          </div>
+        )}
+        {/* ⬇️ 메인 메뉴 하단 가장 아래쪽에 자연스럽게 광고 배치 */}
+        <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
+          <AdBanner />
         </div>
-      )}
-      {/* ⬇️ 메인 메뉴 하단 가장 아래쪽에 자연스럽게 광고 배치 */}
-      <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
-        <AdBanner />
       </div>
     </div>
   );

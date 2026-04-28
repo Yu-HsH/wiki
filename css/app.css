@@ -1633,3 +1633,197 @@ body {
   transform: translateY(-2px);
   background: rgba(185, 28, 28, 0.96);
 }
+
+.dashboard-page {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.dashboard-container {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+  transform-origin: top center;
+}
+
+.dashboard-header,
+.quickstart-grid,
+.dashboard-grid,
+.dashboard-card {
+  max-width: 100%;
+}
+
+.quickstart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 820px) {
+  .dashboard-container {
+    width: min(720px, calc(100vw - 24px));
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .quickstart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-item,
+  .recent-item {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+.ranking-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.ranking-tabs button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ranking-tabs button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.ranking-rotate-list {
+  animation: rankingFade 0.35s ease;
+}
+
+@keyframes rankingFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-page {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.dashboard-container {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+  transform-origin: top center;
+}
+
+.dashboard-header,
+.quickstart-grid,
+.dashboard-grid,
+.dashboard-card {
+  max-width: 100%;
+}
+
+.quickstart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 820px) {
+  .dashboard-container {
+    width: min(720px, calc(100vw - 24px));
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .quickstart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-item,
+  .recent-item {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+.ranking-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.ranking-tabs button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ranking-tabs button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.ranking-rotate-list {
+  animation: rankingFade 0.35s ease;
+}
+
+@keyframes rankingFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
