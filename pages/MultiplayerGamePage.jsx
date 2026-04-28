@@ -758,17 +758,25 @@ export default function MultiplayerGamePage() {
         break;
       }
       case "mini_game_reward": {
+        console.log("mini_game_reward 수신:", payload);
+
+        const rewardName =
+          payload.rewardName ||
+          ITEM_DEFS.find((item) => item.id === payload.rewardId)?.name ||
+          payload.rewardId ||
+          "알 수 없는 아이템";
+
         setMiniGame((prev) => {
           if (!prev || prev.gameId !== payload.gameId) return prev;
 
           return {
             ...prev,
             status: "result",
-            resultMessage: `패배! 상대의 [${payload.rewardName}] 아이템이 발동됐습니다.`,
+            resultMessage: `패배! 상대의 [${rewardName}] 아이템이 발동됐습니다.`,
           };
         });
 
-        showMessage(`상대 미니게임 보상: ${payload.rewardName}`);
+        showMessage(`상대 미니게임 보상: ${rewardName}`);
 
         setTimeout(() => setMiniGame(null), 2200);
         break;
@@ -855,19 +863,26 @@ export default function MultiplayerGamePage() {
         return;
       }
 
-      const rewardName =
-        result === "me" ? await triggerRandomMiniGameReward() : null;
+      if (result === "me") {
+        const rewardName = await triggerRandomMiniGameReward();
 
+        setMiniGame((prev) => ({
+          ...prev,
+          status: "result",
+          resultMessage: `승리! [${rewardName}] 아이템이 발동됐습니다.`,
+        }));
+
+        setTimeout(() => setMiniGame(null), 2200);
+        return;
+      }
+
+      // 패배한 쪽은 여기서 결과창을 확정하지 않음
+      // 승자 쪽에서 보내는 mini_game_reward 이벤트를 기다림
       setMiniGame((prev) => ({
         ...prev,
-        status: "result",
-        resultMessage:
-          result === "me"
-            ? `승리! [${rewardName}] 아이템이 발동됐습니다.`
-            : `패배! 상대의 아이템이 발동됐습니다.`
+        status: "waiting_reward",
+        resultMessage: "패배... 상대 보상 아이템 확인 중입니다.",
       }));
-
-      setTimeout(() => setMiniGame(null), 2200);
     };
 
     resolveMiniGame();
@@ -1013,7 +1028,7 @@ export default function MultiplayerGamePage() {
                     </>
                   )}
 
-                  {miniGame.status === "result" && (
+                  {(miniGame.status === "result" || miniGame.status === "waiting_reward") && (
                     <h3>{miniGame.resultMessage}</h3>
                   )}
                 </div>
