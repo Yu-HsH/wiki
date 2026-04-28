@@ -20,7 +20,7 @@ export default function ItemBar({
                     >
                         <div className="item-slot__name">{item.name}</div>
                         <div className="item-slot__meta">
-                            {item.rarity === "rare" ? "희귀" : "일반"}
+                            {item.type === "joker" ? "조커" : item.rarity === "rare" ? "희귀" : "일반"}
                         </div>
                     </button>
                 );
