@@ -192,7 +192,13 @@ export default function GroupGamePage() {
                     setResults(latestResults);
                     setPhase(GROUP_PHASE.FINISHED);
                 } else {
-                    setPhase(GROUP_PHASE.PICKING);
+                    const saved = loadLocalGameState();
+
+                    if (saved?.currentTitle) {
+                        setPhase(GROUP_PHASE.PLAYING);
+                    } else {
+                        setPhase(GROUP_PHASE.PICKING);
+                    }
                 }
             } catch (e) {
                 console.error(e);
