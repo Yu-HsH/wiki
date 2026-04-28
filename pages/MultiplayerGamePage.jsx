@@ -476,8 +476,10 @@ export default function MultiplayerGamePage() {
     ];
 
     const randomId = rewardIds[Math.floor(Math.random() * rewardIds.length)];
+    const rewardItem = ITEM_DEFS.find((item) => item.id === randomId);
+    const rewardName = rewardItem?.name || randomId;
 
-    showMessage(`🎲 미니게임 보상 발동: ${randomId}`);
+    showMessage(`🎲 미니게임 보상: ${rewardName}`);
 
     switch (randomId) {
       case "blind":
@@ -526,6 +528,8 @@ export default function MultiplayerGamePage() {
       default:
         break;
     }
+
+    return rewardName;
   };
 
   const handleUseItem = async (instanceId) => {
@@ -809,40 +813,43 @@ export default function MultiplayerGamePage() {
   }, [phase]);
 
   useEffect(() => {
-    if (!miniGame) return;
-    if (miniGame.status !== "choosing") return;
-    if (!miniGame.myChoice || !miniGame.opponentChoice) return;
+    const resolveMiniGame = async () => {
+      if (!miniGame) return;
+      if (miniGame.status !== "choosing") return;
+      if (!miniGame.myChoice || !miniGame.opponentChoice) return;
 
-    const result = decideRpsWinner(
-      miniGame.myChoice,
-      miniGame.opponentChoice
-    );
+      const result = decideRpsWinner(
+        miniGame.myChoice,
+        miniGame.opponentChoice
+      );
 
-    if (result === "draw") {
+      if (result === "draw") {
+        setMiniGame((prev) => ({
+          ...prev,
+          status: "result",
+          resultMessage: "무승부! 아무 일도 일어나지 않았습니다.",
+        }));
+
+        setTimeout(() => setMiniGame(null), 1800);
+        return;
+      }
+
+      const rewardName =
+        result === "me" ? await triggerRandomMiniGameReward() : null;
+
       setMiniGame((prev) => ({
         ...prev,
         status: "result",
-        resultMessage: "무승부! 아무 일도 일어나지 않았습니다.",
+        resultMessage:
+          result === "me"
+            ? `승리! [${rewardName}] 아이템이 발동됐습니다.`
+            : "패배! [${rewardName}] 아이템이 발동됐습니다.",
       }));
 
-      setTimeout(() => setMiniGame(null), 1800);
-      return;
-    }
+      setTimeout(() => setMiniGame(null), 2200);
+    };
 
-    if (result === "me") {
-      triggerRandomMiniGameReward();
-    }
-
-    setMiniGame((prev) => ({
-      ...prev,
-      status: "result",
-      resultMessage:
-        result === "me"
-          ? "승리! 랜덤 아이템이 발동됩니다."
-          : "패배! 상대의 랜덤 아이템이 발동됩니다.",
-    }));
-
-    setTimeout(() => setMiniGame(null), 2200);
+    resolveMiniGame();
   }, [miniGame]);
 
   useEffect(() => {
