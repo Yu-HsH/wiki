@@ -70,32 +70,34 @@ export default function useItemSystem({
 
     // 지속 효과 만료 정리
     useEffect(() => {
-        const interval = setInterval(() => {
-            setActiveEffects((prev) => ({
-                self: clearExpiredEffects(prev.self),
-                opponent: clearExpiredEffects(prev.opponent),
-            }));
-        }, 500);
+        if (!itemStorageKey) return;
 
-        return () => clearInterval(interval);
-    }, []);
-    if (itemStorageKey) {
-        const saved = JSON.parse(localStorage.getItem(itemStorageKey) || "null");
+        try {
+            const saved = JSON.parse(localStorage.getItem(itemStorageKey) || "null");
 
-        if (saved?.inventory?.length > 0) {
-            setInventory(saved.inventory);
-            return;
+            if (saved?.inventory?.length > 0) {
+                setInventory(saved.inventory);
+            }
+        } catch (e) {
+            console.error("아이템 복구 실패:", e);
         }
-    }
+    }, [itemStorageKey]);
+
     /**
      * 시작 인벤토리 생성
      * - 모드별 허용 아이템만 사용
      * - total / rareCount를 맞추되 허용 풀 안에서만 뽑음
      */
     const initializeItems = useCallback(
-
-
         ({ total = 4, rareCount = 1 } = {}) => {
+            if (itemStorageKey) {
+                const saved = JSON.parse(localStorage.getItem(itemStorageKey) || "null");
+
+                if (saved?.inventory?.length > 0) {
+                    setInventory(saved.inventory);
+                    return;
+                }
+            }
             const allowedPool = ITEM_DEFS.filter((item) => allowedIds.includes(item.id));
             const rarePool = allowedPool.filter((item) => item.rarity === "rare");
             const normalPool = allowedPool.filter((item) => item.rarity !== "rare");
@@ -146,7 +148,7 @@ export default function useItemSystem({
             setHighlightedLinks([]);
             setFloatingMessage("");
         },
-        [allowedIds]
+        [allowedIds, itemStorageKey]
     );
 
     const pushHistory = useCallback((title) => {
@@ -183,7 +185,7 @@ export default function useItemSystem({
 
             setInventory((prev) => {
                 const next = prev.map((item) =>
-                    item.instanceId === itemId ? { ...item, used: true } : item
+                    item.instanceId === instanceId ? { ...item, used: true } : item
                 );
 
                 if (itemStorageKey) {

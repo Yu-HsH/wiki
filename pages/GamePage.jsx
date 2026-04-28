@@ -358,7 +358,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         autoStarted.current = true;
         setIsLoading(true);
         setError("");
-
+        localStorage.removeItem("wiki-single-items");
         const page = await fetchPageData(saved.currentTitle);
 
         setTarget(saved.target);
