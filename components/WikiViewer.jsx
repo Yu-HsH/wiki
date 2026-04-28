@@ -18,7 +18,7 @@ export default function WikiViewer({
   searchAvailable = false,
   onConsumeSearch,
   highlightRequestId = 0,
-  status,
+  status = {},
 }) {
   const articleRef = useRef(null);
   const [headings, setHeadings] = useState([]);
@@ -488,7 +488,7 @@ export default function WikiViewer({
             );
           })}
         </div>
-        {status.blind && (
+        {status?.blind && (
           <div className="blind-overlay">
             <div className="blind-text">시야 방해 중...</div>
           </div>
