@@ -287,9 +287,17 @@ export default function MultiplayerGamePage() {
   useEffect(() => {
     if (phase !== PHASE.COUNTDOWN) return;
 
-    const pool = ITEM_DEFS.filter((item) => MULTI_ITEM_IDS.includes(item.id));
-    const rare = pool.filter((item) => item.rarity === "rare");
-    const normal = pool.filter((item) => item.rarity !== "rare");
+    const pool = ITEM_DEFS.filter((item) =>
+      MULTI_ITEM_IDS.includes(item.id)
+    );
+
+    const joker = pool.filter((item) => item.type === "joker");
+    const rareOnly = pool.filter(
+      (item) => item.rarity === "rare" && item.type !== "joker"
+    );
+    const normalOnly = pool.filter(
+      (item) => item.rarity !== "rare" && item.type !== "joker"
+    );
 
     const pick = (arr, count) => {
       const copy = [...arr];
@@ -304,14 +312,16 @@ export default function MultiplayerGamePage() {
     };
 
     const selected = [
-      ...pick(pool.filter((item) => item.type === "joker"), 1),
-      ...pick(pool.filter((item) => item.rarity === "rare" && item.type !== "joker"), 1),
-      ...pick(pool.filter((item) => item.rarity !== "rare" && item.type !== "joker"), 3),
+      ...pick(joker, 1),
+      ...pick(rareOnly, 1),
+      ...pick(normalOnly, 3),
     ].map((item, index) => ({
       ...item,
       instanceId: `${item.id}-${Date.now()}-${index}`,
       used: false,
     }));
+
+    console.log("선택된 아이템:", selected.map((i) => i.id));
 
     setInventory(selected);
   }, [phase]);
