@@ -843,7 +843,7 @@ export default function MultiplayerGamePage() {
         resultMessage:
           result === "me"
             ? `승리! [${rewardName}] 아이템이 발동됐습니다.`
-            : "패배! [${rewardName}] 아이템이 발동됐습니다.",
+            : `패배! [${rewardName}] 아이템이 발동됐습니다.`
       }));
 
       setTimeout(() => setMiniGame(null), 2200);
