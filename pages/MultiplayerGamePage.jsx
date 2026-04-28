@@ -750,11 +750,27 @@ export default function MultiplayerGamePage() {
 
           return {
             ...prev,
+            opponentChoice: payload.choice,
+          };
+        });
+
+        showMessage("상대가 선택을 완료했습니다!");
+        break;
+      }
+      case "mini_game_reward": {
+        setMiniGame((prev) => {
+          if (!prev || prev.gameId !== payload.gameId) return prev;
+
+          return {
+            ...prev,
             status: "result",
             resultMessage: `패배! 상대의 [${payload.rewardName}] 아이템이 발동됐습니다.`,
           };
         });
+
         showMessage(`상대 미니게임 보상: ${payload.rewardName}`);
+
+        setTimeout(() => setMiniGame(null), 2200);
         break;
       }
 
