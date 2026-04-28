@@ -86,6 +86,36 @@ export default function MultiplayerGamePage() {
   const [historyStack, setHistoryStack] = useState([]);
   const [floatingMessage, setFloatingMessage] = useState("");
   const [miniGame, setMiniGame] = useState(null);
+
+  const storageKey = user?.id && roomId
+    ? `wiki-mp-game:${roomId}:${user.id}`
+    : null;
+
+  const saveLocalGameState = (patch = {}) => {
+    if (!storageKey) return;
+
+    const prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        ...prev,
+        ...patch,
+        savedAt: Date.now(),
+      })
+    );
+  };
+
+  const loadLocalGameState = () => {
+    if (!storageKey) return null;
+
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || "null");
+    } catch {
+      return null;
+    }
+  };
+
   const [itemCooldownUntil, setItemCooldownUntil] = useState(0);
   const [itemEffect, setItemEffect] = useState(null);
 
@@ -212,6 +242,8 @@ export default function MultiplayerGamePage() {
         setPending(true);
         setError("");
 
+        const saved = loadLocalGameState();
+
         const roomData = await fetchRoom(roomId);
         const playerData = await fetchRoomPlayers(roomId);
 
@@ -229,6 +261,8 @@ export default function MultiplayerGamePage() {
           throw new Error("상대 목표 문서가 설정되지 않았습니다.");
         }
 
+        let currentTitle = me.current_title;
+
         if (!me.start_title || !me.current_title) {
           const excluded = new Set([normalizeTitle(opponent.target_title)]);
           const startTitle = await fetchDistinctRandomTitle(excluded);
@@ -245,20 +279,30 @@ export default function MultiplayerGamePage() {
           setPlayers(refreshedPlayers);
 
           const refreshedMe = refreshedPlayers.find((p) => p.user_id === user.id);
+
           if (!refreshedMe?.current_title) {
             throw new Error("시작 문서를 설정하지 못했습니다.");
           }
 
-          setIsPageLoading(true);
-          const firstPage = await fetchPageData(refreshedMe.current_title);
-          setPageData(firstPage);
-          setIsPageLoading(false);
-        } else {
-          setIsPageLoading(true);
-          const firstPage = await fetchPageData(me.current_title);
-          setPageData(firstPage);
-          setIsPageLoading(false);
+          currentTitle = refreshedMe.current_title;
         }
+
+        const restoreTitle = saved?.currentTitle || currentTitle;
+
+        setIsPageLoading(true);
+
+        const firstPage = await fetchPageData(restoreTitle);
+        setPageData(firstPage);
+
+        if (saved?.historyStack?.length > 0) {
+          setHistoryStack(saved.historyStack);
+        }
+
+        if (saved?.inventory?.length > 0) {
+          setInventory(saved.inventory);
+        }
+
+        setIsPageLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "게임 초기화에 실패했습니다.");
       } finally {
@@ -286,12 +330,23 @@ export default function MultiplayerGamePage() {
     }
 
     if (room.status === "playing" && phase === PHASE.LOADING) {
-      setPhase(PHASE.VS_INTRO);
+      const saved = loadLocalGameState();
+
+      if (saved?.currentTitle || saved?.inventory?.length > 0) {
+        setPhase(PHASE.PLAYING);
+      } else {
+        setPhase(PHASE.VS_INTRO);
+      }
     }
   }, [room, myPlayer, opponentPlayer, roomId, phase]);
 
   useEffect(() => {
     if (phase !== PHASE.COUNTDOWN) return;
+    const saved = loadLocalGameState();
+    if (saved?.inventory?.length > 0) {
+      setInventory(saved.inventory);
+      return;
+    }
 
     const pool = ITEM_DEFS.filter((item) =>
       MULTI_ITEM_IDS.includes(item.id)
@@ -329,17 +384,27 @@ export default function MultiplayerGamePage() {
 
     console.log("선택된 아이템:", selected.map((i) => i.id));
 
+
     setInventory(selected);
+
+    saveLocalGameState({
+      inventory: selected,
+    });
   }, [phase]);
 
   const markUsed = (instanceId) => {
-    setInventory((prev) =>
-      prev.map((item) =>
+    setInventory((prev) => {
+      const next = prev.map((item) =>
         item.instanceId === instanceId ? { ...item, used: true } : item
-      )
-    );
-  };
+      );
 
+      saveLocalGameState({
+        inventory: next,
+      });
+
+      return next;
+    });
+  };
   const canUseItem = (item) => {
     if (!item || item.used) return false;
 
@@ -365,8 +430,11 @@ export default function MultiplayerGamePage() {
       setError("");
       setIsPageLoading(true);
 
+      let nextHistoryStack = historyStack;
+
       if (pageData?.title && pageData.title !== nextTitle) {
-        setHistoryStack((prev) => [...prev, pageData.title]);
+        nextHistoryStack = [...historyStack, pageData.title];
+        setHistoryStack(nextHistoryStack);
       }
 
       setStatus((prev) => ({
@@ -376,6 +444,11 @@ export default function MultiplayerGamePage() {
 
       const nextPage = await fetchPageData(nextTitle);
       setPageData(nextPage);
+
+      saveLocalGameState({
+        currentTitle: nextPage.title,
+        historyStack: nextHistoryStack,
+      });
 
       const nextMoveCount = (myPlayer?.move_count || 0) + 1;
 
@@ -429,6 +502,10 @@ export default function MultiplayerGamePage() {
 
       const nextPage = await fetchPageData(nextTitle);
       setPageData(nextPage);
+
+      saveLocalGameState({
+        currentTitle: nextPage.title,
+      });
 
       const nextMoveCount = (myPlayer?.move_count || 0) + 1;
 

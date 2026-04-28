@@ -64,6 +64,35 @@ export default function GroupGamePage() {
     const startTimeRef = useRef(null);
     const finishedRef = useRef(false);
 
+    const storageKey = user?.id && roomId
+        ? `wiki-group-game-state:${roomId}:${user.id}`
+        : null;
+
+    const saveLocalGameState = useCallback((patch = {}) => {
+        if (!storageKey) return;
+
+        const prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+
+        localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+                ...prev,
+                ...patch,
+                savedAt: Date.now(),
+            })
+        );
+    }, [storageKey]);
+
+    const loadLocalGameState = useCallback(() => {
+        if (!storageKey) return null;
+
+        try {
+            return JSON.parse(localStorage.getItem(storageKey) || "null");
+        } catch {
+            return null;
+        }
+    }, [storageKey]);
+
     const myPlayer = useMemo(
         () => players.find((player) => player.user_id === user?.id),
         [players, user?.id]
@@ -130,14 +159,22 @@ export default function GroupGamePage() {
                     throw new Error("단체모드 시작 문서 또는 목표 문서가 설정되지 않았습니다.");
                 }
 
-                const startPage = await fetchPageData(roomData.group_start_title);
+                const saved = loadLocalGameState();
+                const me = playerData.find((player) => player.user_id === user.id);
 
-                setStartTitle(startPage.title);
-                setCurrentTitle(startPage.title);
-                setCurrentSummary(startPage.summary);
-                setCurrentDocumentHtml(startPage.documentHtml);
-                setLinks(startPage.links);
-                setPathTitles([startPage.title]);
+                const restoreTitle =
+                    saved?.currentTitle || myPlayer?.current_title || roomData.group_start_title;
+
+                const restorePage = await fetchPageData(restoreTitle);
+
+                setStartTitle(roomData.group_start_title);
+                setCurrentTitle(restorePage.title);
+                setCurrentSummary(restorePage.summary);
+                setCurrentDocumentHtml(restorePage.documentHtml);
+                setLinks(restorePage.links);
+                setPathTitles(saved?.pathTitles || [restorePage.title]);
+                setClickCount(saved?.clickCount || myPlayer?.move_count || 0);
+                setElapsedSeconds(saved?.elapsedSeconds || 0);
 
                 setTarget({
                     title: roomData.group_target_title,
@@ -164,7 +201,7 @@ export default function GroupGamePage() {
         };
 
         loadGame();
-    }, [roomId, user?.id]);
+    }, [roomId, user?.id, loadLocalGameState]);
 
     useEffect(() => {
         if (!roomId || !supabase) return;
@@ -257,6 +294,13 @@ export default function GroupGamePage() {
             const newPath = [...pathTitles, page.title];
             setPathTitles(newPath);
 
+            saveLocalGameState({
+                currentTitle: page.title,
+                pathTitles: newPath,
+                clickCount: nextClickCount,
+                elapsedSeconds,
+            });
+
             await updateGroupPlayerProgress(roomId, user.id, {
                 currentTitle: page.title,
                 moveCount: nextClickCount,
@@ -269,6 +313,10 @@ export default function GroupGamePage() {
 
             if (checkWin(page.title, target.title)) {
                 finishedRef.current = true;
+
+                if (storageKey) {
+                    localStorage.removeItem(storageKey);
+                }
 
                 const finishResult = await finishGroupPlayer(roomId, {
                     elapsedSeconds,

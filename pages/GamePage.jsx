@@ -77,6 +77,29 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const startTimeRef = useRef(null);
   const autoStarted = useRef(false);
 
+  const storageKey = "wiki-single-game-state";
+
+  const saveLocalGameState = useCallback((patch = {}) => {
+    const prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        ...prev,
+        ...patch,
+        savedAt: Date.now(),
+      })
+    );
+  }, []);
+
+  const loadLocalGameState = useCallback(() => {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || "null");
+    } catch {
+      return null;
+    }
+  }, []);
+
   const handleCountdownComplete = useCallback(() => {
     setPhase(PHASE.PLAYING);
   }, []);
@@ -113,6 +136,8 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const handleWin = useCallback(
     (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
       setPhase(PHASE.SUCCESS);
+
+      localStorage.removeItem(storageKey);
 
       if (onGameComplete) {
         onGameComplete({
@@ -151,6 +176,14 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
         const newPath = [...pathTitles, page.title];
         setPathTitles(newPath);
+
+        saveLocalGameState({
+          phase: PHASE.PLAYING,
+          currentTitle: page.title,
+          pathTitles: newPath,
+          clickCount: clickCount + 1,
+          elapsedSeconds,
+        });
 
         if (previousTitle) {
           itemSystem.pushHistory(previousTitle);
@@ -217,6 +250,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   // 게임 준비
   // ----------------------------
   const handleSetupComplete = useCallback(
+
     async ({ mode, keyword }) => {
       setIsLoading(true);
       setError("");
@@ -278,6 +312,21 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setCurrentDocumentHtml(startPage.documentHtml);
         setLinks(startPage.links);
 
+        saveLocalGameState({
+          phase: PHASE.COUNTDOWN,
+          target: {
+            title: targetSummaryData.title,
+            summary: targetSummaryData.extract || "요약이 없습니다.",
+            requestedKeyword: mode === "custom" ? keyword : "",
+            mode,
+          },
+          startTitle: startPage.title,
+          currentTitle: startPage.title,
+          pathTitles: [startPage.title],
+          clickCount: 0,
+          elapsedSeconds: 0,
+        });
+
         setElapsedSeconds(0);
         setClickCount(0);
 
@@ -297,6 +346,42 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     },
     [checkWin, handleWin, location.state]
   );
+
+  useEffect(() => {
+    if (autoStarted.current) return;
+
+    const saved = loadLocalGameState();
+    if (!saved?.currentTitle || !saved?.target?.title) return;
+
+    const restoreGame = async () => {
+      try {
+        autoStarted.current = true;
+        setIsLoading(true);
+        setError("");
+
+        const page = await fetchPageData(saved.currentTitle);
+
+        setTarget(saved.target);
+        setStartTitle(saved.startTitle || "");
+        setCurrentTitle(page.title);
+        setCurrentSummary(page.summary);
+        setCurrentDocumentHtml(page.documentHtml);
+        setLinks(page.links);
+        setPathTitles(saved.pathTitles || [page.title]);
+        setClickCount(saved.clickCount || 0);
+        setElapsedSeconds(saved.elapsedSeconds || 0);
+
+        setPhase(PHASE.PLAYING);
+      } catch (e) {
+        console.error("싱글 게임 복구 실패:", e);
+        localStorage.removeItem(storageKey);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    restoreGame();
+  }, [loadLocalGameState]);
 
   // ----------------------------
   // 메인 빠른 시작
