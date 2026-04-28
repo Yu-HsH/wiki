@@ -370,12 +370,6 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setPathTitles(saved.pathTitles || [page.title]);
         setClickCount(saved.clickCount || 0);
         setElapsedSeconds(saved.elapsedSeconds || 0);
-
-        if (!itemSystem.inventory || itemSystem.inventory.length === 0) {
-          itemSystem.initializeItems({ total: 4, rareCount: 1 });
-        }
-
-
         setPhase(PHASE.PLAYING);
       } catch (e) {
         console.error("싱글 게임 복구 실패:", e);

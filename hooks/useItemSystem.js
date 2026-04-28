@@ -30,6 +30,9 @@ export default function useItemSystem({
     onRandomTeleport,
 }) {
     const [inventory, setInventory] = useState([]);
+
+    const itemStorageKey =
+        mode === "single" ? "wiki-single-items" : null;
     const [activeEffects, setActiveEffects] = useState({ self: [], opponent: [] });
     const [immunityUntil, setImmunityUntil] = useState({ self: 0, opponent: 0 });
     const [translateCurrentPage, setTranslateCurrentPage] = useState(false);
@@ -76,13 +79,22 @@ export default function useItemSystem({
 
         return () => clearInterval(interval);
     }, []);
+    if (itemStorageKey) {
+        const saved = JSON.parse(localStorage.getItem(itemStorageKey) || "null");
 
+        if (saved?.inventory?.length > 0) {
+            setInventory(saved.inventory);
+            return;
+        }
+    }
     /**
      * 시작 인벤토리 생성
      * - 모드별 허용 아이템만 사용
      * - total / rareCount를 맞추되 허용 풀 안에서만 뽑음
      */
     const initializeItems = useCallback(
+
+
         ({ total = 4, rareCount = 1 } = {}) => {
             const allowedPool = ITEM_DEFS.filter((item) => allowedIds.includes(item.id));
             const rarePool = allowedPool.filter((item) => item.rarity === "rare");
@@ -115,6 +127,17 @@ export default function useItemSystem({
             }));
 
             setInventory(selected);
+
+            if (itemStorageKey) {
+                localStorage.setItem(
+                    itemStorageKey,
+                    JSON.stringify({
+                        inventory: selected,
+                        savedAt: Date.now(),
+                    })
+                );
+            }
+
             setActiveEffects({ self: [], opponent: [] });
             setImmunityUntil({ self: 0, opponent: 0 });
             setTranslateCurrentPage(false);
@@ -158,7 +181,23 @@ export default function useItemSystem({
             const usable = canUseItem(item);
             if (!usable || item.used) return;
 
-            setInventory((prev) => markItemUsed(prev, item.instanceId));
+            setInventory((prev) => {
+                const next = prev.map((item) =>
+                    item.instanceId === itemId ? { ...item, used: true } : item
+                );
+
+                if (itemStorageKey) {
+                    localStorage.setItem(
+                        itemStorageKey,
+                        JSON.stringify({
+                            inventory: next,
+                            savedAt: Date.now(),
+                        })
+                    );
+                }
+
+                return next;
+            });
 
             switch (item.id) {
                 case "highlight_links": {
