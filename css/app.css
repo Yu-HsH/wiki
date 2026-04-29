@@ -825,17 +825,21 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 20px 22px;
-  border-radius: 20px;
-  border: 1.5px solid transparent;
+  padding: 26px 24px;
+  border-radius: 24px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
   text-align: left;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .quickstart-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .quickstart-random {
@@ -854,19 +858,23 @@ body {
 }
 
 .qs-icon {
-  font-size: 28px;
+  font-size: 38px;
   line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 .qs-title {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   margin-top: 4px;
+  letter-spacing: -0.02em;
 }
 
 .qs-desc {
-  font-size: 13px;
-  opacity: 0.85;
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 1.4;
 }
 
 /* ── 계정 값 말줄임 ── */
@@ -1029,10 +1037,13 @@ body {
 
 /* ── 오늘의 도전 카드 ── */
 .daily-card {
-  padding: 20px 22px;
+  padding: 24px;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  margin-top: 8px;
 }
 
 .daily-head {

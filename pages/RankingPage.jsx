@@ -61,9 +61,6 @@ export default function RankingPage() {
           <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/main")}>
             Main
           </button>
-          <button type="button" className="app-btn app-btn-primary" onClick={() => navigate("/game")}>
-            Play
-          </button>
         </div>
       </header>
 

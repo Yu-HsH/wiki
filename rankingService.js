@@ -114,23 +114,31 @@ export async function fetchUserStats(userId) {
     })),
   };
 }
-function getPeriodStartIso(period) {
+/**
+ * 한국 시간(KST) 기준 특정 시점의 ISO 문자열을 구하는 헬퍼 함수
+ */
+function getKSTPeriodStartIso(period) {
+  if (period === "all") return null;
+
   const now = new Date();
+  const kstOffset = 9 * 60 * 60 * 1000;
+  // 현재 시간을 KST 기준 날짜 객체로 변환 (UTC 시각에 9시간 더함)
+  const kstNow = new Date(now.getTime() + kstOffset);
+
+  const startKST = new Date(kstNow);
+  startKST.setUTCHours(0, 0, 0, 0);
 
   if (period === "daily") {
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    return start.toISOString();
+    // KST 00:00:00에 해당하는 실제 UTC ISO 문자열 반환
+    return new Date(startKST.getTime() - kstOffset).toISOString();
   }
 
   if (period === "weekly") {
-    const start = new Date(now);
-    const day = start.getDay(); // 일요일 0, 월요일 1
+    const day = startKST.getUTCDay(); // 일요일 0, 월요일 1
+    // 월요일까지의 차이 계산 (월:0, 화:1 ... 일:6)
     const diffToMonday = day === 0 ? 6 : day - 1;
-
-    start.setDate(start.getDate() - diffToMonday);
-    start.setHours(0, 0, 0, 0);
-    return start.toISOString();
+    startKST.setUTCDate(startKST.getUTCDate() - diffToMonday);
+    return new Date(startKST.getTime() - kstOffset).toISOString();
   }
 
   return null;
@@ -143,7 +151,7 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
   // 1. 로컬 데모 모드 랭킹 산출
   if (!isSupabaseConfigured) {
     let records = readLocalRecords();
-    const periodStartIso = getPeriodStartIso(period);
+    const periodStartIso = getKSTPeriodStartIso(period);
 
     if (periodStartIso) {
       const startTime = new Date(periodStartIso).getTime();
@@ -177,7 +185,7 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
     .order("created_at", { ascending: true })
     .limit(limit);
 
-  const periodStartIso = getPeriodStartIso(period);
+  const periodStartIso = getKSTPeriodStartIso(period);
 
   if (periodStartIso) {
     query = query.gte("created_at", periodStartIso);

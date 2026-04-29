@@ -90,8 +90,8 @@ export default function MainPage() {
         const [data, todayRankings, weeklyRankings, allRankings] = await Promise.all([
           fetchUserStats(user.id),
           fetchRankings({ period: "daily", limit: 3 }),
-          fetchRankings({ weekly: true, limit: 3 }),
-          fetchRankings({ limit: 3 }),
+          fetchRankings({ period: "weekly", limit: 3 }),
+          fetchRankings({ period: "all", limit: 3 }),
         ]);
 
         if (!cancelled) {
@@ -267,56 +267,21 @@ export default function MainPage() {
         )}
 
 
-        {/* ── 통계 카드 3개 ── */}
-        <section className="dashboard-grid">
-          <article className="dashboard-card">
-            <p className="card-label">총 플레이</p>
-            <p className="card-value">{loading ? "…" : stats.gamesPlayed > 0 ? `${stats.gamesPlayed}회` : "-"}</p>
-          </article>
-          <article className="dashboard-card">
-            <p className="card-label">최고 기록</p>
-            <p className="card-value">{loading ? "…" : formatDuration(stats.bestTime)}</p>
-          </article>
-          <article className="dashboard-card">
-            <p className="card-label">계정</p>
-            <p className="card-value account-value">
-              {/* 게스트가 아닐 경우 아이디(username)를 우선적으로 표시합니다. */}
-              {user.isGuest ? "게스트" : user.username || user.displayName || "로컬 데모"}
-            </p>
-          </article>
-        </section>
-
-        {/* ── 최근 기록 (최대 3개) ── */}
-        <section className="dashboard-card recent-card">
-          <div className="recent-head">
-            <h2>최근 플레이 기록</h2>
-            {!user.isGuest && (
-              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
-                전체 랭킹 →
-              </button>
-            )}
+        {/* ── 오늘의 도전 ── */}
+        <section className="dashboard-card daily-card">
+          <div className="daily-head">
+            <span className="daily-badge">🗓️ TODAY’S CHALLENGE</span>
+            <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
           </div>
-          {error && <p className="app-error">{error}</p>}
-          {!error && user.isGuest && (
-            <p className="dashboard-muted">
-              게스트 모드입니다. 기록 저장과 개인 통계는 로그인 후 이용할 수 있어요.
-            </p>
-          )}
-          {!error && !user.isGuest && stats.recentRecords.length === 0 && (
-            <p className="dashboard-muted">첫 플레이를 시작해 기록을 남겨보세요.</p>
-          )}
-          {!user.isGuest && stats.recentRecords.length > 0 && (
-            <ul className="recent-list">
-              {stats.recentRecords.slice(0, 3).map((record, index) => (
-                <li key={`${record.createdAt}-${index}`} className="recent-item">
-                  <span className="ri-title">{record.targetTitle}</span>
-                  <span className="ri-time">{formatDuration(record.elapsedSeconds)}</span>
-                  <span className="ri-clicks">{record.clickCount}회 클릭</span>
-                  <span className="ri-date">{formatDate(record.createdAt)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="daily-keyword">{dailyChallenge.keyword}</p>
+          <p className="daily-hint">{dailyChallenge.hint}</p>
+          <button
+            type="button"
+            className="app-btn app-btn-primary daily-btn"
+            onClick={() => navigate("/game", { state: { mode: "custom", keyword: dailyChallenge.keyword, targetTitle: dailyChallenge.keyword } })}
+          >
+            ★ 오늘의 도전에 참여하기
+          </button>
         </section>
 
         <section className="dashboard-card weekly-card">
@@ -383,21 +348,56 @@ export default function MainPage() {
           )}
         </section>
 
-        {/* ── 오늘의 도전 ── */}
-        <section className="dashboard-card daily-card">
-          <div className="daily-head">
-            <span className="daily-badge">🗓️ TODAY’S CHALLENGE</span>
-            <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
+        {/* ── 최근 기록 (최대 3개) ── */}
+        <section className="dashboard-card recent-card">
+          <div className="recent-head">
+            <h2>최근 플레이 기록</h2>
+            {!user.isGuest && (
+              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
+                전체 랭킹 →
+              </button>
+            )}
           </div>
-          <p className="daily-keyword">{dailyChallenge.keyword}</p>
-          <p className="daily-hint">{dailyChallenge.hint}</p>
-          <button
-            type="button"
-            className="app-btn app-btn-primary daily-btn"
-            onClick={() => navigate("/game", { state: { mode: "custom", keyword: dailyChallenge.keyword } })}
-          >
-            ★ 오늘의 도전에 참여하기
-          </button>
+          {error && <p className="app-error">{error}</p>}
+          {!error && user.isGuest && (
+            <p className="dashboard-muted">
+              게스트 모드입니다. 기록 저장과 개인 통계는 로그인 후 이용할 수 있어요.
+            </p>
+          )}
+          {!error && !user.isGuest && stats.recentRecords.length === 0 && (
+            <p className="dashboard-muted">첫 플레이를 시작해 기록을 남겨보세요.</p>
+          )}
+          {!user.isGuest && stats.recentRecords.length > 0 && (
+            <ul className="recent-list">
+              {stats.recentRecords.slice(0, 3).map((record, index) => (
+                <li key={`${record.createdAt}-${index}`} className="recent-item">
+                  <span className="ri-title">{record.targetTitle}</span>
+                  <span className="ri-time">{formatDuration(record.elapsedSeconds)}</span>
+                  <span className="ri-clicks">{record.clickCount}회 클릭</span>
+                  <span className="ri-date">{formatDate(record.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* ── 통계 카드 3개 ── */}
+        <section className="dashboard-grid">
+          <article className="dashboard-card">
+            <p className="card-label">총 플레이</p>
+            <p className="card-value">{loading ? "…" : stats.gamesPlayed > 0 ? `${stats.gamesPlayed}회` : "-"}</p>
+          </article>
+          <article className="dashboard-card">
+            <p className="card-label">최고 기록</p>
+            <p className="card-value">{loading ? "…" : formatDuration(stats.bestTime)}</p>
+          </article>
+          <article className="dashboard-card">
+            <p className="card-label">계정</p>
+            <p className="card-value account-value">
+              {/* 게스트가 아닐 경우 아이디(username)를 우선적으로 표시합니다. */}
+              {user.isGuest ? "게스트" : user.username || user.displayName || "로컬 데모"}
+            </p>
+          </article>
         </section>
 
         {/* 플로팅 도움말 버튼 */}

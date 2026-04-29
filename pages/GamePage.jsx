@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   fetchRandomTitle,
   fetchDistinctRandomTitle,
@@ -8,7 +8,6 @@ import {
   normalizeTitle,
 } from "../services/wikiService";
 
-import GameSetup from "../components/GameSetup";
 import CountdownOverlay from "../components/CountdownOverlay";
 import SuccessOverlay from "../components/SuccessOverlay";
 import WikiViewer from "../components/WikiViewer";
@@ -49,6 +48,7 @@ const PHASE = {
 
 export default function GamePage({ onGameComplete, onReturnMain }) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
@@ -404,9 +404,15 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       handleSetupComplete({
         mode: state.mode,
         keyword: state.keyword ?? "",
+        targetTitle: state.targetTitle,
       });
+    } else if (!state?.mode) {
+      const saved = loadLocalGameState();
+      if (!saved?.currentTitle || !saved?.target?.title) {
+        navigate("/main", { replace: true });
+      }
     }
-  }, [location.state, handleSetupComplete]);
+  }, [location.state, handleSetupComplete, loadLocalGameState, navigate]);
 
   return (
     <div className="wiki-game-page">
@@ -414,7 +420,10 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
       {/* 직접 /game 진입 시 */}
       {phase === PHASE.SELECTING && (!hasPresetMode || error) && (
-        <GameSetup onStart={handleSetupComplete} isLoading={isLoading} />
+        <div style={{ textAlign: "center", marginTop: "15vh" }}>
+          <h2>게임을 설정할 수 없습니다.</h2>
+          <p>메인 페이지로 이동합니다...</p>
+        </div>
       )}
 
       {/* preset 모드 준비 중 */}
