@@ -41,7 +41,6 @@ export default function RoomPage() {
 
   // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
 
   // ----------------------------
   // 초기 로드
@@ -602,65 +601,6 @@ export default function RoomPage() {
             </p>
           )}
         </div>
-
-        {/* 플로팅 도움말 버튼 */}
-        <button type="button" className="help-button floating" onClick={() => setShowHelp(true)} aria-label="게임 설명">
-          ?
-        </button>
-
-        {/* ── 도움말 모달 ── */}
-        {showHelp && (
-          <div className="help-backdrop" onClick={() => setShowHelp(false)}>
-            <div className="help-modal" onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--app-line)", paddingBottom: "0.75rem" }}>
-                <h2 style={{ margin: 0, fontSize: "1.25rem" }}>멀티플레이 안내</h2>
-                <button type="button" className="text-btn" onClick={() => setShowHelp(false)} style={{ fontSize: "1.5rem", lineHeight: 1 }}>
-                  &times;
-                </button>
-              </div>
-
-              <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px" }}>
-                <h3>1. 1vs1 모드</h3>
-                <ul>
-                  <li>두 명이 서로 다른 목표 문서를 가지고 시작합니다.</li>
-                  <li>내 목표는 상대가 설정한 목표 문서입니다.</li>
-                  <li>먼저 목표 문서에 도달한 사람이 승리합니다.</li>
-                  <li>상대 현재 문서, 이동 횟수, 상태를 확인할 수 있습니다.</li>
-                  <li>아이템으로 상대를 방해하거나 자신을 보조할 수 있습니다.</li>
-                </ul>
-
-                <h3>2. 그룹모드</h3>
-                <ul>
-                  <li>여러 명이 같은 시작 문서와 같은 목표 문서로 경쟁합니다.</li>
-                  <li>목표 문서는 참가자들이 제출한 후보 중 선택됩니다.</li>
-                  <li>정해진 등수 안에 도착하면 성공입니다.</li>
-                  <li>실시간으로 참가자 진행 상황과 순위를 확인 가능합니다.</li>
-                  <li>그룹모드는 현재 아이템 없이 순수 레이스 중심입니다.</li>
-                </ul>
-
-                <h3>3. 아이템 설명</h3>
-                <ul>
-                  <li><strong>시야 방해:</strong> 상대 화면을 먹물/페인트 효과로 잠시 가립니다.</li>
-                  <li><strong>언어 변경:</strong> 상대 현재 문서에 혼란 효과를 줍니다.</li>
-                  <li><strong>랜덤 링크 이동:</strong> 상대를 현재 문서의 랜덤 링크로 강제 이동시킵니다.</li>
-                  <li><strong>현재 문서 교환:</strong> 나와 상대의 현재 위치를 교환합니다.</li>
-                  <li><strong>링크 하이라이트:</strong> 목표와 관련 있을 가능성이 높은 링크를 표시합니다.</li>
-                  <li><strong>검색 기능:</strong> 현재 문서 안에서 검색 1회 사용합니다.</li>
-                  <li><strong>뒤로가기:</strong> 이전 문서로 한 번 되돌아갑니다.</li>
-                  <li><strong>랜덤 텔레포트:</strong> 무작위 문서로 이동합니다.</li>
-                  <li><strong>방어하기:</strong> 방해 효과 해제 + 일정 시간 면역을 얻습니다.</li>
-                  <li><strong>미니게임:</strong> 가위바위보 승자가 랜덤 아이템을 발동합니다.</li>
-                </ul>
-
-                <h3>4. 새로고침 안내</h3>
-                <ul>
-                  <li>1vs1과 그룹모드는 새로고침해도 현재 문서 진행 상태가 유지됩니다.</li>
-                  <li>단, 방을 나가거나 게임이 종료되면 진행 상태가 초기화될 수 있습니다.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
