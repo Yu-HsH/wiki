@@ -37,6 +37,7 @@ const DAILY_POOL = [
   { keyword: "SQL", hint: "관계형 데이터베이스 관리 시스템(RDBMS)의 데이터를 조작하고 정의하기 위해 설계된 프로그래밍 언어" },
   { keyword: "백준 온라인 저지", hint: "알고리즘 문제 풀이 사이트" },
   { keyword: "생맥주", hint: "전 세계적으로 사랑받는 술" },
+  { keyword: "레드벨벳 (아이돌)", hint: "대한민국의 5인조 걸그룹" },
 ];
 
 function getDailyChallenge() {
@@ -68,12 +69,21 @@ export default function MainPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [dailyChallenge] = useState(getDailyChallenge);
 
-  // ⬇️ 검색 실행 핸들러 추가
+  // ⬇️ 검색 실행 핸들러 수정
   const handleSearchKeyword = async () => {
-    if (!keyword.trim()) return;
+    const trimmed = keyword.trim();
+    if (!trimmed) return;
+
+    // "랜덤" 키워드 입력 시 위키 검색 생략
+    if (trimmed === "랜덤") {
+      setSearchResults([]);
+      setSelectedTarget({ title: "랜덤", isSpecial: true });
+      return;
+    }
+
     setIsSearching(true);
     try {
-      const results = await searchWikiTitleCandidates(keyword.trim(), 5);
+      const results = await searchWikiTitleCandidates(trimmed, 5);
       setSearchResults(results);
       setSelectedTarget(null);
     } catch (e) {
@@ -82,6 +92,7 @@ export default function MainPage() {
       setIsSearching(false);
     }
   };
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -113,6 +124,7 @@ export default function MainPage() {
     load();
     return () => { cancelled = true; };
   }, [user.id]);
+
   useEffect(() => {
     const order = ["today", "weekly", "all"];
 
@@ -125,6 +137,7 @@ export default function MainPage() {
 
     return () => clearInterval(timer);
   }, []);
+
   const handleLogout = async () => {
     await logout();
     navigate("/");
@@ -143,9 +156,9 @@ export default function MainPage() {
             <h1>{user.displayName}님, 반가워요 👋</h1>
             <p className="dashboard-muted">
               {user.isGuest && (
-                <p className="dashboard-muted">
+                <span className="dashboard-muted">
                   게스트 모드로 접속 중입니다. 로그인하면 기록이 저장됩니다.
-                </p>
+                </span>
               )}
             </p>
           </div>
@@ -191,7 +204,7 @@ export default function MainPage() {
               <h3 className="qs-modal-title">🎯 목표 문서 확정</h3>
               <p className="qs-modal-desc">위키백과에서 도달할 정확한 문서를 검색하고 선택하세요.</p>
 
-              <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "0.5rem" }}>
                 <input
                   className="qs-modal-input"
                   style={{ flex: 1, margin: 0 }}
@@ -218,6 +231,11 @@ export default function MainPage() {
                 </button>
               </div>
 
+              {/* 💡 힌트 텍스트 추가 */}
+              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "1rem" }}>
+                💡 팁: '랜덤'을 입력하면 추천 랜덤 목표 문서로 시작할 수 있어요.
+              </p>
+
               {/* 검색 결과 목록 표시 */}
               {searchResults.length > 0 && (
                 <div className="search-results-list">
@@ -239,7 +257,7 @@ export default function MainPage() {
                 </div>
               )}
 
-              {searchResults.length === 0 && keyword.trim() && !isSearching && (
+              {searchResults.length === 0 && keyword.trim() && keyword.trim() !== "랜덤" && !isSearching && (
                 <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginBottom: "1rem" }}>검색 후 아래에서 문서를 선택해주세요.</p>
               )}
 
@@ -248,20 +266,31 @@ export default function MainPage() {
                 <button
                   type="button"
                   className="app-btn app-btn-primary"
-                  disabled={!selectedTarget}
+                  disabled={!selectedTarget && keyword.trim() !== "랜덤"}
                   onClick={() => {
                     setShowKeywordModal(false);
-                    // rawKeyword와 실제 확정된 targetTitle을 분리해서 전달
-                    navigate("/game", {
-                      state: {
-                        mode: "custom",
-                        rawKeyword: keyword.trim(),
-                        targetTitle: selectedTarget.title
-                      }
-                    });
+                    // "랜덤" 키워드인 경우 바로 랜덤 모드로 시작
+                    if (keyword.trim() === "랜덤") {
+                      navigate("/game", {
+                        state: {
+                          mode: "random"
+                        }
+                      });
+                    } else {
+                      // 일반 키워드인 경우 선택된 타겟으로 시작
+                      navigate("/game", {
+                        state: {
+                          mode: "custom",
+                          rawKeyword: keyword.trim(),
+                          targetTitle: selectedTarget.title
+                        }
+                      });
+                    }
                   }}
                 >
-                  {selectedTarget ? `'${selectedTarget.title}' 시작` : "목표를 선택하세요"}
+                  {keyword.trim() === "랜덤"
+                    ? "랜덤 목표로 시작"
+                    : (selectedTarget ? `'${selectedTarget.title}' 시작` : "목표를 선택하세요")}
                 </button>
               </div>
             </div>
