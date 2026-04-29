@@ -114,7 +114,27 @@ export async function fetchUserStats(userId) {
     })),
   };
 }
+function getPeriodStartIso(period) {
+  const now = new Date();
 
+  if (period === "daily") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    return start.toISOString();
+  }
+
+  if (period === "weekly") {
+    const start = new Date(now);
+    const day = start.getDay(); // 일요일 0, 월요일 1
+    const diffToMonday = day === 0 ? 6 : day - 1;
+
+    start.setDate(start.getDate() - diffToMonday);
+    start.setHours(0, 0, 0, 0);
+    return start.toISOString();
+  }
+
+  return null;
+}
 /**
  * 일간/주간/전체 랭킹 데이터를 가져옵니다.
  * @param {Object} options - {period: "daily"|"weekly"|"all", limit: number}
@@ -123,14 +143,14 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
   // 1. 로컬 데모 모드 랭킹 산출
   if (!isSupabaseConfigured) {
     let records = readLocalRecords();
-    const now = Date.now();
-    
-    if (period === "daily") {
-      const oneDayAgo = now - 24 * 60 * 60 * 1000;
-      records = records.filter((r) => new Date(r.created_at).getTime() >= oneDayAgo);
-    } else if (period === "weekly") {
-      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
-      records = records.filter((r) => new Date(r.created_at).getTime() >= sevenDaysAgo);
+    const periodStartIso = getPeriodStartIso(period);
+
+    if (periodStartIso) {
+      const startTime = new Date(periodStartIso).getTime();
+
+      records = records.filter(
+        (r) => new Date(r.created_at).getTime() >= startTime
+      );
     }
 
     return sortByBestTime(records)
@@ -157,12 +177,10 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
     .order("created_at", { ascending: true })
     .limit(limit);
 
-  if (period === "daily") {
-    const oneDayAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    query = query.gte("created_at", oneDayAgoIso);
-  } else if (period === "weekly") {
-    const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    query = query.gte("created_at", sevenDaysAgoIso);
+  const periodStartIso = getPeriodStartIso(period);
+
+  if (periodStartIso) {
+    query = query.gte("created_at", periodStartIso);
   }
 
   const { data: records, error: recordError } = await query;
@@ -174,7 +192,7 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
   // 3. 연관된 프로필 정보 가져오기
   const userIds = [...new Set(resultRecords.map(r => r.user_id).filter(Boolean))];
   let profiles = [];
-  
+
   if (userIds.length > 0) {
     const { data: profileData } = await supabase
       .from("profiles")

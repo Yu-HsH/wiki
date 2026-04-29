@@ -89,7 +89,7 @@ export default function MainPage() {
         setError("");
         const [data, todayRankings, weeklyRankings, allRankings] = await Promise.all([
           fetchUserStats(user.id),
-          fetchRankings({ period: "today", limit: 3 }),
+          fetchRankings({ period: "daily", limit: 3 }),
           fetchRankings({ weekly: true, limit: 3 }),
           fetchRankings({ limit: 3 }),
         ]);
