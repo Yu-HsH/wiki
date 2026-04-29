@@ -19,6 +19,7 @@ import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import useItemSystem from "../hooks/useItemSystem";
 
+import PageLoadingOverlay from "../components/PageLoadingOverlay";
 const pickDifficulty = () => {
   const r = Math.random();
   if (r < 0.5) return "easy";
@@ -53,7 +54,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-
+  import PageLoadingOverlay from "../components/PageLoadingOverlay";
   const hasPresetMode = Boolean(location.state?.mode);
 
   const [target, setTarget] = useState({
@@ -177,6 +178,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       const previousTitle = currentTitle;
       setClickCount((prev) => prev + 1);
       setIsLoading(true);
+      setIsPageLoading(true);
       setError("");
 
       try {
@@ -218,6 +220,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
       } finally {
         setIsLoading(false);
+        setIsPageLoading(false);
       }
     },
     [
@@ -419,7 +422,9 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
   return (
     <div className="wiki-game-page">
+      {isPageLoading && <PageLoadingOverlay />}
       {error && <div className="state-text error">{error}</div>}
+
 
       {/* SELECTING 단계의 로딩 UI */}
       {phase === PHASE.SELECTING && hasPresetMode && !error && (
