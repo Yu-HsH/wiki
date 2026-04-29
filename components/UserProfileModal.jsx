@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchPublicProfile, fetchAllProfileStats } from "../services/profileStatsService"; // 경로는 실제 프로젝트에 맞게 수정하세요
+import { fetchPublicProfile, fetchAllProfileStats } from "../services/profileStatsService";
 
 export default function UserProfileModal({ userId, isOpen, onClose }) {
     const [profile, setProfile] = useState(null);
@@ -43,6 +43,14 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
 
     const isGuest = !userId || userId.startsWith("guest-");
 
+    // 초(seconds)를 mm:ss 포맷으로 변환하는 헬퍼 함수
+    const formatTime = (seconds) => {
+        if (typeof seconds !== "number" || isNaN(seconds)) return "-";
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, "0")}`;
+    };
+
     return (
         <div className="user-profile-modal-backdrop" onClick={onClose}>
             <div className="user-profile-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -79,26 +87,22 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                         <div className="user-profile-modal-stats">
                             <div className="stat-box">
                                 <span>싱글 성공</span>
-                                <strong>{stats?.single?.successCount || 0}회</strong>
+                                <strong>{stats?.single?.totalWins || 0}회</strong>
                             </div>
                             <div className="stat-box">
                                 <span>최고 기록</span>
-                                <strong>{stats?.single?.bestTime ? `${stats.single.bestTime}초` : "-"}</strong>
+                                <strong>{formatTime(stats?.single?.bestTime)}</strong>
                             </div>
                             <div className="stat-box">
                                 <span>1vs1 승률</span>
-                                <strong>
-                                    {stats?.vs?.matches > 0
-                                        ? `${Math.round((stats.vs.wins / stats.vs.matches) * 100)}%`
-                                        : "-"}
-                                </strong>
-                                <small>({stats?.vs?.wins || 0}승 / {stats?.vs?.losses || 0}패)</small>
+                                <strong>{stats?.pvp?.winRate || 0}%</strong>
+                                <small>({stats?.pvp?.wins || 0}승 / {stats?.pvp?.losses || 0}패)</small>
                             </div>
                             <div className="stat-box">
                                 <span>그룹 순위</span>
-                                <small>1등: {stats?.group?.firstPlaces || 0}회</small>
-                                <small>2등: {stats?.group?.secondPlaces || 0}회</small>
-                                <small>3등: {stats?.group?.thirdPlaces || 0}회</small>
+                                <small>1등: {stats?.group?.first || 0}회</small>
+                                <small>2등: {stats?.group?.second || 0}회</small>
+                                <small>3등: {stats?.group?.third || 0}회</small>
                             </div>
                         </div>
                     </div>
