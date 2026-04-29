@@ -55,7 +55,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  import PageLoadingOverlay from "../components/PageLoadingOverlay";
+
   const hasPresetMode = Boolean(location.state?.mode);
 
   const [target, setTarget] = useState({
