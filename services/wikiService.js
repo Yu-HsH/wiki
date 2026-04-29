@@ -14,6 +14,22 @@ const BLOCKED_CONTENT_SELECTORS = [
 const ALLOWED_ARTICLE_TAGS = new Set([
   "P", "H2", "H3", "H4", "UL", "OL", "LI", "B", "STRONG", "I", "EM", "SMALL", "BLOCKQUOTE", "CODE", "PRE", "BR", "SUP", "SUB"
 ]);
+/**
+ * AI 기반 랜덤 타겟 문서를 가져옵니다.
+ * @param {string} difficulty - 난이도 (easy, medium, hard)
+ */
+export async function fetchAiSelectedTarget(difficulty = "easy") {
+  // supabase 객체가 전역 또는 import 되어 있어야 합니다.
+  const { data, error } = await supabase.functions.invoke("target-level", {
+    body: { difficulty },
+  });
+
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error("AI 타겟을 불러오지 못했습니다.");
+
+  const randomIndex = Math.floor(Math.random() * data.length);
+  return data[randomIndex].title;
+}
 
 export function normalizeTitle(title = "") {
   return decodeURIComponent(title).replace(/_/g, " ").trim().toLowerCase();

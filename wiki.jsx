@@ -476,263 +476,283 @@ export default function WikiGame({ onGameComplete, headerActions = null }) {
       const token = ++requestTokenRef.current;
       resetBoard(selectedMode);
 
-      try {
-        let start = await fetchRandomTitle();
-        let targetTitle = "";
+      // ... (기존 startNewGame 코드 내)
+      const startNewGame = useCallback(
+        async ({ mode, customKeyword } = {}) => {
+          const selectedMode = mode || modeRef.current;
+          const selectedKeyword = (customKeyword ?? inputRef.current).trim();
 
-        if (selectedMode === TARGET_MODE.CUSTOM) {
-          targetTitle = await fetchRelatedTargetTitle(selectedKeyword);
-          if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
-            start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
+          const token = ++requestTokenRef.current;
+          resetBoard(selectedMode);
+
+          try {
+            let start = await fetchRandomTitle();
+            let targetTitle = "";
+
+            if (selectedMode === TARGET_MODE.CUSTOM) {
+              // [수정] "랜덤" 키워드 입력 시 AI 타겟 호출, 그 외 기존 로직 유지
+              if (selectedKeyword === "랜덤") {
+                targetTitle = await fetchAiSelectedTarget("easy");
+              } else {
+                targetTitle = await fetchRelatedTargetTitle(selectedKeyword);
+              }
+
+              if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
+                start = await fetchDistinctRandomTitle(new Set([normalizeTitle(targetTitle)]));
+              }
+            } else {
+              targetTitle = await fetchDistinctRandomTitle(new Set([normalizeTitle(start)]));
+            }
+
+
+            const [targetSummaryData, startPage] = await Promise.all([
+              fetchSummary(targetTitle),
+              fetchPageData(start),
+            ]);
+
+            if (token !== requestTokenRef.current) return;
+
+            setStartTitle(startPage.title);
+            setTarget({
+              title: targetSummaryData.title,
+              summary: trimDescription(targetSummaryData.extract),
+              mode: selectedMode,
+              requestedKeyword: selectedMode === TARGET_MODE.CUSTOM ? selectedKeyword : "",
+            });
+
+            applyPageResult(startPage, targetSummaryData.title, { startRunning: false });
+
+            setIsLoading(false);
+            await runStartCountdown(token);
+          } catch (e) {
+            if (token !== requestTokenRef.current) return;
+            setError(e instanceof Error ? e.message : "새 게임 시작에 실패했습니다.");
+            setIsRunning(false);
+            setCountdownValue(null);
+          } finally {
+            if (token === requestTokenRef.current) {
+              setIsLoading(false);
+            }
           }
-        } else {
-          targetTitle = await fetchDistinctRandomTitle(new Set([normalizeTitle(start)]));
-        }
+        },
+        [applyPageResult, resetBoard, runStartCountdown]
+      );
 
-        const [targetSummaryData, startPage] = await Promise.all([
-          fetchSummary(targetTitle),
-          fetchPageData(start),
-        ]);
+      useEffect(() => {
+        startNewGame({ mode: TARGET_MODE.RANDOM });
+      }, [startNewGame]);
 
-        if (token !== requestTokenRef.current) return;
+      useEffect(() => {
+        if (!isRunning) return undefined;
+        const intervalId = setInterval(() => {
+          setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }, 1000);
 
-        setStartTitle(startPage.title);
-        setTarget({
-          title: targetSummaryData.title,
-          summary: trimDescription(targetSummaryData.extract),
-          mode: selectedMode,
-          requestedKeyword: selectedMode === TARGET_MODE.CUSTOM ? selectedKeyword : "",
+        return () => clearInterval(intervalId);
+      }, [isRunning]);
+
+      const handleMove = useCallback(
+        (nextTitle) => {
+          if (isLoading || isWon || !target.title || countdownValue !== null) return;
+          setClickCount((prev) => prev + 1);
+          loadPage(nextTitle, target.title);
+        },
+        [countdownValue, isLoading, isWon, loadPage, target.title]
+      );
+
+      useEffect(() => {
+        if (!isWon || victoryReportedRef.current || !target.title) return;
+        victoryReportedRef.current = true;
+        onGameComplete?.({
+          startTitle,
+          targetTitle: target.title,
+          elapsedSeconds,
+          clickCount,
+          reachedTitle: currentTitle,
         });
+      }, [clickCount, currentTitle, elapsedSeconds, isWon, onGameComplete, startTitle, target.title]);
 
-        applyPageResult(startPage, targetSummaryData.title, { startRunning: false });
+      const handleDocumentClick = useCallback(
+        (event) => {
+          const element = event.target instanceof Element ? event.target : null;
+          if (!element) return;
 
-        setIsLoading(false);
-        await runStartCountdown(token);
-      } catch (e) {
-        if (token !== requestTokenRef.current) return;
-        setError(e instanceof Error ? e.message : "새 게임 시작에 실패했습니다.");
-        setIsRunning(false);
-        setCountdownValue(null);
-      } finally {
-        if (token === requestTokenRef.current) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [applyPageResult, resetBoard, runStartCountdown]
-  );
+          const link = element.closest("a[data-wiki-title]");
+          if (!link) return;
 
-  useEffect(() => {
-    startNewGame({ mode: TARGET_MODE.RANDOM });
-  }, [startNewGame]);
+          event.preventDefault();
+          const nextTitle = link.getAttribute("data-wiki-title");
+          if (!nextTitle) return;
+          handleMove(nextTitle);
+        },
+        [handleMove]
+      );
 
-  useEffect(() => {
-    if (!isRunning) return undefined;
-    const intervalId = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }, 1000);
+      const activateRandomMode = () => {
+        if (isLoading && targetMode === TARGET_MODE.RANDOM) return;
+        setTargetMode(TARGET_MODE.RANDOM);
+        startNewGame({ mode: TARGET_MODE.RANDOM });
+      };
 
-    return () => clearInterval(intervalId);
-  }, [isRunning]);
+      const activateCustomMode = () => {
+        setTargetMode(TARGET_MODE.CUSTOM);
+        setTarget((prev) => ({ ...createInitialTargetState(TARGET_MODE.CUSTOM), title: prev.title && prev.mode === TARGET_MODE.CUSTOM ? prev.title : "" }));
+        setError("");
+      };
 
-  const handleMove = useCallback(
-    (nextTitle) => {
-      if (isLoading || isWon || !target.title || countdownValue !== null) return;
-      setClickCount((prev) => prev + 1);
-      loadPage(nextTitle, target.title);
-    },
-    [countdownValue, isLoading, isWon, loadPage, target.title]
-  );
+      const handleCustomStart = (event) => {
+        event.preventDefault();
+        startNewGame({ mode: TARGET_MODE.CUSTOM, customKeyword: targetInput });
+      };
 
-  useEffect(() => {
-    if (!isWon || victoryReportedRef.current || !target.title) return;
-    victoryReportedRef.current = true;
-    onGameComplete?.({
-      startTitle,
-      targetTitle: target.title,
-      elapsedSeconds,
-      clickCount,
-      reachedTitle: currentTitle,
-    });
-  }, [clickCount, currentTitle, elapsedSeconds, isWon, onGameComplete, startTitle, target.title]);
-
-  const handleDocumentClick = useCallback(
-    (event) => {
-      const element = event.target instanceof Element ? event.target : null;
-      if (!element) return;
-
-      const link = element.closest("a[data-wiki-title]");
-      if (!link) return;
-
-      event.preventDefault();
-      const nextTitle = link.getAttribute("data-wiki-title");
-      if (!nextTitle) return;
-      handleMove(nextTitle);
-    },
-    [handleMove]
-  );
-
-  const activateRandomMode = () => {
-    if (isLoading && targetMode === TARGET_MODE.RANDOM) return;
-    setTargetMode(TARGET_MODE.RANDOM);
-    startNewGame({ mode: TARGET_MODE.RANDOM });
-  };
-
-  const activateCustomMode = () => {
-    setTargetMode(TARGET_MODE.CUSTOM);
-    setTarget((prev) => ({ ...createInitialTargetState(TARGET_MODE.CUSTOM), title: prev.title && prev.mode === TARGET_MODE.CUSTOM ? prev.title : "" }));
-    setError("");
-  };
-
-  const handleCustomStart = (event) => {
-    event.preventDefault();
-    startNewGame({ mode: TARGET_MODE.CUSTOM, customKeyword: targetInput });
-  };
-
-  return (
-    <div className="wiki-game-page">
-      {countdownValue !== null && (
-        <div className="countdown-overlay" aria-live="assertive" aria-atomic="true">
-          <div className="countdown-number">{countdownValue}</div>
-        </div>
-      )}
-      <main className="wiki-shell">
-        <header className="hero-card">
-          <div>
-            <p className="badge">WIKI GAME</p>
-            <h1>위키 문서 탐험 레이스</h1>
-            <p className="hero-subtitle">
-              문서 내부 링크만 클릭해서 목표 문서까지 도달하세요. 시간이 빠를수록 좋은 기록입니다.
-            </p>
-
-            <div className="mode-controls">
-              <button
-                type="button"
-                className={targetMode === TARGET_MODE.RANDOM ? "mode-btn active" : "mode-btn"}
-                onClick={activateRandomMode}
-                disabled={(isLoading && targetMode === TARGET_MODE.RANDOM) || countdownValue !== null}
-              >
-                랜덤 타겟 모드
-              </button>
-              <button
-                type="button"
-                className={targetMode === TARGET_MODE.CUSTOM ? "mode-btn active" : "mode-btn"}
-                onClick={activateCustomMode}
-                disabled={countdownValue !== null}
-              >
-                타겟 직접 입력 모드
-              </button>
+      return (
+        <div className="wiki-game-page">
+          {countdownValue !== null && (
+            <div className="countdown-overlay" aria-live="assertive" aria-atomic="true">
+              <div className="countdown-number">{countdownValue}</div>
             </div>
+          )}
+          <main className="wiki-shell">
+            <header className="hero-card">
+              <div>
+                <p className="badge">WIKI GAME</p>
+                <h1>위키 문서 탐험 레이스</h1>
+                <p className="hero-subtitle">
+                  문서 내부 링크만 클릭해서 목표 문서까지 도달하세요. 시간이 빠를수록 좋은 기록입니다.
+                </p>
 
-            {targetMode === TARGET_MODE.CUSTOM && (
-              <form className="target-form" onSubmit={handleCustomStart}>
-                <input
-                  className="target-input"
-                  value={targetInput}
-                  onChange={(event) => setTargetInput(event.target.value)}
-                  placeholder="예: 배추, 인공지능, 축구"
-                  disabled={countdownValue !== null}
-                />
-                <button type="submit" className="target-start-btn" disabled={isLoading || countdownValue !== null}>
-                  이 키워드로 시작
+                <div className="mode-controls">
+                  <button
+                    type="button"
+                    className={targetMode === TARGET_MODE.RANDOM ? "mode-btn active" : "mode-btn"}
+                    onClick={activateRandomMode}
+                    disabled={(isLoading && targetMode === TARGET_MODE.RANDOM) || countdownValue !== null}
+                  >
+                    랜덤 타겟 모드
+                  </button>
+                  <button
+                    type="button"
+                    className={targetMode === TARGET_MODE.CUSTOM ? "mode-btn active" : "mode-btn"}
+                    onClick={activateCustomMode}
+                    disabled={countdownValue !== null}
+                  >
+                    타겟 직접 입력 모드
+                  </button>
+                </div>
+
+                {targetMode === TARGET_MODE.CUSTOM && (
+                  <form className="target-form" onSubmit={handleCustomStart}>
+                    <input
+                      className="target-input"
+                      value={targetInput}
+                      onChange={(event) => setTargetInput(event.target.value)}
+                      placeholder="예: 배추, 인공지능, 축구"
+                      disabled={countdownValue !== null}
+                    />
+                    {/* 💡 힌트 텍스트 추가 */}
+                    <p className="setup-hint" style={{ fontSize: "0.85rem", color: "#888", marginTop: "8px" }}>
+                      💡 팁: '랜덤'을 입력하면 랜덤 키워드로 시작할 수 있어요!
+                    </p>
+                    <button type="submit" className="target-start-btn" disabled={isLoading || countdownValue !== null}>
+                      이 키워드로 시작
+                    </button>
+                  </form>
+                )}
+              </div>
+              <div className="hero-actions">
+                {headerActions}
+                <button className="restart-btn" onClick={() => startNewGame()} disabled={isLoading || countdownValue !== null}>
+                  {isLoading ? "준비 중..." : "새 게임"}
                 </button>
-              </form>
+              </div>
+            </header>
+
+            <section className="mission-card">
+              <div className="mission-head">
+                <span className="mission-label">목표 문서</span>
+                <span className="timer-pill">{formatDuration(elapsedSeconds)}</span>
+              </div>
+              <h2>{target.title || "목표 문서 생성 중..."}</h2>
+              {target.mode === TARGET_MODE.CUSTOM && target.requestedKeyword && (
+                <p className="target-meta">
+                  입력 키워드: <strong>{target.requestedKeyword}</strong>
+                  {normalizeTitle(target.requestedKeyword) !== normalizeTitle(target.title)
+                    ? ` -> 관련 문서: ${target.title}`
+                    : ""}
+                </p>
+              )}
+              <p>{target.summary}</p>
+            </section>
+
+            <section className="stats-grid">
+              <article className="stat-card">
+                <p className="stat-label">시작 문서</p>
+                <p className="stat-value">{startTitle || "..."}</p>
+              </article>
+              <article className="stat-card">
+                <p className="stat-label">현재 문서</p>
+                <p className="stat-value">{currentTitle || "로딩 중..."}</p>
+              </article>
+              <article className="stat-card">
+                <p className="stat-label">클릭 수</p>
+                <p className="stat-value">{clickCount}</p>
+              </article>
+              <article className="stat-card">
+                <p className="stat-label">진행 상태</p>
+                <p className="stat-value">{isWon ? "목표 도달" : "진행 중"}</p>
+              </article>
+            </section>
+
+            {error && <p className="state-text error">{error}</p>}
+            {isLoading && <p className="state-text loading">위키 문서를 불러오는 중입니다...</p>}
+            {isWon && (
+              <div className="win-banner">
+                <strong>목표 도달 성공!</strong>
+                <span>
+                  {target.title}에 {formatDuration(elapsedSeconds)} 만에 도착했습니다. (클릭 {clickCount}회)
+                </span>
+              </div>
             )}
-          </div>
-          <div className="hero-actions">
-            {headerActions}
-            <button className="restart-btn" onClick={() => startNewGame()} disabled={isLoading || countdownValue !== null}>
-              {isLoading ? "준비 중..." : "새 게임"}
-            </button>
-          </div>
-        </header>
 
-        <section className="mission-card">
-          <div className="mission-head">
-            <span className="mission-label">목표 문서</span>
-            <span className="timer-pill">{formatDuration(elapsedSeconds)}</span>
-          </div>
-          <h2>{target.title || "목표 문서 생성 중..."}</h2>
-          {target.mode === TARGET_MODE.CUSTOM && target.requestedKeyword && (
-            <p className="target-meta">
-              입력 키워드: <strong>{target.requestedKeyword}</strong>
-              {normalizeTitle(target.requestedKeyword) !== normalizeTitle(target.title)
-                ? ` -> 관련 문서: ${target.title}`
-                : ""}
-            </p>
-          )}
-          <p>{target.summary}</p>
-        </section>
+            <section className="current-page-card">
+              <div className="article-head">
+                <h3>{currentTitle || "현재 문서"}</h3>
+                <span>본문에서 강조된 링크를 클릭하면 다음 문서로 이동합니다.</span>
+              </div>
+              <div className="article-summary-preview">{currentSummary || "문서 요약이 이곳에 표시됩니다."}</div>
+              <article
+                className="article-content"
+                onClick={handleDocumentClick}
+                dangerouslySetInnerHTML={{
+                  __html: currentDocumentHtml || "<p>문서 본문을 불러오는 중입니다...</p>",
+                }}
+              />
+            </section>
 
-        <section className="stats-grid">
-          <article className="stat-card">
-            <p className="stat-label">시작 문서</p>
-            <p className="stat-value">{startTitle || "..."}</p>
-          </article>
-          <article className="stat-card">
-            <p className="stat-label">현재 문서</p>
-            <p className="stat-value">{currentTitle || "로딩 중..."}</p>
-          </article>
-          <article className="stat-card">
-            <p className="stat-label">클릭 수</p>
-            <p className="stat-value">{clickCount}</p>
-          </article>
-          <article className="stat-card">
-            <p className="stat-label">진행 상태</p>
-            <p className="stat-value">{isWon ? "목표 도달" : "진행 중"}</p>
-          </article>
-        </section>
+            <section className="links-card">
+              <div className="links-header">
+                <h3>빠른 이동 링크</h3>
+                <span className="links-count">{links.length} / {MAX_LINKS}</span>
+              </div>
 
-        {error && <p className="state-text error">{error}</p>}
-        {isLoading && <p className="state-text loading">위키 문서를 불러오는 중입니다...</p>}
-        {isWon && (
-          <div className="win-banner">
-            <strong>목표 도달 성공!</strong>
-            <span>
-              {target.title}에 {formatDuration(elapsedSeconds)} 만에 도착했습니다. (클릭 {clickCount}회)
-            </span>
-          </div>
-        )}
+              {!isLoading && links.length === 0 && (
+                <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다. 새 게임을 눌러주세요.</p>
+              )}
 
-        <section className="current-page-card">
-          <div className="article-head">
-            <h3>{currentTitle || "현재 문서"}</h3>
-            <span>본문에서 강조된 링크를 클릭하면 다음 문서로 이동합니다.</span>
-          </div>
-          <div className="article-summary-preview">{currentSummary || "문서 요약이 이곳에 표시됩니다."}</div>
-          <article
-            className="article-content"
-            onClick={handleDocumentClick}
-            dangerouslySetInnerHTML={{
-              __html: currentDocumentHtml || "<p>문서 본문을 불러오는 중입니다...</p>",
-            }}
-          />
-        </section>
-
-        <section className="links-card">
-          <div className="links-header">
-            <h3>빠른 이동 링크</h3>
-            <span className="links-count">{links.length} / {MAX_LINKS}</span>
-          </div>
-
-          {!isLoading && links.length === 0 && (
-            <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다. 새 게임을 눌러주세요.</p>
-          )}
-
-          <div className="links-grid">
-            {links.map((linkTitle) => (
-              <button
-                key={linkTitle}
-                className="link-chip"
-                onClick={() => handleMove(linkTitle)}
-                disabled={isLoading || isWon}
-              >
-                {linkTitle}
-              </button>
-            ))}
-          </div>
-        </section>
-      </main>
-    </div>
-  );
-}
+              <div className="links-grid">
+                {links.map((linkTitle) => (
+                  <button
+                    key={linkTitle}
+                    className="link-chip"
+                    onClick={() => handleMove(linkTitle)}
+                    disabled={isLoading || isWon}
+                  >
+                    {linkTitle}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </main>
+        </div>
+      );
+    }
