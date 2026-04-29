@@ -4,6 +4,7 @@ import { useAuth } from "../authContext";
 import { fetchUserStats, fetchRankings } from "../rankingService";
 import AdBanner from "../components/AdBanner";
 import { searchWikiTitleCandidates } from "../services/wikiService";
+import { fetchAllProfileStats } from "../services/profileStatsService";
 
 /**
  * 메인 대시보드 페이지 컴포넌트
@@ -87,15 +88,16 @@ export default function MainPage() {
       try {
         setLoading(true);
         setError("");
-        const [data, todayRankings, weeklyRankings, allRankings] = await Promise.all([
+        const [data, todayRankings, weeklyRankings, allRankings, detailedStats] = await Promise.all([
           fetchUserStats(user.id),
           fetchRankings({ period: "daily", limit: 3 }),
           fetchRankings({ period: "weekly", limit: 3 }),
           fetchRankings({ period: "all", limit: 3 }),
+          fetchAllProfileStats(user.id)
         ]);
 
         if (!cancelled) {
-          setStats(data);
+          setStats({ ...data, detailed: detailedStats });
           setRankingTabs({
             today: todayRankings,
             weekly: weeklyRankings,
@@ -381,22 +383,26 @@ export default function MainPage() {
           )}
         </section>
 
-        {/* ── 통계 카드 3개 ── */}
+        {/* ── 통계 그리드 (종합 전적) ── */}
         <section className="dashboard-grid">
           <article className="dashboard-card">
-            <p className="card-label">총 플레이</p>
+            <p className="card-label">싱글 플레이</p>
             <p className="card-value">{loading ? "…" : stats.gamesPlayed > 0 ? `${stats.gamesPlayed}회` : "-"}</p>
+            <p className="card-sub-label">최고: {formatDuration(stats.bestTime)}</p>
           </article>
           <article className="dashboard-card">
-            <p className="card-label">최고 기록</p>
-            <p className="card-value">{loading ? "…" : formatDuration(stats.bestTime)}</p>
-          </article>
-          <article className="dashboard-card">
-            <p className="card-label">계정</p>
-            <p className="card-value account-value">
-              {/* 게스트가 아닐 경우 아이디(username)를 우선적으로 표시합니다. */}
-              {user.isGuest ? "게스트" : user.username || user.displayName || "로컬 데모"}
+            <p className="card-label">1 VS 1 대전</p>
+            <p className="card-value">
+              {loading ? "…" : user.isGuest ? "-" : `${stats.detailed?.pvp?.wins || 0}승 ${stats.detailed?.pvp?.losses || 0}패`}
             </p>
+            <p className="card-sub-label">승률: {stats.detailed?.pvp?.winRate || 0}%</p>
+          </article>
+          <article className="dashboard-card">
+            <p className="card-label">그룹 레이스</p>
+            <p className="card-value">
+              {loading ? "…" : user.isGuest ? "-" : `${(stats.detailed?.group?.first || 0) + (stats.detailed?.group?.second || 0) + (stats.detailed?.group?.third || 0)}회`}
+            </p>
+            <p className="card-sub-label">1등: {stats.detailed?.group?.first || 0}회</p>
           </article>
         </section>
 

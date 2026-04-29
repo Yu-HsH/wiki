@@ -824,22 +824,38 @@ body {
 .quickstart-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 26px 24px;
-  border-radius: 24px;
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  gap: 10px;
+  padding: 36px 32px;
+  border-radius: 28px;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
   text-align: left;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
   overflow: hidden;
 }
 
 .quickstart-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
-  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.quickstart-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.quickstart-card:hover::after {
+  opacity: 1;
 }
 
 .quickstart-random {
@@ -858,23 +874,23 @@ body {
 }
 
 .qs-icon {
-  font-size: 38px;
+  font-size: 48px;
   line-height: 1;
-  margin-bottom: 8px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  margin-bottom: 12px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
 .qs-title {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   margin-top: 4px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .qs-desc {
-  font-size: 14px;
-  opacity: 0.9;
-  line-height: 1.4;
+  font-size: 15px;
+  opacity: 0.85;
+  line-height: 1.5;
 }
 
 /* ── 계정 값 말줄임 ── */
@@ -1037,13 +1053,26 @@ body {
 
 /* ── 오늘의 도전 카드 ── */
 .daily-card {
-  padding: 24px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  padding: 32px;
+  background: linear-gradient(135deg, #1e1e3f 0%, #111122 100%);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+  margin-top: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.daily-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(240, 192, 64, 0.1) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .daily-head {
@@ -1067,10 +1096,13 @@ body {
 }
 
 .daily-keyword {
-  margin: 0 0 6px;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  background: linear-gradient(to right, #fff, #f0c040);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .daily-hint {
@@ -1776,4 +1808,125 @@ body {
 .auth-debug-error pre {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Profile Page Custom Styles */
+.profile-avatar-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--app-line);
+}
+
+.profile-avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--app-brand), var(--app-brand-deep));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #fff;
+  font-weight: 700;
+}
+
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.profile-readonly-field {
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: #f8fbfa;
+  border: 1px solid var(--app-line);
+  color: var(--app-text);
+  font-weight: 500;
+}
+
+/* Stats Section Styles */
+.profile-stats-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--app-line);
+}
+
+.profile-stats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-stats-group header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--app-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.profile-stat-card {
+  background: #f8fbfa;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.profile-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--app-brand);
+}
+
+.profile-stat-card h4 {
+  margin: 0 0 4px;
+  font-size: 0.7rem;
+  color: var(--app-dim);
+}
+
+.profile-stat-value {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--app-text);
+  line-height: 1.2;
+}
+
+.profile-stat-unit {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--app-dim);
+  margin-left: 2px;
+}
+
+.profile-stat-sub {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--app-dim);
+  margin-top: 2px;
+}
+
+.card-sub-label {
+  font-size: 11px;
+  color: var(--app-dim);
+  margin-top: 4px;
+  font-weight: 500;
+  display: block;
 }

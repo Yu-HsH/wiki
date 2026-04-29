@@ -23,6 +23,7 @@ import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import GroupPickOverlay from "../components/GroupPickOverlay";
 
+import { fetchAllProfileStats, recordGroupMatchHistory } from "../services/profileStatsService";
 const GROUP_PHASE = {
     LOADING: "LOADING",
     PICKING: "PICKING",
@@ -350,6 +351,17 @@ export default function GroupGamePage() {
     const handleReturnToLobby = () => {
         navigate("/multiplayer");
     };
+
+    useEffect(() => {
+        if (room?.status === "finished" && phase !== GROUP_PHASE.FINISHED) {
+            // 게임 종료 시 전적 기록 호출 (중복 방지 로직 포함됨)
+            recordGroupMatchHistory(roomId).catch(console.error);
+            fetchGroupResults(roomId)
+                .then((data) => setResults(data))
+                .catch(() => { })
+                .finally(() => setPhase(GROUP_PHASE.FINISHED));
+        }
+    }, [room?.status, phase, roomId]);
 
     if (phase === GROUP_PHASE.LOADING) {
         return (
