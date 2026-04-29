@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import {
   fetchRandomTitle,
   fetchDistinctRandomTitle,
@@ -19,7 +20,7 @@ import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import useItemSystem from "../hooks/useItemSystem";
 
-import PageLoadingOverlay from "../components/PageLoadingOverlay";
+
 const pickDifficulty = () => {
   const r = Math.random();
   if (r < 0.5) return "easy";
