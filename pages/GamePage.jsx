@@ -76,6 +76,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const autoStarted = useRef(false);
+  const restoredFromStorageRef = useRef(false);
 
   const storageKey = "wiki-single-game-state";
 
@@ -341,7 +342,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         const newPath = [startPage.title];
         setPathTitles(newPath);
 
-        setIsLoading(false); // 준비 완료 후 로딩 해제
+        setIsLoading(false);
 
         if (checkWin(startPage.title, targetSummaryData.title)) {
           handleWin(startPage.title, targetSummaryData.title, 0, 0, newPath);
@@ -362,21 +363,14 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   useEffect(() => {
     if (autoStarted.current) return;
 
-    const state = location.state;
     const saved = loadLocalGameState();
+    const state = location.state;
 
-    // 1. 새 게임 요청(state)이 있으면 우선 처리
-    if (state?.mode) {
+    // 1. 저장된 게임이 있으면 무조건 복구 우선 (새로고침 대응)
+    if (saved?.currentTitle && saved?.target?.title) {
       autoStarted.current = true;
-      handleSetupComplete({
-        mode: state.mode,
-        keyword: state.keyword ?? "",
-        targetTitle: state.targetTitle,
-      });
-    }
-    // 2. 요청은 없지만 저장된 게임이 있으면 복구
-    else if (saved?.currentTitle && saved?.target?.title) {
-      autoStarted.current = true;
+      restoredFromStorageRef.current = true;
+
       const restoreGame = async () => {
         try {
           setIsLoading(true);
@@ -393,6 +387,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           setPathTitles(saved.pathTitles || [page.title]);
           setClickCount(saved.clickCount || 0);
           setElapsedSeconds(saved.elapsedSeconds || 0);
+          // 복구 시에는 카운트다운 없이 바로 진행
           setPhase(PHASE.PLAYING);
         } catch (e) {
           console.error("싱글 게임 복구 실패:", e);
@@ -404,8 +399,20 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       };
       restoreGame();
     }
+    // 2. 저장된 게임이 없고 새 게임 요청(state)이 있으면 시작
+    else if (state?.mode && !restoredFromStorageRef.current) {
+      autoStarted.current = true;
+      handleSetupComplete({
+        mode: state.mode,
+        keyword: state.keyword ?? "",
+        targetTitle: state.targetTitle,
+      });
+
+      // 시작 후 히스토리 state를 비워 새로고침 시 중복 시작 방지
+      window.history.replaceState({}, document.title);
+    }
     // 3. 둘 다 없으면 메인으로 이동
-    else {
+    else if (!state?.mode) {
       navigate("/main", { replace: true });
     }
   }, [location.state, handleSetupComplete, loadLocalGameState, navigate]);
@@ -489,7 +496,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           </>
         )}
 
-      {/* 카운트다운 오버레이 (WikiViewer 위에 렌더링되도록 아래에 배치) */}
+      {/* 카운트다운 오버레이 */}
       {phase === PHASE.COUNTDOWN && (
         <CountdownOverlay onComplete={handleCountdownComplete} />
       )}
