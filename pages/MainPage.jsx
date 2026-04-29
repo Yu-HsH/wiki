@@ -140,11 +140,11 @@ export default function MainPage() {
             <p className="dashboard-badge">Wiki Race</p>
             <h1>{user.displayName}님, 반가워요 👋</h1>
             <p className="dashboard-muted">
-              {user.isGuest
-                ? "게스트 모드로 접속 중입니다. 로그인하면 기록이 저장됩니다."
-                : isSupabaseConfigured
-                  ? "온라인 랭킹 모드 활성화 중"
-                  : "데모 모드로 실행 중"}
+              {user.isGuest && (
+                <p className="dashboard-muted">
+                  게스트 모드로 접속 중입니다. 로그인하면 기록이 저장됩니다.
+                </p>
+              )}
             </p>
           </div>
           {/* 상단 액션 버튼 그룹 */}

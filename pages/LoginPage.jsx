@@ -35,6 +35,50 @@ function applyZodErrors(result, setError) {
   });
 }
 
+function getFriendlyAuthError(error) {
+  const message = error?.message || "";
+
+  if (
+    message.includes("Invalid login credentials") ||
+    message.includes("invalid_credentials")
+  ) {
+    return "아이디 또는 비밀번호를 확인해주세요.";
+  }
+
+  if (
+    message.includes("User already registered") ||
+    message.includes("already registered") ||
+    message.includes("duplicate key")
+  ) {
+    return "이미 가입된 아이디입니다.";
+  }
+
+  if (
+    message.includes("Password should be at least") ||
+    message.includes("password")
+  ) {
+    return "비밀번호는 6자 이상이어야 합니다.";
+  }
+
+  if (message.includes("Email not confirmed")) {
+    return "이메일 인증이 필요합니다.";
+  }
+
+  if (
+    message.includes("Failed to fetch") ||
+    message.includes("NetworkError") ||
+    message.includes("fetch")
+  ) {
+    return "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  }
+
+  if (message.includes("Database error")) {
+    return "서버 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  }
+
+  return "로그인/회원가입에 실패했습니다. 입력값을 확인해주세요.";
+}
+
 export default function LoginPage({ isEmbedded = false }) {
   const navigate = useNavigate();
   const { loginWithUsername, signUpWithUsername, demoLogin, isSupabaseConfigured, loginAsGuest } = useAuth();
@@ -90,8 +134,8 @@ export default function LoginPage({ isEmbedded = false }) {
       });
       navigate("/main");
     } catch (error) {
-      // API 호출 중 발생한 에러 처리
-      setSubmitError(error?.message || "인증 처리 중 오류가 발생했습니다.");
+      console.error("Auth error:", error);
+      setSubmitError(getFriendlyAuthError(error));
     } finally {
       setPending(false);
     }
@@ -114,14 +158,22 @@ export default function LoginPage({ isEmbedded = false }) {
               <button
                 type="button"
                 className={mode === "signin" ? "auth-tab active" : "auth-tab"}
-                onClick={() => setMode("signin")}
+                onClick={() => {
+                  setMode("signin");
+                  setSubmitError("");
+                  clearErrors();
+                }}
               >
                 로그인
               </button>
               <button
                 type="button"
                 className={mode === "signup" ? "auth-tab active" : "auth-tab"}
-                onClick={() => setMode("signup")}
+                onClick={() => {
+                  setMode("signup");
+                  setSubmitError("");
+                  clearErrors();
+                }}
               >
                 회원가입
               </button>
@@ -185,7 +237,16 @@ export default function LoginPage({ isEmbedded = false }) {
               type="button"
               className="app-btn app-btn-secondary"
               style={{ width: "100%", marginTop: "1rem" }}
-              onClick={() => { loginAsGuest(); navigate("/main"); }}
+              onClick={async () => {
+                try {
+                  setSubmitError("");
+                  await loginAsGuest();
+                  navigate("/main");
+                } catch (error) {
+                  console.error("Guest login error:", error);
+                  setSubmitError("게스트 로그인에 실패했습니다. 다시 시도해주세요.");
+                }
+              }}
             >
               게스트로 로그인
             </button>

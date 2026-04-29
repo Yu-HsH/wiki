@@ -39,7 +39,11 @@ export default function IntroPage() {
             style={{
                 backgroundImage: `url(${openingBg})`,
             }}
-            onClick={() => setShowLogin(true)}
+            onClick={() => {
+                if (!showLogin) {
+                    setShowLogin(true);
+                }
+            }}
         >
             <div className="intro-overlay" />
 
@@ -71,6 +75,16 @@ export default function IntroPage() {
                     >
                         <LoginPage isEmbedded />
                     </div>
+                    <button
+                        type="button"
+                        className="auth-modal-close"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowLogin(false);
+                        }}
+                    >
+                        ×
+                    </button>
                 </div>
             )}
         </div>
