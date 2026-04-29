@@ -849,7 +849,7 @@ body {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -1929,4 +1929,117 @@ body {
   margin-top: 4px;
   font-weight: 500;
   display: block;
+}
+
+/* User Profile Modal Styles */
+.user-profile-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.user-profile-modal-card {
+  background: var(--color-surface, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 12px;
+  width: 340px;
+  max-width: 90%;
+  padding: 1.5rem;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  color: var(--color-text, #e2e8f0);
+}
+
+.user-profile-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.user-profile-modal-close:hover {
+  color: #fff;
+}
+
+.user-profile-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border, #334155);
+  padding-bottom: 1rem;
+}
+
+.user-profile-modal-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-border, #334155);
+}
+
+.user-profile-modal-avatar-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.user-profile-modal-info h3 {
+  margin: 0 0 0.2rem 0;
+  font-size: 1.2rem;
+}
+
+.user-profile-modal-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.user-profile-modal-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.user-profile-modal-stats .stat-box {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.8rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-profile-modal-stats .stat-box span {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 0.3rem;
+}
+
+.user-profile-modal-stats .stat-box strong {
+  font-size: 1.1rem;
+}
+
+.user-profile-modal-stats .stat-box small {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.2rem;
 }

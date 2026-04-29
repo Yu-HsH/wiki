@@ -11,6 +11,7 @@ import {
 import { searchWikiTitleCandidates } from "../services/wikiService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
+import UserProfileModal from "../components/UserProfileModal";
 
 /**
  * 대전 대기실 페이지
@@ -41,7 +42,13 @@ export default function RoomPage() {
 
   // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
-
+  // 2. 상태 추가
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const handlePlayerClick = (userId) => {
+    setSelectedUserId(userId);
+    setIsModalOpen(true);
+  };
   // ----------------------------
   // 초기 로드
   // ----------------------------
@@ -487,6 +494,19 @@ export default function RoomPage() {
               )}
             </div>
 
+            {/* 플레이어 목록 렌더링 부분에 클릭 이벤트 추가 (예시) */}
+            {players.map((player) => (
+              <div
+                key={player.id}
+                className="player-item"
+                onClick={() => handlePlayerClick(player.userId || player.user_id)}
+                style={{ cursor: "pointer" }}
+              >
+                {/* 아바타 및 이름 표시 영역 */}
+                {player.name}
+              </div>
+            ))}
+
             {/* 검색 결과 후보 */}
             {!myReadyState && targetSuggestions.length > 0 && (
               <div className="search-results-list" style={{ marginTop: "12px" }}>
@@ -600,6 +620,13 @@ export default function RoomPage() {
               호스트가 게임을 시작할 때까지 기다려주세요.
             </p>
           )}
+
+          {/* 4. 모달 렌더링 */}
+          <UserProfileModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            userId={selectedUserId}
+          />
         </div>
       </div>
     </div>
