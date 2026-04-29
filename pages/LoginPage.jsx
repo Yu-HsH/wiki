@@ -35,48 +35,63 @@ function applyZodErrors(result, setError) {
   });
 }
 
-function getFriendlyAuthError(error) {
+
+
+function getFriendlyAuthError(error, mode) {
   const message = error?.message || "";
+  const lower = message.toLowerCase();
+
+  console.error("Auth original error:", error);
 
   if (
-    message.includes("Invalid login credentials") ||
-    message.includes("invalid_credentials")
+    lower.includes("invalid login credentials") ||
+    lower.includes("invalid credentials") ||
+    lower.includes("invalid_credentials")
   ) {
-    return "아이디 또는 비밀번호를 확인해주세요.";
+    return "아이디 또는 비밀번호가 올바르지 않습니다.";
   }
 
   if (
-    message.includes("User already registered") ||
-    message.includes("already registered") ||
-    message.includes("duplicate key")
+    lower.includes("already registered") ||
+    lower.includes("user already registered") ||
+    lower.includes("duplicate key") ||
+    lower.includes("already exists") ||
+    lower.includes("unique")
   ) {
-    return "이미 가입된 아이디입니다.";
+    return "이미 사용 중인 아이디입니다. 다른 아이디로 가입해주세요.";
   }
 
   if (
-    message.includes("Password should be at least") ||
-    message.includes("password")
+    lower.includes("password should be at least") ||
+    lower.includes("password")
   ) {
     return "비밀번호는 6자 이상이어야 합니다.";
   }
 
-  if (message.includes("Email not confirmed")) {
-    return "이메일 인증이 필요합니다.";
+  if (
+    lower.includes("username") ||
+    lower.includes("id")
+  ) {
+    return "아이디 형식을 확인해주세요.";
   }
 
   if (
-    message.includes("Failed to fetch") ||
-    message.includes("NetworkError") ||
-    message.includes("fetch")
+    lower.includes("network") ||
+    lower.includes("failed to fetch") ||
+    lower.includes("fetch")
   ) {
-    return "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    return "네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.";
   }
 
-  if (message.includes("Database error")) {
-    return "서버 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  if (lower.includes("database")) {
+    return "서버 데이터 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
   }
 
-  return "로그인/회원가입에 실패했습니다. 입력값을 확인해주세요.";
+  if (mode === "signin") {
+    return `로그인에 실패했습니다. 아이디 또는 비밀번호를 확인해주세요.`;
+  }
+
+  return `회원가입에 실패했습니다. 이미 사용 중인 아이디이거나 입력값이 올바르지 않습니다.`;
 }
 
 export default function LoginPage({ isEmbedded = false }) {
@@ -85,6 +100,7 @@ export default function LoginPage({ isEmbedded = false }) {
   const [mode, setMode] = useState("signin");
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [debugError, setDebugError] = useState("");
 
   const {
     register,
@@ -135,7 +151,8 @@ export default function LoginPage({ isEmbedded = false }) {
       navigate("/main");
     } catch (error) {
       console.error("Auth error:", error);
-      setSubmitError(getFriendlyAuthError(error));
+      setSubmitError(getFriendlyAuthError(error, mode));
+      setDebugError(error?.message || JSON.stringify(error));
     } finally {
       setPending(false);
     }
@@ -222,6 +239,13 @@ export default function LoginPage({ isEmbedded = false }) {
             )}
 
             {submitError && <p className="auth-error auth-error-block">{submitError}</p>}
+
+            {debugError && (
+              <details className="auth-debug-error">
+                <summary>오류 상세 보기</summary>
+                <pre>{debugError}</pre>
+              </details>
+            )}
 
             <button type="submit" className="app-btn app-btn-primary" disabled={pending}>
               {pending

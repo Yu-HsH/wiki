@@ -39,11 +39,6 @@ export default function IntroPage() {
             style={{
                 backgroundImage: `url(${openingBg})`,
             }}
-            onClick={() => {
-                if (!showLogin) {
-                    setShowLogin(true);
-                }
-            }}
         >
             <div className="intro-overlay" />
 
@@ -55,9 +50,16 @@ export default function IntroPage() {
                 </p>
 
                 {!showLogin && (
-                    <div className="intro-press-start">
-                        아무 키나 누르거나 화면을 클릭하세요
-                    </div>
+                    <button
+                        type="button"
+                        className="intro-press-start"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowLogin(true);
+                        }}
+                    >
+                        로그인 / 회원가입
+                    </button>
                 )}
             </div>
 
