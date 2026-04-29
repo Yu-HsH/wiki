@@ -55,6 +55,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isPageLoading, setIsPageLoading] = useState(false);
 
   const hasPresetMode = Boolean(location.state?.mode);
 
