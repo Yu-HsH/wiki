@@ -697,6 +697,52 @@ body {
   }
 }
 
+/* --- Page Loading Overlay --- */
+.page-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(13, 17, 23, 0.7);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
+}
+
+.page-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  color: #fff;
+}
+
+.page-loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--app-brand, #00a495);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.page-loading-text {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ========================================================
    GAME PLAY UTILITY UI (HUD & Scroll To Top)
    ======================================================== */

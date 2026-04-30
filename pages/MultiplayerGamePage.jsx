@@ -27,6 +27,8 @@ import EffectOverlay from "../components/EffectOverlay";
 import { ITEM_DEFS } from "../data/items";
 import { MULTI_ITEM_IDS } from "../data/itemPools";
 
+import PageLoadingOverlay from "../components/PageLoadingOverlay";
+
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -52,6 +54,7 @@ export default function MultiplayerGamePage() {
 
   const [pending, setPending] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [phase, setPhase] = useState(PHASE.LOADING);
 
@@ -290,6 +293,7 @@ export default function MultiplayerGamePage() {
         const restoreTitle = saved?.currentTitle || currentTitle;
 
         setIsPageLoading(true);
+        setIsLoading(true);
 
         const firstPage = await fetchPageData(restoreTitle);
         setPageData(firstPage);
@@ -303,6 +307,7 @@ export default function MultiplayerGamePage() {
         }
 
         setIsPageLoading(false);
+        setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "게임 초기화에 실패했습니다.");
       } finally {
@@ -429,6 +434,7 @@ export default function MultiplayerGamePage() {
     try {
       setError("");
       setIsPageLoading(true);
+      setIsLoading(true);
 
       let nextHistoryStack = historyStack;
 
@@ -485,6 +491,7 @@ export default function MultiplayerGamePage() {
       setError(err instanceof Error ? err.message : "문서 이동에 실패했습니다.");
     } finally {
       setIsPageLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -494,6 +501,7 @@ export default function MultiplayerGamePage() {
     try {
       setError("");
       setIsPageLoading(true);
+      setIsLoading(true);
 
       setStatus((prev) => ({
         ...prev,
@@ -520,6 +528,7 @@ export default function MultiplayerGamePage() {
       setError(err instanceof Error ? err.message : "아이템 이동에 실패했습니다.");
     } finally {
       setIsPageLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -1006,6 +1015,7 @@ export default function MultiplayerGamePage() {
 
   return (
     <div className="mp-game-page">
+      {isPageLoading && <PageLoadingOverlay />}
       {phase === PHASE.VS_INTRO && (
         <VsIntroOverlay
           myName={myPlayer?.nickname_snapshot || "나"}
@@ -1046,7 +1056,7 @@ export default function MultiplayerGamePage() {
             currentSummary={pageData?.summary || ""}
             currentDocumentHtml={pageData?.documentHtml || ""}
             links={pageData?.links || []}
-            isLoading={isPageLoading}
+            isLoading={isLoading}
             elapsedSeconds={elapsedSeconds}
             clickCount={myPlayer?.move_count || 0}
             startTitle={myPlayer?.start_title || ""}
