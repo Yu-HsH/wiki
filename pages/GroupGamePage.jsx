@@ -64,6 +64,7 @@ export default function GroupGamePage() {
     const timerRef = useRef(null);
     const startTimeRef = useRef(null);
     const finishedRef = useRef(false);
+    const hasRecordedRef = useRef(false);
 
     const storageKey = user?.id && roomId
         ? `wiki-group-game-state:${roomId}:${user.id}`
@@ -275,6 +276,12 @@ export default function GroupGamePage() {
 
     useEffect(() => {
         if (room?.status === "finished" && phase !== GROUP_PHASE.FINISHED) {
+            // 전적 기록 (최초 1회만 실행되도록 ref 사용)
+            if (!hasRecordedRef.current) {
+                hasRecordedRef.current = true;
+                recordGroupMatchHistory(roomId).catch(console.error);
+            }
+
             fetchGroupResults(roomId)
                 .then((data) => setResults(data))
                 .catch(() => { })
@@ -352,16 +359,6 @@ export default function GroupGamePage() {
         navigate("/multiplayer");
     };
 
-    useEffect(() => {
-        if (room?.status === "finished" && phase !== GROUP_PHASE.FINISHED) {
-            // 게임 종료 시 전적 기록 호출 (중복 방지 로직 포함됨)
-            recordGroupMatchHistory(roomId).catch(console.error);
-            fetchGroupResults(roomId)
-                .then((data) => setResults(data))
-                .catch(() => { })
-                .finally(() => setPhase(GROUP_PHASE.FINISHED));
-        }
-    }, [room?.status, phase, roomId]);
 
     if (phase === GROUP_PHASE.LOADING) {
         return (

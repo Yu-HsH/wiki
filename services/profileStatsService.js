@@ -141,33 +141,33 @@ export async function recordGroupMatchHistory(roomId) {
 
     if (playerError) throw playerError;
 
-    // 2. 완주한 플레이어들을 순위 또는 종료 시간 기준으로 정렬
-    const finishedPlayers = players
+    // 2. 완주한 플레이어들을 종료 시간(빠른 순) -> 이동 횟수(적은 순) 기준으로 정렬
+    const sorted = (players || [])
       .filter((p) => p.has_finished)
       .sort((a, b) => {
-        if (a.rank && b.rank) return a.rank - b.rank;
         const timeA = a.finished_at ? new Date(a.finished_at).getTime() : Infinity;
         const timeB = b.finished_at ? new Date(b.finished_at).getTime() : Infinity;
-        return timeA - timeB;
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.move_count || 0) - (b.move_count || 0);
       });
 
-    if (finishedPlayers.length === 0) return;
+    if (sorted.length === 0) return;
 
-    // 3. 기록 데이터 생성 (게스트 유저 제외)
-    const historyData = finishedPlayers
+    // 3. 기록 데이터 생성 (1~3등까지만, 게스트 유저 제외)
+    const historyData = sorted
+      .slice(0, 3)
       .filter((p) => p.user_id && !p.user_id.startsWith("guest-"))
       .map((p, index) => ({
         room_id: roomId,
         user_id: p.user_id,
-        rank: p.rank || (index + 1),
+        rank: index + 1,
         elapsed_seconds: p.elapsed_seconds || 0,
         move_count: p.move_count || 0,
-        created_at: new Date().toISOString(),
       }));
 
     if (historyData.length === 0) return;
 
-    // 4. Upsert를 통해 중복 저장 방지 (room_id, user_id 유니크 제약 조건 필요)
+    // 4. Upsert를 통해 중복 저장 방지 (room_id + user_id 유니크 제약 조건 필수)
     const { error: insertError } = await supabase
       .from("group_match_history")
       .upsert(historyData, { onConflict: "room_id, user_id" });
@@ -176,6 +176,7 @@ export async function recordGroupMatchHistory(roomId) {
 
     console.log(`[Success] Group match history recorded for room: ${roomId}`);
   } catch (error) {
+    // 저장 실패해도 게임 UI가 깨지지 않도록 에러만 출력
     console.error("그룹 모드 결과 저장 중 오류 발생:", error);
   }
 }

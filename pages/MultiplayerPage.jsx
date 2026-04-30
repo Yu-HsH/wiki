@@ -91,6 +91,19 @@ export default function MultiplayerPage() {
       <div className="mp-container">
 
         {/* =========================
+           상단 내비게이션
+        ========================= */}
+        <header className="mp-header">
+          <button
+            type="button"
+            className="app-btn app-btn-ghost"
+            onClick={() => navigate("/main")}
+          >
+            ← 메인으로
+          </button>
+        </header>
+
+        {/* =========================
            모드 선택
         ========================= */}
         <div className="mp-mode-grid">
