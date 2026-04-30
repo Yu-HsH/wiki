@@ -289,3 +289,59 @@ export async function createMatchHistory(payload) {
     if (error) throw error;
     return data;
 }
+// ... (기존 코드 하단에 추가 또는 수정)
+
+/**
+ * 1vs1 대전 결과 저장
+ */
+export async function saveMatchHistory({
+    roomId,
+    winnerUserId,
+    loserUserId,
+    durationSeconds,
+    winnerStartTitle,
+    loserStartTitle,
+    winnerTargetTitle,
+    loserTargetTitle
+}) {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    // 1. 게스트 유저 필터링 (UUID가 아닌 'guest-' 문자열은 skip)
+    const isGuest = (id) => !id || id.startsWith('guest-');
+    if (isGuest(winnerUserId) || isGuest(loserUserId)) {
+        console.log("게스트 플레이어가 포함되어 전적을 저장하지 않습니다.");
+        return;
+    }
+
+    try {
+        // 2. 중복 저장 방지 (이미 해당 방의 기록이 있는지 확인)
+        const { data: existing } = await supabase
+            .from("match_history")
+            .select("id")
+            .eq("room_id", roomId)
+            .maybeSingle();
+
+        if (existing) {
+            console.log("이미 저장된 대전 기록입니다.");
+            return;
+        }
+
+        // 3. 기록 저장
+        const { error } = await supabase.from("match_history").insert({
+            room_id: roomId,
+            winner_user_id: winnerUserId,
+            loser_user_id: loserUserId,
+            duration_seconds: durationSeconds,
+            winner_start_title: winnerStartTitle,
+            loser_start_title: loserStartTitle,
+            winner_target_title: winnerTargetTitle,
+            loser_target_title: loserTargetTitle,
+            created_at: new Date().toISOString()
+        });
+
+        if (error) throw error;
+        console.log("대전 기록 저장 성공");
+    } catch (err) {
+        console.error("대전 기록 저장 중 오류 발생:", err);
+    }
+}

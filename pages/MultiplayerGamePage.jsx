@@ -6,6 +6,7 @@ import {
   fetchRoomPlayers,
   updateMyGameProgress,
   updateGameRoomStatus,
+  saveMatchHistory,
 } from "../services/multiplayerService";
 
 import {
@@ -28,7 +29,6 @@ import { ITEM_DEFS } from "../data/items";
 import { MULTI_ITEM_IDS } from "../data/itemPools";
 
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
-
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -468,7 +468,19 @@ export default function MultiplayerGamePage() {
 
       if (solved) {
         const finishedAt = new Date().toISOString();
-
+        const duration = startedAtRef.current
+          ? Math.floor((Date.now() - startedAtRef.current) / 1000)
+          : elapsedSeconds;
+        saveMatchHistory({
+          roomId,
+          winnerUserId: user.id,
+          loserUserId: opponentPlayer?.user_id,
+          durationSeconds: duration,
+          winnerStartTitle: myPlayer?.start_title,
+          loserStartTitle: opponentPlayer?.start_title,
+          winnerTargetTitle: myTargetTitle,
+          loserTargetTitle: opponentTargetTitle
+        });
         await updateMyGameProgress(roomId, user.id, {
           current_title: nextPage.title,
           move_count: nextMoveCount,
@@ -1000,6 +1012,7 @@ export default function MultiplayerGamePage() {
   if (pending) {
     return (
       <div className="mp-game-page">
+        {isPageLoading && <PageLoadingOverlay />}
         <div className="mp-game-loading">게임 준비 중...</div>
       </div>
     );

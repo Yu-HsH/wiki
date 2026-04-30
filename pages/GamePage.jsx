@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import {
   fetchRandomTitle,
   fetchDistinctRandomTitle,
@@ -18,6 +19,7 @@ import { supabase } from "../supabaseClient";
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import useItemSystem from "../hooks/useItemSystem";
+
 
 const pickDifficulty = () => {
   const r = Math.random();
@@ -53,6 +55,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isPageLoading, setIsPageLoading] = useState(false);
 
   const hasPresetMode = Boolean(location.state?.mode);
 
@@ -76,6 +79,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const autoStarted = useRef(false);
+  const restoredFromStorageRef = useRef(false);
 
   const storageKey = "wiki-single-game-state";
 
@@ -108,7 +112,9 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const handleCountdownComplete = useCallback(() => {
     setPhase(PHASE.PLAYING);
   }, []);
+
   const useItems = location.state?.useItems ?? true;
+
   // ----------------------------
   // 타이머
   // ----------------------------
@@ -141,7 +147,6 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const handleWin = useCallback(
     (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
       setPhase(PHASE.SUCCESS);
-
       clearSingleGameState();
 
       if (onGameComplete) {
@@ -157,13 +162,14 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     },
     [onGameComplete, startTitle, clearSingleGameState]
   );
+
   const handleGiveUp = useCallback(() => {
     clearSingleGameState();
-
     if (onReturnMain) {
       onReturnMain();
     }
   }, [clearSingleGameState, onReturnMain]);
+
   // ----------------------------
   // 문서 이동
   // ----------------------------
@@ -172,9 +178,9 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       if (phase !== PHASE.PLAYING || isLoading) return;
 
       const previousTitle = currentTitle;
-
       setClickCount((prev) => prev + 1);
       setIsLoading(true);
+      setIsPageLoading(true);
       setError("");
 
       try {
@@ -201,7 +207,6 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         }
 
         itemSystem.clearPageScopedEffects();
-
         window.scrollTo({ top: 0, behavior: "smooth" });
 
         if (checkWin(page.title, target.title)) {
@@ -217,6 +222,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
       } finally {
         setIsLoading(false);
+        setIsPageLoading(false);
       }
     },
     [
@@ -229,6 +235,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       elapsedSeconds,
       clickCount,
       handleWin,
+      saveLocalGameState,
     ]
   );
 
@@ -258,10 +265,9 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----------------------------
-  // 게임 준비
+  // 게임 준비 로직
   // ----------------------------
   const handleSetupComplete = useCallback(
-
     async ({ mode, keyword }) => {
       setIsLoading(true);
       setError("");
@@ -289,10 +295,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           try {
             targetTitle = await fetchAiTargetTitle();
           } catch (err) {
-            console.error(
-              "AI Target fetch failed, falling back to Wikipedia random:",
-              err
-            );
+            console.error("AI Target fetch failed:", err);
             targetTitle = await fetchDistinctRandomTitle(
               new Set([normalizeTitle(start)])
             );
@@ -344,6 +347,8 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         const newPath = [startPage.title];
         setPathTitles(newPath);
 
+        setIsLoading(false);
+
         if (checkWin(startPage.title, targetSummaryData.title)) {
           handleWin(startPage.title, targetSummaryData.title, 0, 0, newPath);
         } else {
@@ -351,82 +356,79 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         }
       } catch (e) {
         setError(e.message || "게임을 준비하는 중 오류가 발생했습니다.");
-      } finally {
         setIsLoading(false);
       }
     },
-    [checkWin, handleWin, location.state]
+    [checkWin, handleWin, location.state, saveLocalGameState]
   );
 
+  // ----------------------------
+  // 마운트 시 게임 시작 또는 복구 통합 관리
+  // ----------------------------
   useEffect(() => {
     if (autoStarted.current) return;
 
     const saved = loadLocalGameState();
-    if (!saved?.currentTitle || !saved?.target?.title) return;
-
-    const restoreGame = async () => {
-      try {
-        autoStarted.current = true;
-        setIsLoading(true);
-        setError("");
-        localStorage.removeItem("wiki-single-items");
-        const page = await fetchPageData(saved.currentTitle);
-
-        setTarget(saved.target);
-        setStartTitle(saved.startTitle || "");
-        setCurrentTitle(page.title);
-        setCurrentSummary(page.summary);
-        setCurrentDocumentHtml(page.documentHtml);
-        setLinks(page.links);
-        setPathTitles(saved.pathTitles || [page.title]);
-        setClickCount(saved.clickCount || 0);
-        setElapsedSeconds(saved.elapsedSeconds || 0);
-        setPhase(PHASE.PLAYING);
-      } catch (e) {
-        console.error("싱글 게임 복구 실패:", e);
-        localStorage.removeItem(storageKey);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    restoreGame();
-  }, [loadLocalGameState]);
-
-  // ----------------------------
-  // 메인 빠른 시작
-  // ----------------------------
-  useEffect(() => {
     const state = location.state;
 
-    if (state?.mode && !autoStarted.current) {
+    // 1. 저장된 게임이 있으면 무조건 복구 우선 (새로고침 대응)
+    if (saved?.currentTitle && saved?.target?.title) {
+      autoStarted.current = true;
+      restoredFromStorageRef.current = true;
+
+      const restoreGame = async () => {
+        try {
+          setIsLoading(true);
+          setError("");
+          localStorage.removeItem("wiki-single-items");
+          const page = await fetchPageData(saved.currentTitle);
+
+          setTarget(saved.target);
+          setStartTitle(saved.startTitle || "");
+          setCurrentTitle(page.title);
+          setCurrentSummary(page.summary);
+          setCurrentDocumentHtml(page.documentHtml);
+          setLinks(page.links);
+          setPathTitles(saved.pathTitles || [page.title]);
+          setClickCount(saved.clickCount || 0);
+          setElapsedSeconds(saved.elapsedSeconds || 0);
+          // 복구 시에는 카운트다운 없이 바로 진행
+          setPhase(PHASE.PLAYING);
+        } catch (e) {
+          console.error("싱글 게임 복구 실패:", e);
+          localStorage.removeItem(storageKey);
+          navigate("/main", { replace: true });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      restoreGame();
+    }
+    // 2. 저장된 게임이 없고 새 게임 요청(state)이 있으면 시작
+    else if (state?.mode && !restoredFromStorageRef.current) {
       autoStarted.current = true;
       handleSetupComplete({
         mode: state.mode,
         keyword: state.keyword ?? "",
         targetTitle: state.targetTitle,
       });
-    } else if (!state?.mode) {
-      const saved = loadLocalGameState();
-      if (!saved?.currentTitle || !saved?.target?.title) {
-        navigate("/main", { replace: true });
-      }
+
+      // 시작 후 히스토리 state를 비워 새로고침 시 중복 시작 방지
+      window.history.replaceState({}, document.title);
+    }
+    // 3. 둘 다 없으면 메인으로 이동
+    else if (!state?.mode) {
+      navigate("/main", { replace: true });
     }
   }, [location.state, handleSetupComplete, loadLocalGameState, navigate]);
 
   return (
     <div className="wiki-game-page">
+      {isPageLoading && <PageLoadingOverlay />}
       {error && <div className="state-text error">{error}</div>}
 
-      {/* 직접 /game 진입 시 */}
-      {phase === PHASE.SELECTING && (!hasPresetMode || error) && (
-        <div style={{ textAlign: "center", marginTop: "15vh" }}>
-          <h2>게임을 설정할 수 없습니다.</h2>
-          <p>메인 페이지로 이동합니다...</p>
-        </div>
-      )}
 
-      {/* preset 모드 준비 중 */}
+      {/* SELECTING 단계의 로딩 UI */}
       {phase === PHASE.SELECTING && hasPresetMode && !error && (
         <div
           style={{
@@ -457,10 +459,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         </div>
       )}
 
-      {phase === PHASE.COUNTDOWN && (
-        <CountdownOverlay onComplete={handleCountdownComplete} />
-      )}
-
+      {/* 게임 진행 및 성공 화면 */}
       {(phase === PHASE.PLAYING ||
         phase === PHASE.COUNTDOWN ||
         phase === PHASE.SUCCESS) && (
@@ -482,6 +481,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           />
         )}
 
+      {/* 아이템 관련 UI */}
       {useItems && itemSystem &&
         (phase === PHASE.PLAYING ||
           phase === PHASE.COUNTDOWN ||
@@ -503,6 +503,12 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           </>
         )}
 
+      {/* 카운트다운 오버레이 */}
+      {phase === PHASE.COUNTDOWN && (
+        <CountdownOverlay onComplete={handleCountdownComplete} />
+      )}
+
+      {/* 결과 화면 */}
       {phase === PHASE.SUCCESS && (
         <SuccessOverlay
           targetTitle={target.title}
@@ -513,6 +519,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         />
       )}
 
+      {/* 게임 도중 HUD 및 조작 버튼 */}
       {phase === PHASE.PLAYING && (
         <>
           <FloatingHud
@@ -531,6 +538,14 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
           <ScrollToTopButton />
         </>
+      )}
+
+      {/* 아무 상태도 아닐 때의 폴백 */}
+      {phase === PHASE.SELECTING && (!hasPresetMode || error) && (
+        <div style={{ textAlign: "center", marginTop: "15vh" }}>
+          <h2>게임을 설정할 수 없습니다.</h2>
+          <p>메인 페이지로 이동합니다...</p>
+        </div>
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";
 import AdBanner from "../components/AdBanner";
+import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 
 function formatDuration(totalSeconds) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -26,6 +27,16 @@ export default function RankingPage() {
   const [error, setError] = useState("");
   const [records, setRecords] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
+
+  // 2. 모달 상태 추가
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // 4. 클릭 핸들러
+  const handleUserClick = (userId) => {
+    setSelectedUserId(userId);
+    setIsProfileModalOpen(true);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +136,12 @@ export default function RankingPage() {
                     <React.Fragment key={rowKey}>
                       <tr className={isMine ? "mine" : ""}>
                         <td>{index + 1}</td>
-                        <td className="ranking-player-cell">
+                        {/* 3. 플레이어 영역 클릭 가능하게 수정 */}
+                        <td
+                          className="ranking-player-cell"
+                          onClick={() => handleUserClick(record.userId)}
+                          style={{ cursor: "pointer" }}
+                        >
                           <div className="ranking-avatar">
                             {record.profileImageUrl ? (
                               <img src={record.profileImageUrl} alt="" className="ranking-avatar-img" />
@@ -133,7 +149,7 @@ export default function RankingPage() {
                               <div className="ranking-avatar-fallback">{initial}</div>
                             )}
                           </div>
-                          <span className="ranking-player-name">{displayName}</span>
+                          <span className="ranking-player-name" style={{ textDecoration: "underline" }}>{displayName}</span>
                         </td>
                         <td>{record.targetTitle}</td>
                         <td>{formatDuration(record.elapsedSeconds)}</td>
@@ -170,6 +186,13 @@ export default function RankingPage() {
       <div style={{ marginTop: "2rem", width: "100%" }}>
         <AdBanner />
       </div>
+
+      {/* 7. 모달 렌더링 (guest 로직 처리는 UserProfileModal 내부에서 수행됨) */}
+      <UserProfileModal
+        userId={selectedUserId}
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
     </div>
   );
 }

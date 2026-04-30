@@ -12,6 +12,7 @@ import {
     startGroupRoomGame,
 } from "../services/groupMultiplayerService";
 import { searchWikiTitleCandidates } from "../services/wikiService";
+import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 
 export default function GroupRoomPage() {
     const { roomId } = useParams();
@@ -28,6 +29,16 @@ export default function GroupRoomPage() {
     const [selectedTarget, setSelectedTarget] = useState(null);
     const [targetSuggestions, setTargetSuggestions] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+
+    // 2. 모달 상태 추가
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const handlePlayerClick = (userId) => {
+        if (!userId) return;
+        setSelectedUserId(userId);
+        setIsModalOpen(true);
+    };
 
     const myPlayer = useMemo(
         () => players.find((player) => player.user_id === user?.id),
@@ -338,7 +349,11 @@ export default function GroupRoomPage() {
                     {/* 왼쪽: 내 설정 카드 */}
                     <section className="mp-card group-my-card">
                         <div className="group-my-profile">
-                            <div className="room-player-avatar" style={{ width: 44, height: 44 }}>
+                            <div
+                                className="room-player-avatar"
+                                style={{ width: 44, height: 44, cursor: "pointer" }}
+                                onClick={() => handlePlayerClick(myPlayer?.user_id)}
+                            >
                                 {user?.photoURL ? (
                                     <img
                                         src={user.photoURL}
@@ -350,7 +365,12 @@ export default function GroupRoomPage() {
                                 )}
                             </div>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: "18px" }}>{user?.displayName || "나"}</h2>
+                                <h2
+                                    style={{ margin: 0, fontSize: "18px", cursor: "pointer", textDecoration: "underline" }}
+                                    onClick={() => handlePlayerClick(myPlayer?.user_id)}
+                                >
+                                    {user?.displayName || "나"}
+                                </h2>
                                 <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
                                     내 목표 문서 제출
                                 </p>
@@ -450,7 +470,12 @@ export default function GroupRoomPage() {
                             {players.map((player) => (
                                 <div key={player.id} className="group-player-row">
                                     <div className="group-player-info">
-                                        <div className="room-player-avatar" style={{ width: 32, height: 32, fontSize: "14px" }}>
+                                        {/* 3. 플레이어 아바타 클릭 연동 */}
+                                        <div
+                                            className="room-player-avatar"
+                                            style={{ width: 32, height: 32, fontSize: "14px", cursor: "pointer" }}
+                                            onClick={() => handlePlayerClick(player.user_id)}
+                                        >
                                             {player.profile_image_snapshot ? (
                                                 <img
                                                     src={player.profile_image_snapshot}
@@ -462,7 +487,12 @@ export default function GroupRoomPage() {
                                             )}
                                         </div>
                                         <div className="group-player-name-block">
-                                            <div className="group-player-name">
+                                            {/* 3. 플레이어 이름 클릭 연동 */}
+                                            <div
+                                                className="group-player-name"
+                                                onClick={() => handlePlayerClick(player.user_id)}
+                                                style={{ cursor: "pointer", textDecoration: "underline" }}
+                                            >
                                                 {player.nickname_snapshot || "참가자"}
                                                 {player.role === "host" && <span className="host-badge">HOST</span>}
                                             </div>
@@ -499,6 +529,13 @@ export default function GroupRoomPage() {
                     </section>
                 </div>
             </div>
+
+            {/* 6. 모달 렌더링 */}
+            <UserProfileModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                userId={selectedUserId}
+            />
         </div>
     );
 }

@@ -179,3 +179,22 @@ export async function recordGroupMatchHistory(roomId) {
     console.error("그룹 모드 결과 저장 중 오류 발생:", error);
   }
 }
+/**
+ * 유저의 공개 프로필 정보(아이디, 닉네임, 프로필 이미지)를 가져옵니다.
+ * @param {string} userId
+ */
+export async function fetchPublicProfile(userId) {
+  if (!userId || userId.startsWith("guest-")) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("username, nickname, profile_image_url")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.error("fetchPublicProfile error:", error);
+    return null;
+  }
+  return data;
+}

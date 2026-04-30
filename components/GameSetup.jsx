@@ -37,6 +37,29 @@ export default function GameSetup({ onStart, isLoading }) {
             >
               직접 키워드 입력
             </button>
+            // components/GameSetup.jsx 내 폼 부분
+            {mode === "custom" && (
+              <div className="target-form" style={{ marginBottom: "15px" }}>
+                <input
+                  className="target-input"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="예: 배추, 인공지능, 축구"
+                  disabled={isLoading}
+                  required
+                />
+                {/* 💡 힌트 텍스트 추가 */}
+                <p style={{
+                  fontSize: "0.85rem",
+                  color: "rgba(255,255,255,0.6)",
+                  marginTop: "8px",
+                  textAlign: "left"
+                }}>
+                  💡 팁: '랜덤'을 입력하면 랜덤 키워드로 시작할 수 있어요!
+                </p>
+              </div>
+            )}
+
           </div>
 
           {mode === "custom" && (

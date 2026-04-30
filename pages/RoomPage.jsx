@@ -11,6 +11,7 @@ import {
 import { searchWikiTitleCandidates } from "../services/wikiService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
+import UserProfileModal from "../components/UserProfileModal";
 
 /**
  * 대전 대기실 페이지
@@ -41,6 +42,16 @@ export default function RoomPage() {
 
   // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
+
+  // 모달 상태
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handlePlayerClick = (userId) => {
+    if (!userId) return;
+    setSelectedUserId(userId);
+    setIsModalOpen(true);
+  };
 
   // ----------------------------
   // 초기 로드
@@ -436,13 +447,21 @@ export default function RoomPage() {
               {isHost ? "👑 HOST" : "⚔️ GUEST"}
             </div>
 
-            <div className="room-player-avatar">
+            <div
+              className="room-player-avatar"
+              onClick={() => handlePlayerClick(myPlayer?.user_id)}
+              style={{ cursor: "pointer" }}
+            >
               {(myPlayer?.nickname_snapshot || user?.displayName || "나")
                 .charAt(0)
                 .toUpperCase()}
             </div>
 
-            <div className="room-player-name">
+            <div
+              className="room-player-name"
+              onClick={() => handlePlayerClick(myPlayer?.user_id)}
+              style={{ cursor: "pointer", textDecoration: "underline" }}
+            >
               {myPlayer?.nickname_snapshot || user?.displayName || "나"}
             </div>
 
@@ -547,13 +566,21 @@ export default function RoomPage() {
                   {isHost ? "⚔️ GUEST" : "👑 HOST"}
                 </div>
 
-                <div className="room-player-avatar">
+                <div
+                  className="room-player-avatar"
+                  onClick={() => handlePlayerClick(opponentPlayer.user_id)}
+                  style={{ cursor: "pointer" }}
+                >
                   {(opponentPlayer.nickname_snapshot || "상대")
                     .charAt(0)
                     .toUpperCase()}
                 </div>
 
-                <div className="room-player-name">
+                <div
+                  className="room-player-name"
+                  onClick={() => handlePlayerClick(opponentPlayer.user_id)}
+                  style={{ cursor: "pointer", textDecoration: "underline" }}
+                >
                   {opponentPlayer.nickname_snapshot || "상대"}
                 </div>
 
@@ -600,6 +627,13 @@ export default function RoomPage() {
               호스트가 게임을 시작할 때까지 기다려주세요.
             </p>
           )}
+
+          {/* 모달 렌더링 */}
+          <UserProfileModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            userId={selectedUserId}
+          />
         </div>
       </div>
     </div>
