@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";
 import { formatDuration } from "../services/wikiService";
-import AdBanner from "./AdBanner";
 
 /**
  * 게임 성공 시 표시되는 오버레이 컴포넌트
@@ -129,10 +128,6 @@ export default function SuccessOverlay({
           <button style={primaryButtonStyle} onClick={onReturnToMain}>
             메인으로 이동
           </button>
-        </div>
-
-        <div style={adContainerStyle}>
-          <AdBanner />
         </div>
       </div>
     </div>
@@ -377,8 +372,4 @@ const secondaryButtonStyle = {
   fontSize: "15px",
   fontWeight: "600",
   cursor: "pointer",
-};
-
-const adContainerStyle = {
-  padding: "0 24px 24px",
 };

@@ -486,7 +486,7 @@ export default function MainPage() {
         )}
         {/* ⬇️ 메인 메뉴 하단 가장 아래쪽에 자연스럽게 광고 배치 */}
         <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
-          <AdBanner />
+          <AdBanner adSlot="3144203546" />
         </div>
       </div>
     </div>

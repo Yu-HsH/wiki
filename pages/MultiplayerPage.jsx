@@ -11,7 +11,6 @@ import {
   findGroupRoomByCode,
   joinGroupRoom,
 } from "../services/groupMultiplayerService";
-import AdBanner from "../components/AdBanner";
 
 export default function MultiplayerPage() {
   const navigate = useNavigate();
@@ -275,11 +274,6 @@ export default function MultiplayerPage() {
         {submitError && (
           <p className="mp-error">{submitError}</p>
         )}
-
-        {/* =========================
-           광고
-        ========================= */}
-        <AdBanner />
 
         {/* 플로팅 도움말 버튼 */}
         <button type="button" className="help-button floating" onClick={() => setShowHelp(true)} aria-label="게임 설명">

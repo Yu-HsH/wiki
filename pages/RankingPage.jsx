@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchRankings } from "../rankingService";
-import AdBanner from "../components/AdBanner";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 
 function formatDuration(totalSeconds) {
@@ -183,9 +182,6 @@ export default function RankingPage() {
           </div>
         )}
       </section>
-      <div style={{ marginTop: "2rem", width: "100%" }}>
-        <AdBanner />
-      </div>
 
       {/* 7. 모달 렌더링 (guest 로직 처리는 UserProfileModal 내부에서 수행됨) */}
       <UserProfileModal
