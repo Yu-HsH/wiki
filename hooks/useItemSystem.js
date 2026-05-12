@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { normalizeTitle } from "../services/wikiService";
 import { ITEM_DEFS } from "../data/items";
 import { SINGLE_ITEM_IDS, MULTI_ITEM_IDS } from "../data/itemPools";
-import {
-    addEffect,
-    buildTimedEffect,
-    canUseItem as canUseItemBase,
-    clearExpiredEffects,
-    markItemUsed,
-    removeEffect,
-} from "../utils/itemSystem";
+import { canUseItem as canUseItemBase } from "../utils/itemSystem";
 
 /**
  * 공통 아이템 시스템 훅
@@ -25,7 +17,6 @@ import {
 export default function useItemSystem({
     mode = "single",
     links = [],
-    targetTitle = "",
     onMove,
     onRandomTeleport,
 }) {
@@ -59,6 +50,7 @@ export default function useItemSystem({
     const [status, setStatus] = useState({
         blind: false,
         immuneUntil: 0,
+        translateCurrent: false,
     });
     useEffect(() => {
         return () => {
@@ -147,6 +139,11 @@ export default function useItemSystem({
             setSearchAvailable(false);
             setHighlightedLinks([]);
             setFloatingMessage("");
+            setStatus({
+                blind: false,
+                immuneUntil: 0,
+                translateCurrent: false,
+            });
         },
         [allowedIds, itemStorageKey]
     );
@@ -251,16 +248,9 @@ export default function useItemSystem({
                     break;
                 }
 
-                // 아래는 멀티용. 싱글에서는 인벤토리 풀에서 제외하는 것이 기본.
+                // 멀티 전용 공격 아이템은 이 훅에서 직접 네트워크 이벤트를 보내지 않는다.
                 case "blind": {
-                    await supabase.from("room_events").insert({
-                        room_id: roomId,
-                        user_id: myUserId,
-                        event_type: "blind",
-                        payload: {},
-                    });
-
-                    showMessage("상대에게 시야 방해!");
+                    showMessage("이 아이템은 멀티플레이에서만 사용할 수 있습니다.");
                     break;
                 }
 
@@ -291,7 +281,7 @@ export default function useItemSystem({
             onMove,
             onRandomTeleport,
             showMessage,
-            targetTitle,
+            status.immuneUntil,
         ]
     );
 
@@ -305,6 +295,7 @@ export default function useItemSystem({
         highlightedLinks,
         floatingMessage,
         highlightRequestId,
+        status,
 
 
         initializeItems,

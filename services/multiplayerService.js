@@ -29,7 +29,7 @@ async function fetchMyProfile(userId) {
 /**
  * 방 생성
  */
-export async function createRoom(userId) {
+export async function createRoom(userId, options = {}) {
     if (!isSupabaseConfigured || !supabase) {
         throw new Error("Supabase가 설정되지 않았습니다.");
     }
@@ -55,7 +55,7 @@ export async function createRoom(userId) {
             room_code: roomCode,
             host_user_id: userId,
             status: "waiting",
-            use_items: PushSubscriptionOptions.useItems ?? true,
+            use_items: options.useItems ?? true,
         })
         .select()
         .single();

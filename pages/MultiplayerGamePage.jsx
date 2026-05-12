@@ -357,12 +357,12 @@ export default function MultiplayerGamePage() {
       MULTI_ITEM_IDS.includes(item.id)
     );
 
-    const joker = pool.filter((item) => item.type === "joker");
+    const joker = pool.filter((item) => item.category === "joker");
     const rareOnly = pool.filter(
-      (item) => item.rarity === "rare" && item.type !== "joker"
+      (item) => item.rarity === "rare" && item.category !== "joker"
     );
     const normalOnly = pool.filter(
-      (item) => item.rarity !== "rare" && item.type !== "joker"
+      (item) => item.rarity !== "rare" && item.category !== "joker"
     );
 
     const pick = (arr, count) => {

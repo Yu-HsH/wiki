@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchUserStats, fetchRankings } from "../rankingService";
 import AdBanner from "../components/AdBanner";
@@ -488,6 +488,13 @@ export default function MainPage() {
         <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
           <AdBanner adSlot="3144203546" />
         </div>
+
+        <footer className="dashboard-footer-links">
+          <Link to="/about">서비스 소개</Link>
+          <Link to="/guide">플레이 가이드</Link>
+          <Link to="/privacy">개인정보처리방침</Link>
+          <Link to="/terms">이용약관</Link>
+        </footer>
       </div>
     </div>
   );

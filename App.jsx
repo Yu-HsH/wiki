@@ -15,6 +15,7 @@ import MultiplayerGamePage from "./pages/MultiplayerGamePage";
 import IntroPage from "./pages/IntroPage";
 import GroupRoomPage from "./pages/GroupRoomPage";
 import GroupGamePage from "./pages/GroupGamePage";
+import PublicContentPage from "./pages/PublicContentPage";
 /**
  * 로그인 여부에 따라 접근을 제어하는 래퍼 컴포넌트
  * - 세션 확인 중일 때는 로딩 표시
@@ -106,6 +107,11 @@ function AppRoutes() {
 
       {/* 기존 로그인 페이지도 유지 가능 */}
       <Route path="/login" element={<LoginRoute />} />
+
+      <Route path="/about" element={<PublicContentPage />} />
+      <Route path="/guide" element={<PublicContentPage />} />
+      <Route path="/privacy" element={<PublicContentPage />} />
+      <Route path="/terms" element={<PublicContentPage />} />
 
       <Route
         path="/main"

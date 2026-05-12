@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import LoginPage from "./LoginPage";
 
@@ -61,6 +61,12 @@ export default function IntroPage() {
                         로그인 / 회원가입
                     </button>
                 )}
+
+                <div className="intro-public-links">
+                    <Link to="/about">서비스 소개</Link>
+                    <Link to="/guide">플레이 가이드</Link>
+                    <Link to="/privacy">개인정보처리방침</Link>
+                </div>
             </div>
 
             {showLogin && (

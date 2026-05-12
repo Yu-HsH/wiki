@@ -23,7 +23,7 @@ import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import GroupPickOverlay from "../components/GroupPickOverlay";
 
-import { fetchAllProfileStats, recordGroupMatchHistory } from "../services/profileStatsService";
+import { recordGroupMatchHistory } from "../services/profileStatsService";
 const GROUP_PHASE = {
     LOADING: "LOADING",
     PICKING: "PICKING",
@@ -165,7 +165,7 @@ export default function GroupGamePage() {
                 const me = playerData.find((player) => player.user_id === user.id);
 
                 const restoreTitle =
-                    saved?.currentTitle || myPlayer?.current_title || roomData.group_start_title;
+                    saved?.currentTitle || me?.current_title || roomData.group_start_title;
 
                 const restorePage = await fetchPageData(restoreTitle);
 
@@ -175,7 +175,7 @@ export default function GroupGamePage() {
                 setCurrentDocumentHtml(restorePage.documentHtml);
                 setLinks(restorePage.links);
                 setPathTitles(saved?.pathTitles || [restorePage.title]);
-                setClickCount(saved?.clickCount || myPlayer?.move_count || 0);
+                setClickCount(saved?.clickCount ?? me?.move_count ?? 0);
                 setElapsedSeconds(saved?.elapsedSeconds || 0);
 
                 setTarget({
@@ -185,8 +185,6 @@ export default function GroupGamePage() {
                     mode: "group",
                 });
 
-                setElapsedSeconds(0);
-                setClickCount(0);
                 finishedRef.current = false;
 
                 if (roomData.status === "finished") {
@@ -194,8 +192,6 @@ export default function GroupGamePage() {
                     setResults(latestResults);
                     setPhase(GROUP_PHASE.FINISHED);
                 } else {
-                    const saved = loadLocalGameState();
-
                     if (saved?.currentTitle) {
                         setPhase(GROUP_PHASE.PLAYING);
                     } else {

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 
 /* ── Zod 유효성 검사 스키마 ── */
@@ -274,6 +274,13 @@ export default function LoginPage({ isEmbedded = false }) {
             >
               게스트로 로그인
             </button>
+
+            <div className="auth-public-links">
+              <Link to="/about">서비스 소개</Link>
+              <Link to="/guide">플레이 가이드</Link>
+              <Link to="/privacy">개인정보처리방침</Link>
+              <Link to="/terms">이용약관</Link>
+            </div>
           </form>
         </div>
       </div>
