@@ -5,6 +5,8 @@ import { fetchUserStats, fetchRankings } from "../rankingService";
 import AdBanner from "../components/AdBanner";
 import { searchWikiTitleCandidates } from "../services/wikiService";
 import { fetchAllProfileStats } from "../services/profileStatsService";
+import { fetchTodayDailyChallenge, getFallbackDailyChallenge } from "../services/dailyChallengeService";
+import { trackEvent } from "../services/analyticsService";
 
 /**
  * 메인 대시보드 페이지 컴포넌트
@@ -67,7 +69,7 @@ export default function MainPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [dailyChallenge] = useState(getDailyChallenge);
+  const [dailyChallenge, setDailyChallenge] = useState(getFallbackDailyChallenge);
 
   // ⬇️ 검색 실행 핸들러 수정
   const handleSearchKeyword = async () => {
@@ -124,6 +126,45 @@ export default function MainPage() {
     load();
     return () => { cancelled = true; };
   }, [user.id]);
+
+  useEffect(() => {
+    try {
+      const today = new Intl.DateTimeFormat("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      const visitKey = `wiki-race-daily-visit-${today}`;
+
+      if (localStorage.getItem(visitKey)) return;
+
+      localStorage.setItem(visitKey, "1");
+
+      trackEvent("daily_visit", {
+        user,
+        mode: "main",
+        metadata: {
+          userAgent: navigator.userAgent,
+        },
+      });
+    } catch (error) {
+      console.warn("Daily visit analytics failed:", error);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDailyChallenge = async () => {
+      const challenge = await fetchTodayDailyChallenge();
+      if (!cancelled) {
+        setDailyChallenge(challenge);
+      }
+    };
+
+    loadDailyChallenge();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const order = ["today", "weekly", "all"];
@@ -309,7 +350,14 @@ export default function MainPage() {
           <button
             type="button"
             className="app-btn app-btn-primary daily-btn"
-            onClick={() => navigate("/game", { state: { mode: "custom", keyword: dailyChallenge.keyword, targetTitle: dailyChallenge.keyword } })}
+            onClick={() => navigate("/game", {
+              state: {
+                mode: "custom",
+                keyword: dailyChallenge.keyword,
+                targetTitle: dailyChallenge.keyword,
+                startTitle: dailyChallenge.startTitle || undefined,
+              },
+            })}
           >
             ★ 오늘의 도전에 참여하기
           </button>

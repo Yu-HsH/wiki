@@ -15,6 +15,8 @@ import WikiViewer from "../components/WikiViewer";
 import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import { supabase } from "../supabaseClient";
+import { useAuth } from "../authContext";
+import { trackEvent } from "../services/analyticsService";
 
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
@@ -51,6 +53,7 @@ const PHASE = {
 export default function GamePage({ onGameComplete, onReturnMain }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,6 +83,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const startTimeRef = useRef(null);
   const autoStarted = useRef(false);
   const restoredFromStorageRef = useRef(false);
+  const playStartTrackedRef = useRef(false);
 
   const storageKey = "wiki-single-game-state";
 
@@ -110,8 +114,17 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   }, []);
 
   const handleCountdownComplete = useCallback(() => {
+    if (!playStartTrackedRef.current) {
+      playStartTrackedRef.current = true;
+      trackEvent("play_start", {
+        user,
+        mode: "single",
+        targetTitle: target.title,
+      });
+    }
+
     setPhase(PHASE.PLAYING);
-  }, []);
+  }, [target.title, user]);
 
   const useItems = location.state?.useItems ?? true;
 
@@ -273,11 +286,11 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       setError("");
 
       try {
-        let start = await fetchRandomTitle();
+        const state = location.state || {};
+        let start = state.startTitle ? state.startTitle : await fetchRandomTitle();
         let targetTitle = "";
 
         if (mode === "custom") {
-          const state = location.state || {};
           targetTitle = state.targetTitle;
 
           if (!targetTitle) {
@@ -375,6 +388,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     if (saved?.currentTitle && saved?.target?.title) {
       autoStarted.current = true;
       restoredFromStorageRef.current = true;
+      playStartTrackedRef.current = true;
 
       const restoreGame = async () => {
         try {

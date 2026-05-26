@@ -24,6 +24,7 @@ import ScrollToTopButton from "../components/ScrollToTopButton";
 import GroupPickOverlay from "../components/GroupPickOverlay";
 
 import { recordGroupMatchHistory } from "../services/profileStatsService";
+import { trackEvent } from "../services/analyticsService";
 const GROUP_PHASE = {
     LOADING: "LOADING",
     PICKING: "PICKING",
@@ -65,6 +66,7 @@ export default function GroupGamePage() {
     const startTimeRef = useRef(null);
     const finishedRef = useRef(false);
     const hasRecordedRef = useRef(false);
+    const playStartTrackedRef = useRef(false);
 
     const storageKey = user?.id && roomId
         ? `wiki-group-game-state:${roomId}:${user.id}`
@@ -162,6 +164,9 @@ export default function GroupGamePage() {
                 }
 
                 const saved = loadLocalGameState();
+                if (saved?.currentTitle) {
+                    playStartTrackedRef.current = true;
+                }
                 const me = playerData.find((player) => player.user_id === user.id);
 
                 const restoreTitle =
@@ -255,6 +260,16 @@ export default function GroupGamePage() {
     useEffect(() => {
         if (phase === GROUP_PHASE.PLAYING) {
             startTimeRef.current = Date.now() - elapsedSeconds * 1000;
+
+            if (!playStartTrackedRef.current) {
+                playStartTrackedRef.current = true;
+                trackEvent("play_start", {
+                    user,
+                    mode: "group",
+                    roomId,
+                    targetTitle: target.title,
+                });
+            }
 
             timerRef.current = setInterval(() => {
                 setElapsedSeconds(

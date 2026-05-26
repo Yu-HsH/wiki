@@ -17,6 +17,7 @@ import {
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
+import { trackEvent } from "../services/analyticsService";
 
 import CountdownOverlay from "../components/CountdownOverlay";
 import ScrollToTopButton from "../components/ScrollToTopButton";
@@ -60,6 +61,7 @@ export default function MultiplayerGamePage() {
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startedAtRef = useRef(null);
+  const playStartTrackedRef = useRef(false);
 
   const myPlayer = useMemo(
     () => players.find((p) => p.user_id === user?.id),
@@ -246,6 +248,9 @@ export default function MultiplayerGamePage() {
         setError("");
 
         const saved = loadLocalGameState();
+        if (saved?.currentTitle) {
+          playStartTrackedRef.current = true;
+        }
 
         const roomData = await fetchRoom(roomId);
         const playerData = await fetchRoomPlayers(roomId);
@@ -941,6 +946,16 @@ export default function MultiplayerGamePage() {
 
     if (!startedAtRef.current) {
       startedAtRef.current = Date.now();
+    }
+
+    if (!playStartTrackedRef.current) {
+      playStartTrackedRef.current = true;
+      trackEvent("play_start", {
+        user,
+        mode: "1v1",
+        roomId,
+        targetTitle: myTargetTitle,
+      });
     }
 
     const interval = setInterval(() => {
