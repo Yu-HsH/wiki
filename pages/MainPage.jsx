@@ -355,7 +355,6 @@ export default function MainPage() {
                 mode: "custom",
                 keyword: dailyChallenge.keyword,
                 targetTitle: dailyChallenge.keyword,
-                startTitle: dailyChallenge.startTitle || undefined,
               },
             })}
           >

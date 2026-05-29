@@ -88,24 +88,24 @@ security definer
 set search_path = public
 as $$
 declare
-  today_kst date := (now() at time zone 'Asia/Seoul')::date;
-  active_count integer;
-  picked public.daily_challenge_pool%rowtype;
+  v_today_kst date := (now() at time zone 'Asia/Seoul')::date;
+  v_active_count integer;
+  v_picked public.daily_challenge_pool%rowtype;
 begin
-  select count(*) into active_count
+  select count(*)
+  into v_active_count
   from public.daily_challenge_pool
   where is_active = true;
 
-  if active_count = 0 then
+  if v_active_count = 0 then
     raise exception 'No active daily challenge candidates';
   end if;
 
   select *
-    into picked
+    into v_picked
   from public.daily_challenge_pool
   where is_active = true
-  order by sort_order
-  offset (to_char(today_kst, 'YYYYMMDD')::integer % active_count)
+  order by random()
   limit 1;
 
   insert into public.daily_challenges (
@@ -114,13 +114,16 @@ begin
     target_title,
     hint
   )
-  values (
-    today_kst,
-    picked.start_title,
-    picked.target_title,
-    picked.hint
-  )
-  on conflict (challenge_date) do nothing;
+  select
+    v_today_kst,
+    v_picked.start_title,
+    v_picked.target_title,
+    v_picked.hint
+  where not exists (
+    select 1
+    from public.daily_challenges dc
+    where dc.challenge_date = v_today_kst
+  );
 
   return query
   select
@@ -129,7 +132,7 @@ begin
     dc.target_title,
     dc.hint
   from public.daily_challenges dc
-  where dc.challenge_date = today_kst;
+  where dc.challenge_date = v_today_kst;
 end;
 $$;
 

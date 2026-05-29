@@ -286,11 +286,11 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       setError("");
 
       try {
-        const state = location.state || {};
-        let start = state.startTitle ? state.startTitle : await fetchRandomTitle();
+        let start = await fetchRandomTitle();
         let targetTitle = "";
 
         if (mode === "custom") {
+          const state = location.state || {};
           targetTitle = state.targetTitle;
 
           if (!targetTitle) {
