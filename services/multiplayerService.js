@@ -1,4 +1,9 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
+import {
+    fatalSessionError,
+    isProgressAlreadyApplied,
+    recoverableSessionError,
+} from "../utils/onlineGameSession";
 
 /**
  * 방 코드 생성
@@ -132,6 +137,18 @@ export async function joinRoom(roomId, userId) {
         has_finished: false,
     });
 
+    if (error?.code === "23505") {
+        const { data: joinedPlayer, error: joinedError } = await supabase
+            .from("room_players")
+            .select("*")
+            .eq("room_id", roomId)
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (joinedError) throw joinedError;
+        if (joinedPlayer) return joinedPlayer;
+    }
+
     if (error) throw error;
 
     return await fetchRoom(roomId);
@@ -159,9 +176,15 @@ export async function fetchRoom(roomId) {
         .from("game_rooms")
         .select("*")
         .eq("id", roomId)
-        .single();
+        .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+        throw fatalSessionError(
+            "ROOM_NOT_FOUND",
+            "게임 방이 삭제되었거나 더 이상 접근할 수 없습니다."
+        );
+    }
     return data;
 }
 
@@ -237,22 +260,33 @@ export async function startRoomGame(roomId, userId) {
     if (error) throw error;
     return data;
 }
-export async function updateGameRoomStatus(roomId, updates) {
+export async function updateGameRoomStatus(roomId, updates, options = {}) {
     if (!isSupabaseConfigured || !supabase) {
         throw new Error("Supabase가 설정되지 않았습니다.");
     }
 
-    const { data, error } = await supabase
+    let query = supabase
         .from("game_rooms")
         .update(updates)
-        .eq("id", roomId)
+        .eq("id", roomId);
+
+    if (options.expectedStatus) {
+        query = query.eq("status", options.expectedStatus);
+    }
+
+    const { data, error } = await query
         .select()
         .maybeSingle();
 
     if (error) throw error;
 
     if (!data) {
-        throw new Error("game_rooms 업데이트 결과가 없습니다. RLS policy를 확인하세요.");
+        const latest = await fetchRoom(roomId);
+        if (updates.status && latest.status === updates.status) return latest;
+        throw recoverableSessionError(
+            "ROOM_STATUS_CONFLICT",
+            "게임 상태가 변경되어 서버 상태를 다시 확인해야 합니다."
+        );
     }
 
     return data;
@@ -273,6 +307,90 @@ export async function updateMyGameProgress(roomId, userId, updates) {
 
     if (error) throw error;
     return data;
+}
+
+export async function initializeMyGameProgress(roomId, userId, startTitle) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const { data, error } = await supabase
+        .from("room_players")
+        .update({
+            start_title: startTitle,
+            current_title: startTitle,
+            move_count: 0,
+            path_titles: [startTitle],
+        })
+        .eq("room_id", roomId)
+        .eq("user_id", userId)
+        .is("start_title", null)
+        .is("current_title", null)
+        .select("*")
+        .maybeSingle();
+
+    if (error) throw error;
+    if (data) return data;
+
+    const players = await fetchRoomPlayers(roomId);
+    const latest = players.find((player) => player.user_id === userId);
+    if (latest?.start_title && latest?.current_title) return latest;
+
+    throw fatalSessionError(
+        "MISSING_PROGRESS",
+        "서버에 시작 문서를 설정하지 못했습니다."
+    );
+}
+
+export async function advanceMyGameProgress(roomId, userId, updates) {
+    if (!isSupabaseConfigured || !supabase) {
+        throw new Error("Supabase가 설정되지 않았습니다.");
+    }
+
+    const {
+        currentTitle,
+        moveCount,
+        pathTitles,
+        expectedMoveCount,
+        hasFinished = false,
+        finishedAt = null,
+    } = updates;
+
+    let query = supabase
+        .from("room_players")
+        .update({
+            current_title: currentTitle,
+            move_count: moveCount,
+            path_titles: pathTitles || [],
+            has_finished: hasFinished,
+            finished_at: finishedAt,
+        })
+        .eq("room_id", roomId)
+        .eq("user_id", userId)
+        .eq("has_finished", false);
+
+    if (Number.isInteger(expectedMoveCount)) {
+        query = query.eq("move_count", expectedMoveCount);
+    }
+
+    const { data, error } = await query.select("*").maybeSingle();
+    if (error) throw error;
+    if (data) return { ...data, __alreadyApplied: false };
+
+    const players = await fetchRoomPlayers(roomId);
+    const latest = players.find((player) => player.user_id === userId);
+    const alreadyApplied = isProgressAlreadyApplied(latest, {
+        currentTitle,
+        moveCount,
+        hasFinished,
+    });
+
+    if (alreadyApplied) return { ...latest, __alreadyApplied: true };
+
+    throw recoverableSessionError(
+        "PROGRESS_CONFLICT",
+        "다른 탭에서 진행 상태가 변경되어 서버 상태를 다시 확인해야 합니다."
+    );
 }
 
 export async function createMatchHistory(payload) {
@@ -315,11 +433,14 @@ export async function saveMatchHistory({
 
     try {
         // 2. 중복 저장 방지 (이미 해당 방의 기록이 있는지 확인)
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
             .from("match_history")
             .select("id")
             .eq("room_id", roomId)
+            .limit(1)
             .maybeSingle();
+
+        if (existingError) throw existingError;
 
         if (existing) {
             console.log("이미 저장된 대전 기록입니다.");
@@ -339,6 +460,10 @@ export async function saveMatchHistory({
             created_at: new Date().toISOString()
         });
 
+        if (error?.code === "23505") {
+            console.log("다른 요청에서 이미 저장한 대전 기록입니다.");
+            return;
+        }
         if (error) throw error;
         console.log("대전 기록 저장 성공");
     } catch (err) {

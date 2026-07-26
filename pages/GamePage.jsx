@@ -17,6 +17,7 @@ import ScrollToTopButton from "../components/ScrollToTopButton";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 import { trackEvent } from "../services/analyticsService";
+import { createLatestRequestManager, isAbortError } from "../utils/latestRequest";
 
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
@@ -75,6 +76,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const [currentSummary, setCurrentSummary] = useState("");
   const [currentDocumentHtml, setCurrentDocumentHtml] = useState("");
   const [links, setLinks] = useState([]);
+  const [quickLinks, setQuickLinks] = useState([]);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [clickCount, setClickCount] = useState(0);
@@ -84,6 +86,8 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const autoStarted = useRef(false);
   const restoredFromStorageRef = useRef(false);
   const playStartTrackedRef = useRef(false);
+  const moveInFlightRef = useRef(false);
+  const pageRequestManagerRef = useRef(createLatestRequestManager());
 
   const storageKey = "wiki-single-game-state";
 
@@ -177,6 +181,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   );
 
   const handleGiveUp = useCallback(() => {
+    pageRequestManagerRef.current.cancel();
     clearSingleGameState();
     if (onReturnMain) {
       onReturnMain();
@@ -188,8 +193,10 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   // ----------------------------
   const handleMove = useCallback(
     async (nextTitle) => {
-      if (phase !== PHASE.PLAYING || isLoading) return;
+      if (phase !== PHASE.PLAYING || isLoading || moveInFlightRef.current) return;
 
+      moveInFlightRef.current = true;
+      const request = pageRequestManagerRef.current.begin();
       const previousTitle = currentTitle;
       setClickCount((prev) => prev + 1);
       setIsLoading(true);
@@ -197,12 +204,14 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       setError("");
 
       try {
-        const page = await fetchPageData(nextTitle);
+        const page = await fetchPageData(nextTitle, { signal: request.signal });
+        if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
         setCurrentTitle(page.title);
         setCurrentSummary(page.summary);
         setCurrentDocumentHtml(page.documentHtml);
         setLinks(page.links);
+        setQuickLinks(page.quickLinks);
 
         const newPath = [...pathTitles, page.title];
         setPathTitles(newPath);
@@ -232,10 +241,16 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           );
         }
       } catch (e) {
-        setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
+        if (!isAbortError(e) && pageRequestManagerRef.current.isCurrent(request.id)) {
+          setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
+        }
       } finally {
-        setIsLoading(false);
-        setIsPageLoading(false);
+        moveInFlightRef.current = false;
+        if (pageRequestManagerRef.current.isCurrent(request.id)) {
+          setIsLoading(false);
+          setIsPageLoading(false);
+          pageRequestManagerRef.current.complete(request.id);
+        }
       }
     },
     [
@@ -282,6 +297,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   // ----------------------------
   const handleSetupComplete = useCallback(
     async ({ mode, keyword }) => {
+      const request = pageRequestManagerRef.current.begin();
       setIsLoading(true);
       setError("");
 
@@ -322,9 +338,10 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         }
 
         const [targetSummaryData, startPage] = await Promise.all([
-          fetchSummary(targetTitle),
-          fetchPageData(start),
+          fetchSummary(targetTitle, { signal: request.signal }),
+          fetchPageData(start, { signal: request.signal }),
         ]);
+        if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
         setStartTitle(startPage.title);
         setTarget({
@@ -338,6 +355,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         setCurrentSummary(startPage.summary);
         setCurrentDocumentHtml(startPage.documentHtml);
         setLinks(startPage.links);
+        setQuickLinks(startPage.quickLinks);
 
         saveLocalGameState({
           phase: PHASE.COUNTDOWN,
@@ -360,16 +378,20 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         const newPath = [startPage.title];
         setPathTitles(newPath);
 
-        setIsLoading(false);
-
         if (checkWin(startPage.title, targetSummaryData.title)) {
           handleWin(startPage.title, targetSummaryData.title, 0, 0, newPath);
         } else {
           setPhase(PHASE.COUNTDOWN);
         }
       } catch (e) {
-        setError(e.message || "게임을 준비하는 중 오류가 발생했습니다.");
-        setIsLoading(false);
+        if (!isAbortError(e) && pageRequestManagerRef.current.isCurrent(request.id)) {
+          setError(e.message || "게임을 준비하는 중 오류가 발생했습니다.");
+        }
+      } finally {
+        if (pageRequestManagerRef.current.isCurrent(request.id)) {
+          setIsLoading(false);
+          pageRequestManagerRef.current.complete(request.id);
+        }
       }
     },
     [checkWin, handleWin, location.state, saveLocalGameState]
@@ -391,11 +413,13 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       playStartTrackedRef.current = true;
 
       const restoreGame = async () => {
+        const request = pageRequestManagerRef.current.begin();
         try {
           setIsLoading(true);
           setError("");
           localStorage.removeItem("wiki-single-items");
-          const page = await fetchPageData(saved.currentTitle);
+          const page = await fetchPageData(saved.currentTitle, { signal: request.signal });
+          if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
           setTarget(saved.target);
           setStartTitle(saved.startTitle || "");
@@ -403,17 +427,22 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           setCurrentSummary(page.summary);
           setCurrentDocumentHtml(page.documentHtml);
           setLinks(page.links);
+          setQuickLinks(page.quickLinks);
           setPathTitles(saved.pathTitles || [page.title]);
           setClickCount(saved.clickCount || 0);
           setElapsedSeconds(saved.elapsedSeconds || 0);
           // 복구 시에는 카운트다운 없이 바로 진행
           setPhase(PHASE.PLAYING);
         } catch (e) {
+          if (isAbortError(e) || !pageRequestManagerRef.current.isCurrent(request.id)) return;
           console.error("싱글 게임 복구 실패:", e);
           localStorage.removeItem(storageKey);
           navigate("/main", { replace: true });
         } finally {
-          setIsLoading(false);
+          if (pageRequestManagerRef.current.isCurrent(request.id)) {
+            setIsLoading(false);
+            pageRequestManagerRef.current.complete(request.id);
+          }
         }
       };
       restoreGame();
@@ -483,6 +512,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             currentSummary={currentSummary}
             currentDocumentHtml={currentDocumentHtml}
             links={links}
+            quickLinks={quickLinks}
             isLoading={isLoading}
             elapsedSeconds={elapsedSeconds}
             clickCount={clickCount}

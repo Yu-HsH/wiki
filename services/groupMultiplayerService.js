@@ -1,4 +1,9 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
+import {
+    fatalSessionError,
+    isProgressAlreadyApplied,
+    recoverableSessionError,
+} from "../utils/onlineGameSession";
 
 function assertSupabase() {
     if (!isSupabaseConfigured || !supabase) {
@@ -117,7 +122,10 @@ export async function findGroupRoomByCode(roomCode) {
     if (error) throw error;
 
     if (!data) {
-        throw new Error("단체모드 방을 찾을 수 없습니다.");
+        throw fatalSessionError(
+            "ROOM_NOT_FOUND",
+            "단체모드 방이 삭제되었거나 더 이상 접근할 수 없습니다."
+        );
     }
 
     return data;
@@ -139,7 +147,10 @@ export async function fetchGroupRoom(roomId) {
     if (error) throw error;
 
     if (!data) {
-        throw new Error("단체모드 방을 찾을 수 없습니다.");
+        throw fatalSessionError(
+            "ROOM_NOT_FOUND",
+            "단체모드 방이 삭제되었거나 더 이상 접근할 수 없습니다."
+        );
     }
 
     return data;
@@ -206,6 +217,18 @@ export async function joinGroupRoom(roomId, userId) {
         has_finished: false,
         path_titles: [],
     });
+
+    if (error?.code === "23505") {
+        const { data: joinedPlayer, error: joinedError } = await supabase
+            .from("room_players")
+            .select("*")
+            .eq("room_id", roomId)
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (joinedError) throw joinedError;
+        if (joinedPlayer) return joinedPlayer;
+    }
 
     if (error) throw error;
 
@@ -332,9 +355,9 @@ export async function startGroupRoomGame(roomId) {
 export async function updateGroupPlayerProgress(roomId, userId, updates) {
     assertSupabase();
 
-    const { currentTitle, moveCount, pathTitles } = updates;
+    const { currentTitle, moveCount, pathTitles, expectedMoveCount } = updates;
 
-    const { data, error } = await supabase
+    let query = supabase
         .from("room_players")
         .update({
             current_title: currentTitle,
@@ -345,10 +368,41 @@ export async function updateGroupPlayerProgress(roomId, userId, updates) {
         })
         .eq("room_id", roomId)
         .eq("user_id", userId)
+        .eq("has_finished", false);
+
+    if (Number.isInteger(expectedMoveCount)) {
+        query = query.eq("move_count", expectedMoveCount);
+    }
+
+    const { data, error } = await query
         .select("*")
-        .single();
+        .maybeSingle();
 
     if (error) throw error;
+
+    if (!data) {
+        const { data: latest, error: latestError } = await supabase
+            .from("room_players")
+            .select("*")
+            .eq("room_id", roomId)
+            .eq("user_id", userId)
+            .maybeSingle();
+
+        if (latestError) throw latestError;
+
+        const alreadyApplied = isProgressAlreadyApplied(latest, {
+            currentTitle,
+            moveCount,
+            hasFinished: false,
+        });
+
+        if (alreadyApplied) return latest;
+
+        throw recoverableSessionError(
+            "PROGRESS_CONFLICT",
+            "다른 탭에서 진행 상태가 변경되어 서버 상태를 다시 확인해야 합니다."
+        );
+    }
 
     return data;
 }

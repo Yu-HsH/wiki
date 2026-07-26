@@ -1,19 +1,41 @@
+import {
+  createAllowedTitleMap,
+  dedupeLinkItems,
+  dedupeTitles,
+  extractTitleFromWikiHref,
+  isSpecialTitle,
+  isValidInternalLink,
+  normalizeRequestedTitle,
+  normalizeTitle,
+  selectAllowedLinkTitlesFromHtml,
+  selectDeterministicQuickLinks,
+} from "./wikiLinkPolicy.js";
+
+export {
+  dedupeTitles,
+  extractTitleFromWikiHref,
+  isSpecialTitle,
+  isValidInternalLink,
+  normalizeRequestedTitle,
+  normalizeTitle,
+  selectDeterministicQuickLinks,
+} from "./wikiLinkPolicy.js";
+
 const WIKI_API = "https://ko.wikipedia.org/w/api.php";
 const SUMMARY_API = "https://ko.wikipedia.org/api/rest_v1/page/summary";
 
-const BLOCKED_PREFIXES = [
-  "분류:", "파일:", "틀:", "위키백과:", "도움말:", "포털:", "특수:", "토론:", "사용자:", "모듈:", "미디어위키:",
-  "Category:", "File:", "Template:", "Wikipedia:", "Help:", "Portal:", "Special:", "Talk:", "User:", "Module:"
+export const SANITIZER_BLOCKED_SELECTORS = [
+  "style", "script", "iframe", "object", "embed", "form", "audio", "video", "math",
+  "sup.reference", ".reflist", ".mw-editsection", ".toc"
 ];
 
-const BLOCKED_CONTENT_SELECTORS = [
-  "style", "script", "table", "figure", "img", "audio", "video", "math",
-  "sup.reference", ".reflist", ".mw-editsection", ".infobox", ".navbox", ".toc", ".thumb", ".metadata", ".hatnote"
-];
-
-const ALLOWED_ARTICLE_TAGS = new Set([
-  "P", "H2", "H3", "H4", "UL", "OL", "LI", "B", "STRONG", "I", "EM", "SMALL", "BLOCKQUOTE", "CODE", "PRE", "BR", "SUP", "SUB"
+export const SANITIZER_ALLOWED_TAGS = new Set([
+  "DIV", "SPAN", "SECTION", "P", "H2", "H3", "H4", "UL", "OL", "LI", "B", "STRONG", "I", "EM", "SMALL",
+  "BLOCKQUOTE", "CODE", "PRE", "BR", "SUP", "SUB", "TABLE", "THEAD", "TBODY", "TFOOT", "TR", "TH", "TD", "CAPTION",
+  "DL", "DT", "DD", "FIGURE", "FIGCAPTION", "IMG"
 ]);
+
+const MAX_LINK_API_PAGES = 100;
 /**
  * AI 기반 랜덤 타겟 문서를 가져옵니다.
  * @param {string} difficulty - 난이도 (easy, medium, hard)
@@ -29,10 +51,6 @@ export async function fetchAiSelectedTarget(difficulty = "easy") {
 
   const randomIndex = Math.floor(Math.random() * data.length);
   return data[randomIndex].title;
-}
-
-export function normalizeTitle(title = "") {
-  return decodeURIComponent(title).replace(/_/g, " ").trim().toLowerCase();
 }
 
 export function formatDuration(totalSeconds) {
@@ -56,54 +74,44 @@ export function trimDescription(text, maxLength = 260) {
   return `${text.slice(0, maxLength).trim()}...`;
 }
 
-export function isSpecialTitle(title) {
-  const trimmed = title.trim();
-  if (BLOCKED_PREFIXES.some((prefix) => trimmed.startsWith(prefix))) return true;
-  return /^[^\s:]{1,40}:/.test(trimmed);
-}
-
-export function isValidInternalLink(link) {
-  if (!link || typeof link.title !== "string") return false;
-  const title = link.title.trim();
-  if (title.replace(/\s/g, "").length < 2) return false;
-  if (typeof link.ns === "number" && link.ns !== 0) return false;
-  if (isSpecialTitle(title)) return false;
-  return true;
-}
-
-export function dedupeTitles(titles) {
-  const uniqueMap = new Map();
-  titles.forEach((title) => {
-    const key = normalizeTitle(title);
-    if (!uniqueMap.has(key)) uniqueMap.set(key, title);
-  });
-  return Array.from(uniqueMap.values());
-}
-
 export function buildWikiQueryUrl(params) {
   const search = new URLSearchParams({ ...params, origin: "*" });
   return `${WIKI_API}?${search.toString()}`;
 }
 
-export function extractTitleFromWikiHref(href = "") {
-  if (!href.startsWith("/wiki/")) return null;
-  const raw = href.slice("/wiki/".length).split("#")[0];
-  if (!raw) return null;
-  const title = decodeURIComponent(raw).replace(/_/g, " ").trim();
-  if (!title) return null;
-  if (isSpecialTitle(title)) return null;
-  if (title.replace(/\s/g, "").length < 2) return null;
-  return title;
+export function getSafeWikiImageSource(source = "") {
+  try {
+    const url = new URL(source, "https://ko.wikipedia.org");
+    if (url.protocol !== "https:" || url.hostname !== "upload.wikimedia.org") return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
-export function sanitizeWikiDocumentHtml(rawHtml) {
-  if (!rawHtml) return "<p>문서 내용을 불러오지 못했습니다.</p>";
-  if (typeof DOMParser === "undefined") return "<p>문서 미리보기를 표시할 수 없습니다.</p>";
+export function sanitizeWikiDocument(rawHtml, { currentTitle = "", apiLinks = [] } = {}) {
+  if (!rawHtml) {
+    return {
+      html: "<p>문서 내용을 불러오지 못했습니다.</p>",
+      linkTitles: [],
+      rawAnchorCount: 0,
+    };
+  }
+  if (typeof DOMParser === "undefined") {
+    return {
+      html: "<p>문서 미리보기를 표시할 수 없습니다.</p>",
+      linkTitles: selectAllowedLinkTitlesFromHtml(rawHtml, apiLinks, currentTitle),
+      rawAnchorCount: (rawHtml.match(/<a\b/gi) || []).length,
+    };
+  }
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawHtml, "text/html");
   const sourceRoot = doc.querySelector(".mw-parser-output") || doc.body;
-  sourceRoot.querySelectorAll(BLOCKED_CONTENT_SELECTORS.join(",")).forEach((node) => node.remove());
+  const rawAnchorCount = sourceRoot.querySelectorAll("a").length;
+  sourceRoot.querySelectorAll(SANITIZER_BLOCKED_SELECTORS.join(",")).forEach((node) => node.remove());
+  const allowedTitles = createAllowedTitleMap(apiLinks);
+  const discoveredTitles = [];
 
   const sanitizeNode = (node) => {
     if (node.nodeType === 3) return doc.createTextNode(node.textContent || "");
@@ -112,9 +120,37 @@ export function sanitizeWikiDocumentHtml(rawHtml) {
     const element = node;
     const tagName = element.tagName.toUpperCase();
 
+    if (tagName === "IMG") {
+      const source = getSafeWikiImageSource(element.getAttribute("src") || "");
+      if (!source) return null;
+
+      const image = doc.createElement("img");
+      image.setAttribute("src", source);
+      image.setAttribute("alt", element.getAttribute("alt") || "");
+      image.setAttribute("loading", "lazy");
+      image.setAttribute("decoding", "async");
+      for (const attribute of ["width", "height"]) {
+        const value = element.getAttribute(attribute);
+        if (/^\d{1,5}$/.test(value || "")) image.setAttribute(attribute, value);
+      }
+      return image;
+    }
+
     if (tagName === "A") {
-      const wikiTitle = extractTitleFromWikiHref(element.getAttribute("href") || "");
-      if (!wikiTitle) return doc.createTextNode(element.textContent || "");
+      const unwrapChildren = () => {
+        const fragment = doc.createDocumentFragment();
+        Array.from(element.childNodes).forEach((child) => {
+          const safeChild = sanitizeNode(child);
+          if (safeChild) fragment.appendChild(safeChild);
+        });
+        return fragment;
+      };
+
+      if (element.classList.contains("new")) return unwrapChildren();
+      const candidate = extractTitleFromWikiHref(element.getAttribute("href") || "", currentTitle);
+      const wikiTitle = candidate ? allowedTitles.get(normalizeTitle(candidate)) : null;
+      if (!wikiTitle) return unwrapChildren();
+      discoveredTitles.push(wikiTitle);
 
       const anchor = doc.createElement("a");
       anchor.setAttribute("href", "#");
@@ -133,7 +169,7 @@ export function sanitizeWikiDocumentHtml(rawHtml) {
       return anchor;
     }
 
-    if (!ALLOWED_ARTICLE_TAGS.has(tagName)) {
+    if (!SANITIZER_ALLOWED_TAGS.has(tagName)) {
       const fragment = doc.createDocumentFragment();
       Array.from(element.childNodes).forEach((child) => {
         const safeChild = sanitizeNode(child);
@@ -143,6 +179,12 @@ export function sanitizeWikiDocumentHtml(rawHtml) {
     }
 
     const cleanElement = doc.createElement(tagName.toLowerCase());
+    if (tagName === "TD" || tagName === "TH") {
+      for (const attribute of ["colspan", "rowspan"]) {
+        const value = element.getAttribute(attribute);
+        if (/^\d{1,2}$/.test(value || "")) cleanElement.setAttribute(attribute, value);
+      }
+    }
     Array.from(element.childNodes).forEach((child) => {
       const safeChild = sanitizeNode(child);
       if (safeChild) cleanElement.appendChild(safeChild);
@@ -165,14 +207,26 @@ export function sanitizeWikiDocumentHtml(rawHtml) {
   });
 
   if (!safeRoot.textContent?.trim()) {
-    return "<p>문서 내용을 불러오지 못했습니다.</p>";
+    return {
+      html: "<p>문서 내용을 불러오지 못했습니다.</p>",
+      linkTitles: [],
+      rawAnchorCount,
+    };
   }
 
-  return safeRoot.innerHTML;
+  return {
+    html: safeRoot.innerHTML,
+    linkTitles: dedupeTitles(discoveredTitles),
+    rawAnchorCount,
+  };
 }
 
-export async function fetchJson(url, errorMessage) {
-  const response = await fetch(url);
+export function sanitizeWikiDocumentHtml(rawHtml, options) {
+  return sanitizeWikiDocument(rawHtml, options).html;
+}
+
+export async function fetchJson(url, errorMessage, { signal } = {}) {
+  const response = await fetch(url, { signal });
   if (!response.ok) throw new Error(errorMessage);
   return response.json();
 }
@@ -203,41 +257,142 @@ export async function fetchRelatedTargetTitle(keyword) {
   return title;
 }
 
-export async function fetchSummary(title) {
+export async function fetchSummary(title, { signal } = {}) {
   const url = `${SUMMARY_API}/${encodeURIComponent(title)}`;
-  const data = await fetchJson(url, "문서 요약을 불러오지 못했습니다.");
+  const data = await fetchJson(url, "문서 요약을 불러오지 못했습니다.", { signal });
   if (!data?.title) throw new Error("위키백과 요약 응답 형식이 올바르지 않습니다.");
   return data;
 }
 
-export async function fetchLinks(title) {
-  const url = buildWikiQueryUrl({ action: "query", prop: "links", titles: title, pllimit: "max", format: "json" });
-  const data = await fetchJson(url, "내부 링크를 불러오지 못했습니다.");
-  const pages = data?.query?.pages || {};
-  const firstPage = Object.values(pages)[0];
-  return Array.isArray(firstPage?.links) ? firstPage.links : [];
+export async function fetchAllLinkPages(
+  title,
+  { signal, fetchJsonImpl = fetchJson, maxPages = MAX_LINK_API_PAGES } = {}
+) {
+  const collectedLinks = [];
+  const pageCounts = [];
+  const seenContinuationTokens = new Set();
+  let continuation = {};
+  let canonicalTitle = title;
+  let normalized = [];
+  let redirects = [];
+
+  for (let pageIndex = 0; pageIndex < maxPages; pageIndex += 1) {
+    const url = buildWikiQueryUrl({
+      action: "query",
+      prop: "links",
+      titles: title,
+      redirects: "1",
+      plnamespace: "0",
+      pllimit: "max",
+      format: "json",
+      ...continuation,
+    });
+    const data = await fetchJsonImpl(url, "내부 링크를 불러오지 못했습니다.", { signal });
+    const pages = data?.query?.pages || {};
+    const page = Object.values(pages)[0];
+    if (!page || "missing" in page) {
+      throw new Error("내부 링크 응답에 유효한 문서가 없습니다.");
+    }
+
+    const pageLinks = Array.isArray(page.links) ? page.links : [];
+    canonicalTitle = page.title || canonicalTitle;
+    normalized = data?.query?.normalized || normalized;
+    redirects = data?.query?.redirects || redirects;
+    collectedLinks.push(...pageLinks);
+    pageCounts.push(pageLinks.length);
+
+    const nextContinuation = data?.continue;
+    if (!nextContinuation?.plcontinue) {
+      return {
+        canonicalTitle,
+        links: dedupeLinkItems(collectedLinks),
+        pageCounts,
+        normalized,
+        redirects,
+      };
+    }
+
+    const continuationKey = `${nextContinuation.continue || ""}|${nextContinuation.plcontinue}`;
+    if (seenContinuationTokens.has(continuationKey)) {
+      throw new Error("내부 링크 페이지네이션 토큰이 반복되었습니다.");
+    }
+    seenContinuationTokens.add(continuationKey);
+    continuation = nextContinuation;
+  }
+
+  throw new Error(`내부 링크 페이지가 안전 한도(${maxPages})를 초과했습니다.`);
 }
 
-export async function fetchDocumentHtml(title) {
-  const url = buildWikiQueryUrl({ action: "parse", page: title, prop: "text", redirects: "1", format: "json" });
-  const data = await fetchJson(url, "문서 본문을 불러오지 못했습니다.");
-  return data?.parse?.text?.["*"] || "";
+export async function fetchLinks(title, options) {
+  return (await fetchAllLinkPages(title, options)).links;
 }
 
-export async function fetchPageData(title, MAX_LINKS = 20) {
-  const [summary, rawLinks, rawDocumentHtml] = await Promise.all([
-    fetchSummary(title),
-    fetchLinks(title),
-    fetchDocumentHtml(title),
+export async function fetchDocumentData(title, { signal } = {}) {
+  const url = buildWikiQueryUrl({ action: "parse", page: title, prop: "text|revid", redirects: "1", format: "json" });
+  const data = await fetchJson(url, "문서 본문을 불러오지 못했습니다.", { signal });
+  if (!data?.parse?.title) throw new Error("문서 본문 응답 형식이 올바르지 않습니다.");
+  return {
+    canonicalTitle: data.parse.title,
+    revisionId: data.parse.revid ?? null,
+    html: data?.parse?.text?.["*"] || "",
+  };
+}
+
+export async function fetchDocumentHtml(title, options) {
+  return (await fetchDocumentData(title, options)).html;
+}
+
+export async function fetchPageData(title, options = {}) {
+  const requestOptions = typeof options === "number"
+    ? { maxQuickLinks: options }
+    : options || {};
+  const { signal, maxQuickLinks = 20 } = requestOptions;
+  const requestedTitle = normalizeRequestedTitle(title);
+  if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
+
+  const [summaryData, linkData, documentData] = await Promise.all([
+    fetchSummary(requestedTitle, { signal }),
+    fetchAllLinkPages(requestedTitle, { signal }),
+    fetchDocumentData(requestedTitle, { signal }),
   ]);
 
-  const linkTitles = dedupeTitles(rawLinks.filter(isValidInternalLink).map((link) => link.title));
+  const canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
+  if (
+    linkData.canonicalTitle &&
+    normalizeTitle(linkData.canonicalTitle) !== normalizeTitle(canonicalTitle)
+  ) {
+    throw new Error("본문과 링크 API의 최종 문서 제목이 일치하지 않습니다.");
+  }
+
+  const sanitized = sanitizeWikiDocument(documentData.html, {
+    currentTitle: canonicalTitle,
+    apiLinks: linkData.links,
+  });
+  const links = sanitized.linkTitles;
+  const quickLinks = selectDeterministicQuickLinks(links, {
+    canonicalTitle,
+    revisionId: documentData.revisionId,
+    maxCount: maxQuickLinks,
+  });
 
   return {
-    title: summary.title,
-    summary: summary.extract || "해당 문서의 요약이 없습니다.",
-    links: pickRandomSubset(linkTitles, MAX_LINKS),
-    documentHtml: sanitizeWikiDocumentHtml(rawDocumentHtml),
+    requestedTitle,
+    canonicalTitle,
+    revisionId: documentData.revisionId,
+    title: canonicalTitle,
+    summary: summaryData.extract || "해당 문서의 요약이 없습니다.",
+    html: sanitized.html,
+    documentHtml: sanitized.html,
+    links,
+    quickLinks,
+    linkDiagnostics: {
+      rawHtmlAnchorCount: sanitized.rawAnchorCount,
+      apiPageCounts: linkData.pageCounts,
+      apiLinkCount: linkData.links.length,
+      finalAllowedCount: links.length,
+      normalized: linkData.normalized,
+      redirects: linkData.redirects,
+    },
   };
 }
 export async function resolveWikiTitle(input) {

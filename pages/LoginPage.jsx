@@ -41,7 +41,25 @@ function getFriendlyAuthError(error, mode) {
   const message = error?.message || "";
   const lower = message.toLowerCase();
 
-  console.error("Auth original error:", error);
+  if (error?.authCategory === "edge-auth") {
+    return "로그인 서비스 인증에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+
+  if (error?.authCategory === "username-not-found") {
+    return "아이디 또는 비밀번호가 올바르지 않습니다.";
+  }
+
+  if (error?.authCategory === "username-conflict") {
+    return "이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.";
+  }
+
+  if (error?.authCategory === "edge-server" || error?.authCategory === "edge-relay") {
+    return "로그인 서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+
+  if (error?.authCategory === "network") {
+    return "네트워크 오류가 발생했습니다. 인터넷 연결을 확인해 주세요.";
+  }
 
   if (
     lower.includes("invalid login credentials") ||
@@ -150,7 +168,17 @@ export default function LoginPage({ isEmbedded = false }) {
       });
       navigate("/main");
     } catch (error) {
-      console.error("Auth error:", error);
+      if (import.meta.env.DEV) {
+        const lowerMessage = (error?.message || "").toLowerCase();
+        const category =
+          error?.authCategory ||
+          (lowerMessage.includes("invalid login credentials") ? "password-mismatch" : "auth-error");
+        console.error("[Auth]", {
+          category,
+          status: error?.status ?? null,
+          code: error?.code ?? null,
+        });
+      }
       setSubmitError(getFriendlyAuthError(error, mode));
       setDebugError(error?.message || JSON.stringify(error));
     } finally {

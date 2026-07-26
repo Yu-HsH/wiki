@@ -10,6 +10,7 @@ export default function WikiViewer({
   currentSummary,
   currentDocumentHtml,
   links,
+  quickLinks,
   isLoading,
   elapsedSeconds,
   clickCount,
@@ -21,6 +22,7 @@ export default function WikiViewer({
   status = {},
 }) {
   const articleRef = useRef(null);
+  const stableQuickLinks = Array.isArray(quickLinks) ? quickLinks : links.slice(0, 20);
   const [headings, setHeadings] = useState([]);
   const [showFindToast, setShowFindToast] = useState(false);
   const [activeId, setActiveId] = useState("");
@@ -464,13 +466,13 @@ export default function WikiViewer({
       <section className="links-card" id="quick-links-section">
         <div className="links-header">
           <h3>빠른 이동 링크</h3>
-          <span className="links-count">{links.length} 개 제공됨</span>
+          <span className="links-count">{stableQuickLinks.length} 개 제공됨</span>
         </div>
         {!isLoading && links.length === 0 && (
           <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다.</p>
         )}
         <div className="links-grid">
-          {links.map((linkTitle) => {
+          {stableQuickLinks.map((linkTitle) => {
             const isHighlighted = articleHighlightedLinks.includes(
               linkTitle.trim().toLowerCase()
             );

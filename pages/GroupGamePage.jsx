@@ -10,6 +10,7 @@ import {
     updateGroupPlayerProgress,
     finishGroupPlayer,
     fetchGroupResults,
+    leaveGroupRoom,
 } from "../services/groupMultiplayerService";
 
 import {
@@ -22,6 +23,13 @@ import CountdownOverlay from "../components/CountdownOverlay";
 import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import GroupPickOverlay from "../components/GroupPickOverlay";
+import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
+import {
+    elapsedSecondsFromServer,
+    normalizeOnlineGameError,
+    retryRecoverable,
+    validateGroupGameSession,
+} from "../utils/onlineGameSession";
 
 import { recordGroupMatchHistory } from "../services/profileStatsService";
 import { trackEvent } from "../services/analyticsService";
@@ -55,18 +63,27 @@ export default function GroupGamePage() {
     const [currentSummary, setCurrentSummary] = useState("");
     const [currentDocumentHtml, setCurrentDocumentHtml] = useState("");
     const [links, setLinks] = useState([]);
+    const [quickLinks, setQuickLinks] = useState([]);
     const [pathTitles, setPathTitles] = useState([]);
 
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [clickCount, setClickCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [recovery, setRecovery] = useState({
+        mode: "recovering",
+        message: "서버에서 현재 게임 상태를 확인하고 있습니다.",
+    });
+    const [leaving, setLeaving] = useState(false);
+    const [connectionVersion, setConnectionVersion] = useState(0);
 
     const timerRef = useRef(null);
     const startTimeRef = useRef(null);
     const finishedRef = useRef(false);
     const hasRecordedRef = useRef(false);
     const playStartTrackedRef = useRef(false);
+    const recoveryGenerationRef = useRef(0);
+    const realtimeChannelRef = useRef(null);
+    const moveInFlightRef = useRef(false);
 
     const storageKey = user?.id && roomId
         ? `wiki-group-game-state:${roomId}:${user.id}`
@@ -75,7 +92,12 @@ export default function GroupGamePage() {
     const saveLocalGameState = useCallback((patch = {}) => {
         if (!storageKey) return;
 
-        const prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+        let prev = {};
+        try {
+            prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+        } catch {
+            localStorage.removeItem(storageKey);
+        }
 
         localStorage.setItem(
             storageKey,
@@ -95,6 +117,10 @@ export default function GroupGamePage() {
         } catch {
             return null;
         }
+    }, [storageKey]);
+
+    const clearLocalGameState = useCallback(() => {
+        if (storageKey) localStorage.removeItem(storageKey);
     }, [storageKey]);
 
     const myPlayer = useMemo(
@@ -125,98 +151,148 @@ export default function GroupGamePage() {
         );
     }, []);
 
-    const refreshRoomState = useCallback(async () => {
-        if (!roomId) return;
-
-        const [latestRoom, latestPlayers] = await Promise.all([
+    const fetchValidatedSession = useCallback(async () => {
+        const [roomData, playerData] = await Promise.all([
             fetchGroupRoom(roomId),
             fetchGroupRoomPlayers(roomId),
         ]);
 
-        setRoom(latestRoom);
-        setPlayers(latestPlayers);
+        return validateGroupGameSession({
+            room: roomData,
+            players: playerData,
+            userId: user.id,
+        });
+    }, [roomId, user?.id]);
 
-        if (latestRoom.status === "finished") {
+    const recoverGame = useCallback(async () => {
+        if (!roomId || !user?.id) return;
+
+        const generation = recoveryGenerationRef.current + 1;
+        recoveryGenerationRef.current = generation;
+        setPhase(GROUP_PHASE.LOADING);
+        setRecovery({
+            mode: "recovering",
+            message: "서버에서 참가 상태와 현재 문서를 다시 확인하고 있습니다.",
+        });
+
+        try {
+            const restored = await retryRecoverable(
+                async () => {
+                    const session = await fetchValidatedSession();
+                    if (session.outcome === "finished") return { session, page: null };
+                    const page = await fetchPageData(session.currentTitle);
+                    return { session, page };
+                },
+                {
+                    attempts: 3,
+                    delays: [500, 1200],
+                    fallbackMessage: "일시적으로 서버 또는 문서 API에 연결할 수 없습니다.",
+                }
+            );
+
+            if (recoveryGenerationRef.current !== generation) return;
+
+            const { session, page } = restored;
+            setRoom(session.room);
+            setPlayers(session.players);
+            setStartTitle(session.room.group_start_title || "");
+            setTarget({
+                title: session.room.group_target_title || "",
+                summary: "단체모드 목표 문서입니다. 가장 빠르게 도착해보세요.",
+                requestedKeyword: "",
+                mode: "group",
+            });
+
+            if (session.outcome === "finished") {
+                finishedRef.current = true;
+                clearLocalGameState();
+                const latestResults = await fetchGroupResults(roomId).catch(() => []);
+                if (recoveryGenerationRef.current !== generation) return;
+                setResults(latestResults);
+                setRecovery(null);
+                setPhase(GROUP_PHASE.FINISHED);
+                setConnectionVersion((prev) => prev + 1);
+                return;
+            }
+
+            const saved = loadLocalGameState();
+            const enteredPlaying = saved?.enteredPlaying === true || session.moveCount > 0;
+
+            setCurrentTitle(page.title);
+            setCurrentSummary(page.summary);
+            setCurrentDocumentHtml(page.documentHtml);
+            setLinks(page.links);
+            setQuickLinks(page.quickLinks);
+            setPathTitles(session.pathTitles);
+            setClickCount(session.moveCount);
+            setElapsedSeconds(session.elapsedSeconds);
+            finishedRef.current = false;
+            playStartTrackedRef.current = enteredPlaying;
+
+            saveLocalGameState({
+                currentTitle: session.currentTitle,
+                pathTitles: session.pathTitles,
+                clickCount: session.moveCount,
+                enteredPlaying,
+            });
+
+            setRecovery(null);
+            setPhase(enteredPlaying ? GROUP_PHASE.PLAYING : GROUP_PHASE.PICKING);
+            setConnectionVersion((prev) => prev + 1);
+        } catch (error) {
+            if (recoveryGenerationRef.current !== generation) return;
+            const normalized = normalizeOnlineGameError(
+                error,
+                "일시적으로 게임 연결을 복구하지 못했습니다."
+            );
+            console.error("group game recovery failed:", normalized.cause || error);
+
+            if (!normalized.recoverable) clearLocalGameState();
+            setRecovery({
+                mode: normalized.recoverable ? "retryable" : "fatal",
+                message: normalized.message,
+            });
+        }
+    }, [
+        roomId,
+        user?.id,
+        fetchValidatedSession,
+        clearLocalGameState,
+        loadLocalGameState,
+        saveLocalGameState,
+    ]);
+
+    const refreshRoomState = useCallback(async () => {
+        const session = await fetchValidatedSession();
+        setRoom(session.room);
+        setPlayers(session.players);
+
+        if (session.outcome === "finished") {
+            clearLocalGameState();
             const latestResults = await fetchGroupResults(roomId).catch(() => []);
             setResults(latestResults);
             setPhase(GROUP_PHASE.FINISHED);
         }
-    }, [roomId]);
+    }, [roomId, fetchValidatedSession, clearLocalGameState]);
 
     useEffect(() => {
-        const loadGame = async () => {
-            if (!roomId || !user?.id) return;
-
-            try {
-                setPhase(GROUP_PHASE.LOADING);
-                setError("");
-
-                const [roomData, playerData] = await Promise.all([
-                    fetchGroupRoom(roomId),
-                    fetchGroupRoomPlayers(roomId),
-                ]);
-
-                setRoom(roomData);
-                setPlayers(playerData);
-
-                if (!roomData.group_start_title || !roomData.group_target_title) {
-                    throw new Error("단체모드 시작 문서 또는 목표 문서가 설정되지 않았습니다.");
-                }
-
-                const saved = loadLocalGameState();
-                if (saved?.currentTitle) {
-                    playStartTrackedRef.current = true;
-                }
-                const me = playerData.find((player) => player.user_id === user.id);
-
-                const restoreTitle =
-                    saved?.currentTitle || me?.current_title || roomData.group_start_title;
-
-                const restorePage = await fetchPageData(restoreTitle);
-
-                setStartTitle(roomData.group_start_title);
-                setCurrentTitle(restorePage.title);
-                setCurrentSummary(restorePage.summary);
-                setCurrentDocumentHtml(restorePage.documentHtml);
-                setLinks(restorePage.links);
-                setPathTitles(saved?.pathTitles || [restorePage.title]);
-                setClickCount(saved?.clickCount ?? me?.move_count ?? 0);
-                setElapsedSeconds(saved?.elapsedSeconds || 0);
-
-                setTarget({
-                    title: roomData.group_target_title,
-                    summary: "단체모드 목표 문서입니다. 가장 빠르게 도착해보세요.",
-                    requestedKeyword: "",
-                    mode: "group",
-                });
-
-                finishedRef.current = false;
-
-                if (roomData.status === "finished") {
-                    const latestResults = await fetchGroupResults(roomId).catch(() => []);
-                    setResults(latestResults);
-                    setPhase(GROUP_PHASE.FINISHED);
-                } else {
-                    if (saved?.currentTitle) {
-                        setPhase(GROUP_PHASE.PLAYING);
-                    } else {
-                        setPhase(GROUP_PHASE.PICKING);
-                    }
-                }
-            } catch (e) {
-                console.error(e);
-                setError(e.message || "단체모드 게임을 불러오지 못했습니다.");
-            }
+        recoverGame();
+        return () => {
+            recoveryGenerationRef.current += 1;
         };
-
-        loadGame();
-    }, [roomId, user?.id, loadLocalGameState]);
+    }, [recoverGame]);
 
     useEffect(() => {
-        if (!roomId || !supabase) return;
+        if (!roomId || !user?.id || !supabase) return;
+
+        if (realtimeChannelRef.current) {
+            const previousChannel = realtimeChannelRef.current;
+            realtimeChannelRef.current = null;
+            supabase.removeChannel(previousChannel);
+        }
 
         const channel = supabase
-            .channel(`group-game:${roomId}`)
+            .channel(`group-game:${roomId}:${user.id}`)
             .on(
                 "postgres_changes",
                 {
@@ -230,6 +306,7 @@ export default function GroupGamePage() {
                         await refreshRoomState();
                     } catch (error) {
                         console.error("group game room refresh failed:", error);
+                        recoverGame();
                     }
                 }
             )
@@ -243,23 +320,55 @@ export default function GroupGamePage() {
                 },
                 async () => {
                     try {
-                        const latestPlayers = await fetchGroupRoomPlayers(roomId);
-                        setPlayers(latestPlayers);
+                        await refreshRoomState();
                     } catch (error) {
                         console.error("group game players refresh failed:", error);
+                        recoverGame();
                     }
                 }
-            )
-            .subscribe();
+            );
+
+        realtimeChannelRef.current = channel;
+        channel.subscribe((status, error) => {
+            if (realtimeChannelRef.current !== channel) return;
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+                console.error("group game realtime disconnected:", status, error);
+                setPhase(GROUP_PHASE.LOADING);
+                setRecovery({
+                    mode: "retryable",
+                    message: "실시간 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
+                });
+            }
+        });
 
         return () => {
+            if (realtimeChannelRef.current === channel) {
+                realtimeChannelRef.current = null;
+            }
             supabase.removeChannel(channel);
         };
-    }, [roomId, refreshRoomState]);
+    }, [roomId, user?.id, refreshRoomState, recoverGame, connectionVersion]);
+
+    useEffect(() => {
+        const handleReconnectOpportunity = () => recoverGame();
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") recoverGame();
+        };
+
+        window.addEventListener("online", handleReconnectOpportunity);
+        document.addEventListener("visibilitychange", handleVisibility);
+
+        return () => {
+            window.removeEventListener("online", handleReconnectOpportunity);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, [recoverGame]);
 
     useEffect(() => {
         if (phase === GROUP_PHASE.PLAYING) {
-            startTimeRef.current = Date.now() - elapsedSeconds * 1000;
+            startTimeRef.current = room?.started_at
+                ? Date.parse(room.started_at)
+                : Date.now() - elapsedSeconds * 1000;
 
             if (!playStartTrackedRef.current) {
                 playStartTrackedRef.current = true;
@@ -272,8 +381,9 @@ export default function GroupGamePage() {
             }
 
             timerRef.current = setInterval(() => {
-                setElapsedSeconds(
-                    Math.floor((Date.now() - startTimeRef.current) / 1000)
+                setElapsedSeconds(room?.started_at
+                    ? elapsedSecondsFromServer(room.started_at)
+                    : Math.max(0, Math.floor((Date.now() - startTimeRef.current) / 1000))
                 );
             }, 1000);
         } else {
@@ -283,126 +393,139 @@ export default function GroupGamePage() {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [phase, elapsedSeconds]);
+    }, [phase, room?.started_at, roomId, target.title, user]);
 
     useEffect(() => {
-        if (room?.status === "finished" && phase !== GROUP_PHASE.FINISHED) {
-            // 전적 기록 (최초 1회만 실행되도록 ref 사용)
+        if (room?.status === "finished") {
             if (!hasRecordedRef.current) {
                 hasRecordedRef.current = true;
                 recordGroupMatchHistory(roomId).catch(console.error);
             }
 
-            fetchGroupResults(roomId)
-                .then((data) => setResults(data))
-                .catch(() => { })
-                .finally(() => setPhase(GROUP_PHASE.FINISHED));
+            if (phase !== GROUP_PHASE.FINISHED) {
+                fetchGroupResults(roomId)
+                    .then((data) => setResults(data))
+                    .catch(() => { })
+                    .finally(() => setPhase(GROUP_PHASE.FINISHED));
+            }
         }
     }, [room?.status, phase, roomId]);
 
     const handleMove = async (nextTitle) => {
-        if (phase !== GROUP_PHASE.PLAYING || isLoading || finishedRef.current) return;
+        if (
+            phase !== GROUP_PHASE.PLAYING ||
+            isLoading ||
+            moveInFlightRef.current ||
+            finishedRef.current
+        ) return;
 
-        setClickCount((prev) => prev + 1);
+        moveInFlightRef.current = true;
         setIsLoading(true);
-        setError("");
 
         try {
             const page = await fetchPageData(nextTitle);
+
+            if (normalizeTitle(page.title) === normalizeTitle(currentTitle)) return;
+
+            const nextClickCount = clickCount + 1;
+            const newPath = [...pathTitles, page.title];
+            const solved = checkWin(page.title, target.title);
+
+            if (solved) {
+                await finishGroupPlayer(roomId, {
+                    elapsedSeconds: room?.started_at
+                        ? elapsedSecondsFromServer(room.started_at)
+                        : elapsedSeconds,
+                    moveCount: nextClickCount,
+                    currentTitle: page.title,
+                    pathTitles: newPath,
+                });
+            } else {
+                await updateGroupPlayerProgress(roomId, user.id, {
+                    currentTitle: page.title,
+                    moveCount: nextClickCount,
+                    pathTitles: newPath,
+                    expectedMoveCount: clickCount,
+                });
+            }
 
             setCurrentTitle(page.title);
             setCurrentSummary(page.summary);
             setCurrentDocumentHtml(page.documentHtml);
             setLinks(page.links);
-
-            const nextClickCount = clickCount + 1;
-            const newPath = [...pathTitles, page.title];
+            setQuickLinks(page.quickLinks);
             setPathTitles(newPath);
+            setClickCount(nextClickCount);
 
-            saveLocalGameState({
-                currentTitle: page.title,
-                pathTitles: newPath,
-                clickCount: nextClickCount,
-                elapsedSeconds,
-            });
-
-            await updateGroupPlayerProgress(roomId, user.id, {
-                currentTitle: page.title,
-                moveCount: nextClickCount,
-                pathTitles: newPath,
-            }).catch((error) => {
-                console.warn("progress update failed:", error);
-            });
-
-            window.scrollTo({ top: 0, behavior: "smooth" });
-
-            if (checkWin(page.title, target.title)) {
+            if (solved) {
                 finishedRef.current = true;
-
-                if (storageKey) {
-                    localStorage.removeItem(storageKey);
-                }
-
-                const finishResult = await finishGroupPlayer(roomId, {
-                    elapsedSeconds,
-                    moveCount: nextClickCount,
+                clearLocalGameState();
+                await refreshRoomState();
+            } else {
+                saveLocalGameState({
                     currentTitle: page.title,
                     pathTitles: newPath,
+                    clickCount: nextClickCount,
+                    enteredPlaying: true,
                 });
-
-                await refreshRoomState();
-
-                if (finishResult?.result_room_status === "finished") {
-                    const latestResults = await fetchGroupResults(roomId).catch(() => []);
-                    setResults(latestResults);
-                    setPhase(GROUP_PHASE.FINISHED);
-                }
             }
+
+            window.scrollTo({ top: 0, behavior: "smooth" });
         } catch (e) {
-            console.error(e);
-            setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
+            const normalized = normalizeOnlineGameError(
+                e,
+                "문서 또는 진행 상태를 일시적으로 저장하지 못했습니다."
+            );
+            console.error("group game move failed:", normalized.cause || e);
+            if (!normalized.recoverable) clearLocalGameState();
+            setPhase(GROUP_PHASE.LOADING);
+            setRecovery({
+                mode: normalized.recoverable ? "retryable" : "fatal",
+                message: normalized.message,
+            });
         } finally {
+            moveInFlightRef.current = false;
             setIsLoading(false);
         }
     };
 
-    const handleReturnToLobby = () => {
-        navigate("/multiplayer");
+    const handleReturnToLobby = async () => {
+        if (leaving) return;
+        setLeaving(true);
+        recoveryGenerationRef.current += 1;
+        clearLocalGameState();
+
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (realtimeChannelRef.current) {
+            const channel = realtimeChannelRef.current;
+            realtimeChannelRef.current = null;
+            await supabase.removeChannel(channel).catch(() => { });
+        }
+
+        const shouldNotifyServer =
+            room &&
+            ["starting", "playing"].includes(room.status) &&
+            myPlayer &&
+            !myPlayer.has_finished;
+
+        try {
+            if (shouldNotifyServer) await leaveGroupRoom(roomId, user.id);
+        } catch (error) {
+            console.error("leave group game failed:", error);
+        } finally {
+            navigate("/multiplayer", { replace: true });
+        }
     };
 
-
-    if (phase === GROUP_PHASE.LOADING) {
+    if (recovery || phase === GROUP_PHASE.LOADING) {
         return (
-            <div className="mp-page">
-                <div className="mp-container">
-                    <div className="mp-title-block">
-                        <span className="mp-badge">GROUP GAME</span>
-                        <h1 className="mp-title">단체모드 게임 준비 중...</h1>
-                        <p className="mp-subtitle">시작 문서와 목표 문서를 불러오고 있습니다.</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="mp-page">
-                <div className="mp-container">
-                    <div className="mp-title-block">
-                        <span className="mp-badge">ERROR</span>
-                        <h1 className="mp-title">단체모드 게임 오류</h1>
-                        <p className="mp-error">{error}</p>
-                        <button
-                            type="button"
-                            className="mp-action-btn"
-                            onClick={handleReturnToLobby}
-                        >
-                            온라인 플레이로 돌아가기
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <OnlineGameRecoveryPanel
+                mode={recovery?.mode || "recovering"}
+                message={recovery?.message}
+                onRetry={recoverGame}
+                onLeave={handleReturnToLobby}
+                leaving={leaving}
+            />
         );
     }
 
@@ -485,7 +608,12 @@ export default function GroupGamePage() {
             )}
 
             {phase === GROUP_PHASE.COUNTDOWN && (
-                <CountdownOverlay onComplete={() => setPhase(GROUP_PHASE.PLAYING)} />
+                <CountdownOverlay
+                    onComplete={() => {
+                        saveLocalGameState({ enteredPlaying: true });
+                        setPhase(GROUP_PHASE.PLAYING);
+                    }}
+                />
             )}
 
             {(phase === GROUP_PHASE.PICKING ||
@@ -497,6 +625,7 @@ export default function GroupGamePage() {
                         currentSummary={currentSummary}
                         currentDocumentHtml={currentDocumentHtml}
                         links={links}
+                        quickLinks={quickLinks}
                         isLoading={isLoading}
                         elapsedSeconds={elapsedSeconds}
                         clickCount={clickCount}

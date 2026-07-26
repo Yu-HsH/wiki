@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
   fetchRoom,
   fetchRoomPlayers,
-  updateMyGameProgress,
   updateGameRoomStatus,
   saveMatchHistory,
+  initializeMyGameProgress,
+  advanceMyGameProgress,
+  leaveRoom,
 } from "../services/multiplayerService";
 
 import {
@@ -30,6 +32,13 @@ import { ITEM_DEFS } from "../data/items";
 import { MULTI_ITEM_IDS } from "../data/itemPools";
 
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
+import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
+import {
+  elapsedSecondsFromServer,
+  normalizeOnlineGameError,
+  retryRecoverable,
+  validateDuelGameSession,
+} from "../utils/onlineGameSession";
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -56,12 +65,22 @@ export default function MultiplayerGamePage() {
   const [pending, setPending] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [recovery, setRecovery] = useState({
+    mode: "recovering",
+    message: "서버에서 현재 게임 상태를 확인하고 있습니다.",
+  });
+  const [leaving, setLeaving] = useState(false);
   const [phase, setPhase] = useState(PHASE.LOADING);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startedAtRef = useRef(null);
   const playStartTrackedRef = useRef(false);
+  const recoveryGenerationRef = useRef(0);
+  const recoverGameRef = useRef(null);
+  const gameChannelRef = useRef(null);
+  const eventChannelRef = useRef(null);
+  const moveInFlightRef = useRef(false);
+  const resultNavigationTimerRef = useRef(null);
 
   const myPlayer = useMemo(
     () => players.find((p) => p.user_id === user?.id),
@@ -96,10 +115,15 @@ export default function MultiplayerGamePage() {
     ? `wiki-mp-game:${roomId}:${user.id}`
     : null;
 
-  const saveLocalGameState = (patch = {}) => {
+  const saveLocalGameState = useCallback((patch = {}) => {
     if (!storageKey) return;
 
-    const prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    let prev = {};
+    try {
+      prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    } catch {
+      localStorage.removeItem(storageKey);
+    }
 
     localStorage.setItem(
       storageKey,
@@ -109,9 +133,9 @@ export default function MultiplayerGamePage() {
         savedAt: Date.now(),
       })
     );
-  };
+  }, [storageKey]);
 
-  const loadLocalGameState = () => {
+  const loadLocalGameState = useCallback(() => {
     if (!storageKey) return null;
 
     try {
@@ -119,7 +143,11 @@ export default function MultiplayerGamePage() {
     } catch {
       return null;
     }
-  };
+  }, [storageKey]);
+
+  const clearLocalGameState = useCallback(() => {
+    if (storageKey) localStorage.removeItem(storageKey);
+  }, [storageKey]);
 
   const [itemCooldownUntil, setItemCooldownUntil] = useState(0);
   const [itemEffect, setItemEffect] = useState(null);
@@ -194,10 +222,16 @@ export default function MultiplayerGamePage() {
   };
 
   useEffect(() => {
-    if (!roomId || !supabase) return;
+    if (!roomId || !user?.id || !supabase) return;
+
+    if (gameChannelRef.current) {
+      const previousChannel = gameChannelRef.current;
+      gameChannelRef.current = null;
+      supabase.removeChannel(previousChannel);
+    }
 
     const channel = supabase
-      .channel(`game:${roomId}`)
+      .channel(`game:${roomId}:${user.id}`)
       .on(
         "postgres_changes",
         {
@@ -210,8 +244,12 @@ export default function MultiplayerGamePage() {
           try {
             const latestRoom = await fetchRoom(roomId);
             setRoom(latestRoom);
+            if (latestRoom.status === "finished") {
+              recoverGameRef.current?.();
+            }
           } catch (err) {
             console.error("game_rooms realtime refresh failed:", err);
+            recoverGameRef.current?.();
           }
         }
       )
@@ -227,101 +265,194 @@ export default function MultiplayerGamePage() {
           try {
             const latestPlayers = await fetchRoomPlayers(roomId);
             setPlayers(latestPlayers);
+            const latestMe = latestPlayers.find((player) => player.user_id === user.id);
+            const participantStatus = String(
+              latestMe?.status || latestMe?.participant_status || ""
+            ).toLowerCase();
+            if (
+              !latestMe ||
+              latestMe.is_active === false ||
+              latestMe.left_at ||
+              latestMe.kicked_at ||
+              ["kicked", "left", "removed", "banned"].includes(participantStatus)
+            ) {
+              recoverGameRef.current?.();
+            }
           } catch (err) {
             console.error("room_players realtime refresh failed:", err);
+            recoverGameRef.current?.();
           }
         }
-      )
-      .subscribe();
+      );
+
+    gameChannelRef.current = channel;
+    channel.subscribe((status, error) => {
+      if (gameChannelRef.current !== channel) return;
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        console.error("duel realtime disconnected:", status, error);
+        setPending(false);
+        setPhase(PHASE.LOADING);
+        setRecovery({
+          mode: "retryable",
+          message: "실시간 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
+        });
+      }
+    });
 
     return () => {
+      if (gameChannelRef.current === channel) gameChannelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomId]);
+  }, [roomId, user?.id]);
 
-  useEffect(() => {
-    const initGame = async () => {
-      if (!roomId || !user?.id) return;
+  const recoverGame = useCallback(async () => {
+    if (!roomId || !user?.id) return;
 
-      try {
-        setPending(true);
-        setError("");
+    const generation = recoveryGenerationRef.current + 1;
+    recoveryGenerationRef.current = generation;
+    setPending(true);
+    setPhase(PHASE.LOADING);
+    setIsPageLoading(true);
+    setRecovery({
+      mode: "recovering",
+      message: "서버에서 참가 상태와 현재 문서를 다시 확인하고 있습니다.",
+    });
 
-        const saved = loadLocalGameState();
-        if (saved?.currentTitle) {
-          playStartTrackedRef.current = true;
-        }
+    try {
+      const restored = await retryRecoverable(
+        async () => {
+          let [roomData, playerData] = await Promise.all([
+            fetchRoom(roomId),
+            fetchRoomPlayers(roomId),
+          ]);
 
-        const roomData = await fetchRoom(roomId);
-        const playerData = await fetchRoomPlayers(roomId);
-
-        setRoom(roomData);
-        setPlayers(playerData);
-
-        const me = playerData.find((p) => p.user_id === user.id);
-        const opponent = playerData.find((p) => p.user_id !== user.id);
-
-        if (!me || !opponent) {
-          throw new Error("플레이어 정보를 찾지 못했습니다.");
-        }
-
-        if (!opponent.target_title) {
-          throw new Error("상대 목표 문서가 설정되지 않았습니다.");
-        }
-
-        let currentTitle = me.current_title;
-
-        if (!me.start_title || !me.current_title) {
-          const excluded = new Set([normalizeTitle(opponent.target_title)]);
-          const startTitle = await fetchDistinctRandomTitle(excluded);
-
-          await updateMyGameProgress(roomId, user.id, {
-            start_title: startTitle,
-            current_title: startTitle,
-            move_count: 0,
-            has_finished: false,
-            finished_at: null,
+          let session = validateDuelGameSession({
+            room: roomData,
+            players: playerData,
+            userId: user.id,
           });
 
-          const refreshedPlayers = await fetchRoomPlayers(roomId);
-          setPlayers(refreshedPlayers);
+          if (session.outcome === "finished") return { session, page: null };
 
-          const refreshedMe = refreshedPlayers.find((p) => p.user_id === user.id);
-
-          if (!refreshedMe?.current_title) {
-            throw new Error("시작 문서를 설정하지 못했습니다.");
+          if (!session.me.start_title || !session.me.current_title) {
+            const excluded = new Set([normalizeTitle(session.opponent.target_title)]);
+            const startTitle = await fetchDistinctRandomTitle(excluded);
+            await initializeMyGameProgress(roomId, user.id, startTitle);
+            playerData = await fetchRoomPlayers(roomId);
+            session = validateDuelGameSession({
+              room: roomData,
+              players: playerData,
+              userId: user.id,
+            });
           }
 
-          currentTitle = refreshedMe.current_title;
+          const page = await fetchPageData(session.currentTitle);
+          return { session, page };
+        },
+        {
+          attempts: 3,
+          delays: [500, 1200],
+          fallbackMessage: "일시적으로 서버 또는 문서 API에 연결할 수 없습니다.",
         }
+      );
 
-        const restoreTitle = saved?.currentTitle || currentTitle;
+      if (recoveryGenerationRef.current !== generation) return;
 
-        setIsPageLoading(true);
-        setIsLoading(true);
+      const { session, page } = restored;
+      setRoom(session.room);
+      setPlayers(session.players);
 
-        const firstPage = await fetchPageData(restoreTitle);
-        setPageData(firstPage);
+      if (session.outcome === "finished") {
+        clearLocalGameState();
+        setPageData(null);
+        setRecovery({
+          mode: "fatal",
+          message: session.me?.has_finished
+            ? "이미 완료한 게임입니다. 온라인 플레이에서 새 게임을 시작해 주세요."
+            : "이미 종료된 게임입니다. 이전 문서 화면으로 다시 들어갈 수 없습니다.",
+        });
+        return;
+      }
 
-        if (saved?.historyStack?.length > 0) {
-          setHistoryStack(saved.historyStack);
-        }
+      const saved = loadLocalGameState();
+      const serverPath = Array.isArray(session.me.path_titles)
+        ? session.me.path_titles.filter(Boolean)
+        : [];
+      const normalizedPath = serverPath.length > 0
+        ? serverPath
+        : [session.me.start_title, session.currentTitle].filter(
+          (title, index, values) => title && values.indexOf(title) === index
+        );
 
-        if (saved?.inventory?.length > 0) {
-          setInventory(saved.inventory);
-        }
+      setPageData(page);
+      setHistoryStack(normalizedPath.slice(0, -1));
+      setElapsedSeconds(session.elapsedSeconds);
+      startedAtRef.current = session.room.started_at
+        ? Date.parse(session.room.started_at)
+        : Date.now() - session.elapsedSeconds * 1000;
+      playStartTrackedRef.current = saved?.enteredPlaying === true;
 
+      if (saved?.inventory?.length > 0) setInventory(saved.inventory);
+
+      saveLocalGameState({
+        currentTitle: session.currentTitle,
+        pathTitles: normalizedPath,
+        historyStack: normalizedPath.slice(0, -1),
+        clickCount: session.moveCount,
+        enteredPlaying: saved?.enteredPlaying === true || session.room.status === "playing",
+      });
+
+      setRecovery(null);
+      setPhase(session.room.status === "playing" ? PHASE.PLAYING : PHASE.LOADING);
+    } catch (error) {
+      if (recoveryGenerationRef.current !== generation) return;
+      const normalized = normalizeOnlineGameError(
+        error,
+        "일시적으로 게임 연결을 복구하지 못했습니다."
+      );
+      console.error("duel game recovery failed:", normalized.cause || error);
+      if (!normalized.recoverable) clearLocalGameState();
+      setRecovery({
+        mode: normalized.recoverable ? "retryable" : "fatal",
+        message: normalized.message,
+      });
+    } finally {
+      if (recoveryGenerationRef.current === generation) {
+        setPending(false);
         setIsPageLoading(false);
         setIsLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "게임 초기화에 실패했습니다.");
-      } finally {
-        setPending(false);
       }
+    }
+  }, [
+    roomId,
+    user?.id,
+    clearLocalGameState,
+    loadLocalGameState,
+    saveLocalGameState,
+  ]);
+
+  recoverGameRef.current = recoverGame;
+
+  useEffect(() => {
+    recoverGame();
+    return () => {
+      recoveryGenerationRef.current += 1;
+    };
+  }, [recoverGame]);
+
+  useEffect(() => {
+    const handleReconnectOpportunity = () => recoverGame();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") recoverGame();
     };
 
-    initGame();
-  }, [roomId, user?.id]);
+    window.addEventListener("online", handleReconnectOpportunity);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("online", handleReconnectOpportunity);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [recoverGame]);
 
   useEffect(() => {
     if (!room || !myPlayer || !opponentPlayer) return;
@@ -335,20 +466,29 @@ export default function MultiplayerGamePage() {
     if (!bothInitialized) return;
 
     if (room.status === "starting") {
-      updateGameRoomStatus(roomId, { status: "playing" }).catch(console.error);
+      updateGameRoomStatus(
+        roomId,
+        { status: "playing" },
+        { expectedStatus: "starting" }
+      )
+        .then((latestRoom) => setRoom(latestRoom))
+        .catch((error) => {
+          console.error("duel start transition failed:", error);
+          recoverGameRef.current?.();
+        });
       return;
     }
 
     if (room.status === "playing" && phase === PHASE.LOADING) {
       const saved = loadLocalGameState();
 
-      if (saved?.currentTitle || saved?.inventory?.length > 0) {
+      if (saved?.enteredPlaying === true) {
         setPhase(PHASE.PLAYING);
       } else {
         setPhase(PHASE.VS_INTRO);
       }
     }
-  }, [room, myPlayer, opponentPlayer, roomId, phase]);
+  }, [room, myPlayer, opponentPlayer, roomId, phase, loadLocalGameState]);
 
   useEffect(() => {
     if (phase !== PHASE.COUNTDOWN) return;
@@ -434,19 +574,18 @@ export default function MultiplayerGamePage() {
   };
 
   const handleMove = async (nextTitle) => {
-    if (!roomId || !user?.id || phase !== PHASE.PLAYING) return;
+    if (
+      !roomId ||
+      !user?.id ||
+      phase !== PHASE.PLAYING ||
+      moveInFlightRef.current ||
+      myPlayer?.has_finished
+    ) return false;
 
+    moveInFlightRef.current = true;
     try {
-      setError("");
       setIsPageLoading(true);
       setIsLoading(true);
-
-      let nextHistoryStack = historyStack;
-
-      if (pageData?.title && pageData.title !== nextTitle) {
-        nextHistoryStack = [...historyStack, pageData.title];
-        setHistoryStack(nextHistoryStack);
-      }
 
       setStatus((prev) => ({
         ...prev,
@@ -454,29 +593,43 @@ export default function MultiplayerGamePage() {
       }));
 
       const nextPage = await fetchPageData(nextTitle);
-      setPageData(nextPage);
-
-      saveLocalGameState({
-        currentTitle: nextPage.title,
-        historyStack: nextHistoryStack,
-      });
+      if (normalizeTitle(nextPage.title) === normalizeTitle(pageData?.title || "")) {
+        return false;
+      }
 
       const nextMoveCount = (myPlayer?.move_count || 0) + 1;
-
-      await updateMyGameProgress(roomId, user.id, {
-        current_title: nextPage.title,
-        move_count: nextMoveCount,
-      });
-
       const solved =
         normalizeTitle(nextPage.title) === normalizeTitle(myTargetTitle);
+      const nextPath = [...historyStack, pageData?.title, nextPage.title].filter(Boolean);
+      const finishedAt = solved ? new Date().toISOString() : null;
+
+      const updatedPlayer = await advanceMyGameProgress(roomId, user.id, {
+        currentTitle: nextPage.title,
+        moveCount: nextMoveCount,
+        pathTitles: nextPath,
+        expectedMoveCount: myPlayer?.move_count || 0,
+        hasFinished: solved,
+        finishedAt,
+      });
+
+      setPageData(nextPage);
+      setHistoryStack(nextPath.slice(0, -1));
+      setPlayers((prev) => prev.map((player) =>
+        player.user_id === user.id ? updatedPlayer : player
+      ));
 
       if (solved) {
-        const finishedAt = new Date().toISOString();
-        const duration = startedAtRef.current
-          ? Math.floor((Date.now() - startedAtRef.current) / 1000)
+        if (updatedPlayer.__alreadyApplied) {
+          clearLocalGameState();
+          recoverGameRef.current?.();
+          return true;
+        }
+
+        const duration = room?.started_at
+          ? elapsedSecondsFromServer(room.started_at)
           : elapsedSeconds;
-        saveMatchHistory({
+
+        await saveMatchHistory({
           roomId,
           winnerUserId: user.id,
           loserUserId: opponentPlayer?.user_id,
@@ -486,67 +639,52 @@ export default function MultiplayerGamePage() {
           winnerTargetTitle: myTargetTitle,
           loserTargetTitle: opponentTargetTitle
         });
-        await updateMyGameProgress(roomId, user.id, {
-          current_title: nextPage.title,
-          move_count: nextMoveCount,
-          has_finished: true,
-          finished_at: finishedAt,
-        });
 
-        await updateGameRoomStatus(roomId, {
-          status: "finished",
-          finished_at: finishedAt,
-        });
+        await updateGameRoomStatus(
+          roomId,
+          { status: "finished", finished_at: finishedAt },
+          { expectedStatus: "playing" }
+        );
 
+        clearLocalGameState();
         setPhase(PHASE.SUCCESS);
 
-        setTimeout(() => {
-          navigate("/main");
+        resultNavigationTimerRef.current = setTimeout(() => {
+          navigate("/multiplayer", { replace: true });
         }, 2200);
+      } else {
+        saveLocalGameState({
+          currentTitle: nextPage.title,
+          pathTitles: nextPath,
+          historyStack: nextPath.slice(0, -1),
+          clickCount: nextMoveCount,
+          enteredPlaying: true,
+        });
       }
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "문서 이동에 실패했습니다.");
+      const normalized = normalizeOnlineGameError(
+        err,
+        "문서 또는 진행 상태를 일시적으로 저장하지 못했습니다."
+      );
+      console.error("duel move failed:", normalized.cause || err);
+      if (!normalized.recoverable) clearLocalGameState();
+      setPhase(PHASE.LOADING);
+      setRecovery({
+        mode: normalized.recoverable ? "retryable" : "fatal",
+        message: normalized.message,
+      });
+      return false;
     } finally {
+      moveInFlightRef.current = false;
       setIsPageLoading(false);
       setIsLoading(false);
     }
   };
 
   const forceMoveByItem = async (nextTitle) => {
-    if (!roomId || !user?.id) return;
-
-    try {
-      setError("");
-      setIsPageLoading(true);
-      setIsLoading(true);
-
-      setStatus((prev) => ({
-        ...prev,
-        translateCurrent: false,
-      }));
-
-      const nextPage = await fetchPageData(nextTitle);
-      setPageData(nextPage);
-
-      saveLocalGameState({
-        currentTitle: nextPage.title,
-      });
-
-      const nextMoveCount = (myPlayer?.move_count || 0) + 1;
-
-      await updateMyGameProgress(roomId, user.id, {
-        current_title: nextPage.title,
-        move_count: nextMoveCount,
-      });
-
-      showMessage(`${nextPage.title} 문서로 이동했습니다.`);
-    } catch (err) {
-      console.error("아이템 강제 이동 실패:", err);
-      setError(err instanceof Error ? err.message : "아이템 이동에 실패했습니다.");
-    } finally {
-      setIsPageLoading(false);
-      setIsLoading(false);
-    }
+    const moved = await handleMove(nextTitle);
+    if (moved) showMessage(`${nextTitle} 문서로 이동했습니다.`);
   };
 
   const decideRpsWinner = (myChoice, opponentChoice) => {
@@ -906,8 +1044,14 @@ export default function MultiplayerGamePage() {
   useEffect(() => {
     if (!roomId || !user?.id) return;
 
+    if (eventChannelRef.current) {
+      const previousChannel = eventChannelRef.current;
+      eventChannelRef.current = null;
+      supabase.removeChannel(previousChannel);
+    }
+
     const channel = supabase
-      .channel(`room-events-${roomId}`)
+      .channel(`room-events-${roomId}:${user.id}`)
       .on(
         "postgres_changes",
         {
@@ -923,10 +1067,24 @@ export default function MultiplayerGamePage() {
 
           handleIncomingEvent(event);
         }
-      )
-      .subscribe();
+      );
+
+    eventChannelRef.current = channel;
+    channel.subscribe((status, error) => {
+      if (eventChannelRef.current !== channel) return;
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        console.error("duel event realtime disconnected:", status, error);
+        setPending(false);
+        setPhase(PHASE.LOADING);
+        setRecovery({
+          mode: "retryable",
+          message: "상대 상태 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
+        });
+      }
+    });
 
     return () => {
+      if (eventChannelRef.current === channel) eventChannelRef.current = null;
       supabase.removeChannel(channel);
     };
   }, [roomId, user?.id]);
@@ -944,9 +1102,9 @@ export default function MultiplayerGamePage() {
   useEffect(() => {
     if (phase !== PHASE.PLAYING) return;
 
-    if (!startedAtRef.current) {
-      startedAtRef.current = Date.now();
-    }
+    startedAtRef.current = room?.started_at
+      ? Date.parse(room.started_at)
+      : startedAtRef.current || Date.now();
 
     if (!playStartTrackedRef.current) {
       playStartTrackedRef.current = true;
@@ -960,11 +1118,14 @@ export default function MultiplayerGamePage() {
 
     const interval = setInterval(() => {
       if (!startedAtRef.current) return;
-      setElapsedSeconds(Math.floor((Date.now() - startedAtRef.current) / 1000));
+      setElapsedSeconds(room?.started_at
+        ? elapsedSecondsFromServer(room.started_at)
+        : Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000))
+      );
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [phase]);
+  }, [phase, room?.started_at, roomId, myTargetTitle, user]);
 
   useEffect(() => {
     const resolveMiniGame = async () => {
@@ -1017,27 +1178,64 @@ export default function MultiplayerGamePage() {
     if (!opponentPlayer?.has_finished) return;
     if (myPlayer?.has_finished) return;
 
+    clearLocalGameState();
     setPhase(PHASE.OPPONENT_WIN);
 
-    setTimeout(() => {
-      navigate("/main");
+    resultNavigationTimerRef.current = setTimeout(() => {
+      navigate("/multiplayer", { replace: true });
     }, 2200);
-  }, [opponentPlayer?.has_finished, myPlayer?.has_finished, navigate]);
+  }, [
+    opponentPlayer?.has_finished,
+    myPlayer?.has_finished,
+    navigate,
+    clearLocalGameState,
+  ]);
 
-  if (pending) {
-    return (
-      <div className="mp-game-page">
-        {isPageLoading && <PageLoadingOverlay />}
-        <div className="mp-game-loading">게임 준비 중...</div>
-      </div>
-    );
-  }
+  useEffect(() => () => {
+    if (resultNavigationTimerRef.current) {
+      clearTimeout(resultNavigationTimerRef.current);
+    }
+  }, []);
 
-  if (error && !pageData) {
+  const handleReturnToLobby = async () => {
+    if (leaving) return;
+    setLeaving(true);
+    recoveryGenerationRef.current += 1;
+    clearLocalGameState();
+
+    if (resultNavigationTimerRef.current) {
+      clearTimeout(resultNavigationTimerRef.current);
+    }
+
+    const channels = [gameChannelRef.current, eventChannelRef.current].filter(Boolean);
+    gameChannelRef.current = null;
+    eventChannelRef.current = null;
+    await Promise.all(channels.map((channel) => supabase.removeChannel(channel).catch(() => { })));
+
+    const shouldNotifyServer =
+      room &&
+      ["starting", "playing"].includes(room.status) &&
+      myPlayer &&
+      !myPlayer.has_finished;
+
+    try {
+      if (shouldNotifyServer) await leaveRoom(roomId, user.id);
+    } catch (error) {
+      console.error("leave duel game failed:", error);
+    } finally {
+      navigate("/multiplayer", { replace: true });
+    }
+  };
+
+  if (pending || recovery || phase === PHASE.LOADING) {
     return (
-      <div className="mp-game-page">
-        <div className="mp-game-error">에러: {error}</div>
-      </div>
+      <OnlineGameRecoveryPanel
+        mode={recovery?.mode || "recovering"}
+        message={recovery?.message}
+        onRetry={recoverGame}
+        onLeave={handleReturnToLobby}
+        leaving={leaving}
+      />
     );
   }
 
@@ -1060,7 +1258,12 @@ export default function MultiplayerGamePage() {
       )}
 
       {phase === PHASE.COUNTDOWN && (
-        <CountdownOverlay onComplete={() => setPhase(PHASE.PLAYING)} />
+        <CountdownOverlay
+          onComplete={() => {
+            saveLocalGameState({ enteredPlaying: true });
+            setPhase(PHASE.PLAYING);
+          }}
+        />
       )}
 
       <div className="mp-game-topbar">
@@ -1084,6 +1287,7 @@ export default function MultiplayerGamePage() {
             currentSummary={pageData?.summary || ""}
             currentDocumentHtml={pageData?.documentHtml || ""}
             links={pageData?.links || []}
+            quickLinks={pageData?.quickLinks || []}
             isLoading={isLoading}
             elapsedSeconds={elapsedSeconds}
             clickCount={myPlayer?.move_count || 0}

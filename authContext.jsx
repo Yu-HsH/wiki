@@ -1,4 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  FunctionsFetchError,
+  FunctionsHttpError,
+  FunctionsRelayError,
+} from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 // 로컬 스토리지에 유저 정보를 저장하기 위한 키 (데모/게스트 모드용)
@@ -8,6 +13,97 @@ const LOCAL_USER_KEY = "wiki_game_local_user";
  * 인증 상태(로그인 유저 정보, 로그인/로그아웃 함수 등)를 관리하는 커스텀 컨텍스트
  */
 const AuthContext = createContext(null);
+
+function createAuthFunctionError(message, details) {
+  const error = new Error(message);
+  error.name = "AuthFunctionError";
+  Object.assign(error, details);
+  return error;
+}
+
+async function normalizeFunctionError(error, operation) {
+  if (error instanceof FunctionsHttpError) {
+    const response = error.context;
+    const status = response?.status ?? null;
+    const gatewayCode = response?.headers?.get("sb-error-code") || null;
+    let responseBody = null;
+
+    try {
+      responseBody = await response.clone().json();
+    } catch {
+      responseBody = null;
+    }
+
+    let category = "edge-request";
+    let userMessage = "로그인 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+
+    if (status === 401 || gatewayCode?.startsWith("UNAUTHORIZED")) {
+      category = "edge-auth";
+      userMessage = "로그인 서비스 인증에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+    } else if (operation === "username-lookup" && status === 404) {
+      category = "username-not-found";
+      userMessage = "아이디 또는 비밀번호가 올바르지 않습니다.";
+    } else if (operation === "username-signup" && status === 409) {
+      category = "username-conflict";
+      userMessage = "이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.";
+    } else if (status >= 500) {
+      category = "edge-server";
+      userMessage = "로그인 서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    const normalized = createAuthFunctionError(userMessage, {
+      authCategory: category,
+      operation,
+      status,
+      code: gatewayCode || responseBody?.code || null,
+    });
+
+    if (import.meta.env.DEV) {
+      console.error("[Auth function]", {
+        operation,
+        category,
+        status,
+        code: normalized.code,
+      });
+    }
+
+    return normalized;
+  }
+
+  if (error instanceof FunctionsFetchError) {
+    return createAuthFunctionError(
+      "네트워크 오류가 발생했습니다. 인터넷 연결을 확인해 주세요.",
+      {
+        authCategory: "network",
+        operation,
+        status: null,
+        code: null,
+      }
+    );
+  }
+
+  if (error instanceof FunctionsRelayError) {
+    return createAuthFunctionError(
+      "로그인 서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      {
+        authCategory: "edge-relay",
+        operation,
+        status: error.context?.status ?? null,
+        code: null,
+      }
+    );
+  }
+
+  return createAuthFunctionError(
+    "로그인 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    {
+      authCategory: "unknown",
+      operation,
+      status: null,
+      code: null,
+    }
+  );
+}
 
 /**
  * Supabase가 반환하는 유저 객체를 애플리케이션 프론트엔드에서 사용하기 쉬운 형식으로 변환합니다.
@@ -112,7 +208,7 @@ export function AuthProvider({ children }) {
     const { data: fnData, error: fnError } = await supabase.functions.invoke("username-lookup", {
       body: { username },
     });
-    if (fnError) throw new Error(fnError.message || "사용자를 찾을 수 없습니다.");
+    if (fnError) throw await normalizeFunctionError(fnError, "username-lookup");
 
     const syntheticEmail = fnData?.syntheticEmail;
     if (!syntheticEmail) throw new Error("사용자를 찾을 수 없습니다.");
@@ -149,7 +245,7 @@ export function AuthProvider({ children }) {
       body: { username, password, nickname },
     });
 
-    if (fnError) throw new Error(fnError.message || "회원가입에 실패했습니다.");
+    if (fnError) throw await normalizeFunctionError(fnError, "username-signup");
     if (fnData?.error) throw new Error(fnData.error);
 
     // 가입 성공 후 즉시 로그인을 수행하여 세션을 활성화합니다.
