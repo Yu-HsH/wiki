@@ -16,6 +16,17 @@ import IntroPage from "./pages/IntroPage";
 import GroupRoomPage from "./pages/GroupRoomPage";
 import GroupGamePage from "./pages/GroupGamePage";
 import PublicContentPage from "./pages/PublicContentPage";
+import {
+  clearGuestSingleGameProgress,
+  getSingleGameAccess,
+  readGuestSingleGameSession,
+} from "./utils/singleGameSession";
+import {
+  LOBBY_PATH,
+  LOGIN_PATH,
+  getLobbyAccess,
+  getSingleGameLobbyNavigation,
+} from "./utils/appRoutes";
 /**
  * 로그인 여부에 따라 접근을 제어하는 래퍼 컴포넌트
  * - 세션 확인 중일 때는 로딩 표시
@@ -33,7 +44,7 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={LOGIN_PATH} replace />;
   }
 
   return children;
@@ -42,17 +53,37 @@ function ProtectedRoute({ children }) {
 function LoginRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/main" replace />;
+  if (user) return <Navigate to={LOBBY_PATH} replace />;
   return <LoginPage />;
 }
 
-function GameRoute() {
+function LobbyRoute() {
+  const { user, loading } = useAuth();
+  const access = getLobbyAccess({ loading, user });
+
+  if (access === "loading") {
+    return (
+      <div className="app-center">
+        <p className="app-muted">세션 확인 중...</p>
+      </div>
+    );
+  }
+
+  if (access === "login") {
+    return <Navigate to={LOGIN_PATH} replace />;
+  }
+
+  return <MainPage />;
+}
+
+function GameRoute({ isGuestRecovery = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [saveStatus, setSaveStatus] = useState("");
+  const isGuestGame = Boolean(user?.isGuest || isGuestRecovery);
 
   const handleSaveRecord = async (result) => {
-    if (user?.isGuest) {
+    if (isGuestGame) {
       alert("랭킹저장은 로그인 후 가능합니다.");
       return;
     }
@@ -72,11 +103,19 @@ function GameRoute() {
     }
   };
 
+  const handleReturnLobby = () => {
+    if (isGuestGame) {
+      clearGuestSingleGameProgress();
+    }
+    const destination = getSingleGameLobbyNavigation();
+    navigate(destination.path, destination.options);
+  };
+
   return (
     <>
       <div className="game-nav">
-        <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/main")}>
-          메인
+        <button type="button" className="app-btn app-btn-ghost" onClick={handleReturnLobby}>
+          로비
         </button>
         <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/ranking")}>
           랭킹
@@ -85,17 +124,38 @@ function GameRoute() {
       {saveStatus && <div className="save-status">{saveStatus}</div>}
       <GamePage
         onGameComplete={handleSaveRecord}
-        onReturnMain={() => navigate("/main")}
+        onReturnLobby={handleReturnLobby}
+        guestRecovery={isGuestRecovery}
       />
     </>
   );
 }
 
+function SingleGameRoute() {
+  const { user, loading } = useAuth();
+  const [guestSession] = useState(() => readGuestSingleGameSession());
+  const access = getSingleGameAccess({ loading, user, guestSession });
+
+  if (access === "loading") {
+    return (
+      <div className="app-center">
+        <p className="app-muted">세션 확인 중...</p>
+      </div>
+    );
+  }
+
+  if (access === "login") {
+    return <Navigate to={LOGIN_PATH} replace />;
+  }
+
+  return <GameRoute isGuestRecovery={access === "guest-recovery"} />;
+}
+
 /**
  * 전체 라우팅 설정
  * - /login: 로그인/회원가입
- * - /main: 메인 대시보드 (인증 필수)
- * - /game: 게임 화면 (인증 필수)
+ * - /lobby: 메인 대시보드 (로그인 또는 로컬 게스트)
+ * - /game: 게임 화면 (로그인 또는 유효한 게스트 싱글 세션 필요)
  * - /ranking: 전체 랭킹 (인증 필수)
  * - /profile: 내 프로필 (인증 필수)
  */
@@ -106,7 +166,7 @@ function AppRoutes() {
       <Route path="/" element={<IntroPage />} />
 
       {/* 기존 로그인 페이지도 유지 가능 */}
-      <Route path="/login" element={<LoginRoute />} />
+      <Route path={LOGIN_PATH} element={<LoginRoute />} />
 
       <Route path="/about" element={<PublicContentPage />} />
       <Route path="/guide" element={<PublicContentPage />} />
@@ -114,21 +174,13 @@ function AppRoutes() {
       <Route path="/terms" element={<PublicContentPage />} />
 
       <Route
-        path="/main"
-        element={
-          <ProtectedRoute>
-            <MainPage />
-          </ProtectedRoute>
-        }
+        path={LOBBY_PATH}
+        element={<LobbyRoute />}
       />
 
       <Route
         path="/game"
-        element={
-          <ProtectedRoute>
-            <GameRoute />
-          </ProtectedRoute>
-        }
+        element={<SingleGameRoute />}
       />
 
       <Route

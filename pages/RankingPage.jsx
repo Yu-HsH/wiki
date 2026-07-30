@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
+import { LOBBY_PATH } from "../utils/appRoutes";
 import { fetchRankings } from "../rankingService";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 
@@ -68,8 +69,8 @@ export default function RankingPage() {
           <p className="dashboard-muted">Fastest players to reach random target pages.</p>
         </div>
         <div className="header-actions">
-          <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/main")}>
-            Main
+          <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate(LOBBY_PATH)}>
+            Lobby
           </button>
         </div>
       </header>

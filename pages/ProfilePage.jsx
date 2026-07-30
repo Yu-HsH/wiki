@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
+import { LOBBY_PATH } from "../utils/appRoutes";
 import { supabase } from "../supabaseClient";
 import { fetchAllProfileStats } from "../services/profileStatsService";
 
@@ -174,8 +175,8 @@ export default function ProfilePage() {
       <div className="auth-card" style={{ maxWidth: 460 }}>
         {/* Header Actions */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-          <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/main")}>
-            ← 메인
+          <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate(LOBBY_PATH)}>
+            ← 로비
           </button>
           <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>
             로그아웃

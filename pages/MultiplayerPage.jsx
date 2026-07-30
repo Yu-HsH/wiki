@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
+import { LOBBY_PATH } from "../utils/appRoutes";
 import {
   createRoom,
   findRoomByCode,
@@ -96,9 +97,9 @@ export default function MultiplayerPage() {
           <button
             type="button"
             className="app-btn app-btn-ghost"
-            onClick={() => navigate("/main")}
+            onClick={() => navigate(LOBBY_PATH)}
           >
-            ← 메인으로
+            ← 로비로
           </button>
         </header>
 

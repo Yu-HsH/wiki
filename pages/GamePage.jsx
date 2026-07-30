@@ -18,6 +18,13 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 import { trackEvent } from "../services/analyticsService";
 import { createLatestRequestManager, isAbortError } from "../utils/latestRequest";
+import {
+  clearGuestSingleGameProgress,
+  getRestoredGuestElapsedSeconds,
+  readGuestSingleGameSession,
+  saveGuestSingleGameSession,
+} from "../utils/singleGameSession";
+import { LOBBY_PATH } from "../utils/appRoutes";
 
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
@@ -51,10 +58,17 @@ const PHASE = {
   SUCCESS: "SUCCESS",
 };
 
-export default function GamePage({ onGameComplete, onReturnMain }) {
+const LEGACY_SINGLE_GAME_STORAGE_KEY = "wiki-single-game-state";
+
+export default function GamePage({
+  onGameComplete,
+  onReturnLobby,
+  guestRecovery = false,
+}) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isGuestGame = Boolean(user?.isGuest || guestRecovery);
 
   const [phase, setPhase] = useState(PHASE.SELECTING);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,33 +103,53 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const moveInFlightRef = useRef(false);
   const pageRequestManagerRef = useRef(createLatestRequestManager());
 
-  const storageKey = "wiki-single-game-state";
-
   const saveLocalGameState = useCallback((patch = {}) => {
-    const prev = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    if (isGuestGame) {
+      return saveGuestSingleGameSession(patch);
+    }
 
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        ...prev,
-        ...patch,
-        savedAt: Date.now(),
-      })
-    );
-  }, []);
+    try {
+      const prev = JSON.parse(
+        localStorage.getItem(LEGACY_SINGLE_GAME_STORAGE_KEY) || "{}"
+      );
+
+      localStorage.setItem(
+        LEGACY_SINGLE_GAME_STORAGE_KEY,
+        JSON.stringify({
+          ...prev,
+          ...patch,
+          savedAt: Date.now(),
+        })
+      );
+    } catch {
+      localStorage.removeItem(LEGACY_SINGLE_GAME_STORAGE_KEY);
+    }
+    return null;
+  }, [isGuestGame]);
 
   const loadLocalGameState = useCallback(() => {
+    if (isGuestGame) {
+      return readGuestSingleGameSession();
+    }
+
     try {
-      return JSON.parse(localStorage.getItem(storageKey) || "null");
+      return JSON.parse(
+        localStorage.getItem(LEGACY_SINGLE_GAME_STORAGE_KEY) || "null"
+      );
     } catch {
+      localStorage.removeItem(LEGACY_SINGLE_GAME_STORAGE_KEY);
       return null;
     }
-  }, []);
+  }, [isGuestGame]);
 
   const clearSingleGameState = useCallback(() => {
-    localStorage.removeItem("wiki-single-game-state");
-    localStorage.removeItem("wiki-single-items");
-  }, []);
+    if (isGuestGame) {
+      clearGuestSingleGameProgress();
+    } else {
+      localStorage.removeItem(LEGACY_SINGLE_GAME_STORAGE_KEY);
+      localStorage.removeItem("wiki-single-items");
+    }
+  }, [isGuestGame]);
 
   const handleCountdownComplete = useCallback(() => {
     if (!playStartTrackedRef.current) {
@@ -128,7 +162,12 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
     }
 
     setPhase(PHASE.PLAYING);
-  }, [target.title, user]);
+    saveLocalGameState({
+      phase: PHASE.PLAYING,
+      elapsedSeconds,
+      startedAt: Date.now() - elapsedSeconds * 1000,
+    });
+  }, [elapsedSeconds, saveLocalGameState, target.title, user]);
 
   const useItems = location.state?.useItems ?? true;
 
@@ -183,10 +222,10 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   const handleGiveUp = useCallback(() => {
     pageRequestManagerRef.current.cancel();
     clearSingleGameState();
-    if (onReturnMain) {
-      onReturnMain();
+    if (onReturnLobby) {
+      onReturnLobby();
     }
-  }, [clearSingleGameState, onReturnMain]);
+  }, [clearSingleGameState, onReturnLobby]);
 
   // ----------------------------
   // 문서 이동
@@ -297,6 +336,11 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
   // ----------------------------
   const handleSetupComplete = useCallback(
     async ({ mode, keyword }) => {
+      clearSingleGameState();
+      if (!isGuestGame) {
+        clearGuestSingleGameProgress();
+      }
+
       const request = pageRequestManagerRef.current.begin();
       setIsLoading(true);
       setError("");
@@ -394,7 +438,14 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
         }
       }
     },
-    [checkWin, handleWin, location.state, saveLocalGameState]
+    [
+      checkWin,
+      clearSingleGameState,
+      handleWin,
+      isGuestGame,
+      location.state,
+      saveLocalGameState,
+    ]
   );
 
   // ----------------------------
@@ -405,6 +456,18 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
 
     const saved = loadLocalGameState();
     const state = location.state;
+
+    // 게스트가 메인 화면에서 새 게임을 요청했다면 이전 진행보다 새 요청을 우선합니다.
+    if (isGuestGame && !guestRecovery && state?.mode) {
+      autoStarted.current = true;
+      handleSetupComplete({
+        mode: state.mode,
+        keyword: state.keyword ?? "",
+        targetTitle: state.targetTitle,
+      });
+      window.history.replaceState({}, document.title);
+      return;
+    }
 
     // 1. 저장된 게임이 있으면 무조건 복구 우선 (새로고침 대응)
     if (saved?.currentTitle && saved?.target?.title) {
@@ -428,16 +491,32 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           setCurrentDocumentHtml(page.documentHtml);
           setLinks(page.links);
           setQuickLinks(page.quickLinks);
-          setPathTitles(saved.pathTitles || [page.title]);
-          setClickCount(saved.clickCount || 0);
-          setElapsedSeconds(saved.elapsedSeconds || 0);
+          const restoredPath = saved.pathTitles || [page.title];
+          const restoredClicks = saved.clickCount || 0;
+          const restoredElapsed = isGuestGame
+            ? getRestoredGuestElapsedSeconds(saved)
+            : saved.elapsedSeconds || 0;
+          const restoredStartedAt =
+            saved.startedAt || Date.now() - restoredElapsed * 1000;
+
+          setPathTitles(restoredPath);
+          setClickCount(restoredClicks);
+          setElapsedSeconds(restoredElapsed);
+          saveLocalGameState({
+            phase: PHASE.PLAYING,
+            currentTitle: page.title,
+            pathTitles: restoredPath,
+            clickCount: restoredClicks,
+            elapsedSeconds: restoredElapsed,
+            startedAt: restoredStartedAt,
+          });
           // 복구 시에는 카운트다운 없이 바로 진행
           setPhase(PHASE.PLAYING);
         } catch (e) {
           if (isAbortError(e) || !pageRequestManagerRef.current.isCurrent(request.id)) return;
           console.error("싱글 게임 복구 실패:", e);
-          localStorage.removeItem(storageKey);
-          navigate("/main", { replace: true });
+          clearSingleGameState();
+          navigate(LOBBY_PATH, { replace: true });
         } finally {
           if (pageRequestManagerRef.current.isCurrent(request.id)) {
             setIsLoading(false);
@@ -459,11 +538,20 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
       // 시작 후 히스토리 state를 비워 새로고침 시 중복 시작 방지
       window.history.replaceState({}, document.title);
     }
-    // 3. 둘 다 없으면 메인으로 이동
+    // 3. 둘 다 없으면 로비로 이동
     else if (!state?.mode) {
-      navigate("/main", { replace: true });
+      navigate(LOBBY_PATH, { replace: true });
     }
-  }, [location.state, handleSetupComplete, loadLocalGameState, navigate]);
+  }, [
+    clearSingleGameState,
+    guestRecovery,
+    handleSetupComplete,
+    isGuestGame,
+    loadLocalGameState,
+    location.state,
+    navigate,
+    saveLocalGameState,
+  ]);
 
   return (
     <div className="wiki-game-page">
@@ -559,7 +647,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
           elapsedSeconds={elapsedSeconds}
           clickCount={clickCount}
           pathTitles={pathTitles}
-          onReturnToMain={handleGiveUp}
+          onReturnToLobby={handleGiveUp}
         />
       )}
 
@@ -577,7 +665,7 @@ export default function GamePage({ onGameComplete, onReturnMain }) {
             className="single-giveup-button"
             onClick={handleGiveUp}
           >
-            포기하고 메인으로
+            포기하고 로비로
           </button>
 
           <ScrollToTopButton />

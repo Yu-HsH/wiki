@@ -5,6 +5,7 @@ import {
   FunctionsRelayError,
 } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
+import { resolveAuthUserWithGuestFallback } from "./utils/localAuthSession";
 
 // 로컬 스토리지에 유저 정보를 저장하기 위한 키 (데모/게스트 모드용)
 const LOCAL_USER_KEY = "wiki_game_local_user";
@@ -161,7 +162,11 @@ export function AuthProvider({ children }) {
 
       const { data } = await supabase.auth.getSession();
       if (!unsubscribed) {
-        setUser(mapSupabaseUser(data.session?.user || null));
+        const authenticatedUser = mapSupabaseUser(data.session?.user || null);
+        if (authenticatedUser) clearLocalUser();
+        setUser(
+          resolveAuthUserWithGuestFallback(authenticatedUser, readLocalUser())
+        );
         setLoading(false);
       }
     };
@@ -175,7 +180,11 @@ export function AuthProvider({ children }) {
     }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(mapSupabaseUser(session?.user || null));
+      const authenticatedUser = mapSupabaseUser(session?.user || null);
+      if (authenticatedUser) clearLocalUser();
+      setUser(
+        resolveAuthUserWithGuestFallback(authenticatedUser, readLocalUser())
+      );
     });
 
     return () => {
@@ -193,6 +202,7 @@ export function AuthProvider({ children }) {
     }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    clearLocalUser();
     setUser(mapSupabaseUser(data.user));
   };
 
@@ -216,6 +226,7 @@ export function AuthProvider({ children }) {
     // 내부적으로 이메일을 사용하여 실제 로그인 처리
     const { data, error } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password });
     if (error) throw error;
+    clearLocalUser();
     setUser(mapSupabaseUser(data.user));
   };
 
@@ -231,6 +242,7 @@ export function AuthProvider({ children }) {
       },
     });
     if (error) throw error;
+    clearLocalUser();
     setUser(mapSupabaseUser(data.user));
   };
 
@@ -269,6 +281,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     if (isSupabaseConfigured) {
+      clearLocalUser();
       await supabase.auth.signOut();
       setUser(null);
       return;

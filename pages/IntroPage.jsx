@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../authContext";
+import { LOBBY_PATH } from "../utils/appRoutes";
 import LoginPage from "./LoginPage";
 
 // c:\Users\황성현\Desktop\game\wiki\Opening.png 에 위치하므로 경로 수정
@@ -10,7 +11,7 @@ import openingBg from "../Opening.png";
  * 첫 시작 화면
  * - 배경 이미지 표시
  * - 아무 키 / 클릭 시 로그인 박스 표시
- * - 이미 로그인된 유저는 바로 /main 이동
+ * - 이미 로그인된 유저는 바로 /lobby 이동
  */
 export default function IntroPage() {
     const { user, loading } = useAuth();
@@ -30,7 +31,7 @@ export default function IntroPage() {
     }
 
     if (user) {
-        return <Navigate to="/main" replace />;
+        return <Navigate to={LOBBY_PATH} replace />;
     }
 
     return (

@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
+import { LOBBY_PATH } from "../utils/appRoutes";
 
 /* ── Zod 유효성 검사 스키마 ── */
 // 로그인 시: 아이디(2자+), 비밀번호(6자+) 필수
@@ -145,7 +146,7 @@ export default function LoginPage({ isEmbedded = false }) {
         const parsed = demoSchema.safeParse(values);
         if (!parsed.success) { applyZodErrors(parsed, setError); return; }
         await demoLogin({ displayName: parsed.data.nickname });
-        navigate("/main");
+        navigate(LOBBY_PATH);
         return;
       }
 
@@ -154,7 +155,7 @@ export default function LoginPage({ isEmbedded = false }) {
         const parsed = signinSchema.safeParse(values);
         if (!parsed.success) { applyZodErrors(parsed, setError); return; }
         await loginWithUsername({ username: parsed.data.username, password: parsed.data.password });
-        navigate("/main");
+        navigate(LOBBY_PATH);
         return;
       }
 
@@ -166,7 +167,7 @@ export default function LoginPage({ isEmbedded = false }) {
         password: parsed.data.password,
         nickname: parsed.data.nickname,
       });
-      navigate("/main");
+      navigate(LOBBY_PATH);
     } catch (error) {
       if (import.meta.env.DEV) {
         const lowerMessage = (error?.message || "").toLowerCase();
@@ -293,7 +294,7 @@ export default function LoginPage({ isEmbedded = false }) {
                 try {
                   setSubmitError("");
                   await loginAsGuest();
-                  navigate("/main");
+                  navigate(LOBBY_PATH);
                 } catch (error) {
                   console.error("Guest login error:", error);
                   setSubmitError("게스트 로그인에 실패했습니다. 다시 시도해주세요.");

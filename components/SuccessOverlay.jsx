@@ -14,7 +14,7 @@ export default function SuccessOverlay({
   elapsedSeconds,
   clickCount,
   pathTitles = [],
-  onReturnToMain,
+  onReturnToLobby,
 }) {
   const { user } = useAuth();
   const [rankings, setRankings] = useState([]);
@@ -125,8 +125,8 @@ export default function SuccessOverlay({
           >
             다시 도전
           </button>
-          <button style={primaryButtonStyle} onClick={onReturnToMain}>
-            메인으로 이동
+          <button style={primaryButtonStyle} onClick={onReturnToLobby}>
+            로비로 이동
           </button>
         </div>
       </div>
