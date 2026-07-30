@@ -407,6 +407,40 @@ export async function updateGroupPlayerProgress(roomId, userId, updates) {
     return data;
 }
 
+function isMissingLeaveRpc(error) {
+    const code = String(error?.code || "").toUpperCase();
+    const message = String(error?.message || "").toLowerCase();
+    return (
+        code === "PGRST202" ||
+        code === "42883" ||
+        message.includes("leave_group_player") && message.includes("function")
+    );
+}
+
+/**
+ * 진행 중인 단체 게임 나가기
+ *
+ * 신규 RPC가 적용된 환경에서는 참가자 행과 결과 스냅샷을 보존해 DNF로 처리합니다.
+ * 아직 마이그레이션이 적용되지 않은 환경에서는 미완주자만 기존 삭제 방식으로
+ * 정리하고, 완주자의 기록 행은 결과 조회 권한과 순위 보존을 위해 유지합니다.
+ */
+export async function leaveGroupGame(roomId, userId, { hasFinished = false } = {}) {
+    assertSupabase();
+
+    if (!roomId || !userId) return null;
+
+    const { data, error } = await supabase.rpc("leave_group_player", {
+        p_room_id: roomId,
+    });
+
+    if (!error) return Array.isArray(data) ? data[0] : data;
+    if (!isMissingLeaveRpc(error)) throw error;
+
+    if (hasFinished) return null;
+    await leaveGroupRoom(roomId, userId);
+    return null;
+}
+
 /**
  * 목표 도착 처리
  */

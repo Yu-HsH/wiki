@@ -106,7 +106,7 @@ export function isProgressAlreadyApplied(latest, expected) {
   return (
     latest.current_title === expected.currentTitle &&
     latest.move_count === expected.moveCount &&
-    (!expected.hasFinished || latest.has_finished === true)
+    latest.has_finished === Boolean(expected.hasFinished)
   );
 }
 
@@ -128,7 +128,11 @@ export function validateGroupGameSession({ room, players, userId, now = Date.now
     throw fatalSessionError("PARTICIPANT_INACTIVE", "게임에서 나갔거나 강제 퇴장되어 다시 입장할 수 없습니다.");
   }
 
-  if (room.status === "finished" || me.has_finished) {
+  if (room.status === "finished") {
+    return { outcome: "ended", room, players, me };
+  }
+
+  if (me.has_finished) {
     return { outcome: "finished", room, players, me };
   }
 

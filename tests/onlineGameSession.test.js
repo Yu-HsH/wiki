@@ -58,12 +58,26 @@ test("삭제된 방, 강제 퇴장, 종료된 게임을 서로 구분한다", ()
     (error) => error.code === "PARTICIPANT_INACTIVE"
   );
 
-  const finished = validateGroupGameSession({
+  const ended = validateGroupGameSession({
     room: { ...groupRoom, status: "finished" },
     players: [{ ...groupPlayer, has_finished: true }],
     userId: "user-1",
   });
-  assert.equal(finished.outcome, "finished");
+  assert.equal(ended.outcome, "ended");
+});
+
+test("개인 완주와 전체 경기 종료를 서로 다른 서버 상태로 복원한다", () => {
+  const personalFinish = validateGroupGameSession({
+    room: groupRoom,
+    players: [
+      { ...groupPlayer, has_finished: true, rank: 1 },
+      { ...groupPlayer, user_id: "user-2", current_title: "서울", has_finished: false },
+    ],
+    userId: "user-1",
+  });
+
+  assert.equal(personalFinish.outcome, "finished");
+  assert.equal(personalFinish.room.status, "playing");
 });
 
 test("1:1 게임 URL은 참가자가 없거나 종료된 경우 진행 화면을 허용하지 않는다", () => {
@@ -119,6 +133,15 @@ test("같은 이동 요청은 이미 반영된 결과로 판정하고 다른 이
   }), true);
   assert.equal(isProgressAlreadyApplied(latest, {
     currentTitle: "서울특별시",
+    moveCount: 1,
+    hasFinished: false,
+  }), false);
+
+  assert.equal(isProgressAlreadyApplied({
+    ...latest,
+    has_finished: true,
+  }, {
+    currentTitle: "한반도",
     moveCount: 1,
     hasFinished: false,
   }), false);

@@ -12,6 +12,7 @@ import {
     startGroupRoomGame,
 } from "../services/groupMultiplayerService";
 import { searchWikiTitleCandidates } from "../services/wikiService";
+import { createGroupEntryMarker } from "../utils/groupGameFlow";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 
 export default function GroupRoomPage() {
@@ -136,7 +137,13 @@ export default function GroupRoomPage() {
     useEffect(() => {
         if (!room || room.status !== "starting") return;
 
-        navigate(`/multiplayer/group/game/${roomId}`);
+        const entryToken = createGroupEntryMarker({
+            roomId,
+            storage: sessionStorage,
+        });
+        navigate(`/multiplayer/group/game/${roomId}`, {
+            state: { groupEntryToken: entryToken },
+        });
     }, [room, roomId, navigate]);
 
     useEffect(() => {

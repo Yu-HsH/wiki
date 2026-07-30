@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
@@ -10,11 +10,12 @@ import {
     updateGroupPlayerProgress,
     finishGroupPlayer,
     fetchGroupResults,
-    leaveGroupRoom,
+    leaveGroupGame,
 } from "../services/groupMultiplayerService";
 
 import {
     fetchPageData,
+    formatDuration,
     normalizeTitle,
 } from "../services/wikiService";
 
@@ -30,23 +31,37 @@ import {
     retryRecoverable,
     validateGroupGameSession,
 } from "../utils/onlineGameSession";
+import {
+    buildGroupFinalStandings,
+    canGroupPlayerMove,
+    consumeGroupEntryMarker,
+    getGroupLoadingState,
+    getPendingGroupPlayers,
+    getRestoredGroupPhase,
+    GROUP_GAME_PHASE,
+    isGroupPlayerInactive,
+    resolveGroupEntry,
+} from "../utils/groupGameFlow";
 
 import { recordGroupMatchHistory } from "../services/profileStatsService";
 import { trackEvent } from "../services/analyticsService";
-const GROUP_PHASE = {
-    LOADING: "LOADING",
-    PICKING: "PICKING",
-    COUNTDOWN: "COUNTDOWN",
-    PLAYING: "PLAYING",
-    FINISHED: "FINISHED",
-};
 
 export default function GroupGamePage() {
     const { roomId } = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const [phase, setPhase] = useState(GROUP_PHASE.LOADING);
+    const initialEntryRef = useRef(null);
+    if (!initialEntryRef.current) {
+        initialEntryRef.current = resolveGroupEntry({
+            roomId,
+            navigationState: location.state,
+            storage: sessionStorage,
+        });
+    }
+
+    const [phase, setPhase] = useState(initialEntryRef.current.phase);
     const [room, setRoom] = useState(null);
     const [players, setPlayers] = useState([]);
     const [results, setResults] = useState([]);
@@ -69,12 +84,12 @@ export default function GroupGamePage() {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [clickCount, setClickCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-    const [recovery, setRecovery] = useState({
-        mode: "recovering",
-        message: "서버에서 현재 게임 상태를 확인하고 있습니다.",
-    });
+    const [recovery, setRecovery] = useState(() =>
+        getGroupLoadingState(initialEntryRef.current.phase)
+    );
     const [leaving, setLeaving] = useState(false);
     const [connectionVersion, setConnectionVersion] = useState(0);
+    const [selectedSpectatorId, setSelectedSpectatorId] = useState(null);
 
     const timerRef = useRef(null);
     const startTimeRef = useRef(null);
@@ -82,6 +97,7 @@ export default function GroupGamePage() {
     const hasRecordedRef = useRef(false);
     const playStartTrackedRef = useRef(false);
     const recoveryGenerationRef = useRef(0);
+    const initialValidationCompletedRef = useRef(false);
     const realtimeChannelRef = useRef(null);
     const moveInFlightRef = useRef(false);
 
@@ -164,22 +180,33 @@ export default function GroupGamePage() {
         });
     }, [roomId, user?.id]);
 
-    const recoverGame = useCallback(async () => {
+    const recoverGame = useCallback(async (entryPhase = GROUP_GAME_PHASE.RECOVERING) => {
         if (!roomId || !user?.id) return;
 
         const generation = recoveryGenerationRef.current + 1;
         recoveryGenerationRef.current = generation;
-        setPhase(GROUP_PHASE.LOADING);
+        const loadingState = getGroupLoadingState(entryPhase);
+        setPhase(loadingState.phase);
         setRecovery({
-            mode: "recovering",
-            message: "서버에서 참가 상태와 현재 문서를 다시 확인하고 있습니다.",
+            mode: loadingState.mode,
+            message: loadingState.message,
         });
 
         try {
+            const saved = loadLocalGameState() || {};
+            if (saved.exited === true) {
+                setPhase(GROUP_GAME_PHASE.FATAL_ERROR);
+                setRecovery({
+                    mode: "fatal",
+                    message: "이미 게임 로비로 나간 세션입니다. 온라인 플레이에서 새 게임을 시작해 주세요.",
+                });
+                return;
+            }
+
             const restored = await retryRecoverable(
                 async () => {
                     const session = await fetchValidatedSession();
-                    if (session.outcome === "finished") return { session, page: null };
+                    if (session.outcome !== "active") return { session, page: null };
                     const page = await fetchPageData(session.currentTitle);
                     return { session, page };
                 },
@@ -192,6 +219,11 @@ export default function GroupGamePage() {
 
             if (recoveryGenerationRef.current !== generation) return;
 
+            if (!initialValidationCompletedRef.current) {
+                consumeGroupEntryMarker(initialEntryRef.current, sessionStorage);
+                initialValidationCompletedRef.current = true;
+            }
+
             const { session, page } = restored;
             setRoom(session.room);
             setPlayers(session.players);
@@ -203,20 +235,31 @@ export default function GroupGamePage() {
                 mode: "group",
             });
 
-            if (session.outcome === "finished") {
+            if (session.outcome !== "active") {
                 finishedRef.current = true;
-                clearLocalGameState();
                 const latestResults = await fetchGroupResults(roomId).catch(() => []);
                 if (recoveryGenerationRef.current !== generation) return;
+
+                const restoredPhase = getRestoredGroupPhase(session, saved);
                 setResults(latestResults);
+                setSelectedSpectatorId(
+                    getPendingGroupPlayers(session.players)[0]?.user_id || session.me.user_id
+                );
+                saveLocalGameState({
+                    enteredPlaying: true,
+                    hasFinished: Boolean(session.me.has_finished),
+                    viewMode: restoredPhase === GROUP_GAME_PHASE.ENDED
+                        ? "ended"
+                        : saved.viewMode || "result",
+                });
                 setRecovery(null);
-                setPhase(GROUP_PHASE.FINISHED);
+                setPhase(restoredPhase);
                 setConnectionVersion((prev) => prev + 1);
                 return;
             }
 
-            const saved = loadLocalGameState();
-            const enteredPlaying = saved?.enteredPlaying === true || session.moveCount > 0;
+            const restoredPhase = getRestoredGroupPhase(session, saved);
+            const enteredPlaying = restoredPhase === GROUP_GAME_PHASE.PLAYING;
 
             setCurrentTitle(page.title);
             setCurrentSummary(page.summary);
@@ -237,7 +280,7 @@ export default function GroupGamePage() {
             });
 
             setRecovery(null);
-            setPhase(enteredPlaying ? GROUP_PHASE.PLAYING : GROUP_PHASE.PICKING);
+            setPhase(restoredPhase);
             setConnectionVersion((prev) => prev + 1);
         } catch (error) {
             if (recoveryGenerationRef.current !== generation) return;
@@ -247,7 +290,10 @@ export default function GroupGamePage() {
             );
             console.error("group game recovery failed:", normalized.cause || error);
 
-            if (!normalized.recoverable) clearLocalGameState();
+            if (!normalized.recoverable) {
+                setPhase(GROUP_GAME_PHASE.FATAL_ERROR);
+                clearLocalGameState();
+            }
             setRecovery({
                 mode: normalized.recoverable ? "retryable" : "fatal",
                 message: normalized.message,
@@ -267,16 +313,34 @@ export default function GroupGamePage() {
         setRoom(session.room);
         setPlayers(session.players);
 
-        if (session.outcome === "finished") {
-            clearLocalGameState();
+        if (session.outcome !== "active") {
+            finishedRef.current = true;
             const latestResults = await fetchGroupResults(roomId).catch(() => []);
             setResults(latestResults);
-            setPhase(GROUP_PHASE.FINISHED);
+            const restoredPhase = getRestoredGroupPhase(session, loadLocalGameState() || {});
+            saveLocalGameState({
+                enteredPlaying: true,
+                hasFinished: Boolean(session.me.has_finished),
+                viewMode: restoredPhase === GROUP_GAME_PHASE.ENDED
+                    ? "ended"
+                    : restoredPhase === GROUP_GAME_PHASE.SPECTATING
+                        ? "spectating"
+                        : "result",
+            });
+            setPhase(restoredPhase);
         }
-    }, [roomId, fetchValidatedSession, clearLocalGameState]);
+    }, [
+        roomId,
+        fetchValidatedSession,
+        loadLocalGameState,
+        saveLocalGameState,
+    ]);
 
     useEffect(() => {
-        recoverGame();
+        const entryPhase = initialValidationCompletedRef.current
+            ? GROUP_GAME_PHASE.RECOVERING
+            : initialEntryRef.current.phase;
+        recoverGame(entryPhase);
         return () => {
             recoveryGenerationRef.current += 1;
         };
@@ -333,7 +397,7 @@ export default function GroupGamePage() {
             if (realtimeChannelRef.current !== channel) return;
             if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
                 console.error("group game realtime disconnected:", status, error);
-                setPhase(GROUP_PHASE.LOADING);
+                setPhase(GROUP_GAME_PHASE.RECOVERING);
                 setRecovery({
                     mode: "retryable",
                     message: "실시간 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
@@ -365,7 +429,7 @@ export default function GroupGamePage() {
     }, [recoverGame]);
 
     useEffect(() => {
-        if (phase === GROUP_PHASE.PLAYING) {
+        if (phase === GROUP_GAME_PHASE.PLAYING) {
             startTimeRef.current = room?.started_at
                 ? Date.parse(room.started_at)
                 : Date.now() - elapsedSeconds * 1000;
@@ -402,22 +466,16 @@ export default function GroupGamePage() {
                 recordGroupMatchHistory(roomId).catch(console.error);
             }
 
-            if (phase !== GROUP_PHASE.FINISHED) {
-                fetchGroupResults(roomId)
-                    .then((data) => setResults(data))
-                    .catch(() => { })
-                    .finally(() => setPhase(GROUP_PHASE.FINISHED));
-            }
         }
-    }, [room?.status, phase, roomId]);
+    }, [room?.status, roomId]);
 
     const handleMove = async (nextTitle) => {
-        if (
-            phase !== GROUP_PHASE.PLAYING ||
-            isLoading ||
-            moveInFlightRef.current ||
-            finishedRef.current
-        ) return;
+        if (!canGroupPlayerMove({
+            phase,
+            isLoading,
+            moveInFlight: moveInFlightRef.current,
+            hasFinished: finishedRef.current || myPlayer?.has_finished,
+        })) return;
 
         moveInFlightRef.current = true;
         setIsLoading(true);
@@ -459,7 +517,15 @@ export default function GroupGamePage() {
 
             if (solved) {
                 finishedRef.current = true;
-                clearLocalGameState();
+                saveLocalGameState({
+                    currentTitle: page.title,
+                    pathTitles: newPath,
+                    clickCount: nextClickCount,
+                    enteredPlaying: true,
+                    hasFinished: true,
+                    viewMode: "result",
+                });
+                setPhase(GROUP_GAME_PHASE.FINISHED);
                 await refreshRoomState();
             } else {
                 saveLocalGameState({
@@ -478,7 +544,9 @@ export default function GroupGamePage() {
             );
             console.error("group game move failed:", normalized.cause || e);
             if (!normalized.recoverable) clearLocalGameState();
-            setPhase(GROUP_PHASE.LOADING);
+            setPhase(normalized.recoverable
+                ? GROUP_GAME_PHASE.RECOVERING
+                : GROUP_GAME_PHASE.FATAL_ERROR);
             setRecovery({
                 mode: normalized.recoverable ? "retryable" : "fatal",
                 message: normalized.message,
@@ -493,7 +561,6 @@ export default function GroupGamePage() {
         if (leaving) return;
         setLeaving(true);
         recoveryGenerationRef.current += 1;
-        clearLocalGameState();
 
         if (timerRef.current) clearInterval(timerRef.current);
         if (realtimeChannelRef.current) {
@@ -502,93 +569,268 @@ export default function GroupGamePage() {
             await supabase.removeChannel(channel).catch(() => { });
         }
 
-        const shouldNotifyServer =
-            room &&
-            ["starting", "playing"].includes(room.status) &&
+        const shouldNotifyServer = room && myPlayer &&
+            ["starting", "playing", "finished"].includes(room.status);
+        const requiresConfirmedLeave =
+            ["starting", "playing"].includes(room?.status) &&
             myPlayer &&
             !myPlayer.has_finished;
 
         try {
-            if (shouldNotifyServer) await leaveGroupRoom(roomId, user.id);
+            if (shouldNotifyServer) {
+                await leaveGroupGame(roomId, user.id, {
+                    hasFinished: myPlayer.has_finished || room.status === "finished",
+                });
+            }
         } catch (error) {
             console.error("leave group game failed:", error);
-        } finally {
-            navigate("/multiplayer", { replace: true });
+            if (requiresConfirmedLeave) {
+                setLeaving(false);
+                setPhase(GROUP_GAME_PHASE.RECOVERING);
+                setRecovery({
+                    mode: "retryable",
+                    message: "게임 이탈 상태를 서버에 저장하지 못했습니다. 연결을 확인한 뒤 다시 시도해 주세요.",
+                });
+                return;
+            }
         }
+
+        saveLocalGameState({
+            enteredPlaying: true,
+            exited: true,
+            exitedAt: Date.now(),
+        });
+        navigate("/multiplayer", { replace: true });
     };
 
-    if (recovery || phase === GROUP_PHASE.LOADING) {
+    const handleStartSpectating = () => {
+        const firstPending = getPendingGroupPlayers(players)[0];
+        setSelectedSpectatorId(firstPending?.user_id || myPlayer?.user_id || null);
+        saveLocalGameState({
+            enteredPlaying: true,
+            hasFinished: true,
+            viewMode: "spectating",
+        });
+        setPhase(GROUP_GAME_PHASE.SPECTATING);
+    };
+
+    if (
+        recovery ||
+        phase === GROUP_GAME_PHASE.INITIALIZING ||
+        phase === GROUP_GAME_PHASE.RECOVERING ||
+        phase === GROUP_GAME_PHASE.FATAL_ERROR
+    ) {
         return (
             <OnlineGameRecoveryPanel
                 mode={recovery?.mode || "recovering"}
                 message={recovery?.message}
-                onRetry={recoverGame}
+                onRetry={() => recoverGame()}
                 onLeave={handleReturnToLobby}
                 leaving={leaving}
             />
         );
     }
 
-    if (phase === GROUP_PHASE.FINISHED) {
+    if (phase === GROUP_GAME_PHASE.FINISHED) {
         const myResult =
             results.find((result) => result.user_id === user?.id) ||
             players.find((player) => player.user_id === user?.id);
-
-        const rankedResults = results.length > 0 ? results : finishedPlayers;
+        const pendingCount = getPendingGroupPlayers(players).length;
 
         return (
-            <div className="mp-page">
+            <div className="mp-page group-result-page">
                 <div className="mp-container">
                     <div className="mp-title-block">
-                        <span className="mp-badge">RESULT</span>
-                        <h1 className="mp-title">
-                            {myResult?.rank && myResult.rank <= finishRankLimit
-                                ? `${myResult.rank}등으로 도착!`
-                                : "이번 라운드는 패배했습니다"}
-                        </h1>
+                        <span className="mp-badge">FINISHED</span>
+                        <h1 className="mp-title">내 기록</h1>
                         <p className="mp-subtitle">
                             목표 문서: <strong>{target.title}</strong>
                         </p>
                     </div>
 
-                    <section className="mp-card" style={{ maxWidth: 720, margin: "0 auto" }}>
-                        <h2>상위 {finishRankLimit}명 결과</h2>
+                    <section className="mp-card group-result-card">
+                        <div className="group-record-grid">
+                            <div>
+                                <span>현재 순위</span>
+                                <strong>{myResult?.rank ? `${myResult.rank}위` : "확정 중"}</strong>
+                            </div>
+                            <div>
+                                <span>이동 횟수</span>
+                                <strong>{myResult?.move_count ?? clickCount}회</strong>
+                            </div>
+                            <div>
+                                <span>기록</span>
+                                <strong>
+                                    {formatDuration(myResult?.elapsed_seconds ?? elapsedSeconds)}
+                                </strong>
+                            </div>
+                        </div>
 
-                        <div style={{ display: "grid", gap: "10px", marginTop: "16px" }}>
-                            {rankedResults.slice(0, finishRankLimit).map((player) => (
+                        <p className="group-pending-message">
+                            {pendingCount > 0
+                                ? `아직 ${pendingCount}명이 진행 중입니다.`
+                                : "모든 참가자의 결과를 확인하고 있습니다."}
+                        </p>
+
+                        <div className="group-result-actions">
+                            {pendingCount > 0 && (
+                                <button
+                                    type="button"
+                                    className="mp-action-btn mp-action-btn--primary"
+                                    onClick={handleStartSpectating}
+                                >
+                                    다른 참가자 관전하기
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                className="mp-action-btn"
+                                onClick={handleReturnToLobby}
+                                disabled={leaving}
+                            >
+                                {leaving ? "게임 정리 중..." : "게임 로비로 나가기"}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        );
+    }
+
+    if (phase === GROUP_GAME_PHASE.SPECTATING) {
+        const selectedPlayer =
+            players.find((player) => player.user_id === selectedSpectatorId) ||
+            getPendingGroupPlayers(players)[0] ||
+            myPlayer;
+        const selectedPath = Array.isArray(selectedPlayer?.path_titles)
+            ? selectedPlayer.path_titles
+            : [];
+
+        return (
+            <div className="mp-page group-spectator-page">
+                <div className="mp-container">
+                    <div className="mp-title-block">
+                        <span className="mp-badge">SPECTATING</span>
+                        <h1 className="mp-title">다른 참가자 관전 중</h1>
+                        <p className="mp-subtitle">
+                            참가자의 현재 문서와 이동 경로가 실시간으로 갱신됩니다.
+                        </p>
+                    </div>
+
+                    <div className="group-spectator-layout">
+                        <section className="mp-card group-spectator-list-card">
+                            <h2>참가자</h2>
+                            <div className="group-spectator-list">
+                                {players.map((player) => {
+                                    const isMe = player.user_id === user?.id;
+                                    const inactive = isGroupPlayerInactive(player);
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={player.id || player.user_id}
+                                            className={`group-spectator-player ${
+                                                selectedPlayer?.user_id === player.user_id ? "active" : ""
+                                            }`}
+                                            onClick={() => setSelectedSpectatorId(player.user_id)}
+                                        >
+                                            <span>
+                                                {isMe ? "나" : player.nickname_snapshot || "참가자"}
+                                            </span>
+                                            <strong>
+                                                {player.has_finished
+                                                    ? `${player.rank ?? "-"}위 · 완주 · ${player.move_count ?? 0}회`
+                                                    : inactive
+                                                        ? "DNF · 게임 이탈"
+                                                        : `진행 중 · ${player.current_title || "문서 확인 중"} · ${player.move_count ?? 0}회`}
+                                            </strong>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </section>
+
+                        <section className="mp-card group-spectator-detail-card">
+                            <span className="mp-badge">LIVE PATH</span>
+                            <h2>{selectedPlayer?.nickname_snapshot || "참가자"}의 이동 경로</h2>
+                            <p className="group-spectator-current">
+                                현재 문서: <strong>{selectedPlayer?.current_title || "확인 중"}</strong>
+                            </p>
+                            <div className="group-spectator-path">
+                                {selectedPath.map((title, index) => (
+                                    <React.Fragment key={`${title}-${index}`}>
+                                        {index > 0 && <span aria-hidden="true">→</span>}
+                                        <em>{title}</em>
+                                    </React.Fragment>
+                                ))}
+                                {selectedPath.length === 0 && (
+                                    <p className="mp-subtitle">아직 저장된 이동 경로가 없습니다.</p>
+                                )}
+                            </div>
+                        </section>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="mp-action-btn group-spectator-leave"
+                        onClick={handleReturnToLobby}
+                        disabled={leaving}
+                    >
+                        {leaving ? "게임 정리 중..." : "게임 로비로 나가기"}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (phase === GROUP_GAME_PHASE.ENDED) {
+        const finalStandings = buildGroupFinalStandings(players, results);
+
+        return (
+            <div className="mp-page group-result-page">
+                <div className="mp-container">
+                    <div className="mp-title-block">
+                        <span className="mp-badge">FINAL RESULT</span>
+                        <h1 className="mp-title">최종 결과</h1>
+                        <p className="mp-subtitle">
+                            목표 문서: <strong>{target.title}</strong>
+                        </p>
+                    </div>
+
+                    <section className="mp-card group-result-card">
+                        <div className="group-final-list">
+                            {finalStandings.map((player) => (
                                 <div
                                     key={player.id || player.user_id}
-                                    style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                        padding: "12px 14px",
-                                        borderRadius: "14px",
-                                        background: "rgba(255,255,255,0.06)",
-                                        border: "1px solid var(--line-main, rgba(255,255,255,0.12))",
-                                    }}
+                                    className={`group-final-player ${
+                                        player.result_status === "dnf" ? "dnf" : ""
+                                    }`}
                                 >
                                     <strong>
-                                        {player.rank}등 · {player.nickname_snapshot || "참가자"}
+                                        {player.result_status === "dnf"
+                                            ? "DNF"
+                                            : `${player.rank ?? "-"}위`}
+                                        {" · "}
+                                        {player.nickname_snapshot || "참가자"}
                                     </strong>
-                                    <span style={{ color: "var(--text-muted)" }}>
-                                        {player.move_count ?? 0}회 이동
+                                    <span>
+                                        {player.result_status === "dnf"
+                                            ? player.leave_reason || "게임 이탈 또는 미완주"
+                                            : `${player.move_count ?? 0}회 · ${formatDuration(player.elapsed_seconds ?? 0)}`}
                                     </span>
                                 </div>
                             ))}
-
-                            {rankedResults.length === 0 && (
-                                <p className="mp-subtitle">결과를 불러오는 중입니다...</p>
+                            {finalStandings.length === 0 && (
+                                <p className="mp-subtitle">최종 결과를 불러오는 중입니다.</p>
                             )}
                         </div>
 
                         <button
                             type="button"
-                            className="mp-action-btn mp-action-btn--primary"
-                            style={{ width: "100%", marginTop: "20px" }}
+                            className="mp-action-btn mp-action-btn--primary group-final-leave"
                             onClick={handleReturnToLobby}
+                            disabled={leaving}
                         >
-                            확인
+                            {leaving ? "게임 정리 중..." : "게임 로비로 이동"}
                         </button>
                     </section>
                 </div>
@@ -598,27 +840,27 @@ export default function GroupGamePage() {
 
     return (
         <div className="wiki-game-page">
-            {phase === GROUP_PHASE.PICKING && (
+            {phase === GROUP_GAME_PHASE.PICKING && (
                 <GroupPickOverlay
                     candidates={candidates}
                     startTitle={room?.group_start_title}
                     targetTitle={room?.group_target_title}
-                    onComplete={() => setPhase(GROUP_PHASE.COUNTDOWN)}
+                    onComplete={() => setPhase(GROUP_GAME_PHASE.COUNTDOWN)}
                 />
             )}
 
-            {phase === GROUP_PHASE.COUNTDOWN && (
+            {phase === GROUP_GAME_PHASE.COUNTDOWN && (
                 <CountdownOverlay
                     onComplete={() => {
                         saveLocalGameState({ enteredPlaying: true });
-                        setPhase(GROUP_PHASE.PLAYING);
+                        setPhase(GROUP_GAME_PHASE.PLAYING);
                     }}
                 />
             )}
 
-            {(phase === GROUP_PHASE.PICKING ||
-                phase === GROUP_PHASE.COUNTDOWN ||
-                phase === GROUP_PHASE.PLAYING) && (
+            {(phase === GROUP_GAME_PHASE.PICKING ||
+                phase === GROUP_GAME_PHASE.COUNTDOWN ||
+                phase === GROUP_GAME_PHASE.PLAYING) && (
                     <WikiViewer
                         target={target}
                         currentTitle={currentTitle}
@@ -634,7 +876,7 @@ export default function GroupGamePage() {
                     />
                 )}
 
-            {phase === GROUP_PHASE.PLAYING && (
+            {phase === GROUP_GAME_PHASE.PLAYING && (
                 <>
                     <FloatingHud
                         targetTitle={target.title}
