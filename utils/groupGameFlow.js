@@ -11,7 +11,15 @@ export const GROUP_GAME_PHASE = Object.freeze({
 });
 
 const GROUP_ENTRY_MARKER_PREFIX = "wiki-group-initial-entry";
-const INACTIVE_STATUSES = new Set(["dnf", "forfeited", "kicked", "left", "removed", "banned"]);
+const INACTIVE_STATUSES = new Set([
+  "retired",
+  "forfeited",
+  "kicked",
+  "left",
+  "removed",
+  "banned",
+  "disconnected_timeout",
+]);
 
 export function getGroupEntryMarkerKey(roomId) {
   return `${GROUP_ENTRY_MARKER_PREFIX}:${roomId}`;
@@ -59,12 +67,53 @@ export function consumeGroupEntryMarker(entry, storage) {
 }
 
 export function isGroupPlayerInactive(player) {
-  const status = String(player?.participant_status || player?.status || "").toLowerCase();
+  const status = String(
+    player?.player_status ||
+      player?.result_status ||
+      player?.participant_status ||
+      player?.status ||
+      ""
+  ).toLowerCase();
   return (
     player?.is_active === false ||
     Boolean(player?.left_at) ||
     Boolean(player?.kicked_at) ||
+    Boolean(player?.retired_at) ||
     INACTIVE_STATUSES.has(status)
+  );
+}
+
+function getGroupPlayerServerStatus(player) {
+  return String(
+    player?.player_status ||
+      player?.status ||
+      player?.result_status ||
+      player?.participant_status ||
+      ""
+  ).toLowerCase();
+}
+
+export function isGroupPlayerFinished(player) {
+  const playerStatus = String(
+    player?.player_status || player?.status || ""
+  ).toLowerCase();
+
+  if (playerStatus) return playerStatus === "finished";
+
+  return player?.result_status === "finished" || player?.has_finished === true;
+}
+
+export function shouldRetireGroupPlayer(room, player) {
+  const playerStatus = String(
+    player?.player_status || player?.status || ""
+  ).toLowerCase();
+
+  return Boolean(
+    ["starting", "playing", "grace_period"].includes(room?.status) &&
+      player &&
+      !isGroupPlayerFinished(player) &&
+      !isGroupPlayerInactive(player) &&
+      !["finished", "retired"].includes(playerStatus)
   );
 }
 
@@ -101,7 +150,7 @@ export function getRestoredGroupPhase(session, savedState = {}) {
 
   const enteredPlaying =
     savedState.enteredPlaying === true ||
-    session?.room?.status === "playing" ||
+    ["playing", "grace_period"].includes(session?.room?.status) ||
     Number(session?.moveCount) > 0;
 
   return enteredPlaying ? GROUP_GAME_PHASE.PLAYING : GROUP_GAME_PHASE.PICKING;
@@ -118,43 +167,79 @@ export function canGroupPlayerMove({ phase, isLoading, moveInFlight, hasFinished
 
 export function getPendingGroupPlayers(players = []) {
   return players.filter(
-    (player) => !player?.has_finished && !isGroupPlayerInactive(player)
+    (player) => {
+      const status = getGroupPlayerServerStatus(player);
+      const hasExplicitStatus = Boolean(status);
+
+      if (hasExplicitStatus) {
+        return status !== "finished" && !INACTIVE_STATUSES.has(status);
+      }
+
+      return (
+        !player?.has_finished &&
+        !Number.isInteger(player?.rank) &&
+        !isGroupPlayerInactive(player)
+      );
+    }
   );
 }
 
-function resultStatus(player) {
-  const explicitStatus = String(
-    player?.result_status || player?.participant_status || player?.status || ""
-  ).toLowerCase();
+function getFinalResultStatus(result) {
+  const status = String(result?.result_status || "").toLowerCase();
+  return status === "finished" || status === "retired" ? status : null;
+}
 
-  if (player?.has_finished || explicitStatus === "finished" || Number.isInteger(player?.rank)) {
-    return "finished";
-  }
-
-  if (INACTIVE_STATUSES.has(explicitStatus) || isGroupPlayerInactive(player)) {
-    return "dnf";
-  }
-
-  return "dnf";
+function getRoomPlayerFinalStatus(player) {
+  const status = getGroupPlayerServerStatus(player);
+  if (status === "finished") return "finished";
+  if (INACTIVE_STATUSES.has(status)) return "retired";
+  return null;
 }
 
 export function buildGroupFinalStandings(players = [], results = []) {
-  const merged = new Map();
+  const playerByUserId = new Map(
+    players
+      .filter((player) => player?.user_id)
+      .map((player) => [player.user_id, player])
+  );
+  const standingsByUserId = new Map();
 
-  players.forEach((player) => {
-    merged.set(player.user_id, { ...player });
-  });
-
+  // group_match_results is authoritative. room_players only supplements the
+  // result with live/display fields such as nickname and path_titles.
   results.forEach((result) => {
-    const previous = merged.get(result.user_id) || {};
-    merged.set(result.user_id, { ...previous, ...result });
+    const resultStatus = getFinalResultStatus(result);
+    if (!result?.user_id || !resultStatus) return;
+
+    const player = playerByUserId.get(result.user_id) || {};
+    standingsByUserId.set(result.user_id, {
+      ...player,
+      ...result,
+      result_status: resultStatus,
+      ...(resultStatus === "retired"
+        ? { rank: null, is_winner: false }
+        : {}),
+    });
   });
 
-  return Array.from(merged.values())
-    .map((player) => ({
+  // A just-finished Realtime update can arrive before the result row. Only
+  // explicit server final statuses are allowed as a temporary fallback; do
+  // not infer finished from has_finished or rank.
+  players.forEach((player) => {
+    if (!player?.user_id || standingsByUserId.has(player.user_id)) return;
+
+    const resultStatus = getRoomPlayerFinalStatus(player);
+    if (!resultStatus) return;
+
+    standingsByUserId.set(player.user_id, {
       ...player,
-      result_status: resultStatus(player),
-    }))
+      result_status: resultStatus,
+      ...(resultStatus === "retired"
+        ? { rank: null, is_winner: false }
+        : {}),
+    });
+  });
+
+  return Array.from(standingsByUserId.values())
     .sort((a, b) => {
       const aRank = Number.isInteger(a.rank) ? a.rank : Number.POSITIVE_INFINITY;
       const bRank = Number.isInteger(b.rank) ? b.rank : Number.POSITIVE_INFINITY;

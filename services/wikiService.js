@@ -264,6 +264,49 @@ export async function fetchSummary(title, { signal } = {}) {
   return data;
 }
 
+function normalizeSummaryText(value) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+}
+
+/**
+ * 목표 문서 카드처럼 본문과 링크가 필요하지 않은 화면을 위한 요약 전용 요청입니다.
+ * REST 응답의 일반 텍스트 필드만 반환하며 extract_html은 사용하지 않습니다.
+ */
+export async function fetchPageSummary(
+  title,
+  { signal, fetchImpl = fetch } = {}
+) {
+  const requestedTitle = normalizeRequestedTitle(title);
+  if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
+
+  const url = `${SUMMARY_API}/${encodeURIComponent(requestedTitle)}`;
+  const response = await fetchImpl(url, {
+    signal,
+    headers: { accept: "application/json" },
+  });
+
+  if (response.status === 404) {
+    const error = new Error(`"${requestedTitle}" 문서를 찾을 수 없습니다.`);
+    error.code = "WIKI_PAGE_NOT_FOUND";
+    throw error;
+  }
+  if (!response.ok) {
+    throw new Error("문서 요약을 불러오지 못했습니다.");
+  }
+
+  const data = await response.json();
+  const canonicalTitle = normalizeRequestedTitle(data?.title) || requestedTitle;
+
+  return {
+    requestedTitle,
+    canonicalTitle,
+    revisionId: data?.revision ?? null,
+    description: normalizeSummaryText(data?.description),
+    extract: normalizeSummaryText(data?.extract),
+    thumbnailUrl: getSafeWikiImageSource(data?.thumbnail?.source || "") || null,
+  };
+}
+
 export async function fetchAllLinkPages(
   title,
   { signal, fetchJsonImpl = fetchJson, maxPages = MAX_LINK_API_PAGES } = {}

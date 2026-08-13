@@ -2,7 +2,7 @@
 
 > 문서 목적: 그룹 온라인 대전의 확정 규칙, 기존 보안 하드닝, 현재 DB 문제, 변경할 DB 구조와 RPC 책임을 한 문서에서 관리한다.  
 > 적용 범위: 그룹 온라인 대전만 해당한다. 싱글, 게스트 싱글, 1:1 온라인 대전은 이번 변경 대상이 아니다.  
-> 문서 상태: Phase 1 로컬 검증 완료 / Phase 2A 구현 전 설계 확정안  
+> 문서 상태: Phase 1 완료 / Phase 2A 완료 / Phase 2B 완료
 > 운영 적용 상태: **미적용** — 현재까지의 마이그레이션과 검증은 로컬 Supabase에서만 수행했다.
 
 ---
@@ -794,36 +794,87 @@ leave_group_player RPC
 
 ## Phase 1 — 로컬 완료
 
-- RPC 인증 강화
-- 함수 실행 권한 정리
-- `search_path` 강화
-- 중복 트리거 제거
-- 고수준 테이블 권한 회수
-- 기존 기능 회귀 테스트
+상태: **완료**
 
-## Phase 2A — 다음 구현
+- 그룹 RPC 보안 hardening
+- `auth` 검증
+- 함수 실행 권한 제한
+- `search_path` 보강
+- 로컬 검증 완료
 
-- 상태·시간 컬럼 추가
-- DB 제약조건 추가
-- 시작·활성화 RPC
-- 완주 RPC 변경
-- 유예시간 구현
-- RETIRE RPC
-- 만료 최종화 RPC
-- 4인·6인 로컬 테스트
+## Phase 2A — 그룹 lifecycle DB 구현
+
+상태: **완료**
+
+- 그룹 lifecycle DB 구현
+- room/player/result 상태 모델
+- activate/finalize/leave RPC
+- 15분 제한
+- 3등 이후 3분 grace
+- 4등 이후 정상 완주
+- RETIRE
+- pgTAP 60개 통과
 
 ## Phase 2B — 프론트 연결
 
-- 타이머 UI
-- `grace_period` UI
-- 4등 이후 완주
-- RETIRE 결과 화면
-- 완주 후 관전
-- F5 복구
-- Realtime 동기화
-- 자유 채팅 대신 이모지 반응
+상태: **완료**
 
-## Phase 2C — 보안 잠금
+### Phase 2B-1 — RPC / 상태 연결
+
+상태: **완료**
+
+- `activate_group_room_game` 연결
+- `finalize_group_room_if_expired` wrapper 연결
+- `leave_group_player` 연결
+- 경기 중 직접 DELETE fallback 제거
+- `grace_period` 복구와 `retired` 상태 지원
+
+### Phase 2B-2 — 서버 시간 / grace / finalizer
+
+상태: **완료**
+
+- `game_starts_at`, `game_deadline_at`, `grace_ends_at` 기반 서버 권위 타이머
+- grace timer와 만료 finalizer 자동 호출
+- F5 만료 복구
+- Realtime 만료 처리
+- 경기 중 이탈 RETIRE 처리
+- 전원 resolved 시 즉시 최종 종료
+
+### Phase 2B-3 — 결과 / RETIRE / 관전
+
+상태: **완료**
+
+- `group_match_results` 기준 최종 결과
+- 4등 이후 정상 완주 지원
+- RETIRE 결과와 사용자 문구 처리
+- `finished`/`retired` 참가자의 관전 대상 제외
+- 관전 중 RETIRE 시 다음 대상 자동 전환
+- `recordGroupMatchHistory` 서버 결과 기반 정리
+- 그룹 경로 DNF → RETIRE 정리
+
+### Phase 2B 검증 결과
+
+- 실제 로컬 Supabase 4인 브라우저 통합 테스트 완료
+- 4등 정상 완주 확인
+- grace timeout RETIRE 확인
+- F5 만료 복구 확인
+- Realtime 최종 결과 전환 확인
+- 경기 이탈 RETIRE 확인
+- 싱글 / 1:1 회귀 확인
+- 현재 프론트 자동 테스트 94개 통과
+
+## Phase 2C — 보안 잠금 (미착수)
+
+다음 단계: **Phase 2C-0 — 직접 DB write 감사 및 대체 RPC 설계**
+
+Phase 2C-0에서는 다음 직접 write 후보를 먼저 감사한다.
+
+- 목표 문서 제출 / READY
+- READY 취소
+- 현재 문서 / 이동 횟수 / `path_titles` 저장
+- 기타 `room_players` 직접 `UPDATE`
+
+감사 결과를 바탕으로 대체 RPC를 설계한 뒤 RLS를 최종 잠근다.
 
 - 직접 UPDATE/DELETE 제한
 - 결과·기록·통계 직접 쓰기 차단

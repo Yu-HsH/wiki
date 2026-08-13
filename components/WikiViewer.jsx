@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { formatDuration } from "../services/wikiService";
+import { formatDuration, normalizeTitle } from "../services/wikiService";
+import { TARGET_SUMMARY_STATUS } from "../utils/groupTargetSummary";
 
 
 
@@ -16,6 +17,7 @@ export default function WikiViewer({
   clickCount,
   startTitle,
   onLinkClick,
+  timerLabel = "진행 시간",
   searchAvailable = false,
   onConsumeSearch,
   highlightRequestId = 0,
@@ -31,6 +33,36 @@ export default function WikiViewer({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMessage, setSearchMessage] = useState("");
   const [articleHighlightedLinks, setArticleHighlightedLinks] = useState([]);
+  const [targetSummaryExpanded, setTargetSummaryExpanded] = useState(false);
+  const [targetSummaryCanExpand, setTargetSummaryCanExpand] = useState(false);
+  const targetSummaryRef = useRef(null);
+  const hasCanonicalTargetTitle =
+    target?.canonicalTitle &&
+    normalizeTitle(target.canonicalTitle) !== normalizeTitle(target.title);
+
+  useEffect(() => {
+    setTargetSummaryExpanded(false);
+    setTargetSummaryCanExpand(false);
+  }, [target?.title, target?.summary]);
+
+  useEffect(() => {
+    if (targetSummaryExpanded || !targetSummaryRef.current) return undefined;
+
+    const measureOverflow = () => {
+      const element = targetSummaryRef.current;
+      if (!element) return;
+      setTargetSummaryCanExpand(element.scrollHeight > element.clientHeight + 1);
+    };
+
+    const frameId = window.requestAnimationFrame(measureOverflow);
+    window.addEventListener("resize", measureOverflow);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", measureOverflow);
+    };
+  }, [target?.title, target?.summary, targetSummaryExpanded]);
+
   // 1. 페이지에서 찾기(Ctrl+F/Cmd+F) 및 우클릭 방지 (100% 차단은 불가능함을 주석으로 명시)
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -425,7 +457,60 @@ export default function WikiViewer({
         {target.requestedKeyword && (
           <p className="target-meta">입력 키워드: <strong>{target.requestedKeyword}</strong></p>
         )}
-        <p>{target.summary}</p>
+        {hasCanonicalTargetTitle && (
+          <p className="target-meta">
+            위키백과 문서: <strong>{target.canonicalTitle}</strong>
+          </p>
+        )}
+        {target.summaryStatus === TARGET_SUMMARY_STATUS.LOADING && (
+          <p className="target-summary-status" role="status">
+            설명을 불러오는 중입니다.
+          </p>
+        )}
+        {target.summaryStatus === TARGET_SUMMARY_STATUS.SUCCESS && (
+          <>
+            <p
+              ref={targetSummaryRef}
+              className={`target-summary ${
+                !targetSummaryExpanded
+                  ? "target-summary--collapsed"
+                  : ""
+              }`}
+            >
+              {target.summary}
+            </p>
+            {targetSummaryCanExpand && (
+              <button
+                type="button"
+                className="target-summary-toggle"
+                aria-expanded={targetSummaryExpanded}
+                onClick={() => setTargetSummaryExpanded((expanded) => !expanded)}
+              >
+                {targetSummaryExpanded ? "접기" : "더보기"}
+              </button>
+            )}
+          </>
+        )}
+        {target.summaryStatus === TARGET_SUMMARY_STATUS.EMPTY && (
+          <p className="target-summary-status">
+            목표 문서 설명을 찾을 수 없습니다.
+          </p>
+        )}
+        {target.summaryStatus === TARGET_SUMMARY_STATUS.ERROR && (
+          <div className="target-summary-error" role="status">
+            <span>목표 설명을 불러오지 못했습니다. 게임 진행에는 영향이 없습니다.</span>
+            {target.onSummaryRetry && (
+              <button
+                type="button"
+                className="target-summary-retry"
+                onClick={target.onSummaryRetry}
+              >
+                다시 시도
+              </button>
+            )}
+          </div>
+        )}
+        {!target.summaryStatus && target.summary && <p>{target.summary}</p>}
       </section>
 
       <section className="stats-grid">
@@ -442,7 +527,7 @@ export default function WikiViewer({
           <p className="stat-value">{clickCount}</p>
         </article>
         <article className="stat-card">
-          <p className="stat-label">진행 시간</p>
+          <p className="stat-label">{timerLabel}</p>
           <p className="stat-value">{formatDuration(elapsedSeconds)}</p>
         </article>
       </section>

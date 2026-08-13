@@ -496,6 +496,12 @@ body {
   padding: 20px 24px;
 }
 
+.mission-card h2 {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
 .mission-head {
   display: flex;
   justify-content: space-between;
@@ -511,6 +517,55 @@ body {
   color: #373a3c;
 }
 
+.target-meta,
+.target-summary,
+.target-summary-status {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.target-summary--collapsed {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.target-summary-toggle,
+.target-summary-retry {
+  min-height: 36px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border: 1px solid #a2a9b1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #3366cc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.target-summary-toggle:hover,
+.target-summary-retry:hover {
+  background: #f8f9fa;
+}
+
+.target-summary-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  color: #72777d;
+  overflow-wrap: anywhere;
+}
+
+.target-summary-error .target-summary-retry {
+  margin-top: 0;
+}
+
 .timer-pill {
   font-weight: 700;
   color: #d9534f;
@@ -524,6 +579,10 @@ body {
 }
 
 @media (max-width: 768px) {
+  .mission-card {
+    padding: 16px;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr 1fr;
   }

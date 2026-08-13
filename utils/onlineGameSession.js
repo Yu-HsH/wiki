@@ -81,13 +81,30 @@ export function normalizeOnlineGameError(error, fallbackMessage = "게임 연결
   );
 }
 
-function isInactivePlayer(player) {
-  const status = String(player?.status || player?.participant_status || "").toLowerCase();
+function isInactivePlayer(player, { includeLegacyDnf = true } = {}) {
+  const status = String(
+    player?.player_status ||
+      player?.result_status ||
+      player?.status ||
+      player?.participant_status ||
+      ""
+  ).toLowerCase();
+  const inactiveStatuses = [
+    "retired",
+    "forfeited",
+    "kicked",
+    "left",
+    "removed",
+    "banned",
+  ];
+  if (includeLegacyDnf) inactiveStatuses.push("dnf");
+
   return (
     player?.is_active === false ||
     Boolean(player?.left_at) ||
     Boolean(player?.kicked_at) ||
-    ["kicked", "left", "removed", "banned"].includes(status)
+    Boolean(player?.retired_at) ||
+    inactiveStatuses.includes(status)
   );
 }
 
@@ -124,19 +141,22 @@ export function validateGroupGameSession({ room, players, userId, now = Date.now
     throw fatalSessionError("NOT_A_PARTICIPANT", "이 게임의 참가자가 아니거나 이미 퇴장 처리되었습니다.");
   }
 
-  if (isInactivePlayer(me)) {
-    throw fatalSessionError("PARTICIPANT_INACTIVE", "게임에서 나갔거나 강제 퇴장되어 다시 입장할 수 없습니다.");
-  }
-
   if (room.status === "finished") {
     return { outcome: "ended", room, players, me };
   }
 
-  if (me.has_finished) {
+  if (isInactivePlayer(me, { includeLegacyDnf: false })) {
+    throw fatalSessionError("PARTICIPANT_INACTIVE", "게임에서 나갔거나 강제 퇴장되어 다시 입장할 수 없습니다.");
+  }
+
+  if (
+    me.has_finished ||
+    String(me.player_status || me.status || "").toLowerCase() === "finished"
+  ) {
     return { outcome: "finished", room, players, me };
   }
 
-  if (!["starting", "playing"].includes(room.status)) {
+  if (!["starting", "playing", "grace_period"].includes(room.status)) {
     throw fatalSessionError("GAME_NOT_ACTIVE", "진행 중인 게임이 아닙니다.");
   }
 
@@ -161,7 +181,10 @@ export function validateGroupGameSession({ room, players, userId, now = Date.now
     currentTitle,
     pathTitles,
     moveCount: Math.max(0, Number(me.move_count) || 0),
-    elapsedSeconds: elapsedSecondsFromServer(room.started_at, now),
+    elapsedSeconds: elapsedSecondsFromServer(
+      room.game_starts_at || room.started_at,
+      now
+    ),
   };
 }
 

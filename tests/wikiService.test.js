@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { fetchAllLinkPages, fetchPageData } from "../services/wikiService.js";
+import {
+  fetchAllLinkPages,
+  fetchPageData,
+  fetchPageSummary,
+} from "../services/wikiService.js";
 import { createLatestRequestManager, isAbortError } from "../utils/latestRequest.js";
 
 test("plcontinue의 모든 페이지를 병합하고 페이지 사이 중복을 제거한다", async () => {
@@ -75,6 +79,75 @@ test("반복 continuation과 페이지 안전 한도를 감지한다", async () 
       }),
     }),
     /안전 한도/
+  );
+});
+
+test("요약 전용 요청은 URL을 인코딩하고 필요한 일반 텍스트 필드만 반환한다", async () => {
+  const controller = new AbortController();
+  let requestedUrl = "";
+  let receivedSignal = null;
+
+  const summary = await fetchPageSummary("사과 (동음이의)", {
+    signal: controller.signal,
+    fetchImpl: async (url, options) => {
+      requestedUrl = url;
+      receivedSignal = options.signal;
+      return Response.json({
+        title: "사과 (동음이의)",
+        revision: 123,
+        description: "동음이의어 문서",
+        extract: "  사과는 여러 뜻으로 쓰인다. \n",
+        extract_html: "<script>사용하지 않음</script>",
+        thumbnail: {
+          source: "https://upload.wikimedia.org/example.png",
+        },
+      });
+    },
+  });
+
+  assert.match(requestedUrl, /%20/);
+  assert.equal(receivedSignal, controller.signal);
+  assert.deepEqual(summary, {
+    requestedTitle: "사과 (동음이의)",
+    canonicalTitle: "사과 (동음이의)",
+    revisionId: 123,
+    description: "동음이의어 문서",
+    extract: "사과는 여러 뜻으로 쓰인다.",
+    thumbnailUrl: "https://upload.wikimedia.org/example.png",
+  });
+  assert.equal(Object.hasOwn(summary, "extract_html"), false);
+});
+
+test("요약 전용 요청은 리다이렉트의 canonical title을 보존한다", async () => {
+  const summary = await fetchPageSummary("남한", {
+    fetchImpl: async () => Response.json({
+      title: "대한민국",
+      extract: "대한민국에 대한 실제 요약",
+    }),
+  });
+
+  assert.equal(summary.requestedTitle, "남한");
+  assert.equal(summary.canonicalTitle, "대한민국");
+  assert.equal(summary.extract, "대한민국에 대한 실제 요약");
+});
+
+test("요약 응답 필드가 빠져도 빈 일반 텍스트 값으로 안전하게 반환한다", async () => {
+  const summary = await fetchPageSummary("설명이 없는 문서", {
+    fetchImpl: async () => Response.json({ title: "설명이 없는 문서" }),
+  });
+
+  assert.equal(summary.description, "");
+  assert.equal(summary.extract, "");
+  assert.equal(summary.thumbnailUrl, null);
+  assert.equal(summary.revisionId, null);
+});
+
+test("존재하지 않는 요약 문서는 식별 가능한 오류로 처리한다", async () => {
+  await assert.rejects(
+    fetchPageSummary("존재하지 않는 문서", {
+      fetchImpl: async () => new Response("not found", { status: 404 }),
+    }),
+    (error) => error.code === "WIKI_PAGE_NOT_FOUND"
   );
 });
 

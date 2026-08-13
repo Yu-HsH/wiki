@@ -407,38 +407,90 @@ export async function updateGroupPlayerProgress(roomId, userId, updates) {
     return data;
 }
 
-function isMissingLeaveRpc(error) {
-    const code = String(error?.code || "").toUpperCase();
-    const message = String(error?.message || "").toLowerCase();
-    return (
-        code === "PGRST202" ||
-        code === "42883" ||
-        message.includes("leave_group_player") && message.includes("function")
-    );
+function normalizeRpcRow(data) {
+    return Array.isArray(data) ? data[0] || null : data || null;
+}
+
+/**
+ * 카운트다운 종료 후 서버에 경기 활성화를 요청한다.
+ *
+ * RPC는 이미 playing인 방을 다시 호출해도 현재 방 행을 반환하는
+ * 멱등 계약을 전제로 한다. 따라서 클라이언트는 이 함수의 반환값을
+ * 최신 game_rooms 행으로 사용하고, 직접 status를 변경하지 않는다.
+ */
+export async function activateGroupRoomGame(roomId) {
+    assertSupabase();
+
+    const { data, error } = await supabase.rpc("activate_group_room_game", {
+        p_room_id: roomId,
+    });
+
+    if (error) throw error;
+
+    return normalizeRpcRow(data);
+}
+
+/**
+ * 제한시간 또는 유예시간 만료 시 방 최종화를 요청한다.
+ */
+export async function finalizeGroupRoomIfExpired(roomId) {
+    assertSupabase();
+
+    const { data, error } = await supabase.rpc("finalize_group_room_if_expired", {
+        p_room_id: roomId,
+    });
+
+    if (error) throw error;
+
+    return normalizeRpcRow(data);
 }
 
 /**
  * 진행 중인 단체 게임 나가기
  *
- * 신규 RPC가 적용된 환경에서는 참가자 행과 결과 스냅샷을 보존해 DNF로 처리합니다.
- * 아직 마이그레이션이 적용되지 않은 환경에서는 미완주자만 기존 삭제 방식으로
- * 정리하고, 완주자의 기록 행은 결과 조회 권한과 순위 보존을 위해 유지합니다.
+ * 대기실에서만 기존 참가자 행 삭제 흐름을 사용한다. 경기 시작 후에는
+ * leave_group_player RPC가 실패해도 직접 DELETE로 대체하지 않는다.
  */
-export async function leaveGroupGame(roomId, userId, { hasFinished = false } = {}) {
+export async function leaveGroupGame(
+    roomId,
+    userId,
+    {
+        hasFinished = false,
+        roomStatus,
+        status,
+        reason,
+        retireReason,
+    } = {}
+) {
     assertSupabase();
 
     if (!roomId || !userId) return null;
 
+    const effectiveRoomStatus = roomStatus || status || "playing";
+
+    if (effectiveRoomStatus === "waiting") {
+        await leaveGroupRoom(roomId, userId);
+        return null;
+    }
+
+    // finished 방은 결과를 다시 쓰지 않고 화면 이탈만 처리한다.
+    // hasFinished는 기존 호출부 호환을 위해 받지만, 실제 결과 보호 기준은
+    // 서버가 반환한 방 상태다.
+    if (effectiveRoomStatus === "finished") return null;
+
+    const effectiveReason = reason || retireReason || "left";
+    if (!["left", "forfeited"].includes(effectiveReason)) {
+        throw new Error("유효하지 않은 RETIRE 사유입니다.");
+    }
+
     const { data, error } = await supabase.rpc("leave_group_player", {
         p_room_id: roomId,
+        p_retire_reason: effectiveReason,
     });
 
-    if (!error) return Array.isArray(data) ? data[0] : data;
-    if (!isMissingLeaveRpc(error)) throw error;
+    if (error) throw error;
 
-    if (hasFinished) return null;
-    await leaveGroupRoom(roomId, userId);
-    return null;
+    return normalizeRpcRow(data);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
+import { buildGroupMatchHistoryRows } from "../utils/groupMatchHistory";
 
 /**
  * 프로필 전적 조회 서비스
@@ -133,37 +134,16 @@ export async function recordGroupMatchHistory(roomId) {
   if (!isSupabaseConfigured || !roomId) return;
 
   try {
-    // 1. 방의 모든 플레이어 정보 조회
-    const { data: players, error: playerError } = await supabase
-      .from("room_players")
-      .select("*")
+    // 서버가 확정한 group_match_results만 조회한다.
+    const { data: results, error: resultError } = await supabase
+      .from("group_match_results")
+      .select("room_id, user_id, result_status, rank, elapsed_seconds, move_count")
       .eq("room_id", roomId);
 
-    if (playerError) throw playerError;
+    if (resultError) throw resultError;
 
-    // 2. 완주한 플레이어들을 종료 시간(빠른 순) -> 이동 횟수(적은 순) 기준으로 정렬
-    const sorted = (players || [])
-      .filter((p) => p.has_finished)
-      .sort((a, b) => {
-        const timeA = a.finished_at ? new Date(a.finished_at).getTime() : Infinity;
-        const timeB = b.finished_at ? new Date(b.finished_at).getTime() : Infinity;
-        if (timeA !== timeB) return timeA - timeB;
-        return (a.move_count || 0) - (b.move_count || 0);
-      });
-
-    if (sorted.length === 0) return;
-
-    // 3. 기록 데이터 생성 (1~3등까지만, 게스트 유저 제외)
-    const historyData = sorted
-      .slice(0, 3)
-      .filter((p) => p.user_id && !p.user_id.startsWith("guest-"))
-      .map((p, index) => ({
-        room_id: roomId,
-        user_id: p.user_id,
-        rank: index + 1,
-        elapsed_seconds: p.elapsed_seconds || 0,
-        move_count: p.move_count || 0,
-      }));
+    // result_status와 server rank를 그대로 history 입력으로 사용한다.
+    const historyData = buildGroupMatchHistoryRows(results || [], roomId);
 
     if (historyData.length === 0) return;
 
