@@ -1,5 +1,4 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
-import { buildGroupMatchHistoryRows } from "../utils/groupMatchHistory";
 
 /**
  * 프로필 전적 조회 서비스
@@ -126,40 +125,6 @@ export async function fetchAllProfileStats(userId) {
   };
 }
 
-/**
- * 그룹 모드 결과 저장 (게임 종료 시 호출)
- * @param {string} roomId
- */
-export async function recordGroupMatchHistory(roomId) {
-  if (!isSupabaseConfigured || !roomId) return;
-
-  try {
-    // 서버가 확정한 group_match_results만 조회한다.
-    const { data: results, error: resultError } = await supabase
-      .from("group_match_results")
-      .select("room_id, user_id, result_status, rank, elapsed_seconds, move_count")
-      .eq("room_id", roomId);
-
-    if (resultError) throw resultError;
-
-    // result_status와 server rank를 그대로 history 입력으로 사용한다.
-    const historyData = buildGroupMatchHistoryRows(results || [], roomId);
-
-    if (historyData.length === 0) return;
-
-    // 4. Upsert를 통해 중복 저장 방지 (room_id + user_id 유니크 제약 조건 필수)
-    const { error: insertError } = await supabase
-      .from("group_match_history")
-      .upsert(historyData, { onConflict: "room_id, user_id" });
-
-    if (insertError) throw insertError;
-
-    console.log(`[Success] Group match history recorded for room: ${roomId}`);
-  } catch (error) {
-    // 저장 실패해도 게임 UI가 깨지지 않도록 에러만 출력
-    console.error("그룹 모드 결과 저장 중 오류 발생:", error);
-  }
-}
 /**
  * 유저의 공개 프로필 정보(아이디, 닉네임, 프로필 이미지)를 가져옵니다.
  * @param {string} userId

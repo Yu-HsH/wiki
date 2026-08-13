@@ -849,7 +849,7 @@ leave_group_player RPC
 - RETIRE 결과와 사용자 문구 처리
 - `finished`/`retired` 참가자의 관전 대상 제외
 - 관전 중 RETIRE 시 다음 대상 자동 전환
-- `recordGroupMatchHistory` 서버 결과 기반 정리
+- `group_match_history` 서버 finalizer 기반 기록 정리
 - 그룹 경로 DNF → RETIRE 정리
 
 ### Phase 2B 검증 결과
@@ -863,24 +863,96 @@ leave_group_player RPC
 - 싱글 / 1:1 회귀 확인
 - 현재 프론트 자동 테스트 94개 통과
 
-## Phase 2C — 보안 잠금 (미착수)
+## Phase 2C — 보안 잠금 (완료)
 
-다음 단계: **Phase 2C-0 — 직접 DB write 감사 및 대체 RPC 설계**
+상태: **완료**
 
-Phase 2C-0에서는 다음 직접 write 후보를 먼저 감사한다.
+Phase 2C-0부터 Phase 2C-5까지 완료했다.
 
-- 목표 문서 제출 / READY
-- READY 취소
-- 현재 문서 / 이동 횟수 / `path_titles` 저장
-- 기타 `room_players` 직접 `UPDATE`
+### Phase 2C-0 — 직접 DB write 감사
 
-감사 결과를 바탕으로 대체 RPC를 설계한 뒤 RLS를 최종 잠근다.
+상태: **완료**
 
-- 직접 UPDATE/DELETE 제한
-- 결과·기록·통계 직접 쓰기 차단
-- RLS 활성화 및 정책 재작성
-- Security Advisor 재검사
-- 전체 회귀 테스트
+- 그룹 프론트의 `game_rooms`, `room_players`, `room_events` 직접 write 경로 감사
+- `group_match_history`, `user_profile_stats` client write 경로 감사
+- 그룹과 1:1이 공유하는 테이블의 mode별 권한 분리 설계
+
+### Phase 2C-1 — 안전한 그룹 write RPC
+
+상태: **완료**
+
+- `create_group_room`
+- `join_group_room`
+- `submit_group_target`
+- `set_group_ready`
+- `update_group_progress`
+- `leave_group_waiting_room`
+- `finalize_group_records`
+- 방장 대기실 이탈 시 안정적인 기준에 따른 host 승계
+- 마지막 참가자 이탈 시 빈 대기실 정리
+
+그룹의 방 생성·참가·목표·READY·진행 상태 변경은 `auth.uid()` 기반 RPC에서만 처리한다. 진행 RPC는 `current_title`, `move_count`, `path_titles`, `last_seen_at`만 수정하며 rank, 완주, result, room lifecycle 필드는 인자로 받지 않는다.
+
+### Phase 2C-2 — 그룹 프론트 RPC 전환
+
+상태: **완료**
+
+- 그룹 방/참가자 생성 direct write 제거
+- 목표·READY·진행 상태 direct update 제거
+- 대기실 참가자/방 direct delete 제거
+- `group_match_history` client UPSERT 제거
+- 기존 그룹 lifecycle RPC는 유지
+- 1:1 `multiplayerService.js`는 리팩터링하지 않음
+
+### Phase 2C-3 — GRANT 축소
+
+상태: **완료**
+
+- 그룹 RPC는 `authenticated`, `service_role`만 실행 가능
+- `anon`의 그룹 RPC 실행 권한 제거
+- `group_match_history`, `user_profile_stats` 직접 INSERT/UPDATE/DELETE 차단
+- `group_match_results` 직접 write 차단
+- 필요한 프로필/기록 SELECT만 유지
+
+### Phase 2C-4 — mode별 RLS 최종 정리
+
+상태: **완료**
+
+- `game_rooms`, `room_players`, `room_events`의 직접 write 정책을 `mode = 'duel'`로 제한
+- 그룹 사용자의 rank, `has_finished`, `player_status`, room status, group target, `finished_count`, `winner_user_ids` 직접 변경 차단
+- 그룹 임의 room event 삽입 차단
+- 1:1 direct write 정책은 유지
+
+### Phase 2C-5 — authenticated 브라우저 수동 통합·공격 검증
+
+상태: **완료**
+
+기존 로그인된 4개 로컬 브라우저 세션을 사용해 실제 authenticated 권한으로 검증했다.
+
+- 4인 그룹 방 생성·참가·READY·시작·Countdown·playing·정상 lifecycle 확인
+- 방장 대기실 이탈 후 남은 참가자의 host 승계 및 새 방장 시작 확인
+- F5 진행 상태 복구 확인
+- 1~3등 완주 후 `grace_period`, 4등 정상 완주 및 최종 1~4위 표시 확인
+- 경기 중 RETIRE 후 즉시 전체 종료, RETIRE 사용자 문구, 관전 대상 제외 확인
+- 그룹 기록 및 프로필 조회 확인
+- `room_players.rank` 직접 변경 차단
+- `room_players.has_finished`, `player_status` 직접 변경 차단
+- `game_rooms.status`, `group_target_title`, `finished_count`, `winner_user_ids` 직접 변경 차단
+- `group_match_history` 직접 UPDATE → `403 Forbidden`
+- `user_profile_stats` 직접 UPDATE → `403 Forbidden`
+
+### Phase 2C 검증 결과
+
+- 기존·신규 pgTAP 테스트: **111개 통과**
+- 프론트 JS 테스트: **98개 통과**
+- 로컬 `db reset`, `db lint`, `npm run build`, `git diff --check` 통과
+- 수동 authenticated 공격 검증 완료
+- 그룹 DB/RLS 보안 안정화 완료
+
+### Phase 2C 후속사항
+
+- 완전한 Wikipedia 이동경로 anti-cheat는 별도 후속 과제로 남긴다.
+- 1:1 / 싱글 / 아이템 / 프로필 / 랭킹 전체 회귀 점검은 다음 단계에서 진행한다.
 
 ---
 

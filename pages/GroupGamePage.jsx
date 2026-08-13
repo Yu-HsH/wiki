@@ -65,7 +65,6 @@ import {
 } from "../utils/groupGameTimer";
 import { formatGroupRetireReason } from "../utils/groupResultFormatter";
 
-import { recordGroupMatchHistory } from "../services/profileStatsService";
 import { trackEvent } from "../services/analyticsService";
 
 export default function GroupGamePage() {
@@ -119,7 +118,6 @@ export default function GroupGamePage() {
 
     const timerRef = useRef(null);
     const finishedRef = useRef(false);
-    const hasRecordedRef = useRef(false);
     const playStartTrackedRef = useRef(false);
     const activationInFlightRef = useRef(null);
     const activationCompletedRef = useRef(false);
@@ -720,16 +718,6 @@ export default function GroupGamePage() {
             if (timerRef.current) clearInterval(timerRef.current);
         };
     }, [phase, room, roomId, target.title, user, finalizeExpiredRoom]);
-
-    useEffect(() => {
-        if (room?.status === "finished") {
-            if (!hasRecordedRef.current) {
-                hasRecordedRef.current = true;
-                recordGroupMatchHistory(roomId).catch(console.error);
-            }
-
-        }
-    }, [room?.status, roomId]);
 
     useEffect(() => {
         if (phase !== GROUP_GAME_PHASE.SPECTATING) return;

@@ -67,7 +67,7 @@ export default function GroupRoomPage() {
                 const roomData = await fetchGroupRoom(roomId);
 
                 if (roomData.status === "waiting") {
-                    await joinGroupRoom(roomId, user.id).catch(() => { });
+                    await joinGroupRoom(roomId).catch(() => { });
                 }
 
                 const playerData = await fetchGroupRoomPlayers(roomId);
@@ -198,7 +198,7 @@ export default function GroupRoomPage() {
         try {
             setSubmitError("");
 
-            await submitGroupKeyword(roomId, user.id, {
+            await submitGroupKeyword(roomId, {
                 rawKeyword: keywordInput.trim(),
                 selectedTitle: selectedTarget.title,
             });
@@ -217,7 +217,7 @@ export default function GroupRoomPage() {
 
         try {
             setSubmitError("");
-            await unreadyGroupPlayer(roomId, user.id);
+            await unreadyGroupPlayer(roomId);
 
             const latestPlayers = await fetchGroupRoomPlayers(roomId);
             setPlayers(latestPlayers);
@@ -247,7 +247,7 @@ export default function GroupRoomPage() {
     const handleLeave = async () => {
         try {
             if (roomId && user?.id) {
-                await leaveGroupRoom(roomId, user.id);
+                await leaveGroupRoom(roomId);
             }
         } catch (error) {
             console.error("leave group room failed:", error);

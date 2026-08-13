@@ -211,7 +211,7 @@ export default function MultiplayerPage() {
                     setPending(true);
                     setSubmitError("");
 
-                    const room = await createGroupRoom(user.id);
+                    const room = await createGroupRoom();
 
                     navigate(`/multiplayer/group/room/${room.id}`);
                   } catch (error) {
@@ -252,7 +252,7 @@ export default function MultiplayerPage() {
                       setSubmitError("");
 
                       const room = await findGroupRoomByCode(code);
-                      await joinGroupRoom(room.id, user.id);
+                      await joinGroupRoom(room.id);
 
                       navigate(`/multiplayer/group/room/${room.id}`);
                     } catch (error) {

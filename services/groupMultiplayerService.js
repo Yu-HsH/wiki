@@ -11,41 +11,11 @@ function assertSupabase() {
     }
 }
 
-function generateRoomCode(length = 6) {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let result = "";
-
-    for (let i = 0; i < length; i += 1) {
-        result += chars[Math.floor(Math.random() * chars.length)];
-    }
-
-    return result;
-}
-
-export async function fetchMyProfile(userId) {
-    assertSupabase();
-
-    const { data, error } = await supabase
-        .from("profiles")
-        .select("id, nickname, profile_image_url")
-        .eq("id", userId)
-        .single();
-
-    if (error) throw error;
-    return data;
-}
-
 /**
  * 단체모드 방 생성
  */
-export async function createGroupRoom(userId, options = {}) {
+export async function createGroupRoom(options = {}) {
     assertSupabase();
-
-    if (!userId) {
-        throw new Error("로그인이 필요합니다.");
-    }
-
-    const profile = await fetchMyProfile(userId);
 
     const {
         maxPlayers = 6,
@@ -53,51 +23,15 @@ export async function createGroupRoom(userId, options = {}) {
         finishRankLimit = 3,
     } = options;
 
-    let roomCode = generateRoomCode();
-
-    // room_code 중복 방지용 간단 재시도
-    for (let i = 0; i < 3; i += 1) {
-        const { data: existing } = await supabase
-            .from("game_rooms")
-            .select("id")
-            .eq("room_code", roomCode)
-            .maybeSingle();
-
-        if (!existing) break;
-        roomCode = generateRoomCode();
-    }
-
-    const { data: room, error: roomError } = await supabase
-        .from("game_rooms")
-        .insert({
-            room_code: roomCode,
-            host_user_id: userId,
-            status: "waiting",
-            mode: "group",
-            max_players: maxPlayers,
-            min_players: minPlayers,
-            finish_rank_limit: finishRankLimit,
-        })
-        .select("*")
-        .single();
-
-    if (roomError) throw roomError;
-
-    const { error: playerError } = await supabase.from("room_players").insert({
-        room_id: room.id,
-        user_id: userId,
-        role: "host",
-        nickname_snapshot: profile.nickname || "방장",
-        profile_image_snapshot: profile.profile_image_url || null,
-        is_ready: false,
-        move_count: 0,
-        has_finished: false,
-        path_titles: [],
+    const { data, error } = await supabase.rpc("create_group_room", {
+        p_max_players: maxPlayers,
+        p_min_players: minPlayers,
+        p_finish_rank_limit: finishRankLimit,
     });
 
-    if (playerError) throw playerError;
+    if (error) throw error;
 
-    return room;
+    return normalizeRpcRow(data);
 }
 
 /**
@@ -176,162 +110,84 @@ export async function fetchGroupRoomPlayers(roomId) {
 /**
  * 단체모드 방 참가
  */
-export async function joinGroupRoom(roomId, userId) {
+export async function joinGroupRoom(roomId) {
     assertSupabase();
 
-    if (!roomId || !userId) {
-        throw new Error("방 정보 또는 사용자 정보가 없습니다.");
+    if (!roomId) {
+        throw new Error("방 정보가 없습니다.");
     }
 
-    const room = await fetchGroupRoom(roomId);
-    const profile = await fetchMyProfile(userId);
-
-    const { data: existingPlayer, error: existingError } = await supabase
-        .from("room_players")
-        .select("*")
-        .eq("room_id", roomId)
-        .eq("user_id", userId)
-        .maybeSingle();
-
-    if (existingError) throw existingError;
-    if (existingPlayer) return existingPlayer;
-
-    if (room.status !== "waiting") {
-        throw new Error("이미 시작된 방에는 참가할 수 없습니다.");
-    }
-
-    const players = await fetchGroupRoomPlayers(roomId);
-
-    if (players.length >= room.max_players) {
-        throw new Error("방 인원이 가득 찼습니다.");
-    }
-
-    const { error } = await supabase.from("room_players").insert({
-        room_id: roomId,
-        user_id: userId,
-        role: "guest",
-        nickname_snapshot: profile.nickname || "참가자",
-        profile_image_snapshot: profile.profile_image_url || null,
-        is_ready: false,
-        move_count: 0,
-        has_finished: false,
-        path_titles: [],
+    const { data, error } = await supabase.rpc("join_group_room", {
+        p_room_id: roomId,
     });
-
-    if (error?.code === "23505") {
-        const { data: joinedPlayer, error: joinedError } = await supabase
-            .from("room_players")
-            .select("*")
-            .eq("room_id", roomId)
-            .eq("user_id", userId)
-            .maybeSingle();
-
-        if (joinedError) throw joinedError;
-        if (joinedPlayer) return joinedPlayer;
-    }
 
     if (error) throw error;
 
-    return await fetchGroupRoom(roomId);
+    return normalizeRpcRow(data);
 }
 
 /**
  * 단체모드 방 나가기
  */
-export async function leaveGroupRoom(roomId, userId) {
+export async function leaveGroupRoom(roomId) {
     assertSupabase();
 
-    if (!roomId || !userId) return;
+    if (!roomId) return null;
 
-    const { error: deletePlayerError } = await supabase
-        .from("room_players")
-        .delete()
-        .eq("room_id", roomId)
-        .eq("user_id", userId);
+    const { data, error } = await supabase.rpc("leave_group_waiting_room", {
+        p_room_id: roomId,
+    });
 
-    if (deletePlayerError) throw deletePlayerError;
+    if (error) throw error;
 
-    const { data: remainingPlayers, error: remainingError } = await supabase
-        .from("room_players")
-        .select("id")
-        .eq("room_id", roomId);
-
-    if (remainingError) throw remainingError;
-
-    if (!remainingPlayers || remainingPlayers.length === 0) {
-        const { error: deleteRoomError } = await supabase
-            .from("game_rooms")
-            .delete()
-            .eq("id", roomId);
-
-        if (deleteRoomError) throw deleteRoomError;
-    }
+    return normalizeRpcRow(data);
 }
 
 /**
  * 키워드/목표 문서 제출 + 준비 완료
  */
-export async function submitGroupKeyword(roomId, userId, payload) {
+export async function submitGroupKeyword(roomId, payload) {
     assertSupabase();
 
     const { rawKeyword, selectedTitle } = payload;
 
-    if (!roomId || !userId) {
-        throw new Error("방 정보 또는 사용자 정보가 없습니다.");
+    if (!roomId) {
+        throw new Error("방 정보가 없습니다.");
     }
 
     if (!selectedTitle) {
         throw new Error("목표 문서를 선택해주세요.");
     }
 
-    const { data, error } = await supabase
-        .from("room_players")
-        .update({
-            submitted_keyword: rawKeyword || selectedTitle,
-            submitted_target_title: selectedTitle,
-            target_title: selectedTitle,
-            is_ready: true,
-            updated_at: new Date().toISOString(),
-        })
-        .eq("room_id", roomId)
-        .eq("user_id", userId)
-        .select("*")
-        .single();
+    const { error } = await supabase.rpc("submit_group_target", {
+        p_room_id: roomId,
+        p_submitted_keyword: rawKeyword || selectedTitle,
+        p_submitted_target_title: selectedTitle,
+    });
 
     if (error) throw error;
 
-    await insertRoomEvent(roomId, userId, "submit_keyword", {
-        rawKeyword,
-        selectedTitle,
-    }).catch(() => { });
+    return setGroupReady(roomId, true);
+}
 
-    return data;
+export async function setGroupReady(roomId, isReady) {
+    assertSupabase();
+
+    const { data, error } = await supabase.rpc("set_group_ready", {
+        p_room_id: roomId,
+        p_is_ready: isReady,
+    });
+
+    if (error) throw error;
+
+    return normalizeRpcRow(data);
 }
 
 /**
  * 준비 해제
  */
-export async function unreadyGroupPlayer(roomId, userId) {
-    assertSupabase();
-
-    const { data, error } = await supabase
-        .from("room_players")
-        .update({
-            is_ready: false,
-            updated_at: new Date().toISOString(),
-        })
-        .eq("room_id", roomId)
-        .eq("user_id", userId)
-        .select("*")
-        .single();
-
-    if (error) throw error;
-
-    await insertRoomEvent(roomId, userId, "ready_toggle", {
-        isReady: false,
-    }).catch(() => { });
-
-    return data;
+export async function unreadyGroupPlayer(roomId) {
+    return setGroupReady(roomId, false);
 }
 
 /**
@@ -357,28 +213,19 @@ export async function updateGroupPlayerProgress(roomId, userId, updates) {
 
     const { currentTitle, moveCount, pathTitles, expectedMoveCount } = updates;
 
-    let query = supabase
-        .from("room_players")
-        .update({
-            current_title: currentTitle,
-            move_count: moveCount,
-            path_titles: pathTitles || [],
-            last_seen_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        })
-        .eq("room_id", roomId)
-        .eq("user_id", userId)
-        .eq("has_finished", false);
-
-    if (Number.isInteger(expectedMoveCount)) {
-        query = query.eq("move_count", expectedMoveCount);
-    }
-
-    const { data, error } = await query
-        .select("*")
-        .maybeSingle();
+    const { data: rpcData, error } = await supabase.rpc("update_group_progress", {
+        p_room_id: roomId,
+        p_current_title: currentTitle,
+        p_move_count: moveCount,
+        p_path_titles: pathTitles || [],
+        p_expected_move_count: Number.isInteger(expectedMoveCount)
+            ? expectedMoveCount
+            : null,
+    });
 
     if (error) throw error;
+
+    const data = normalizeRpcRow(rpcData);
 
     if (!data) {
         const { data: latest, error: latestError } = await supabase
@@ -469,7 +316,7 @@ export async function leaveGroupGame(
     const effectiveRoomStatus = roomStatus || status || "playing";
 
     if (effectiveRoomStatus === "waiting") {
-        await leaveGroupRoom(roomId, userId);
+        await leaveGroupRoom(roomId);
         return null;
     }
 
@@ -530,22 +377,4 @@ export async function fetchGroupResults(roomId) {
     if (error) throw error;
 
     return data ?? [];
-}
-
-/**
- * room_events 기록
- */
-export async function insertRoomEvent(roomId, userId, eventType, payload = {}) {
-    assertSupabase();
-
-    const { error } = await supabase.from("room_events").insert({
-        room_id: roomId,
-        user_id: userId,
-        event_type: eventType,
-        payload,
-    });
-
-    if (error) throw error;
-
-    return true;
 }
