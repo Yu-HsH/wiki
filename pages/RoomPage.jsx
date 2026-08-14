@@ -4,11 +4,18 @@ import {
   fetchRoom,
   fetchRoomPlayers,
   joinRoom,
-  updateMyRoomPlayer,
+  setDuelTargetV2,
   leaveRoom,
   startRoomGame,
 } from "../services/multiplayerService";
-import { searchWikiTitleCandidates } from "../services/wikiService";
+import {
+  fetchDistinctRandomTitle,
+  fetchPageData,
+  fetchPageSummary,
+  normalizeTitle,
+  searchWikiTitleCandidates,
+} from "../services/wikiService";
+import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
 import UserProfileModal from "../components/UserProfileModal";
@@ -252,9 +259,18 @@ export default function RoomPage() {
     try {
       setSubmitError("");
 
-      await updateMyRoomPlayer(roomId, user.id, {
-        target_title: selectedTargetTitle,
-        is_ready: true,
+      const targetPage = await fetchPageSummary(selectedTargetTitle);
+      await ensureWikiSnapshot({
+        title: targetPage.canonicalTitle || selectedTargetTitle,
+        canonicalTitle: targetPage.canonicalTitle || selectedTargetTitle,
+        pageId: targetPage.pageId,
+        revisionId: targetPage.revisionId,
+      });
+      await setDuelTargetV2(roomId, {
+        title: targetPage.canonicalTitle || selectedTargetTitle,
+        pageId: targetPage.pageId,
+        revisionId: targetPage.revisionId,
+        isReady: true,
       });
 
       const playerData = await fetchRoomPlayers(roomId);
@@ -276,8 +292,11 @@ export default function RoomPage() {
       setSubmitError("");
       setTargetSuggestions([]);
 
-      await updateMyRoomPlayer(roomId, user.id, {
-        is_ready: false,
+      await setDuelTargetV2(roomId, {
+        title: myPlayer?.target_title || selectedTargetTitle,
+        pageId: myPlayer?.target_page_id,
+        revisionId: myPlayer?.target_revision_id,
+        isReady: false,
       });
 
       const playerData = await fetchRoomPlayers(roomId);
@@ -298,6 +317,13 @@ export default function RoomPage() {
     try {
       setSubmitError("");
       setStarting(true);
+      const currentPlayers = await fetchRoomPlayers(roomId);
+      const excludedTitles = new Set(
+        currentPlayers.map((player) => normalizeTitle(player.target_title)).filter(Boolean)
+      );
+      const candidateTitle = await fetchDistinctRandomTitle(excludedTitles);
+      const candidatePage = await fetchPageData(candidateTitle);
+      await ensureWikiSnapshot(candidatePage);
       await startRoomGame(roomId, user.id);
     } catch (error) {
       console.error("startRoomGame failed:", error);

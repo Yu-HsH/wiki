@@ -19,6 +19,13 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function createGuestToken() {
+  if (globalThis.crypto?.randomUUID) {
+    return `${globalThis.crypto.randomUUID()}${globalThis.crypto.randomUUID()}`;
+  }
+  return `${Date.now()}-${Math.random()}-${Math.random()}-${Math.random()}`;
+}
+
 function normalizeStoredTitle(value) {
   return value.trim().replaceAll("_", " ").replace(/\s+/g, " ").toLowerCase();
 }
@@ -127,6 +134,10 @@ export function saveGuestSingleGameSession(
     status: "active",
     savedAt: now,
   };
+
+  if (!isNonEmptyString(candidate.guestToken)) {
+    candidate.guestToken = createGuestToken();
+  }
 
   if (!isValidGuestSingleGameSession(candidate, now)) {
     clearGuestSingleGameSession(storage);

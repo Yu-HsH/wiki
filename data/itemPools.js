@@ -16,5 +16,10 @@ export const MULTI_ITEM_IDS = [
     "random_teleport",
     "double_blind",
     "mini_game",
-    "swap_current",
 ];
+
+export const DISABLED_DUEL_ITEM_IDS = new Set(["swap_current"]);
+
+export function isDisabledDuelItem(item) {
+    return DISABLED_DUEL_ITEM_IDS.has(item?.id);
+}

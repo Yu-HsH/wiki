@@ -19,9 +19,9 @@ test("그룹 서비스의 변경 작업은 Phase 2C RPC 경로만 사용한다",
   for (const rpc of [
     "create_group_room",
     "join_group_room",
-    "submit_group_target",
+    "submit_group_target_v2",
     "set_group_ready",
-    "update_group_progress",
+    "apply_group_move_v2",
     "leave_group_waiting_room",
   ]) {
     assert.match(groupService, new RegExp(`rpc\\(["']${rpc}["']`));
@@ -78,7 +78,7 @@ test("history finalizer는 client payload 없이 authoritative 결과를 읽는�
   );
 });
 
-test("RLS는 group direct write를 닫고 duel direct write 정책을 보존한다", () => {
+test("RLS는 group direct write를 닫고 duel도 서버 권위 RPC를 사용한다", () => {
   for (const policy of [
     "Authenticated users can create duel rooms",
     "Duel players can update joined rooms",
@@ -93,12 +93,10 @@ test("RLS는 group direct write를 닫고 duel direct write 정책을 보존한�
 
   assert.match(migration, /and mode = 'duel'/);
   assert.match(migration, /room\.mode = 'duel'/);
-  assert.match(
-    duelService,
-    /\.from\(["']game_rooms["']\)\s*\.insert\s*\(/s
-  );
-  assert.match(
-    duelService,
-    /\.from\(["']room_players["']\)\s*\.update\s*\(/s
-  );
+  assert.match(duelService, /rpc\("create_duel_room_v2"/);
+  assert.match(duelService, /rpc\("join_duel_room_v2"/);
+  assert.match(duelService, /apply_duel_move_v2/);
+  assert.match(duelService, /apply_duel_swap_v2/);
+  assert.doesNotMatch(duelService, /\.from\(["']game_rooms["']\)\s*\.insert\s*\(/s);
+  assert.doesNotMatch(duelService, /\.from\(["']room_players["']\)\s*\.update\s*\(/s);
 });

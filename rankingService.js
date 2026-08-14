@@ -60,8 +60,7 @@ export async function saveGameRecord(record) {
   }
 
   // 2. 온라인 모드 (Supabase game_records 테이블에 삽입)
-  const { error } = await supabase.from("game_records").insert(payload);
-  if (error) throw error;
+  throw new Error("온라인 게임 기록은 서버에서 자동 저장됩니다.");
 }
 
 /**

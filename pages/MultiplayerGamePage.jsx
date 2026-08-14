@@ -4,18 +4,18 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   fetchRoom,
   fetchRoomPlayers,
-  updateGameRoomStatus,
-  saveMatchHistory,
   initializeMyGameProgress,
-  advanceMyGameProgress,
+  applyDuelMoveV2,
+  heartbeatDuel,
+  finalizeDuelIfExpired,
   leaveRoom,
 } from "../services/multiplayerService";
 
 import {
-  fetchDistinctRandomTitle,
   fetchPageData,
   normalizeTitle,
 } from "../services/wikiService";
+import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
@@ -29,7 +29,7 @@ import VsIntroOverlay from "../components/VsIntroOverlay";
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import { ITEM_DEFS } from "../data/items";
-import { MULTI_ITEM_IDS } from "../data/itemPools";
+import { isDisabledDuelItem, MULTI_ITEM_IDS } from "../data/itemPools";
 
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
@@ -39,6 +39,12 @@ import {
   retryRecoverable,
   validateDuelGameSession,
 } from "../utils/onlineGameSession";
+import {
+  classifyRealtimeVersion,
+  SERVER_HEARTBEAT_INTERVAL_MS,
+} from "../utils/serverAuthority";
+import { useExitGuard } from "../components/ExitGuard";
+
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -57,10 +63,17 @@ export default function MultiplayerGamePage() {
   const [players, setPlayers] = useState([]);
   const [pageData, setPageData] = useState(null);
   const pageDataRef = useRef(null);
+  const roomRef = useRef(null);
+  const playersRef = useRef([]);
 
   useEffect(() => {
     pageDataRef.current = pageData;
   }, [pageData]);
+
+  useEffect(() => {
+    roomRef.current = room;
+    playersRef.current = players;
+  }, [room, players]);
 
   const [pending, setPending] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -240,7 +253,12 @@ export default function MultiplayerGamePage() {
           table: "game_rooms",
           filter: `id=eq.${roomId}`,
         },
-        async () => {
+        async (payload) => {
+          const incoming = payload?.new?.state_version;
+          const relation = incoming == null
+            ? "next"
+            : classifyRealtimeVersion(roomRef.current?.state_version, incoming);
+          if (relation === "stale") return;
           try {
             const latestRoom = await fetchRoom(roomId);
             setRoom(latestRoom);
@@ -261,7 +279,14 @@ export default function MultiplayerGamePage() {
           table: "room_players",
           filter: `room_id=eq.${roomId}`,
         },
-        async () => {
+        async (payload) => {
+          const incoming = payload?.new?.progress_version;
+          const playerId = payload?.new?.user_id;
+          const current = playersRef.current.find((player) => player.user_id === playerId);
+          const relation = incoming == null
+            ? "next"
+            : classifyRealtimeVersion(current?.progress_version, incoming);
+          if (relation === "stale") return;
           try {
             const latestPlayers = await fetchRoomPlayers(roomId);
             setPlayers(latestPlayers);
@@ -334,10 +359,8 @@ export default function MultiplayerGamePage() {
 
           if (session.outcome === "finished") return { session, page: null };
 
-          if (!session.me.start_title || !session.me.current_title) {
-            const excluded = new Set([normalizeTitle(session.opponent.target_title)]);
-            const startTitle = await fetchDistinctRandomTitle(excluded);
-            await initializeMyGameProgress(roomId, user.id, startTitle);
+          if (!session.me.start_page_id || !session.me.current_page_id) {
+            await initializeMyGameProgress(roomId, user.id, null, {});
             playerData = await fetchRoomPlayers(roomId);
             session = validateDuelGameSession({
               room: roomData,
@@ -347,6 +370,7 @@ export default function MultiplayerGamePage() {
           }
 
           const page = await fetchPageData(session.currentTitle);
+          await ensureWikiSnapshot(page);
           return { session, page };
         },
         {
@@ -392,7 +416,15 @@ export default function MultiplayerGamePage() {
         : Date.now() - session.elapsedSeconds * 1000;
       playStartTrackedRef.current = saved?.enteredPlaying === true;
 
-      if (saved?.inventory?.length > 0) setInventory(saved.inventory);
+      if (saved?.inventory?.length > 0) {
+        const restoredInventory = saved.inventory.filter(
+          (item) => !isDisabledDuelItem(item)
+        );
+        setInventory(restoredInventory);
+        if (restoredInventory.length !== saved.inventory.length) {
+          saveLocalGameState({ inventory: restoredInventory });
+        }
+      }
 
       saveLocalGameState({
         currentTitle: session.currentTitle,
@@ -465,19 +497,7 @@ export default function MultiplayerGamePage() {
 
     if (!bothInitialized) return;
 
-    if (room.status === "starting") {
-      updateGameRoomStatus(
-        roomId,
-        { status: "playing" },
-        { expectedStatus: "starting" }
-      )
-        .then((latestRoom) => setRoom(latestRoom))
-        .catch((error) => {
-          console.error("duel start transition failed:", error);
-          recoverGameRef.current?.();
-        });
-      return;
-    }
+    if (room.status === "starting") return;
 
     if (room.status === "playing" && phase === PHASE.LOADING) {
       const saved = loadLocalGameState();
@@ -494,7 +514,13 @@ export default function MultiplayerGamePage() {
     if (phase !== PHASE.COUNTDOWN) return;
     const saved = loadLocalGameState();
     if (saved?.inventory?.length > 0) {
-      setInventory(saved.inventory);
+      const restoredInventory = saved.inventory.filter(
+        (item) => !isDisabledDuelItem(item)
+      );
+      setInventory(restoredInventory);
+      if (restoredInventory.length !== saved.inventory.length) {
+        saveLocalGameState({ inventory: restoredInventory });
+      }
       return;
     }
 
@@ -556,7 +582,7 @@ export default function MultiplayerGamePage() {
     });
   };
   const canUseItem = (item) => {
-    if (!item || item.used) return false;
+    if (!item || item.used || isDisabledDuelItem(item)) return false;
 
     if (Date.now() < itemCooldownUntil) {
       return false;
@@ -573,7 +599,7 @@ export default function MultiplayerGamePage() {
     return true;
   };
 
-  const handleMove = async (nextTitle) => {
+  const handleMove = async (nextTitle, { eventType = "NORMAL_LINK" } = {}) => {
     if (
       !roomId ||
       !user?.id ||
@@ -592,60 +618,45 @@ export default function MultiplayerGamePage() {
         translateCurrent: false,
       }));
 
-      const nextPage = await fetchPageData(nextTitle);
-      if (normalizeTitle(nextPage.title) === normalizeTitle(pageData?.title || "")) {
+      const serverSelectedMove = ["FORCED_LINK", "RANDOM_TELEPORT"].includes(eventType);
+      const nextPage = serverSelectedMove
+        ? pageDataRef.current
+        : await fetchPageData(nextTitle);
+      await ensureWikiSnapshot(nextPage);
+      if (!serverSelectedMove && eventType === "NORMAL_LINK"
+        && normalizeTitle(nextPage.title) === normalizeTitle(pageData?.title || "")) {
         return false;
       }
 
-      const nextMoveCount = (myPlayer?.move_count || 0) + 1;
-      const solved =
-        normalizeTitle(nextPage.title) === normalizeTitle(myTargetTitle);
-      const nextPath = [...historyStack, pageData?.title, nextPage.title].filter(Boolean);
-      const finishedAt = solved ? new Date().toISOString() : null;
-
-      const updatedPlayer = await advanceMyGameProgress(roomId, user.id, {
-        currentTitle: nextPage.title,
-        moveCount: nextMoveCount,
-        pathTitles: nextPath,
-        expectedMoveCount: myPlayer?.move_count || 0,
-        hasFinished: solved,
-        finishedAt,
+      const moveResponse = await applyDuelMoveV2({
+        roomId,
+        expectedVersion: Number(myPlayer?.progress_version) || 0,
+        nextPage,
+        clickedRawTitle: nextTitle,
+        eventType,
       });
+      const updatedPlayer = moveResponse.player;
+      const authoritativeTitle = updatedPlayer?.current_title || nextPage.title;
+      const requestedPageId = String(nextPage?.pageId ?? "");
+      const authoritativePageId = String(updatedPlayer?.current_page_id ?? "");
+      const renderedPage = eventType === "NORMAL_LINK" && requestedPageId === authoritativePageId
+        ? nextPage
+        : await fetchPageData(authoritativeTitle);
+      await ensureWikiSnapshot(renderedPage);
+      const nextMoveCount = Number(updatedPlayer?.move_count) || 0;
+      const nextPath = Array.isArray(updatedPlayer?.path_titles)
+        ? updatedPlayer.path_titles
+        : [...historyStack, pageData?.title, nextPage.title].filter(Boolean);
+      const solved = updatedPlayer?.player_status === "finished" || updatedPlayer?.has_finished === true;
+      if (moveResponse.room) setRoom(moveResponse.room);
 
-      setPageData(nextPage);
+      setPageData(renderedPage);
       setHistoryStack(nextPath.slice(0, -1));
       setPlayers((prev) => prev.map((player) =>
         player.user_id === user.id ? updatedPlayer : player
       ));
 
       if (solved) {
-        if (updatedPlayer.__alreadyApplied) {
-          clearLocalGameState();
-          recoverGameRef.current?.();
-          return true;
-        }
-
-        const duration = room?.started_at
-          ? elapsedSecondsFromServer(room.started_at)
-          : elapsedSeconds;
-
-        await saveMatchHistory({
-          roomId,
-          winnerUserId: user.id,
-          loserUserId: opponentPlayer?.user_id,
-          durationSeconds: duration,
-          winnerStartTitle: myPlayer?.start_title,
-          loserStartTitle: opponentPlayer?.start_title,
-          winnerTargetTitle: myTargetTitle,
-          loserTargetTitle: opponentTargetTitle
-        });
-
-        await updateGameRoomStatus(
-          roomId,
-          { status: "finished", finished_at: finishedAt },
-          { expectedStatus: "playing" }
-        );
-
         clearLocalGameState();
         setPhase(PHASE.SUCCESS);
 
@@ -654,7 +665,7 @@ export default function MultiplayerGamePage() {
         }, 2200);
       } else {
         saveLocalGameState({
-          currentTitle: nextPage.title,
+          currentTitle: renderedPage.title,
           pathTitles: nextPath,
           historyStack: nextPath.slice(0, -1),
           clickCount: nextMoveCount,
@@ -682,9 +693,9 @@ export default function MultiplayerGamePage() {
     }
   };
 
-  const forceMoveByItem = async (nextTitle) => {
-    const moved = await handleMove(nextTitle);
-    if (moved) showMessage(`${nextTitle} 문서로 이동했습니다.`);
+  const forceMoveByItem = async (nextTitle, eventType = "FORCED_LINK") => {
+    const moved = await handleMove(nextTitle, { eventType });
+    if (moved) showMessage(`${nextTitle || "서버가 선택한 문서"}로 이동했습니다.`);
   };
 
   const decideRpsWinner = (myChoice, opponentChoice) => {
@@ -719,7 +730,6 @@ export default function MultiplayerGamePage() {
       "blind",
       "random_link_move",
       "translate_current",
-      "swap_current",
       "highlight_links",
       "search_once",
       "random_teleport",
@@ -746,13 +756,9 @@ export default function MultiplayerGamePage() {
         break;
 
       case "swap_current":
-        await emitRoomEvent("swap_current", {
-          senderCurrentTitle: pageDataRef.current?.title,
-        });
-
-        if (opponentPlayer?.current_title) {
-          await forceMoveByItem(opponentPlayer.current_title);
-        }
+        // Kept as a compatibility branch for old local inventories. The
+        // server RPC remains present but always returns SWAP_DISABLED.
+        showMessage("현재 문서 교환은 일시적으로 비활성화되었습니다.");
         break;
 
       case "highlight_links":
@@ -764,11 +770,7 @@ export default function MultiplayerGamePage() {
         break;
 
       case "random_teleport": {
-        const randomTitle = await fetchDistinctRandomTitle(
-          new Set([normalizeTitle(pageDataRef.current?.title)])
-        );
-
-        await forceMoveByItem(randomTitle);
+        await forceMoveByItem(pageDataRef.current?.title, "RANDOM_TELEPORT");
         break;
       }
 
@@ -832,16 +834,13 @@ export default function MultiplayerGamePage() {
         if (!prevTitle) return;
 
         setHistoryStack((prev) => prev.slice(0, -1));
-        await handleMove(prevTitle);
+        await handleMove(prevTitle, { eventType: "UNDO" });
         showMessage("뒤로가기 사용");
         break;
       }
 
       case "random_teleport": {
-        const randomTitle = await fetchDistinctRandomTitle(
-          new Set([normalizeTitle(pageDataRef.current?.title)])
-        );
-        await forceMoveByItem(randomTitle);
+        await forceMoveByItem(pageDataRef.current?.title, "RANDOM_TELEPORT");
         showMessage("랜덤 텔레포트!");
         break;
       }
@@ -852,15 +851,8 @@ export default function MultiplayerGamePage() {
         break;
 
       case "swap_current":
-        await emitRoomEvent("swap_current", {
-          senderCurrentTitle: pageDataRef.current?.title,
-        });
-
-        if (opponentPlayer?.current_title) {
-          await forceMoveByItem(opponentPlayer.current_title);
-        }
-
-        showMessage("현재 문서 서로 교환!");
+        // Keep the old item ID readable, but never emit or move while SWAP is disabled.
+        showMessage("현재 문서 교환은 일시적으로 비활성화되었습니다.");
         break;
 
       case "mini_game": {
@@ -934,23 +926,8 @@ export default function MultiplayerGamePage() {
         break;
 
       case "swap_current":
-        console.log("swap_current 처리 진입:", payload);
-
-        if (isImmune()) {
-          showMessage("방어 성공! 현재 문서 교환을 막았습니다");
-          return;
-        }
-
-        if (!payload.senderCurrentTitle) {
-          console.log("senderCurrentTitle 없음");
-          return;
-        }
-
-        console.log("상대 문서로 이동 시도:", payload.senderCurrentTitle);
-
-        await forceMoveByItem(payload.senderCurrentTitle);
-
-        showMessage("상대와 현재 문서를 교환했습니다!");
+        // A forged room_events row must not move or mutate this client.
+        console.warn("무시한 비활성화 SWAP 이벤트:", payload);
         break;
 
       case "random_link_move": {
@@ -961,25 +938,10 @@ export default function MultiplayerGamePage() {
           return;
         }
 
-        const currentPageData = pageDataRef.current;
-        const links = currentPageData?.links || [];
+        const currentTitle = pageDataRef.current?.title;
+        await forceMoveByItem(currentTitle, "FORCED_LINK");
 
-        console.log("현재 pageDataRef:", currentPageData);
-        console.log("현재 링크 개수:", links.length);
-
-        if (!links.length) {
-          console.log("이동할 링크 없음");
-          showMessage("이동 가능한 링크가 없습니다");
-          return;
-        }
-
-        const random = links[Math.floor(Math.random() * links.length)];
-
-        console.log("랜덤 이동 대상:", random);
-
-        await forceMoveByItem(random);
-
-        showMessage(`🌀 상대 아이템! ${random}로 이동`);
+        showMessage("🌀 상대 아이템! 서버가 유효한 링크를 선택했습니다.");
         break;
       }
 
@@ -1012,6 +974,11 @@ export default function MultiplayerGamePage() {
       }
       case "mini_game_reward": {
         console.log("mini_game_reward 수신:", payload);
+
+        if (isDisabledDuelItem({ id: payload.rewardId })) {
+          console.warn("무시한 비활성화 SWAP 보상:", payload);
+          return;
+        }
 
         const rewardName =
           payload.rewardName ||
@@ -1128,6 +1095,43 @@ export default function MultiplayerGamePage() {
   }, [phase, room?.started_at, roomId, myTargetTitle, user]);
 
   useEffect(() => {
+    if (phase !== PHASE.PLAYING || !roomId || !user?.id) return undefined;
+
+    const sendHeartbeat = async () => {
+      try {
+        const player = await heartbeatDuel(roomId);
+        if (player) setPlayers((previous) => previous.map((item) =>
+          item.user_id === user.id ? { ...item, ...player } : item
+        ));
+      } catch (error) {
+        console.warn("duel heartbeat failed:", error);
+      }
+    };
+
+    void sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, SERVER_HEARTBEAT_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [phase, roomId, user?.id]);
+
+  useEffect(() => {
+    if (phase !== PHASE.PLAYING || !roomId || !user?.id) return undefined;
+
+    // Finalization is deliberately decoupled from the local heartbeat. A
+    // client must not refresh its own row and immediately classify the other
+    // client as timed out in the same request turn.
+    const interval = setInterval(async () => {
+      try {
+        const latestRoom = await finalizeDuelIfExpired(roomId);
+        if (latestRoom?.status === "finished") recoverGameRef.current?.();
+      } catch (error) {
+        console.warn("duel timeout finalizer failed:", error);
+      }
+    }, SERVER_HEARTBEAT_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [phase, roomId, user?.id]);
+
+  useEffect(() => {
     const resolveMiniGame = async () => {
       if (!miniGame) return;
       if (miniGame.status !== "choosing") return;
@@ -1201,16 +1205,10 @@ export default function MultiplayerGamePage() {
     if (leaving) return;
     setLeaving(true);
     recoveryGenerationRef.current += 1;
-    clearLocalGameState();
 
     if (resultNavigationTimerRef.current) {
       clearTimeout(resultNavigationTimerRef.current);
     }
-
-    const channels = [gameChannelRef.current, eventChannelRef.current].filter(Boolean);
-    gameChannelRef.current = null;
-    eventChannelRef.current = null;
-    await Promise.all(channels.map((channel) => supabase.removeChannel(channel).catch(() => { })));
 
     const shouldNotifyServer =
       room &&
@@ -1220,27 +1218,50 @@ export default function MultiplayerGamePage() {
 
     try {
       if (shouldNotifyServer) await leaveRoom(roomId, user.id);
+
+      // Keep the recovery snapshot until the authoritative leave succeeds.
+      clearLocalGameState();
+      const channels = [gameChannelRef.current, eventChannelRef.current].filter(Boolean);
+      gameChannelRef.current = null;
+      eventChannelRef.current = null;
+      await Promise.all(channels.map((channel) => supabase.removeChannel(channel).catch(() => { })));
+      navigate("/multiplayer", { replace: true });
     } catch (error) {
       console.error("leave duel game failed:", error);
-    } finally {
-      navigate("/multiplayer", { replace: true });
+      setLeaving(false);
+      setRecovery({
+        mode: "retryable",
+        message: "게임 이탈을 서버에 확정하지 못했습니다. 현재 진행 상태를 유지합니다.",
+      });
     }
   };
 
+  const { requestExit, dialog: exitDialog } = useExitGuard({
+    enabled:
+      phase === PHASE.VS_INTRO ||
+      phase === PHASE.COUNTDOWN ||
+      phase === PHASE.PLAYING,
+    onConfirm: handleReturnToLobby,
+  });
+
   if (pending || recovery || phase === PHASE.LOADING) {
     return (
-      <OnlineGameRecoveryPanel
-        mode={recovery?.mode || "recovering"}
-        message={recovery?.message}
-        onRetry={recoverGame}
-        onLeave={handleReturnToLobby}
-        leaving={leaving}
-      />
+      <>
+        <OnlineGameRecoveryPanel
+          mode={recovery?.mode || "recovering"}
+          message={recovery?.message}
+          onRetry={recoverGame}
+          onLeave={requestExit}
+          leaving={leaving}
+        />
+        {exitDialog}
+      </>
     );
   }
 
   return (
     <div className="mp-game-page">
+      {exitDialog}
       {isPageLoading && <PageLoadingOverlay />}
       {phase === PHASE.VS_INTRO && (
         <VsIntroOverlay

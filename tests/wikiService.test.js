@@ -110,7 +110,7 @@ test("요약 전용 요청은 URL을 인코딩하고 필요한 일반 텍스트 
   assert.deepEqual(summary, {
     requestedTitle: "사과 (동음이의)",
     canonicalTitle: "사과 (동음이의)",
-    revisionId: 123,
+    revisionId: "123",
     description: "동음이의어 문서",
     extract: "사과는 여러 뜻으로 쓰인다.",
     thumbnailUrl: "https://upload.wikimedia.org/example.png",
@@ -200,6 +200,7 @@ test("남한/대한민국과 세종대왕/세종은 각각 같은 canonical titl
     assert.equal(aliasPage.canonicalTitle, canonical);
     assert.equal(canonicalPage.canonicalTitle, canonical);
     assert.equal(aliasPage.revisionId, canonicalPage.revisionId);
+    assert.equal(aliasPage.pageId, canonicalPage.pageId);
     assert.deepEqual(aliasPage.links, ["서울특별시", "일본"]);
     assert.deepEqual(aliasPage.links, canonicalPage.links);
     assert.deepEqual(aliasPage.quickLinks, canonicalPage.quickLinks);

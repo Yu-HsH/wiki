@@ -14,7 +14,7 @@ import SuccessOverlay from "../components/SuccessOverlay";
 import WikiViewer from "../components/WikiViewer";
 import FloatingHud from "../components/FloatingHud";
 import ScrollToTopButton from "../components/ScrollToTopButton";
-import { supabase } from "../supabaseClient";
+import { isSupabaseConfigured, supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 import { trackEvent } from "../services/analyticsService";
 import { createLatestRequestManager, isAbortError } from "../utils/latestRequest";
@@ -29,6 +29,17 @@ import { LOBBY_PATH } from "../utils/appRoutes";
 import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import useItemSystem from "../hooks/useItemSystem";
+import {
+  applyAuthenticatedSingleMove,
+  applyGuestSingleMove,
+  createAuthenticatedSingleRun,
+  fetchAuthenticatedSingleRun,
+  invokeGuestSingleRun,
+  leaveAuthenticatedSingleRun,
+} from "../services/singleGameService";
+import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
+import { createPendingRequestStore } from "../utils/serverAuthority";
+import { useExitGuard } from "../components/ExitGuard";
 
 
 const pickDifficulty = () => {
@@ -82,6 +93,8 @@ export default function GamePage({
     summary: "",
     requestedKeyword: "",
     mode: "random",
+    pageId: null,
+    revisionId: null,
   });
 
   const [startTitle, setStartTitle] = useState("");
@@ -94,6 +107,7 @@ export default function GamePage({
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [clickCount, setClickCount] = useState(0);
+  const [serverRun, setServerRun] = useState(null);
 
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -102,6 +116,18 @@ export default function GamePage({
   const playStartTrackedRef = useRef(false);
   const moveInFlightRef = useRef(false);
   const pageRequestManagerRef = useRef(createLatestRequestManager());
+  const serverRunRef = useRef(null);
+  const pendingRequestStoreRef = useRef(null);
+  if (!pendingRequestStoreRef.current) {
+    pendingRequestStoreRef.current = createPendingRequestStore(
+      typeof window !== "undefined" ? window.localStorage : null,
+      "wiki-single-pending-mutation"
+    );
+  }
+
+  useEffect(() => {
+    serverRunRef.current = serverRun;
+  }, [serverRun]);
 
   const saveLocalGameState = useCallback((patch = {}) => {
     if (isGuestGame) {
@@ -150,6 +176,73 @@ export default function GamePage({
       localStorage.removeItem("wiki-single-items");
     }
   }, [isGuestGame]);
+
+  const setAuthoritativeRun = useCallback((run) => {
+    if (!run) return;
+    setServerRun(run);
+    serverRunRef.current = run;
+  }, []);
+
+  const createAuthoritativeRun = useCallback(async ({ runId, startPage, targetData, guestToken }) => {
+    if (!isSupabaseConfigured || !startPage?.pageId || !startPage?.revisionId || !targetData?.pageId) return null;
+
+    const result = isGuestGame
+      ? await invokeGuestSingleRun("create", {
+        guestToken,
+        run: {
+          runId,
+          start: startPage,
+          target: targetData,
+        },
+      })
+      : await createAuthenticatedSingleRun({ runId, start: startPage, target: targetData });
+    setAuthoritativeRun(result.run);
+    return result.run;
+  }, [isGuestGame, setAuthoritativeRun]);
+
+  const loadAuthoritativeRun = useCallback(async (saved) => {
+    if (!isSupabaseConfigured || !saved?.serverRunId) return null;
+    const run = isGuestGame
+      ? (await invokeGuestSingleRun("snapshot", {
+        guestToken: saved.guestToken,
+        runId: saved.serverRunId,
+      })).run
+      : await fetchAuthenticatedSingleRun(saved.serverRunId);
+    setAuthoritativeRun(run);
+    return run;
+  }, [isGuestGame, setAuthoritativeRun]);
+
+  const replayPendingMutation = useCallback(async (run, saved, signal) => {
+    const pending = pendingRequestStoreRef.current.read();
+    if (!run || !pending || pending.runId !== run.id || !pending.nextPage?.title) {
+      return run;
+    }
+
+    const page = await fetchPageData(pending.nextPage.title, { signal });
+    await ensureWikiSnapshot(page);
+    const guestToken = loadLocalGameState()?.guestToken || saved?.guestToken;
+    const response = isGuestGame
+      ? await applyGuestSingleMove({
+        guestToken,
+        runId: run.id,
+        expectedVersion: pending.expectedVersion ?? run.state_version,
+        nextPage: page,
+        clickedRawTitle: pending.clickedRawTitle,
+        requestId: pending.requestId,
+        correlationId: pending.correlationId,
+      })
+      : await applyAuthenticatedSingleMove({
+        runId: run.id,
+        expectedVersion: pending.expectedVersion ?? run.state_version,
+        nextPage: page,
+        clickedRawTitle: pending.clickedRawTitle,
+        requestId: pending.requestId,
+        correlationId: pending.correlationId,
+      });
+    pendingRequestStoreRef.current.clear(pending.requestId);
+    setAuthoritativeRun(response.run);
+    return response.run;
+  }, [isGuestGame, loadLocalGameState, setAuthoritativeRun]);
 
   const handleCountdownComplete = useCallback(() => {
     if (!playStartTrackedRef.current) {
@@ -201,7 +294,7 @@ export default function GamePage({
   }, []);
 
   const handleWin = useCallback(
-    (reachedTitle, targetTitle, timeSec, clicks, finalPath) => {
+    (reachedTitle, targetTitle, timeSec, clicks, finalPath, serverFinalized = false) => {
       setPhase(PHASE.SUCCESS);
       clearSingleGameState();
 
@@ -213,19 +306,41 @@ export default function GamePage({
           clickCount: clicks,
           reachedTitle,
           pathTitles: finalPath,
+          serverFinalized,
         });
       }
     },
     [onGameComplete, startTitle, clearSingleGameState]
   );
 
-  const handleGiveUp = useCallback(() => {
+  const handleGiveUp = useCallback(async () => {
     pageRequestManagerRef.current.cancel();
+    const activeRun = serverRunRef.current;
+    if (isSupabaseConfigured && activeRun?.status === "active") {
+      try {
+        if (isGuestGame) {
+          await invokeGuestSingleRun("leave", {
+            guestToken: loadLocalGameState()?.guestToken,
+            runId: activeRun.id,
+          });
+        } else {
+          await leaveAuthenticatedSingleRun({ runId: activeRun.id });
+        }
+      } catch (error) {
+        setError(error?.message || "게임 이탈 상태를 서버에 저장하지 못했습니다.");
+        return;
+      }
+    }
     clearSingleGameState();
     if (onReturnLobby) {
       onReturnLobby();
     }
-  }, [clearSingleGameState, onReturnLobby]);
+  }, [clearSingleGameState, isGuestGame, loadLocalGameState, onReturnLobby]);
+
+  const { requestExit, dialog: exitDialog } = useExitGuard({
+    enabled: phase === PHASE.COUNTDOWN || phase === PHASE.PLAYING,
+    onConfirm: handleGiveUp,
+  });
 
   // ----------------------------
   // 문서 이동
@@ -246,21 +361,62 @@ export default function GamePage({
         const page = await fetchPageData(nextTitle, { signal: request.signal });
         if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
+        let authoritativeMove = null;
+        const activeRun = serverRunRef.current;
+        if (isSupabaseConfigured && activeRun?.status === "active") {
+          await ensureWikiSnapshot(page);
+          const pendingMutation = pendingRequestStoreRef.current.begin({
+            runId: activeRun.id,
+            mode: "single",
+            expectedVersion: activeRun.state_version,
+            clickedRawTitle: nextTitle,
+            nextPage: {
+              title: page.title,
+              canonicalTitle: page.canonicalTitle || page.title,
+              pageId: page.pageId,
+              revisionId: page.revisionId,
+            },
+          });
+          authoritativeMove = isGuestGame
+            ? await applyGuestSingleMove({
+              guestToken: loadLocalGameState()?.guestToken,
+              runId: activeRun.id,
+              expectedVersion: activeRun.state_version,
+              nextPage: page,
+              clickedRawTitle: nextTitle,
+              requestId: pendingMutation.requestId,
+              correlationId: pendingMutation.correlationId,
+            })
+            : await applyAuthenticatedSingleMove({
+              runId: activeRun.id,
+              expectedVersion: activeRun.state_version,
+              nextPage: page,
+              clickedRawTitle: nextTitle,
+              requestId: pendingMutation.requestId,
+              correlationId: pendingMutation.correlationId,
+            });
+          pendingRequestStoreRef.current.clear(pendingMutation.requestId);
+          setAuthoritativeRun(authoritativeMove.run);
+        }
+
         setCurrentTitle(page.title);
         setCurrentSummary(page.summary);
         setCurrentDocumentHtml(page.documentHtml);
         setLinks(page.links);
         setQuickLinks(page.quickLinks);
 
-        const newPath = [...pathTitles, page.title];
+        const newPath = authoritativeMove?.run?.path_title_snapshots || [...pathTitles, page.title];
+        const nextClickCount = authoritativeMove?.run?.move_count ?? clickCount + 1;
         setPathTitles(newPath);
 
         saveLocalGameState({
           phase: PHASE.PLAYING,
           currentTitle: page.title,
           pathTitles: newPath,
-          clickCount: clickCount + 1,
+          clickCount: nextClickCount,
           elapsedSeconds,
+          serverRunId: authoritativeMove?.run?.id || activeRun?.id,
+          serverStateVersion: authoritativeMove?.run?.state_version ?? activeRun?.state_version,
         });
 
         if (previousTitle) {
@@ -270,13 +426,15 @@ export default function GamePage({
         itemSystem.clearPageScopedEffects();
         window.scrollTo({ top: 0, behavior: "smooth" });
 
-        if (checkWin(page.title, target.title)) {
+        const serverSolved = authoritativeMove?.run?.status === "completed";
+        if (serverSolved || (!authoritativeMove && checkWin(page.title, target.title))) {
           handleWin(
             page.title,
             target.title,
             elapsedSeconds,
-            clickCount + 1,
-            newPath
+            authoritativeMove?.run?.move_count ?? clickCount + 1,
+            newPath,
+            Boolean(authoritativeMove)
           );
         }
       } catch (e) {
@@ -303,6 +461,9 @@ export default function GamePage({
       clickCount,
       handleWin,
       saveLocalGameState,
+      isGuestGame,
+      loadLocalGameState,
+      setAuthoritativeRun,
     ]
   );
 
@@ -393,6 +554,8 @@ export default function GamePage({
           summary: targetSummaryData.extract || "요약이 없습니다.",
           requestedKeyword: mode === "custom" ? keyword : "",
           mode,
+          pageId: targetSummaryData.pageId || null,
+          revisionId: targetSummaryData.revisionId || null,
         });
 
         setCurrentTitle(startPage.title);
@@ -401,13 +564,15 @@ export default function GamePage({
         setLinks(startPage.links);
         setQuickLinks(startPage.quickLinks);
 
-        saveLocalGameState({
+        const initialState = saveLocalGameState({
           phase: PHASE.COUNTDOWN,
           target: {
             title: targetSummaryData.title,
             summary: targetSummaryData.extract || "요약이 없습니다.",
             requestedKeyword: mode === "custom" ? keyword : "",
             mode,
+            pageId: targetSummaryData.pageId || null,
+            revisionId: targetSummaryData.revisionId || null,
           },
           startTitle: startPage.title,
           currentTitle: startPage.title,
@@ -415,6 +580,29 @@ export default function GamePage({
           clickCount: 0,
           elapsedSeconds: 0,
         });
+
+        if (isSupabaseConfigured && startPage.pageId && startPage.revisionId && targetSummaryData.pageId) {
+          await ensureWikiSnapshot(startPage);
+          const runId = initialState?.serverRunId || crypto.randomUUID();
+          const run = await createAuthoritativeRun({
+            runId,
+            startPage,
+            targetData: {
+              title: targetSummaryData.title,
+              canonicalTitle: targetSummaryData.canonicalTitle || targetSummaryData.title,
+              pageId: targetSummaryData.pageId,
+              revisionId: targetSummaryData.revisionId,
+            },
+            guestToken: initialState?.guestToken,
+          });
+          if (run) {
+            saveLocalGameState({
+              serverRunId: run.id,
+              serverStateVersion: run.state_version,
+              guestToken: initialState?.guestToken,
+            });
+          }
+        }
 
         setElapsedSeconds(0);
         setClickCount(0);
@@ -441,6 +629,7 @@ export default function GamePage({
     [
       checkWin,
       clearSingleGameState,
+      createAuthoritativeRun,
       handleWin,
       isGuestGame,
       location.state,
@@ -481,18 +670,36 @@ export default function GamePage({
           setIsLoading(true);
           setError("");
           localStorage.removeItem("wiki-single-items");
-          const page = await fetchPageData(saved.currentTitle, { signal: request.signal });
+          let authoritative = await loadAuthoritativeRun(saved);
+          authoritative = await replayPendingMutation(authoritative, saved, request.signal);
+          if (authoritative && ["abandoned", "expired"].includes(authoritative.status)) {
+            clearSingleGameState();
+            navigate(LOBBY_PATH, { replace: true });
+            return;
+          }
+          if (authoritative?.status === "completed") {
+            clearSingleGameState();
+            navigate(LOBBY_PATH, { replace: true });
+            return;
+          }
+          const restoredTitle = authoritative?.current_title_snapshot || saved.currentTitle;
+          const page = await fetchPageData(restoredTitle, { signal: request.signal });
+          if (authoritative) await ensureWikiSnapshot(page);
           if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
-          setTarget(saved.target);
-          setStartTitle(saved.startTitle || "");
+          setTarget({
+            ...saved.target,
+            pageId: authoritative?.target_page_id || saved.target?.pageId || null,
+            revisionId: authoritative?.target_revision_id || saved.target?.revisionId || null,
+          });
+          setStartTitle(authoritative?.start_title_snapshot || saved.startTitle || "");
           setCurrentTitle(page.title);
           setCurrentSummary(page.summary);
           setCurrentDocumentHtml(page.documentHtml);
           setLinks(page.links);
           setQuickLinks(page.quickLinks);
-          const restoredPath = saved.pathTitles || [page.title];
-          const restoredClicks = saved.clickCount || 0;
+          const restoredPath = authoritative?.path_title_snapshots || saved.pathTitles || [page.title];
+          const restoredClicks = authoritative?.move_count ?? saved.clickCount ?? 0;
           const restoredElapsed = isGuestGame
             ? getRestoredGuestElapsedSeconds(saved)
             : saved.elapsedSeconds || 0;
@@ -509,6 +716,9 @@ export default function GamePage({
             clickCount: restoredClicks,
             elapsedSeconds: restoredElapsed,
             startedAt: restoredStartedAt,
+            serverRunId: authoritative?.id || saved.serverRunId,
+            serverStateVersion: authoritative?.state_version ?? saved.serverStateVersion,
+            guestToken: saved.guestToken,
           });
           // 복구 시에는 카운트다운 없이 바로 진행
           setPhase(PHASE.PLAYING);
@@ -544,6 +754,8 @@ export default function GamePage({
     }
   }, [
     clearSingleGameState,
+    loadAuthoritativeRun,
+    replayPendingMutation,
     guestRecovery,
     handleSetupComplete,
     isGuestGame,
@@ -663,7 +875,7 @@ export default function GamePage({
           <button
             type="button"
             className="single-giveup-button"
-            onClick={handleGiveUp}
+            onClick={requestExit}
           >
             포기하고 로비로
           </button>
@@ -679,6 +891,8 @@ export default function GamePage({
           <p>메인 페이지로 이동합니다...</p>
         </div>
       )}
+
+      {exitDialog}
     </div>
   );
 }

@@ -181,6 +181,48 @@ body {
   color: var(--text-main);
 }
 
+.app-btn-danger {
+  background: #b42318;
+  border-color: #b42318;
+  color: #fff;
+}
+
+.app-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 27, 29, 0.52);
+}
+
+.app-modal {
+  width: min(100%, 420px);
+  padding: 24px;
+  border: 1px solid var(--app-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(5, 27, 29, 0.22);
+}
+
+.app-modal h2 {
+  margin: 0 0 10px;
+}
+
+.app-modal p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.app-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
 .dashboard-page {
   width: 100%;
   min-height: 100vh;

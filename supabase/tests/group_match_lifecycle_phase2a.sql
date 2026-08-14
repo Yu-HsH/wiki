@@ -7,6 +7,33 @@ create extension if not exists pgtap with schema extensions;
 
 select no_plan();
 
+-- V2 cutover removes the legacy finish RPCs to avoid a PostgreSQL 17.6
+-- backend crash on revoked-function invocation.  The full completion
+-- lifecycle now lives in server_authority_v2.sql and uses apply_group_move_v2.
+select (
+  to_regprocedure('public.finish_group_player(uuid,integer,integer,text,text[])') is null
+  and to_regprocedure('public.update_group_progress(uuid,text,integer,text[],integer)') is null
+) as v2_cutover \gset
+
+\if :v2_cutover
+select ok(
+  to_regprocedure('public.finish_group_player(uuid,integer,integer,text,text[])') is null
+  and to_regprocedure('public.update_group_progress(uuid,text,integer,text[],integer)') is null,
+  'legacy finish/progress RPCs are removed after V2 cutover'
+);
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.apply_group_move_v2(uuid,uuid,uuid,bigint,text,text,text,text,text,uuid,uuid)',
+    'EXECUTE'
+  ),
+  'authenticated group completion uses apply_group_move_v2 after cutover'
+);
+select * from finish();
+rollback;
+\quit
+\endif
+
 create temporary table phase2a_test_rooms (
   name text primary key,
   room_id uuid not null

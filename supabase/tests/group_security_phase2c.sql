@@ -32,6 +32,9 @@ begin
     and user_id = p_user_id;
   get diagnostics v_count = row_count;
   return v_count;
+exception
+  when insufficient_privilege then
+    return 0;
 end;
 $$;
 
@@ -54,6 +57,9 @@ begin
     and user_id = p_user_id;
   get diagnostics v_count = row_count;
   return v_count;
+exception
+  when insufficient_privilege then
+    return 0;
 end;
 $$;
 
@@ -72,6 +78,9 @@ begin
     and user_id = p_user_id;
   get diagnostics v_count = row_count;
   return v_count;
+exception
+  when insufficient_privilege then
+    return 0;
 end;
 $$;
 
@@ -90,6 +99,9 @@ begin
   where id = p_room_id;
   get diagnostics v_count = row_count;
   return v_count;
+exception
+  when insufficient_privilege then
+    return 0;
 end;
 $$;
 
@@ -108,6 +120,9 @@ begin
   where id = p_room_id;
   get diagnostics v_count = row_count;
   return v_count;
+exception
+  when insufficient_privilege then
+    return 0;
 end;
 $$;
 
@@ -122,6 +137,9 @@ begin
   where id = p_room_id;
   get diagnostics v_count = row_count;
   return v_count;
+exception
+  when insufficient_privilege then
+    return 0;
 end;
 $$;
 
@@ -195,7 +213,7 @@ select ok(
   )
   and has_function_privilege(
     'authenticated',
-    'public.update_group_progress(uuid, text, integer, text[], integer)',
+    'public.apply_group_move_v2(uuid, uuid, uuid, bigint, text, text, text, text, text, uuid, uuid)',
     'EXECUTE'
   )
   and has_function_privilege(
@@ -208,7 +226,13 @@ select ok(
     'public.finalize_group_records(uuid)',
     'EXECUTE'
   ),
-  'authenticated can execute every Phase 2C group RPC'
+  'authenticated can execute the V2 group mutation and lifecycle RPCs'
+);
+
+select ok(
+  to_regprocedure('public.update_group_progress(uuid,text,integer,text[],integer)') is null
+  and to_regprocedure('public.finish_group_player(uuid,integer,integer,text,text[])') is null,
+  'legacy progress and finish RPCs are unavailable after V2 cutover'
 );
 
 select ok(
@@ -228,11 +252,7 @@ select ok(
     'public.set_group_ready(uuid, boolean)',
     'EXECUTE'
   )
-  and not has_function_privilege(
-    'anon',
-    'public.update_group_progress(uuid, text, integer, text[], integer)',
-    'EXECUTE'
-  )
+  and to_regprocedure('public.update_group_progress(uuid,text,integer,text[],integer)') is null
   and not has_function_privilege(
     'anon',
     'public.leave_group_waiting_room(uuid)',
@@ -310,7 +330,7 @@ select throws_ok(
     )
   $$,
   '42501',
-  'new row violates row-level security policy for table "game_rooms"',
+  'permission denied for table game_rooms',
   'authenticated cannot bypass create_group_room with direct group insert'
 );
 
@@ -490,7 +510,7 @@ select is(
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000001';
 
-select lives_ok(
+select throws_ok(
   format(
     'select public.update_group_progress(%L::uuid, %L, 1, array[%L, %L]::text[], 0)',
     (select room_id::text from phase2c_test_rooms where name = 'lifecycle'),
@@ -498,23 +518,9 @@ select lives_ok(
     'Start',
     'Korea'
   ),
-  'update_group_progress accepts only active own progress'
-);
-
-select ok(
-  exists (
-    select 1
-    from public.room_players
-    where room_id = (select room_id from phase2c_test_rooms where name = 'lifecycle')
-      and user_id = '00000000-0000-0000-0002-000000000001'::uuid
-      and current_title = 'Korea'
-      and move_count = 1
-      and path_titles = array['Start', 'Korea']::text[]
-      and rank is null
-      and not has_finished
-      and player_status = 'playing'
-  ),
-  'progress RPC changes progress fields without changing rank/finished/status'
+  '42883',
+  null,
+  'legacy progress RPC is unavailable after the V2 cutover'
 );
 
 select is(
@@ -548,129 +554,30 @@ select is(
   'group participants cannot directly change room lifecycle or winner fields'
 );
 
-select is(
-  (
-    select result_rank
-    from public.finish_group_player(
-      (select room_id from phase2c_test_rooms where name = 'lifecycle'),
-      10,
-      1,
-      (
-        select group_target_title
-        from public.game_rooms
-        where id = (select room_id from phase2c_test_rooms where name = 'lifecycle')
-      ),
-      array['Start', 'Target']::text[]
-    )
+select throws_ok(
+  format(
+    'select public.finish_group_player(%L::uuid, 10, 1, %L, array[%L]::text[])',
+    (select room_id::text from phase2c_test_rooms where name = 'lifecycle'),
+    'Target',
+    'Target'
   ),
-  1,
-  'first player finishes through the existing authoritative lifecycle RPC'
-);
-
-set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000002';
-
-select is(
-  (
-    select result_rank
-    from public.finish_group_player(
-      (select room_id from phase2c_test_rooms where name = 'lifecycle'),
-      20,
-      2,
-      (
-        select group_target_title
-        from public.game_rooms
-        where id = (select room_id from phase2c_test_rooms where name = 'lifecycle')
-      ),
-      array['Start', 'Middle', 'Target']::text[]
-    )
-  ),
-  2,
-  'second player finishes and closes the group room'
+  '42883',
+  null,
+  'legacy finish RPC is unavailable after the V2 cutover'
 );
 
 select is(
-  (
-    select count(*)::integer
-    from public.group_match_history
-    where room_id = (select room_id from phase2c_test_rooms where name = 'lifecycle')
-  ),
-  2,
-  'finished room trigger creates server-side group history'
-);
-
-select ok(
-  not exists (
-    select 1
-    from public.group_match_history history
-    join public.group_match_results result
-      on result.room_id = history.room_id
-     and result.user_id = history.user_id
-    where history.room_id = (select room_id from phase2c_test_rooms where name = 'lifecycle')
-      and (
-        history.rank,
-        history.elapsed_seconds,
-        history.move_count
-      ) is distinct from (
-        result.rank,
-        result.elapsed_seconds,
-        result.move_count
-      )
-  ),
-  'history values come from authoritative group_match_results'
-);
-
-set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000001';
-
-select is(
-  public.finalize_group_records(
-    (select room_id from phase2c_test_rooms where name = 'lifecycle')
-  ),
-  2,
-  'explicit history finalizer returns the authoritative row count'
+  (select count(*)::integer from public.group_match_results
+   where room_id = (select room_id from phase2c_test_rooms where name = 'lifecycle')),
+  0,
+  'legacy finish rejection creates no group result'
 );
 
 select is(
-  public.finalize_group_records(
-    (select room_id from phase2c_test_rooms where name = 'lifecycle')
-  ),
-  2,
-  'history finalizer is repeatable'
-);
-
-select ok(
-  exists (
-    select 1
-    from public.user_profile_stats
-    where user_id = '00000000-0000-0000-0002-000000000001'::uuid
-      and group_first_count = 1
-      and group_second_count = 0
-      and group_third_count = 0
-  ),
-  'server-side stats record the first-place result exactly once'
-);
-
-set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000002';
-
-select is(
-  (
-    select count(*)::integer
-    from public.group_match_history
-    where user_id = '00000000-0000-0000-0002-000000000001'::uuid
-  ),
-  1,
-  'authenticated profile lookup can read another user group rank history'
-);
-
-select ok(
-  exists (
-    select 1
-    from public.user_profile_stats
-    where user_id = '00000000-0000-0000-0002-000000000002'::uuid
-      and group_first_count = 0
-      and group_second_count = 1
-      and group_third_count = 0
-  ),
-  'server-side stats record the second-place result exactly once'
+  (select count(*)::integer from public.group_match_history
+   where room_id = (select room_id from phase2c_test_rooms where name = 'lifecycle')),
+  0,
+  'legacy finish rejection creates no group history'
 );
 
 select throws_ok(
@@ -788,94 +695,64 @@ select is(
 );
 
 set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000008';
+set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000001';
 
-with created as (
-  insert into public.game_rooms (
-    room_code,
-    host_user_id,
-    status,
-    mode,
-    max_players,
-    min_players,
-    finish_rank_limit
-  )
-  values (
-    'phase2c-duel',
-    '00000000-0000-0000-0002-000000000008'::uuid,
-    'waiting',
-    'duel',
-    2,
-    2,
-    2
-  )
-  returning id
-)
-insert into phase2c_test_rooms (name, room_id)
-select 'duel', id from created;
-
-select lives_ok(
-  format(
-    'insert into public.room_players (room_id, user_id, role, nickname_snapshot) values (%L::uuid, %L::uuid, %L, %L)',
-    (select room_id::text from phase2c_test_rooms where name = 'duel'),
-    '00000000-0000-0000-0002-000000000008',
-    'host',
-    'Duel Host'
-  ),
-  'duel host direct room_players insert remains available'
+select throws_ok(
+  $$insert into public.game_rooms (room_code, host_user_id, status, mode, max_players, min_players)
+    values ('phase2c-forged', auth.uid(), 'waiting', 'duel', 2, 2)$$,
+  '42501',
+  'permission denied for table game_rooms',
+  'authenticated cannot directly insert duel or group rooms after cutover'
 );
 
-set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000009';
-
-select lives_ok(
+select throws_ok(
   format(
-    'insert into public.room_players (room_id, user_id, role, nickname_snapshot) values (%L::uuid, %L::uuid, %L, %L)',
-    (select room_id::text from phase2c_test_rooms where name = 'duel'),
-    '00000000-0000-0000-0002-000000000009',
+    'insert into public.room_players (room_id, user_id, role, nickname_snapshot) values (%L::uuid, auth.uid(), %L, %L)',
+    (select room_id::text from phase2c_test_rooms where name = 'capacity'),
     'guest',
-    'Duel Guest'
+    'Forged player'
   ),
-  'duel guest direct join remains available'
+  '42501',
+  'permission denied for table room_players',
+  'authenticated cannot directly insert room players after cutover'
 );
 
 select is(
   pg_temp.try_update_player_progress(
-    (select room_id from phase2c_test_rooms where name = 'duel'),
-    '00000000-0000-0000-0002-000000000009'::uuid,
-    'Duel Progress'
+    (select room_id from phase2c_test_rooms where name = 'capacity'),
+    '00000000-0000-0000-0002-000000000001'::uuid,
+    'Forged'
   ),
-  1,
-  'duel player direct own-row update remains available'
-);
-
-set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000008';
-
-select is(
-  pg_temp.try_update_room_status(
-    (select room_id from phase2c_test_rooms where name = 'duel'),
-    'starting'
-  ),
-  1,
-  'duel host direct room lifecycle update remains available'
-);
-
-select lives_ok(
-  format(
-    'insert into public.room_events (room_id, user_id, event_type, payload) values (%L::uuid, %L::uuid, %L, %L::jsonb)',
-    (select room_id::text from phase2c_test_rooms where name = 'duel'),
-    '00000000-0000-0000-0002-000000000008',
-    'duel_test',
-    '{}'
-  ),
-  'duel participant direct room event insert remains available'
+  0,
+  'authenticated cannot directly update room_players after cutover'
 );
 
 select is(
   pg_temp.try_delete_room(
-    (select room_id from phase2c_test_rooms where name = 'duel')
+    (select room_id from phase2c_test_rooms where name = 'capacity')
   ),
-  1,
-  'duel host direct room delete remains available'
+  0,
+  'authenticated cannot directly delete game_rooms after cutover'
+);
+
+select throws_ok(
+  format(
+    'insert into public.group_match_results (room_id, user_id) values (%L::uuid, auth.uid())',
+    (select room_id::text from phase2c_test_rooms where name = 'capacity')
+  ),
+  '42501',
+  'permission denied for table group_match_results',
+  'authenticated cannot directly insert group results'
+);
+
+select throws_ok(
+  format(
+    'insert into public.match_history (room_id, winner_user_id) values (%L::uuid, auth.uid())',
+    (select room_id::text from phase2c_test_rooms where name = 'capacity')
+  ),
+  '42501',
+  'permission denied for table match_history',
+  'authenticated cannot directly insert match history'
 );
 
 set local role postgres;

@@ -261,7 +261,11 @@ export async function fetchSummary(title, { signal } = {}) {
   const url = `${SUMMARY_API}/${encodeURIComponent(title)}`;
   const data = await fetchJson(url, "문서 요약을 불러오지 못했습니다.", { signal });
   if (!data?.title) throw new Error("위키백과 요약 응답 형식이 올바르지 않습니다.");
-  return data;
+  return {
+    ...data,
+    pageId: data.pageid != null ? String(data.pageid) : null,
+    revisionId: data.revision != null ? String(data.revision) : null,
+  };
 }
 
 function normalizeSummaryText(value) {
@@ -300,7 +304,8 @@ export async function fetchPageSummary(
   return {
     requestedTitle,
     canonicalTitle,
-    revisionId: data?.revision ?? null,
+    ...(data?.pageid != null ? { pageId: String(data.pageid) } : {}),
+    revisionId: data?.revision != null ? String(data.revision) : null,
     description: normalizeSummaryText(data?.description),
     extract: normalizeSummaryText(data?.extract),
     thumbnailUrl: getSafeWikiImageSource(data?.thumbnail?.source || "") || null,
@@ -348,6 +353,7 @@ export async function fetchAllLinkPages(
     if (!nextContinuation?.plcontinue) {
       return {
         canonicalTitle,
+        pageId: page.pageid != null ? String(page.pageid) : null,
         links: dedupeLinkItems(collectedLinks),
         pageCounts,
         normalized,
@@ -375,8 +381,9 @@ export async function fetchDocumentData(title, { signal } = {}) {
   const data = await fetchJson(url, "문서 본문을 불러오지 못했습니다.", { signal });
   if (!data?.parse?.title) throw new Error("문서 본문 응답 형식이 올바르지 않습니다.");
   return {
+    pageId: data.parse.pageid != null ? String(data.parse.pageid) : null,
     canonicalTitle: data.parse.title,
-    revisionId: data.parse.revid ?? null,
+    revisionId: data.parse.revid != null ? String(data.parse.revid) : null,
     html: data?.parse?.text?.["*"] || "",
   };
 }
@@ -400,6 +407,7 @@ export async function fetchPageData(title, options = {}) {
   ]);
 
   const canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
+  const pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
   if (
     linkData.canonicalTitle &&
     normalizeTitle(linkData.canonicalTitle) !== normalizeTitle(canonicalTitle)
@@ -420,6 +428,7 @@ export async function fetchPageData(title, options = {}) {
 
   return {
     requestedTitle,
+    pageId,
     canonicalTitle,
     revisionId: documentData.revisionId,
     title: canonicalTitle,

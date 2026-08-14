@@ -11,7 +11,8 @@ import {
     unreadyGroupPlayer,
     startGroupRoomGame,
 } from "../services/groupMultiplayerService";
-import { searchWikiTitleCandidates } from "../services/wikiService";
+import { fetchPageSummary, searchWikiTitleCandidates } from "../services/wikiService";
+import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { createGroupEntryMarker } from "../utils/groupGameFlow";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 
@@ -198,9 +199,18 @@ export default function GroupRoomPage() {
         try {
             setSubmitError("");
 
+            const selectedPage = await fetchPageSummary(selectedTarget.title);
+            await ensureWikiSnapshot({
+                title: selectedPage.canonicalTitle || selectedTarget.title,
+                canonicalTitle: selectedPage.canonicalTitle || selectedTarget.title,
+                pageId: selectedPage.pageId,
+                revisionId: selectedPage.revisionId,
+            });
             await submitGroupKeyword(roomId, {
                 rawKeyword: keywordInput.trim(),
                 selectedTitle: selectedTarget.title,
+                selectedPageId: selectedPage.pageId,
+                selectedRevisionId: selectedPage.revisionId,
             });
 
             const latestPlayers = await fetchGroupRoomPlayers(roomId);

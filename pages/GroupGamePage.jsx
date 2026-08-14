@@ -7,8 +7,7 @@ import { useAuth } from "../authContext";
 import {
     fetchGroupRoom,
     fetchGroupRoomPlayers,
-    updateGroupPlayerProgress,
-    finishGroupPlayer,
+    applyGroupMoveV2,
     fetchGroupResults,
     activateGroupRoomGame,
     finalizeGroupRoomIfExpired,
@@ -21,6 +20,7 @@ import {
     formatDuration,
     normalizeTitle,
 } from "../services/wikiService";
+import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
 import WikiViewer from "../components/WikiViewer";
 import CountdownOverlay from "../components/CountdownOverlay";
@@ -64,6 +64,8 @@ import {
     isGroupRoomExpired,
 } from "../utils/groupGameTimer";
 import { formatGroupRetireReason } from "../utils/groupResultFormatter";
+import { useExitGuard } from "../components/ExitGuard";
+import { classifyRealtimeVersion } from "../utils/serverAuthority";
 
 import { trackEvent } from "../services/analyticsService";
 
@@ -115,6 +117,13 @@ export default function GroupGamePage() {
     const [leaving, setLeaving] = useState(false);
     const [connectionVersion, setConnectionVersion] = useState(0);
     const [selectedSpectatorId, setSelectedSpectatorId] = useState(null);
+    const roomRef = useRef(null);
+    const playersRef = useRef([]);
+
+    useEffect(() => {
+        roomRef.current = room;
+        playersRef.current = players;
+    }, [room, players]);
 
     const timerRef = useRef(null);
     const finishedRef = useRef(false);
@@ -372,6 +381,7 @@ export default function GroupGamePage() {
 
                     if (session.outcome !== "active") return { session, page: null };
                     const page = await fetchPageData(session.currentTitle);
+                    await ensureWikiSnapshot(page);
                     return { session, page };
                 },
                 {
@@ -627,7 +637,12 @@ export default function GroupGamePage() {
                     table: "game_rooms",
                     filter: `id=eq.${roomId}`,
                 },
-                async () => {
+                async (payload) => {
+                    const incoming = payload?.new?.state_version;
+                    const relation = incoming == null
+                        ? "next"
+                        : classifyRealtimeVersion(roomRef.current?.state_version, incoming);
+                    if (relation === "stale") return;
                     try {
                         await refreshRoomState();
                     } catch (error) {
@@ -644,7 +659,14 @@ export default function GroupGamePage() {
                     table: "room_players",
                     filter: `room_id=eq.${roomId}`,
                 },
-                async () => {
+                async (payload) => {
+                    const incoming = payload?.new?.progress_version;
+                    const playerId = payload?.new?.user_id;
+                    const current = playersRef.current.find((player) => player.user_id === playerId);
+                    const relation = incoming == null
+                        ? "next"
+                        : classifyRealtimeVersion(current?.progress_version, incoming);
+                    if (relation === "stale") return;
                     try {
                         await refreshRoomState();
                     } catch (error) {
@@ -793,40 +815,32 @@ export default function GroupGamePage() {
 
         try {
             const page = await fetchPageData(nextTitle);
+            await ensureWikiSnapshot(page);
 
             if (normalizeTitle(page.title) === normalizeTitle(currentTitle)) return;
 
-            const nextClickCount = clickCount + 1;
-            const newPath = [...pathTitles, page.title];
-            const solved = checkWin(page.title, target.title);
+            const serverMove = await applyGroupMoveV2({
+                roomId,
+                expectedVersion: Number(myPlayer?.progress_version) || 0,
+                nextPage: page,
+                clickedRawTitle: nextTitle,
+            });
+            if (serverMove.room) setRoom(serverMove.room);
+            const serverPlayer = serverMove.player || {};
+            const nextClickCount = Number(serverPlayer.move_count) || 0;
+            const newPath = Array.isArray(serverPlayer.path_titles) && serverPlayer.path_titles.length
+                ? serverPlayer.path_titles
+                : [...pathTitles, page.title];
+            const solved = serverPlayer.player_status === "finished" || serverPlayer.has_finished === true;
 
-            if (solved) {
-                const serverFinishResult = await finishGroupPlayer(roomId, {
-                    elapsedSeconds: room?.game_starts_at
-                        ? elapsedSecondsFromServer(room.game_starts_at)
-                        : elapsedSeconds,
-                    moveCount: nextClickCount,
-                    currentTitle: page.title,
-                    pathTitles: newPath,
-                });
-                setFinishResult(serverFinishResult
-                    ? {
-                        ...serverFinishResult,
-                        user_id: serverFinishResult.user_id ?? serverFinishResult.result_user_id,
-                        rank: serverFinishResult.rank ?? serverFinishResult.result_rank,
-                        is_winner: serverFinishResult.is_winner ?? serverFinishResult.result_is_winner,
-                    }
-                    : null);
-            } else {
-                await updateGroupPlayerProgress(roomId, user.id, {
-                    currentTitle: page.title,
-                    moveCount: nextClickCount,
-                    pathTitles: newPath,
-                    expectedMoveCount: clickCount,
-                });
-            }
+            setFinishResult(solved ? {
+                ...serverPlayer,
+                user_id: serverPlayer.user_id,
+                rank: serverPlayer.rank,
+                is_winner: serverPlayer.rank <= (room?.finish_rank_limit ?? 3),
+            } : null);
 
-            setCurrentTitle(page.title);
+            setCurrentTitle(serverPlayer.current_title || page.title);
             setCurrentSummary(page.summary);
             setCurrentDocumentHtml(page.documentHtml);
             setLinks(page.links);
@@ -837,7 +851,7 @@ export default function GroupGamePage() {
             if (solved) {
                 finishedRef.current = true;
                 saveLocalGameState({
-                    currentTitle: page.title,
+                    currentTitle: serverPlayer.current_title || page.title,
                     pathTitles: newPath,
                     clickCount: nextClickCount,
                     enteredPlaying: true,
@@ -848,7 +862,7 @@ export default function GroupGamePage() {
                 await refreshRoomState();
             } else {
                 saveLocalGameState({
-                    currentTitle: page.title,
+                    currentTitle: serverPlayer.current_title || page.title,
                     pathTitles: newPath,
                     clickCount: nextClickCount,
                     enteredPlaying: true,
@@ -943,6 +957,15 @@ export default function GroupGamePage() {
         navigate("/multiplayer", { replace: true });
     };
 
+    const { requestExit, dialog: exitDialog } = useExitGuard({
+        enabled:
+            phase === GROUP_GAME_PHASE.PICKING ||
+            phase === GROUP_GAME_PHASE.COUNTDOWN ||
+            phase === GROUP_GAME_PHASE.PLAYING ||
+            phase === GROUP_GAME_PHASE.SPECTATING,
+        onConfirm: () => handleReturnToLobby("forfeited"),
+    });
+
     const handleStartSpectating = () => {
         const firstPending = getPendingGroupPlayers(players)[0];
         setSelectedSpectatorId(firstPending?.user_id || null);
@@ -974,13 +997,16 @@ export default function GroupGamePage() {
         phase === GROUP_GAME_PHASE.FATAL_ERROR
     ) {
         return (
-            <OnlineGameRecoveryPanel
-                mode={recovery?.mode || "recovering"}
-                message={recovery?.message}
-                onRetry={() => recoverGame()}
-                onLeave={() => handleReturnToLobby("left")}
-                leaving={leaving}
-            />
+            <>
+                <OnlineGameRecoveryPanel
+                    mode={recovery?.mode || "recovering"}
+                    message={recovery?.message}
+                    onRetry={() => recoverGame()}
+                    onLeave={requestExit}
+                    leaving={leaving}
+                />
+                {exitDialog}
+            </>
         );
     }
 
@@ -995,6 +1021,7 @@ export default function GroupGamePage() {
 
         return (
             <div className="mp-page group-result-page">
+                {exitDialog}
                 <div className="mp-container">
                     <div className="mp-title-block">
                         <span className="mp-badge">FINISHED</span>
@@ -1067,6 +1094,7 @@ export default function GroupGamePage() {
 
         return (
             <div className="mp-page group-spectator-page">
+                {exitDialog}
                 <div className="mp-container">
                     <div className="mp-title-block">
                         <span className="mp-badge">SPECTATING</span>
@@ -1153,6 +1181,7 @@ export default function GroupGamePage() {
 
         return (
             <div className="mp-page group-result-page">
+                {exitDialog}
                 <div className="mp-container">
                     <div className="mp-title-block">
                         <span className="mp-badge">FINAL RESULT</span>
@@ -1207,6 +1236,7 @@ export default function GroupGamePage() {
 
     return (
         <div className="wiki-game-page">
+            {exitDialog}
             {phase === GROUP_GAME_PHASE.PICKING && (
                 <GroupPickOverlay
                     candidates={candidates}

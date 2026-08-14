@@ -25,10 +25,23 @@ function isPlaceholder(value) {
 /**
  * 유효한 Supabase URL 형식인지 확인하는 정규식 검사
  */
+// function isValidSupabaseUrl(value) {
+//   return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(value);
+// }
 function isValidSupabaseUrl(value) {
-  return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(value);
-}
+  try {
+    const url = new URL(value);
 
+    return (
+      (url.protocol === "https:" &&
+        /^[a-z0-9-]+\.supabase\.co$/i.test(url.hostname)) ||
+      (url.protocol === "http:" &&
+        (url.hostname === "127.0.0.1" || url.hostname === "localhost"))
+    );
+  } catch {
+    return false;
+  }
+}
 /**
  * 현재 프로젝트에 Supabase가 올바르게 설정되어 있는지 체크하는 플래그
  */

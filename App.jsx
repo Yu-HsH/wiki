@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  Route,
+  RouterProvider,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
 import { AuthProvider, useAuth } from "./authContext";
 import { saveGameRecord } from "./rankingService";
 import GamePage from "./pages/GamePage";
@@ -83,6 +90,10 @@ function GameRoute({ isGuestRecovery = false }) {
   const isGuestGame = Boolean(user?.isGuest || isGuestRecovery);
 
   const handleSaveRecord = async (result) => {
+    if (result?.serverFinalized) {
+      setSaveStatus("서버에서 결과와 랭킹 기록을 확정했습니다.");
+      return;
+    }
     if (isGuestGame) {
       alert("랭킹저장은 로그인 후 가능합니다.");
       return;
@@ -249,11 +260,18 @@ function AppRoutes() {
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
-  );
+  return <RouterProvider router={appRouter} />;
 }
+
+// useBlocker 기반 명시적 이탈 가드는 data router에서만 동작하므로
+// 기존 BrowserRouter 대신 createBrowserRouter를 앱의 단일 진입점으로 사용한다.
+const appRouter = createBrowserRouter([
+  {
+    path: "*",
+    element: (
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    ),
+  },
+]);

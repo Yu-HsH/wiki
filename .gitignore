@@ -84,6 +84,7 @@ web_modules/
 .env.production.local
 .env.local
 .env.*.local
+.env.local.remote-backup
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -144,3 +145,7 @@ dist
 .svelte-kit
 
 # End of https://www.toptal.com/developers/gitignore/api/node
+
+# Local review artifacts and personal Supabase snippets are never release inputs.
+supabase/snippets/
+*.zip
