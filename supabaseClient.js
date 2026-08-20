@@ -4,8 +4,9 @@ import { createClient } from "@supabase/supabase-js";
  * Supabase 클라이언트 초기화 및 설정 확인 모듈
  */
 
-const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const rawSupabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const runtimeEnv = import.meta.env || {};
+const rawSupabaseUrl = runtimeEnv.VITE_SUPABASE_URL || "";
+const rawSupabaseAnonKey = runtimeEnv.VITE_SUPABASE_ANON_KEY || "";
 
 const supabaseUrl = rawSupabaseUrl.trim();
 const supabaseAnonKey = rawSupabaseAnonKey.trim();

@@ -58,8 +58,8 @@ insert into public.game_rooms(
   group_target_title, group_target_page_id, group_target_revision_id
 )
 values (
-  '$roomId', 'V2CONCUR-$($roomId.ToString('N').Substring(0, 8))', '$userId', 'playing', 'group', 2, 2,
-  1, false, 0, now() - interval '5 seconds', now() + interval '5 minutes',
+  '$roomId', 'V2CONCUR-$($roomId.ToString('N').Substring(0, 8))', '$userId', 'playing', 'group', 3, 3,
+  3, false, 0, now() - interval '5 seconds', now() + interval '5 minutes',
   'Concurrent Middle', '$middlePageId', '400', 'Concurrent Target', '$targetPageId', '500'
 );
 insert into public.room_players(

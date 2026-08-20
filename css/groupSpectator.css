@@ -112,6 +112,54 @@
     font-size: 13px;
 }
 
+.group-spectator-settings {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.group-spectator-mute-list,
+.group-spectator-emoji-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.group-spectator-mute-list .mp-action-btn,
+.group-spectator-emoji-bar .mp-action-btn {
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 12px;
+}
+
+.group-spectator-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 34px;
+    margin-top: 14px;
+}
+
+.group-spectator-reaction {
+    padding: 8px 10px;
+    border-radius: 999px;
+    background: rgba(251, 191, 36, 0.14);
+    border: 1px solid rgba(251, 191, 36, 0.28);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.group-spectator-emoji-bar {
+    margin-top: 10px;
+}
+
+.group-spectator-wiki-viewer {
+    margin-top: 18px;
+    max-height: 62vh;
+    overflow: auto;
+    border-radius: 16px;
+}
+
 .group-spectator-leave {
     display: block;
     width: min(360px, 100%);

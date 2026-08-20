@@ -22,6 +22,7 @@ export default function WikiViewer({
   onConsumeSearch,
   highlightRequestId = 0,
   status = {},
+  readOnly = false,
 }) {
   const articleRef = useRef(null);
   const stableQuickLinks = Array.isArray(quickLinks) ? quickLinks : links.slice(0, 20);
@@ -228,6 +229,8 @@ export default function WikiViewer({
   };
   const handleDocumentClick = useCallback((event) => {
 
+    if (readOnly) return;
+
     const element = event.target instanceof Element ? event.target : null;
     if (!element) return;
     const link = element.closest("a[data-wiki-title]");
@@ -236,8 +239,25 @@ export default function WikiViewer({
     event.preventDefault();
     const nextTitle = link.getAttribute("data-wiki-title");
     if (!nextTitle) return;
-    onLinkClick(nextTitle);
-  }, [onLinkClick]);
+    onLinkClick?.(nextTitle);
+  }, [onLinkClick, readOnly]);
+
+  useEffect(() => {
+    if (!readOnly || !articleRef.current) return undefined;
+
+    articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((link) => {
+      const title = link.getAttribute("data-wiki-title");
+      if (!title) return;
+      link.setAttribute(
+        "href",
+        `https://ko.wikipedia.org/wiki/${encodeURIComponent(title).replaceAll("%20", "_")}`
+      );
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noreferrer noopener");
+    });
+
+    return undefined;
+  }, [currentDocumentHtml, readOnly]);
   const escapeRegExp = (value) => {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   };
@@ -537,7 +557,11 @@ export default function WikiViewer({
       <section className="current-page-card">
         <div className="article-head">
           <h3>{currentTitle || "현재 문서"}</h3>
-          <span>본문에서 강조된 파란색 링크를 클릭하면 다음 문서로 이동합니다.</span>
+          <span>
+            {readOnly
+              ? "읽기 전용 관전 화면입니다. 링크는 새 탭의 Wikipedia로 엽니다."
+              : "본문에서 강조된 파란색 링크를 클릭하면 다음 문서로 이동합니다."}
+          </span>
         </div>
         <div className="article-summary-preview">{currentSummary || "..."}</div>
         <article
@@ -562,11 +586,27 @@ export default function WikiViewer({
               linkTitle.trim().toLowerCase()
             );
 
+            const className = `link-chip ${isHighlighted ? "wiki-link--highlighted" : ""}`;
+            if (readOnly) {
+              return (
+                <a
+                  key={linkTitle}
+                  className={className}
+                  href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(linkTitle).replaceAll("%20", "_")}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {isHighlighted ? "⭐ " : ""}
+                  {linkTitle}
+                </a>
+              );
+            }
+
             return (
               <button
                 key={linkTitle}
-                className={`link-chip ${isHighlighted ? "wiki-link--highlighted" : ""}`}
-                onClick={() => onLinkClick(linkTitle)}
+                className={className}
+                onClick={() => onLinkClick?.(linkTitle)}
                 disabled={isLoading}
               >
                 {isHighlighted ? "⭐ " : ""}

@@ -282,7 +282,7 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000001';
 
 insert into phase2c_test_rooms (name, room_id)
 select 'capacity', id
-from public.create_group_room(2, 2, 2);
+from public.create_group_room(3, 3, 3);
 
 select is(
   (
@@ -376,13 +376,23 @@ select lives_ok(
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000003';
 
+select lives_ok(
+  format(
+    'select public.join_group_room(%L::uuid)',
+    (select room_id::text from phase2c_test_rooms where name = 'capacity')
+  ),
+  'third player joins the three-player capacity room'
+);
+
+set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000004';
+
 select throws_ok(
   format(
     'select public.join_group_room(%L::uuid)',
     (select room_id::text from phase2c_test_rooms where name = 'capacity')
   ),
   'P0001',
-  'room is full',
+  'GROUP_ROOM_FULL',
   'join_group_room rejects max_players overflow'
 );
 
@@ -390,7 +400,7 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000001';
 
 insert into phase2c_test_rooms (name, room_id)
 select 'lifecycle', id
-from public.create_group_room(2, 2, 2);
+from public.create_group_room(3, 3, 3);
 
 select throws_ok(
   format(
@@ -448,6 +458,34 @@ select lives_ok(
   'second player can become ready'
 );
 
+set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000003';
+
+select lives_ok(
+  format(
+    'select public.join_group_room(%L::uuid)',
+    (select room_id::text from phase2c_test_rooms where name = 'lifecycle')
+  ),
+  'third player joins the lifecycle room'
+);
+
+select lives_ok(
+  format(
+    'select public.submit_group_target(%L::uuid, %L, %L)',
+    (select room_id::text from phase2c_test_rooms where name = 'lifecycle'),
+    'jeju',
+    'Jeju'
+  ),
+  'third player can submit a distinct target'
+);
+
+select lives_ok(
+  format(
+    'select public.set_group_ready(%L::uuid, true)',
+    (select room_id::text from phase2c_test_rooms where name = 'lifecycle')
+  ),
+  'third player can become ready'
+);
+
 set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000001';
 
 select is(
@@ -483,7 +521,7 @@ select throws_ok(
   'ready state changes are rejected after start'
 );
 
-set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000003';
+set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000004';
 
 select throws_ok(
   format(
@@ -491,7 +529,7 @@ select throws_ok(
     (select room_id::text from phase2c_test_rooms where name = 'lifecycle')
   ),
   'P0001',
-  'only a waiting room can be joined',
+  'GROUP_ROOM_NOT_WAITING',
   'join_group_room rejects a non-waiting room'
 );
 
@@ -606,7 +644,7 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000004';
 
 insert into phase2c_test_rooms (name, room_id)
 select 'host-transfer', id
-from public.create_group_room(3, 2, 2);
+from public.create_group_room(3, 3, 3);
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000005';
 select lives_ok(
@@ -672,7 +710,7 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0002-000000000007';
 
 insert into phase2c_test_rooms (name, room_id)
 select 'last-leave', id
-from public.create_group_room(2, 2, 2);
+from public.create_group_room(3, 3, 3);
 
 select lives_ok(
   format(

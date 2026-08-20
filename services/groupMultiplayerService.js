@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
 import { fatalSessionError } from "../utils/onlineGameSession";
 import { createCorrelationId, createRequestId } from "../utils/serverAuthority";
+import { normalizeGroupSpectatorEmojiRpcResponse } from "./groupSpectatorService.js";
 
 function assertSupabase() {
     if (!isSupabaseConfigured || !supabase) {
@@ -207,8 +208,6 @@ export async function leaveGroupGame(
         await leaveGroupRoom(roomId);
         return null;
     }
-    if (effectiveRoomStatus === "finished") return null;
-
     const effectiveReason = reason || retireReason || "left";
     if (!["left", "forfeited"].includes(effectiveReason)) {
         throw new Error("유효하지 않은 RETIRE 사유입니다.");
@@ -219,6 +218,31 @@ export async function leaveGroupGame(
     });
     if (error) throw error;
     return normalizeRpcRow(data);
+}
+
+export async function sendGroupSpectatorEmoji(roomId, presetId) {
+    assertSupabase();
+    if (!roomId || !presetId) throw new Error("관전 이모티콘 정보가 없습니다.");
+
+    const { data, error } = await supabase.rpc("send_group_spectator_emoji_v13", {
+        p_room_id: roomId,
+        p_preset_id: presetId,
+    });
+    if (error) throw error;
+    return normalizeGroupSpectatorEmojiRpcResponse(data);
+}
+
+export async function fetchGroupSpectatorEmojis(roomId) {
+    assertSupabase();
+    const { data, error } = await supabase
+        .from("room_events")
+        .select("id, room_id, user_id, event_type, payload, created_at")
+        .eq("room_id", roomId)
+        .eq("event_type", "group_spectator_emoji")
+        .order("created_at", { ascending: false })
+        .limit(64);
+    if (error) throw error;
+    return data ?? [];
 }
 
 export async function fetchGroupResults(roomId) {

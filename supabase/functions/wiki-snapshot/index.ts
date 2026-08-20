@@ -119,27 +119,48 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const requestedTitle = normalizeTitle(body?.title);
     const requestId = body?.requestId || null;
+    const expectedPageId = body?.pageId == null ? "" : String(body.pageId);
+    const expectedRevisionId = body?.revisionId == null ? "" : String(body.revisionId);
     if (!requestedTitle) return json({ code: "INVALID_TITLE" }, 400);
 
-    const initialParse = await wikiJson({
-      action: "parse",
-      page: requestedTitle,
-      prop: "text|revid",
-      redirects: "1",
-      format: "json",
-    });
-    const initialPage = initialParse?.parse;
-    if (!initialPage?.pageid || !initialPage?.revid || !initialPage?.title) return json({ code: "WIKI_PAGE_INVALID" }, 502);
+    let parsedPage: any;
+    if (expectedPageId && expectedRevisionId) {
+      const pinnedParseResponse = await wikiJson({
+        action: "parse",
+        oldid: expectedRevisionId,
+        prop: "text|revid",
+        format: "json",
+      });
+      parsedPage = pinnedParseResponse?.parse;
+      if (String(parsedPage?.pageid ?? "") !== expectedPageId
+        || String(parsedPage?.revid ?? "") !== expectedRevisionId) {
+        return json({ code: "WIKI_SNAPSHOT_IDENTITY_MISMATCH" }, 409);
+      }
+    } else {
+      const initialParse = await wikiJson({
+        action: "parse",
+        page: requestedTitle,
+        prop: "text|revid",
+        redirects: "1",
+        format: "json",
+      });
+      const initialPage = initialParse?.parse;
+      if (!initialPage?.pageid || !initialPage?.revid || !initialPage?.title) return json({ code: "WIKI_PAGE_INVALID" }, 502);
 
-    const pinnedParseResponse = await wikiJson({
-      action: "parse",
-      oldid: String(initialPage.revid),
-      prop: "text|revid",
-      format: "json",
-    });
-    const parsedPage = pinnedParseResponse?.parse;
-    if (!parsedPage?.pageid || !parsedPage?.revid || !parsedPage?.title
-      || String(parsedPage.revid) !== String(initialPage.revid)) {
+      const pinnedParseResponse = await wikiJson({
+        action: "parse",
+        oldid: String(initialPage.revid),
+        prop: "text|revid",
+        format: "json",
+      });
+      parsedPage = pinnedParseResponse?.parse;
+      if (!parsedPage?.pageid || !parsedPage?.revid || !parsedPage?.title
+        || String(parsedPage.revid) !== String(initialPage.revid)) {
+        return json({ code: "WIKI_REVISION_CHANGED" }, 409);
+      }
+    }
+
+    if (!parsedPage?.pageid || !parsedPage?.revid || !parsedPage?.title) {
       return json({ code: "WIKI_REVISION_CHANGED" }, 409);
     }
 
@@ -187,6 +208,7 @@ Deno.serve(async (req) => {
       pageId,
       revisionId,
       canonicalTitle,
+      documentHtml: parsedPage?.text?.["*"] ?? "",
       links: links.map((row) => ({
         pageId: row.targetPageId,
         title: row.targetTitle,

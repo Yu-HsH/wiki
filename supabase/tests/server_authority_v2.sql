@@ -152,7 +152,7 @@ insert into public.game_rooms(
 )
 values (
   '00000000-0000-0000-0012-000000000001', 'V2GROUP1',
-  '00000000-0000-0000-0008-000000000001', 'playing', 'group', 2, 2,
+  '00000000-0000-0000-0008-000000000001', 'playing', 'group', 3, 3,
   false, 0, now()
 );
 insert into public.room_players(
@@ -497,8 +497,8 @@ insert into public.game_rooms (
 )
 values (
   '00000000-0000-0000-0018-000000000001', 'V2GCOMP',
-  '00000000-0000-0000-0008-000000000001', 'playing', 'group', 2, 4,
-  2, 600, 60, false, 0, now() - interval '30 seconds', now() + interval '10 minutes',
+  '00000000-0000-0000-0008-000000000001', 'playing', 'group', 3, 4,
+  3, 1200, 120, false, 0, now() - interval '30 seconds', now() + interval '10 minutes',
   'V2 Start', 'v2-start', '100', 'V2 Target', 'v2-target', '300'
 );
 
@@ -566,8 +566,8 @@ select is(
   'APPLIED',
   'first group player completes after two server-validated moves'
 );
-select is((select status from public.game_rooms where id = '00000000-0000-0000-0018-000000000001'), 'grace_period', 'finish_rank_limit transitions the group room to grace_period');
-select is((select finished_count from public.game_rooms where id = '00000000-0000-0000-0018-000000000001'), 2, 'finish_rank_limit is counted by the server');
+select is((select status from public.game_rooms where id = '00000000-0000-0000-0018-000000000001'), 'playing', 'third finisher has not arrived yet, so the room remains playing');
+select is((select finished_count from public.game_rooms where id = '00000000-0000-0000-0018-000000000001'), 2, 'finished_count is counted before the third finisher');
 select is((select move_count from public.room_players where room_id = '00000000-0000-0000-0018-000000000001' and user_id = '00000000-0000-0000-0008-000000000001'), 2, 'server completion stores the authoritative move_count');
 select ok((select elapsed_seconds >= 0 from public.room_players where room_id = '00000000-0000-0000-0018-000000000001' and user_id = '00000000-0000-0000-0008-000000000001'), 'server completion stores non-negative elapsed_seconds');
 
@@ -585,15 +585,16 @@ select is((select count(distinct rank)::integer from public.group_match_results 
 select ok(
   (select winner_user_ids = array[
     '00000000-0000-0000-0008-000000000002'::uuid,
-    '00000000-0000-0000-0008-000000000001'::uuid
+    '00000000-0000-0000-0008-000000000001'::uuid,
+    '00000000-0000-0000-0008-000000000003'::uuid
   ] from public.game_rooms where id = '00000000-0000-0000-0018-000000000001'),
-  'winner_user_ids matches the first two server ranks'
+  'winner_user_ids matches the first three server ranks'
 );
 select ok(
   not exists (
     select 1 from public.group_match_results
     where room_id = '00000000-0000-0000-0018-000000000001'
-      and is_winner is distinct from (rank <= 2)
+      and is_winner is distinct from (rank <= 3)
   ),
   'group_match_results winner flags match winner_user_ids ranks'
 );
@@ -605,13 +606,13 @@ set local role postgres;
 insert into public.game_rooms (
   id, room_code, host_user_id, status, mode, min_players, max_players,
   finish_rank_limit, game_duration_seconds, grace_duration_seconds,
-  game_starts_at, game_deadline_at, grace_started_at, grace_ends_at,
+  use_items, game_starts_at, game_deadline_at, grace_started_at, grace_ends_at,
   group_start_title, group_target_title
 )
 values
-  ('00000000-0000-0000-0018-000000000002', 'V2GTIME', '00000000-0000-0000-0008-000000000001', 'playing', 'group', 2, 2, 1, 600, 60, now() - interval '10 minutes', now() - interval '1 second', null, null, 'V2 Start', 'V2 Target'),
-  ('00000000-0000-0000-0018-000000000003', 'V2GGRACE', '00000000-0000-0000-0008-000000000001', 'grace_period', 'group', 2, 2, 1, 600, 60, now() - interval '10 minutes', now() + interval '10 minutes', now() - interval '2 minutes', now() - interval '1 second', 'V2 Start', 'V2 Target'),
-  ('00000000-0000-0000-0018-000000000004', 'V2GRETIRE', '00000000-0000-0000-0008-000000000001', 'playing', 'group', 2, 2, 1, 600, 60, now() - interval '1 minute', now() + interval '10 minutes', null, null, 'V2 Start', 'V2 Target');
+  ('00000000-0000-0000-0018-000000000002', 'V2GTIME', '00000000-0000-0000-0008-000000000001', 'playing', 'group', 3, 3, 3, 1200, 120, false, now() - interval '10 minutes', now() - interval '1 second', null, null, 'V2 Start', 'V2 Target'),
+  ('00000000-0000-0000-0018-000000000003', 'V2GGRACE', '00000000-0000-0000-0008-000000000001', 'grace_period', 'group', 3, 3, 3, 1200, 120, false, now() - interval '10 minutes', now() + interval '10 minutes', now() - interval '2 minutes', now() - interval '1 second', 'V2 Start', 'V2 Target'),
+  ('00000000-0000-0000-0018-000000000004', 'V2GRETIRE', '00000000-0000-0000-0008-000000000001', 'playing', 'group', 3, 3, 3, 1200, 120, false, now() - interval '1 minute', now() + interval '10 minutes', null, null, 'V2 Start', 'V2 Target');
 
 insert into public.room_players (
   room_id, user_id, role, nickname_snapshot, player_status, start_title, target_title,

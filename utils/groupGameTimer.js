@@ -1,4 +1,6 @@
 const ACTIVE_GROUP_ROOM_STATUSES = new Set(["playing", "grace_period"]);
+export const GROUP_GAME_DURATION_SECONDS = 20 * 60;
+export const GROUP_GRACE_DURATION_SECONDS = 2 * 60;
 
 function toTimestampMs(value) {
   const timestamp = Date.parse(value || "");

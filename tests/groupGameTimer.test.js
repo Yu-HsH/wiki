@@ -2,12 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  GROUP_GAME_DURATION_SECONDS,
+  GROUP_GRACE_DURATION_SECONDS,
   createGroupFinalizerGate,
   getGroupActualEndAt,
   getGroupRemainingSeconds,
   isGroupRoomActive,
   isGroupRoomExpired,
 } from "../utils/groupGameTimer.js";
+
+test("그룹 기본 시간은 20분 hard deadline과 2분 grace이다", () => {
+  assert.equal(GROUP_GAME_DURATION_SECONDS, 1200);
+  assert.equal(GROUP_GRACE_DURATION_SECONDS, 120);
+});
 
 const now = Date.parse("2026-08-13T00:00:00.000Z");
 

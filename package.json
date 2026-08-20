@@ -7,7 +7,12 @@
     "dev": "vite",
     "test": "node --test",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "supabase:start": "node scripts/supabase-start-pinned.mjs",
+    "supabase:preflight": "node scripts/supabase-runtime-preflight.mjs",
+    "supabase:clean-gate": "node scripts/supabase-clean-gate.mjs",
+    "supabase:postgrest-smoke": "node scripts/supabase-postgrest-smoke.mjs",
+    "test:e2e:packet13-b1": "node scripts/packet13-browser-b1.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
@@ -18,6 +23,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "supabase": "2.114.0",
     "vite": "^5.4.19"
   }
 }

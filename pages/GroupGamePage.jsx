@@ -12,6 +12,8 @@ import {
     activateGroupRoomGame,
     finalizeGroupRoomIfExpired,
     leaveGroupGame,
+    fetchGroupSpectatorEmojis,
+    sendGroupSpectatorEmoji,
 } from "../services/groupMultiplayerService";
 
 import {
@@ -66,6 +68,13 @@ import {
 import { formatGroupRetireReason } from "../utils/groupResultFormatter";
 import { useExitGuard } from "../components/ExitGuard";
 import { classifyRealtimeVersion } from "../utils/serverAuthority";
+import {
+    fetchGroupSpectatorPage,
+    filterVisibleGroupSpectatorEmojis,
+    GROUP_SPECTATOR_PRESETS,
+    normalizeGroupSpectatorEmojiEvent,
+    upsertLatestGroupSpectatorEmoji,
+} from "../services/groupSpectatorService";
 
 import { trackEvent } from "../services/analyticsService";
 
@@ -117,6 +126,25 @@ export default function GroupGamePage() {
     const [leaving, setLeaving] = useState(false);
     const [connectionVersion, setConnectionVersion] = useState(0);
     const [selectedSpectatorId, setSelectedSpectatorId] = useState(null);
+    const [spectatorPage, setSpectatorPage] = useState(null);
+    const [spectatorPageLoading, setSpectatorPageLoading] = useState(false);
+    const [spectatorPageError, setSpectatorPageError] = useState("");
+    const [spectatorEmojis, setSpectatorEmojis] = useState([]);
+    const [mutedSpectatorIds, setMutedSpectatorIds] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`wiki-group-spectator-mutes:${roomId}:${user?.id}`);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [muteAllSpectatorEmojis, setMuteAllSpectatorEmojis] = useState(() => {
+        try {
+            return localStorage.getItem(`wiki-group-spectator-mute-all:${roomId}:${user?.id}`) === "true";
+        } catch {
+            return false;
+        }
+    });
     const roomRef = useRef(null);
     const playersRef = useRef([]);
 
@@ -139,13 +167,34 @@ export default function GroupGamePage() {
     const realtimeChannelRef = useRef(null);
     const moveInFlightRef = useRef(false);
     const targetSummaryRequestRef = useRef(null);
+    const spectatorPageRequestRef = useRef(null);
     if (!targetSummaryRequestRef.current) {
         targetSummaryRequestRef.current = createLatestRequestManager();
+    }
+    if (!spectatorPageRequestRef.current) {
+        spectatorPageRequestRef.current = createLatestRequestManager();
     }
 
     const storageKey = user?.id && roomId
         ? `wiki-group-game-state:${roomId}:${user.id}`
         : null;
+
+    const spectatorMutesKey = user?.id && roomId
+        ? `wiki-group-spectator-mutes:${roomId}:${user.id}`
+        : null;
+    const spectatorMuteAllKey = user?.id && roomId
+        ? `wiki-group-spectator-mute-all:${roomId}:${user.id}`
+        : null;
+
+    useEffect(() => {
+        if (!spectatorMutesKey) return;
+        localStorage.setItem(spectatorMutesKey, JSON.stringify(mutedSpectatorIds));
+    }, [mutedSpectatorIds, spectatorMutesKey]);
+
+    useEffect(() => {
+        if (!spectatorMuteAllKey) return;
+        localStorage.setItem(spectatorMuteAllKey, String(muteAllSpectatorEmojis));
+    }, [muteAllSpectatorEmojis, spectatorMuteAllKey]);
 
     const saveLocalGameState = useCallback((patch = {}) => {
         if (!storageKey) return;
@@ -197,6 +246,25 @@ export default function GroupGamePage() {
                 )
                 .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)),
         [players]
+    );
+
+    const pendingSpectatorPlayers = useMemo(
+        () => getPendingGroupPlayers(players),
+        [players]
+    );
+    const selectedSpectatorPlayer = useMemo(
+        () =>
+            pendingSpectatorPlayers.find(
+                (player) => player.user_id === selectedSpectatorId
+            ) || pendingSpectatorPlayers[0] || null,
+        [pendingSpectatorPlayers, selectedSpectatorId]
+    );
+    const visibleSpectatorEmojis = useMemo(
+        () => filterVisibleGroupSpectatorEmojis(spectatorEmojis, {
+            mutedUserIds: mutedSpectatorIds,
+            muteAll: muteAllSpectatorEmojis,
+        }),
+        [muteAllSpectatorEmojis, mutedSpectatorIds, spectatorEmojis]
     );
 
     const candidates = useMemo(() => {
@@ -616,6 +684,7 @@ export default function GroupGamePage() {
 
     useEffect(() => () => {
         targetSummaryRequestRef.current?.cancel();
+        spectatorPageRequestRef.current?.cancel();
     }, []);
 
     useEffect(() => {
@@ -673,6 +742,22 @@ export default function GroupGamePage() {
                         console.error("group game players refresh failed:", error);
                         recoverGame();
                     }
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "INSERT",
+                    schema: "public",
+                    table: "room_events",
+                    filter: `room_id=eq.${roomId}`,
+                },
+                (payload) => {
+                    if (payload?.new?.event_type !== "group_spectator_emoji") return;
+                    if (!normalizeGroupSpectatorEmojiEvent(payload.new)) return;
+                    setSpectatorEmojis((current) =>
+                        upsertLatestGroupSpectatorEmoji(current, payload.new)
+                    );
                 }
             );
 
@@ -759,11 +844,116 @@ export default function GroupGamePage() {
         // A Realtime RETIRE update invalidates the current target. If no
         // pending participant remains, keep the active room in a safe empty
         // spectator state until the server publishes the final result.
-        setSelectedSpectatorId(null);
+            setSelectedSpectatorId(null);
         if (room?.status === "finished") {
             setPhase(GROUP_GAME_PHASE.ENDED);
         }
     }, [phase, players, room?.status, selectedSpectatorId]);
+
+    useEffect(() => {
+        if (phase !== GROUP_GAME_PHASE.SPECTATING || !selectedSpectatorPlayer) {
+            spectatorPageRequestRef.current?.cancel();
+            setSpectatorPage(null);
+            setSpectatorPageError("");
+            setSpectatorPageLoading(false);
+            return undefined;
+        }
+
+        const request = spectatorPageRequestRef.current.begin();
+        setSpectatorPage(null);
+        setSpectatorPageError("");
+        setSpectatorPageLoading(true);
+
+        fetchGroupSpectatorPage(selectedSpectatorPlayer)
+            .then((page) => {
+                if (!spectatorPageRequestRef.current.isCurrent(request.id)) return;
+                setSpectatorPage(page);
+            })
+            .catch((error) => {
+                if (!spectatorPageRequestRef.current.isCurrent(request.id)) return;
+                console.warn("group spectator page failed:", error);
+                setSpectatorPageError(
+                    error?.message || "관전 문서를 불러오지 못했습니다."
+                );
+            })
+            .finally(() => {
+                if (spectatorPageRequestRef.current.isCurrent(request.id)) {
+                    spectatorPageRequestRef.current.complete(request.id);
+                    setSpectatorPageLoading(false);
+                }
+            });
+
+        return () => {
+            if (spectatorPageRequestRef.current.isCurrent(request.id)) {
+                spectatorPageRequestRef.current.cancel();
+            }
+        };
+    }, [phase, selectedSpectatorPlayer]);
+
+    useEffect(() => {
+        if (phase !== GROUP_GAME_PHASE.SPECTATING || !roomId) return undefined;
+
+        let cancelled = false;
+        fetchGroupSpectatorEmojis(roomId)
+            .then((events) => {
+                if (cancelled) return;
+                setSpectatorEmojis(
+                    events.reduce(
+                        (current, event) => upsertLatestGroupSpectatorEmoji(current, event),
+                        []
+                    )
+                );
+            })
+            .catch((error) => {
+                if (!cancelled) console.warn("group spectator emoji restore failed:", error);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [phase, roomId]);
+
+    const handleSendSpectatorEmoji = useCallback(async (presetId) => {
+        if (phase !== GROUP_GAME_PHASE.SPECTATING || !roomId) return;
+        try {
+            const response = await sendGroupSpectatorEmoji(roomId, presetId);
+            if (response?.accepted === false) {
+                if (response.code === "SPECTATOR_ROOM_EXPIRED") {
+                    if (response.room?.status === "finished") {
+                        await showFinalGroupRoom(response.room);
+                    } else {
+                        await refreshRoomState();
+                    }
+                    return;
+                }
+
+                const rejected = new Error(
+                    response.code || "이모티콘을 보낼 수 없습니다."
+                );
+                rejected.code = response.code || "SPECTATOR_EMOJI_REJECTED";
+                throw rejected;
+            }
+
+            const event = response;
+            if (!event) return;
+            setSpectatorEmojis((current) => upsertLatestGroupSpectatorEmoji(current, event));
+        } catch (error) {
+            const message = error?.message || "이모티콘을 보낼 수 없습니다.";
+            if (String(message).includes("RATE_LIMIT")) {
+                setSpectatorPageError("이모티콘은 3초에 한 번만 보낼 수 있습니다.");
+            } else {
+                setSpectatorPageError(message);
+            }
+        }
+    }, [phase, refreshRoomState, roomId, showFinalGroupRoom]);
+
+    const handleToggleSpectatorMute = useCallback((userId) => {
+        setMutedSpectatorIds((current) =>
+            current.includes(userId)
+                ? current.filter((id) => id !== userId)
+                : [...current, userId]
+        );
+    }, []);
 
     const handleCountdownComplete = useCallback(async () => {
         if (!roomId || activationCompletedRef.current) return;
@@ -929,7 +1119,11 @@ export default function GroupGamePage() {
             }
         }
 
-        const shouldNotifyServer = shouldRetireGroupPlayer(currentRoom, currentPlayer);
+        const isFinishedExplicitLeave =
+            currentPlayer?.player_status === "finished" &&
+            [GROUP_GAME_PHASE.FINISHED, GROUP_GAME_PHASE.SPECTATING, GROUP_GAME_PHASE.ENDED].includes(phase);
+        const shouldNotifyServer =
+            shouldRetireGroupPlayer(currentRoom, currentPlayer) || isFinishedExplicitLeave;
 
         try {
             if (shouldNotifyServer) {
@@ -1083,7 +1277,7 @@ export default function GroupGamePage() {
     }
 
     if (phase === GROUP_GAME_PHASE.SPECTATING) {
-        const pendingPlayers = getPendingGroupPlayers(players);
+        const pendingPlayers = pendingSpectatorPlayers;
         const selectedPlayer =
             pendingPlayers.find((player) => player.user_id === selectedSpectatorId) ||
             pendingPlayers[0] ||
@@ -1141,6 +1335,27 @@ export default function GroupGamePage() {
                                     );
                                 })}
                             </div>
+                            <div className="group-spectator-settings">
+                                <button
+                                    type="button"
+                                    className="mp-action-btn"
+                                    onClick={() => setMuteAllSpectatorEmojis((current) => !current)}
+                                >
+                                    {muteAllSpectatorEmojis ? "이모티콘 전체 표시" : "이모티콘 전체 끄기"}
+                                </button>
+                                <div className="group-spectator-mute-list">
+                                    {players.map((player) => (
+                                        <button
+                                            key={`mute-${player.user_id}`}
+                                            type="button"
+                                            className="mp-action-btn"
+                                            onClick={() => handleToggleSpectatorMute(player.user_id)}
+                                        >
+                                            {mutedSpectatorIds.includes(player.user_id) ? "표시" : "숨김"} · {player.nickname_snapshot || "참가자"}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </section>
 
                         <section className="mp-card group-spectator-detail-card">
@@ -1160,6 +1375,56 @@ export default function GroupGamePage() {
                                     <p className="mp-subtitle">아직 저장된 이동 경로가 없습니다.</p>
                                 )}
                             </div>
+                            <div className="group-spectator-reactions" aria-live="polite">
+                                {visibleSpectatorEmojis.map((event) => {
+                                    const sender = players.find((player) => player.user_id === event.userId);
+                                    return (
+                                        <span key={event.id} className="group-spectator-reaction">
+                                            {event.preset.emoji} {sender?.nickname_snapshot || "참가자"}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                            <div className="group-spectator-emoji-bar">
+                                {GROUP_SPECTATOR_PRESETS.map((preset) => (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        className="mp-action-btn"
+                                        onClick={() => handleSendSpectatorEmoji(preset.id)}
+                                    >
+                                        {preset.emoji} {preset.label}
+                                    </button>
+                                ))}
+                            </div>
+                            {spectatorPageLoading && (
+                                <p className="mp-subtitle">서버가 확정한 Wikipedia 문서를 불러오는 중입니다...</p>
+                            )}
+                            {spectatorPageError && (
+                                <p className="mp-error">{spectatorPageError}</p>
+                            )}
+                            {spectatorPage && selectedPlayer && (
+                                <div className="group-spectator-wiki-viewer">
+                                    <WikiViewer
+                                        target={{
+                                            title: room?.group_target_title || target.title,
+                                            canonicalTitle: room?.group_target_title || target.title,
+                                            mode: "group",
+                                        }}
+                                        currentTitle={spectatorPage.canonicalTitle}
+                                        currentSummary={spectatorPage.summary}
+                                        currentDocumentHtml={spectatorPage.documentHtml}
+                                        links={spectatorPage.links}
+                                        quickLinks={spectatorPage.quickLinks}
+                                        isLoading={spectatorPageLoading}
+                                        elapsedSeconds={Number(selectedPlayer.elapsed_seconds) || 0}
+                                        clickCount={Number(selectedPlayer.move_count) || 0}
+                                        startTitle={selectedPlayer.start_title || room?.group_start_title || ""}
+                                        timerLabel="관전 중 기록"
+                                        readOnly
+                                    />
+                                </div>
+                            )}
                         </section>
                     </div>
 

@@ -149,3 +149,6 @@ dist
 # Local review artifacts and personal Supabase snippets are never release inputs.
 supabase/snippets/
 *.zip
+
+# Packet 13 browser gate artifacts are local QA outputs, not release inputs.
+test-results/packet13-b1/

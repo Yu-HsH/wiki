@@ -1,4 +1,4 @@
-import { isSupabaseConfigured, supabase } from "../supabaseClient";
+import { isSupabaseConfigured, supabase } from "../supabaseClient.js";
 
 function createRequestId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -50,6 +50,7 @@ export async function ensureWikiSnapshot(page, { requestId = createRequestId() }
     ...data,
     pageId: String(data.pageId),
     revisionId: String(data.revisionId),
+    documentHtml: typeof data.documentHtml === "string" ? data.documentHtml : "",
   };
 }
 
