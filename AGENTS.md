@@ -29,7 +29,10 @@
 - 현재 로컬은 미배포 서버 권위 V2와 Packet 13을 포함하며, **운영 DB에는 해당 RPC가 존재하지 않는다.**
   운영 `public` 함수는 7개뿐이고 V2 RPC 30개가 없다 (`docs/ops/PROD-SNAPSHOT-2026-08-20.md` §2).
 - 따라서 **cutover 계획 확정 전 main push는 즉시 장애를 유발한다.** 프론트가 존재하지 않는 RPC를 호출한다.
-- 백업 목적의 push는 **feature 브랜치 또는 별도 원격으로만** 수행한다. `main`에는 하지 않는다.
+- 백업 목적의 push는 **`origin/feat/group-final-gaps`로만** 수행한다. `main`에는 하지 않는다.
+  이 브랜치가 현재 작업 브랜치의 upstream이며 2026-08-20에 push되어 원격 백업이 존재한다.
+- Vercel 설정: **Production Branch = `main`**, **Ignored Build Step = Automatic** (사용자 확인, 2026-08-20).
+  따라서 feature 브랜치 push는 프로덕션 배포를 만들지 않는다. preview 배포 생성 여부는 미확인이다.
 - 배포와 DB 적용의 순서는 `code/18-...md`의 Release C(프론트) → Release D(cutover) 계약을 따르며,
   그 순서 자체가 운영 실측 이후 재설계 대상이다 (`docs/agent/CURRENT.md` §5).
 - 이 항목의 Vercel 연동 사실은 사용자가 제공한 정보다. 저장소의 `vercel.json`은 SPA rewrite 설정만

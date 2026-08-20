@@ -87,13 +87,15 @@
 
 | 항목 | 값 |
 |---|---|
-| `origin/main` HEAD | `e6d8eee` ("0529백업") |
-| 현재 브랜치 upstream | **미설정** (`no upstream configured`) |
-| `origin/main...HEAD` | 0 behind / **10 ahead** |
-| `37adc69`·`450f63a`·`339fb77` 원격 포함 | **전부 미포함** |
+| `origin/main` HEAD | `e6d8eee` ("0529백업") — **변경 없음** |
+| `origin/feat/group-final-gaps` HEAD | `f1e61fa` — 2026-08-20 push |
+| 현재 브랜치 upstream | `origin/feat/group-final-gaps` (설정됨) |
+| upstream 대비 | 0 behind / 0 ahead — **동기화 완료** |
+| `origin/main...HEAD` | 0 behind / **11 ahead** |
+| `37adc69`·`450f63a`·`339fb77`·`f1e61fa` | `origin/feat/group-final-gaps`에 **포함**, `origin/main`에는 **미포함** |
 
-로컬이 원격보다 크게 앞서 있다. 그룹 보안 하드닝, 서버 권위 V2, Packet 13이 모두 원격에 없다.
-push는 하지 않았다 (`AGENTS.md` §2).
+작업 브랜치는 원격 백업됐다. **`main`은 여전히 5월 상태(`e6d8eee`)이며 그룹 보안 하드닝, 서버 권위 V2,
+Packet 13이 모두 들어 있지 않다.** 원격 백업이 있다는 사실이 배포 가능 상태를 뜻하지 않는다.
 
 ### `main` push 금지 — 배포 연동
 
@@ -102,7 +104,9 @@ push는 하지 않았다 (`AGENTS.md` §2).
   (운영 `public` 함수 7개, V2 RPC 30개 부재 — `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §2).
 - 따라서 **cutover 계획 확정 전 main push는 즉시 장애를 유발한다.** 배포된 프론트가 존재하지 않는 RPC를
   호출하고, 반대로 `finish_group_player`는 cutover 시 삭제되므로 순서를 잘못 잡으면 양방향으로 깨진다.
-- 백업이 필요하면 feature 브랜치 또는 별도 원격만 사용한다. 상시 규칙: `AGENTS.md` §1.1.
+- 백업 push는 `origin/feat/group-final-gaps`로만 한다. Vercel Production Branch = `main`,
+  Ignored Build Step = Automatic이므로(사용자 확인, 2026-08-20) 이 브랜치 push는 프로덕션 배포를
+  만들지 않는다. preview 배포 생성 여부는 미확인. 상시 규칙: `AGENTS.md` §1.1.
 
 ---
 

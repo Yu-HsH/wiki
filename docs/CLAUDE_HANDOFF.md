@@ -205,7 +205,7 @@ npm test
 
 | 항목 | 상태 |
 |---|---|
-| `37adc69`·`450f63a`의 원격(`origin/main`) 포함 여부 | **해소 (2026-08-20).** 둘 다 원격 미포함. `origin/main` HEAD는 `e6d8eee`("0529백업")이고 현재 브랜치는 upstream 미설정, `origin/main...HEAD` = 0 behind / 10 ahead. 상세는 `docs/agent/CURRENT.md` §3. **`origin/main`은 Vercel 프로덕션 배포와 연동되어 있어 cutover 계획 확정 전 main push가 금지된다 (`AGENTS.md` §1.1)** |
+| `37adc69`·`450f63a`의 원격(`origin/main`) 포함 여부 | **해소 (2026-08-20).** `origin/main`에는 미포함(HEAD `e6d8eee` "0529백업", 5월 상태). 같은 날 `origin/feat/group-final-gaps`로 push해 `f1e61fa`까지 원격 백업됨. 상세는 `docs/agent/CURRENT.md` §3. **`origin/main`은 Vercel 프로덕션 배포와 연동되어 있어 cutover 계획 확정 전 main push가 금지된다 (`AGENTS.md` §1.1)** |
 | 운영/linked Supabase 프로젝트의 실제 migration 적용 상태 | **해소.** 미적용 11개, `supabase_migrations.schema_migrations` 부재로 CLI push 이력 자체 없음 → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §1. 격차는 V2 5개에 더해 8/4·8/7·8/13 3개를 포함한다 |
 | 운영 PostgreSQL/Supabase 런타임 버전 | **해소.** `PostgreSQL 17.6 on aarch64-unknown-linux-gnu` → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §5. 파생 위험은 §4.4로 이관 |
 | 운영 DB의 `onboarding_full_avatar` 사용 여부 | **해소.** avatar/achievement/reward 관련 테이블·컬럼 0행이므로 저장 구조 자체가 없고 업적 ID rename이 안전 → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §4. 이전 "확인 전 rename/update 금지" 제약은 해제됨 |
