@@ -121,15 +121,25 @@ Packet 13이 모두 들어 있지 않다.** 원격 백업이 있다는 사실이
 
 ## 5. 다음 작업 (순서대로)
 
-1. **`baseline_remote_schema`와 운영 스키마 대응 관계 확인** — 스냅샷 §1은 로컬 baseline이 운영 덤프로
-   "보인다"고만 기록한다. 이 대응이 확정되지 않으면 `migration repair` 대상 버전 자체가 정해지지 않는다.
-   **2번(cutover 계획 재작성)의 선행 조건이므로 먼저 수행한다.**
+1. ~~**`baseline_remote_schema`와 운영 스키마 대응 관계 확인**~~ — **집합 수준 완료 (2026-08-20).**
+   운영 `public` 테이블 14개와 baseline을 대조했다: 테이블 14/14 일치, baseline-only 0건, 운영-only 0건,
+   함수 7/7 일치(`finish_group_player` 포함). `picked`는 baseline 612행에 이미 있다 —
+   CLI 이력 밖에서 만들어진 사본이지만 덤프에는 포함되어 있어 신규 미기록 객체가 아니다.
+   → **baseline은 이 운영 상태의 덤프로 볼 수 있고, `repair` 대상 버전은 `20260730170602`로 확정된다.**
+   `repair --status applied 20260730170602`을 막는 차이는 발견되지 않았다(**(a) 조건부 성립**).
+   **남은 것:** 컬럼·제약·RLS 정책·publication·GRANT 수준 대조는 미수행이다(운영 조회 승인 필요).
+   미검출 차이가 실재하면 baseline을 "적용됨"으로 기록한 뒤에는 어떤 migration으로도 교정되지 않는다.
+   근거·판단 전문: `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §9.
 2. **cutover 계획 재작성** — `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §7의 신규 위험 4건을 반영한다.
    baseline 처리 선행 단계, 운영 17.6 권한 거부 경로 검증, `finish_group_player` 배포 순서,
    V2 이전 3개 migration 범위 재산정. Release A~D 정의를 이 격차 기준으로 다시 계산하며,
    Vercel main 배포와 DB 적용의 순서·다운타임 허용 여부를 함께 확정한다 (§3, `AGENTS.md` §1.1).
-3. **`avatars` 버킷 객체 소유자 확인** — 운영 콘솔, **사람 작업**. 객체 1개·소유자 1명이 실재하며
-   실제 사용자인지 개발 테스트 계정인지에 따라 프로필 업로드 제거 방식이 갈린다. 삭제·변환은 금지(`AGENTS.md` §4).
+3. **`avatars` 버킷 객체 소유자 확인** — **부분 해소 (2026-08-20).** 객체 정보를 확보했다:
+   1건, 2026-04-22 생성, `owner`는 UUID 1개(익명 업로드 아님). 업로드 시점이 `origin/main`의
+   5월 상태(`e6d8eee`)보다 앞서므로 **현재 작업 브랜치와 무관한 기록**이다.
+   **잔여:** 그 UUID가 실사용자 계정인지 개발 테스트 계정인지의 **계정 식별**. `auth.users`·`profiles`
+   대조가 필요하고 운영 조회 승인이 필요하다. 이 판정에 따라 프로필 업로드 제거 방식이 갈린다.
+   삭제·변환은 금지(`AGENTS.md` §4). 근거: `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §4.1.
 4. **실제 Wikipedia snapshot smoke (B2)** — B1은 fixture 인터셉트 기반이므로 실제 API 경로의
    429·revision 변경·`WIKI_SNAPSHOT_IDENTITY_MISMATCH` 처리는 아직 미검증이다.
 
