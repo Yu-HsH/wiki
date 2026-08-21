@@ -158,3 +158,6 @@ test-results/packet13-b1/
 # 한 번 커밋되면 계정 정보가 git 이력에 영구히 남는다.
 # 근거: docs/ops/CUTOVER-PLAN.md §4.2·§4.3
 backup/
+
+# 로컬 검증 도구 설정. 릴리스 입력이 아니다.
+.claude/

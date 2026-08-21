@@ -95,3 +95,53 @@ npm run dev
 ```
 
 서버가 실행된 후 `http://localhost:5173` 등 주어진 로컬호스트 주소를 통해 접속하실 수 있습니다.
+
+## 🚧 유지보수 게이트 (점검 화면)
+
+DB 마이그레이션 창(cutover) 같은 작업 중에 앱 진입 자체를 막는 클라이언트 측 게이트다.
+`main.jsx`의 진입점에서 라우터·Supabase 클라이언트 초기화보다 **먼저** 분기하므로,
+점검 화면은 Supabase 클라이언트를 만들지 않고 네트워크 요청도 하지 않는다.
+
+### 환경변수
+
+| 변수 | 값 | 설명 |
+|---|---|---|
+| `VITE_MAINTENANCE` | `true` | 정확히 `true`일 때만 점검 화면을 표시한다. 비어 있거나 다른 값이면 평소처럼 앱이 뜬다 (기본값 = 비활성) |
+| `VITE_MAINTENANCE_BYPASS` | 임의의 문자열 | 바이패스 값. 비어 있으면 바이패스 수단 자체가 없다. 소스에 하드코딩하지 않는다 |
+
+### 켜고 끄는 방법 (Vercel)
+
+`VITE_*`는 **빌드 시점에 번들로 인라인**된다. 따라서 환경변수를 바꾸는 것만으로는
+이미 배포된 사이트가 바뀌지 않는다 — **반드시 재배포(Redeploy)해야 적용된다.**
+
+1. Vercel → Project Settings → Environment Variables → Production 에
+   `VITE_MAINTENANCE=true`, `VITE_MAINTENANCE_BYPASS=<임의의 값>` 추가
+2. **Deployments에서 Redeploy** (또는 새 커밋 push) — 이 빌드에 플래그가 박힌다
+3. 점검 종료 시 `VITE_MAINTENANCE`를 삭제하거나 `false`로 바꾸고 **다시 Redeploy**
+
+### 바이패스로 앱에 진입
+
+```
+https://<도메인>/?bypass=<VITE_MAINTENANCE_BYPASS 값>
+```
+
+- 값이 맞으면 `localStorage`의 `wiki-maintenance-bypass` 키에 저장되어, 이후 쿼리 문자열 없이
+  새로고침해도 앱에 계속 진입할 수 있다.
+- 해제는 `?bypass=off` 로 접속한다. 저장된 키가 지워지고 다시 점검 화면으로 돌아간다.
+- 값이 틀리면 통과하지 못하며, 이미 저장된 바이패스도 지워지지 않는다.
+
+### 로컬 확인
+
+```bash
+# 점검 화면
+VITE_MAINTENANCE=true VITE_MAINTENANCE_BYPASS=letmein npm run build
+npm run preview            # → 점검 화면
+#                            ?bypass=letmein 으로 접속하면 앱 진입
+
+# 평소 빌드 (게이트 비활성)
+npm run build
+```
+
+> 주의: 이 게이트는 **보안 경계가 아니다.** 플래그와 바이패스 값이 모두 번들에 인라인되므로
+> 클라이언트에서 확인할 수 있다. 실제 쓰기 차단은 DB 권한으로 해야 한다
+> (`docs/ops/CUTOVER-PLAN.md` §3.1).
