@@ -19,9 +19,12 @@ baseline(`20260730170602`) 자체와의 대조는 최초 작성 시 수행하지
 | 날짜 | 대상 | 내용 |
 |---|---|---|
 | 2026-08-20 | §2 | `finish_group_player`의 "운영 전용" 분류를 정정. 운영 함수 7개는 **전부 baseline에 있다.** 이 함수는 운영 전용이 아니라 cutover migration이 삭제하여 현재 로컬에만 없는 함수다. §9 baseline 대조로 확인. cutover 시 클라이언트 파손 위험이라는 **결론은 유지**되고 근거만 정확해졌다 |
+| 2026-08-20 | §9.7 | 제약·RLS 실측(§10) 반영. baseline 대응 판단을 "(a) 조건부 성립"에서 **"(a) 성립"**으로 갱신. 잔여 항목(publication·`GRANT`)은 repair가 아니라 **첫 `db push`의 선행 조건**으로 재분류 |
+| 2026-08-20 | §8 | 해소된 항목(RLS 목록·제약 대조) 취소선 처리, 잔여 항목을 §10.5 기준으로 세분 |
 
-> 이 문서는 2026-08-20 작성 후 같은 날 §9(baseline 대조)가 추가되며 §2가 위와 같이 정정되었다.
-> §4.1(avatars 객체 실측)도 같은 날 추가되었다. 그 외 절의 관찰값은 최초 기록 그대로다.
+> 이 문서는 2026-08-20 작성 후 같은 날 §9(baseline 테이블·함수 대조)와 §10(제약·RLS 대조)이
+> 추가되며 §2가 정정되고 §9.7이 갱신되었다. §4.1(avatars 객체 실측)도 같은 날 추가되었다.
+> 그 외 절의 관찰값은 최초 기록 그대로다.
 
 ---
 
@@ -209,10 +212,11 @@ cutover 직후 운영에서 권한 거부 경로 발생 빈도가 크게 증가�
 
 | 항목 | 성격 |
 |---|---|
-| `supabase_migrations.schema_migrations` 부재 → 첫 push 시 baseline 재적용 위험 | **cutover 차단 요소.** `migration repair --status applied 20260730170602` 등 baseline 처리 절차를 cutover 계획에 선행 단계로 추가해야 한다. **대조 결과와 repair 판단은 §9** |
+| `supabase_migrations.schema_migrations` 부재 → 첫 push 시 baseline 재적용 위험 | **cutover 차단 요소.** `migration repair --status applied 20260730170602` 등 baseline 처리 절차를 cutover 계획에 선행 단계로 추가해야 한다. **대조 결과는 §9·§10, repair 판단은 §9.7 — (a) 성립으로 갱신됨** |
 | 운영 PostgreSQL 17.6 + 권한 거부 경로 SIGSEGV | **릴리스 게이트 추가 대상.** 로컬 게이트로 대체 불가 |
 | `finish_group_player` cutover 시 삭제 → 운영 클라이언트 파손 | **배포 순서 설계 필요.** 프론트/DB 적용 순서와 다운타임 허용 여부 결정 |
 | 운영 격차가 V2 이전 3개 migration까지 포함 | **cutover 범위 재산정.** 8/4·8/7·8/13 migration의 운영 적용 영향도 미검토 |
+| Packet 13 그룹 제약(3~8명, `finish_rank_limit=3`, `use_items=false`) 대비 운영 `game_rooms` 데이터 적합성 | **cutover 선행 점검.** 운영의 `min>=2`/`max<=30`은 미적용 상태의 정상값이며 불일치가 아니다. 제약은 `not valid`로 추가되므로 **migration은 실패하지 않지만**, 위반 행이 있으면 hardening의 `validate`가 생략되고 이후 UPDATE·RPC 경로가 런타임에 깨진다. 점검 쿼리와 판단 근거는 `docs/agent/CURRENT.md` §5-2 |
 
 ---
 
@@ -220,11 +224,14 @@ cutover 직후 운영에서 권한 거부 경로 발생 빈도가 크게 증가�
 
 - `avatars` 객체 소유자 **계정 식별** — UUID는 확보(§4.1), `auth.users` 대조 남음
 - `git status -sb`로 원격 반영 여부
-- 운영 Realtime publication 구성
-- 운영 RLS 활성 테이블 목록 (`user_profile_stats`, `group_match_history` 포함)
+- 운영 Realtime publication 구성 — baseline은 4테이블 등록(§10.5)
+- ~~운영 RLS 활성 테이블 목록~~ → **해소.** 14/14 일치, 정책 수까지 일치 (§10.3)
 - 운영 Edge Function 배포 목록
 - 8/4·8/7·8/13 migration이 운영 적용 시 기존 데이터에 미치는 영향
-- **운영 컬럼·제약 수준 대조** — §9.5에서 미수행. `migration repair` 전 확인 항목(§9.7)
+- ~~운영 제약 수준 대조~~ → **해소.** 52/52 일치 (§10.1·§10.2)
+- 운영 `GRANT`/ACL 대조 — baseline `GRANT` 70행 (§10.5)
+- 운영 비제약 인덱스(22건)·트리거(2건) 대조 (§10.5)
+- 운영 **컬럼 전체 목록** 대조 — 제약이 걸리지 않은 잉여 컬럼은 §10의 방법으로 검출되지 않는다
 
 ---
 
@@ -309,18 +316,163 @@ cutover 직후 운영에서 권한 거부 경로 발생 빈도가 크게 증가�
 
 ### 9.7 `migration repair` 판단
 
-**(a) 조건부 성립.** `repair --status applied 20260730170602`을 막는 차이는 대조에서 발견되지 않았다.
+> **갱신(2026-08-20, §10 실측 반영).** 최초 판단은 "(a) 조건부 성립 — 컬럼·제약·RLS 대조 미수행"이었다.
+> 제약(52/52)과 RLS(14/14)가 실측으로 해소되어 아래와 같이 갱신한다.
 
-- 이 명령은 스키마를 변경하지 않는다. `supabase_migrations.schema_migrations`(§1에서 부재 확인)를
-  생성하고 해당 버전 행만 기록한다. 목적은 **이후 `db push`가 baseline을 운영에 재적용하는 사고를
-  막는 것**이며, 명령 자체의 스키마 변경 위험은 없다.
-- repair 전 필요한 처리 — 차단 요소가 아니라 확인 항목이다:
-  1. **컬럼·제약 수준 대조 1회.** `information_schema.columns` / `pg_constraint` 읽기 전용 조회.
-     운영 조회이므로 건별 승인 필요(`AGENTS.md` §1).
-  2. **RLS 정책·publication·GRANT 대조.** §8의 미실행 항목과 동일 범위.
-     baseline에서 `group_match_history`·`user_profile_stats`는 RLS ENABLE이 없으므로 이 두 개를 포함한다.
-  3. **`picked` 처리 결정.** repair로 baseline이 "적용됨"으로 확정되면 `picked`는 이후 모든
-     로컬 재구성에 계속 포함된다. drop 여부는 별도 승인 사안(`AGENTS.md` §4).
-- **(a)를 무조건이 아니라 조건부로 두는 이유:** 1·2가 미실행인 상태에서 baseline을 "적용됨"으로
-  기록하면, 미검출 차이가 실재할 경우 그 차이는 이후 어떤 migration으로도 교정되지 않고
-  영구히 이력 밖에 남는다. 집합 대조는 그 가능성을 좁혔을 뿐 제거하지 않았다.
+**(a) 성립. `repair --status applied 20260730170602`이 적절한 처리다.**
+
+`repair`는 스키마를 변경하지 않는다. `supabase_migrations.schema_migrations`(§1에서 부재 확인)를
+생성하고 해당 버전 행만 기록한다. 목적은 **이후 `db push`가 baseline을 운영에 재적용하는 사고를
+막는 것**이며, 명령 자체의 스키마 변경 위험은 없다.
+
+#### 해소된 대조 축 (4/4 차이 0건)
+
+| 축 | 결과 | 근거 |
+|---|---|---|
+| 테이블 | 14/14, 양방향 잉여 0 | §9.1~§9.3 |
+| 함수 | 7/7, 이름·인자 일치 | §9.5 |
+| 제약 | 52/52, 정의·FK 동작까지 일치 | §10.1·§10.2 |
+| RLS + 정책 수 | 14/14, 정책 합계 29 일치 | §10.3 |
+
+#### 잔여 항목과 repair 차단 여부
+
+| 잔여 | repair를 막는가 | 근거 |
+|---|---|---|
+| `supabase_realtime` publication (baseline 4테이블) | **막지 않음** | repair는 publication을 읽지도 쓰지도 않는다 |
+| `GRANT`/ACL (baseline 70행) | **막지 않음** | 동일 |
+| 비제약 인덱스 22건·트리거 2건 | **막지 않음** | 동일 |
+| 컬럼 전체 목록(잉여 컬럼 검출) | **막지 않음** | 동일 |
+
+**근거 — 왜 잔여 항목이 repair를 막지 못하는가.** `repair`는 대상 스키마를 검사하지 않고
+이력 테이블에 행 하나를 기록하는 연산이다. 따라서 잔여 드리프트가 있든 없든 repair의 성공·실패는
+달라지지 않는다. 잔여 항목이 실제로 작용하는 시점은 **repair 이후의 첫 `db push`**이며,
+그때의 실패 양상이 두 갈래로 갈린다.
+
+- **큰 소리로 실패하는 것 (안전):** 컬럼·인덱스·트리거 드리프트. 미적용 migration 11개가 존재하지 않는
+  컬럼을 `ALTER`하거나 중복 객체를 만들려 하면 해당 migration이 트랜잭션 안에서 실패한다.
+  드리프트가 즉시 드러나므로 조용히 잘못되지 않는다.
+- **조용히 실패하는 것 (위험):** **publication과 `GRANT`**. 운영의 publication 멤버십이
+  baseline과 다르면 어떤 migration도 실패하지 않지만 Realtime 이벤트가 전달되지 않는다.
+  `GRANT` 역시 `20260814093000_server_authority_cutover_v2`가 `public`·`anon` 실행 권한을
+  **회수**하는 쪽이므로, 사전 상태가 달라도 회수는 성공하고 차이는 런타임 권한 거부로만 나타난다.
+  §5의 17.6 권한 거부 경로 SIGSEGV 위험과 직결된다.
+
+→ 따라서 publication·GRANT 대조는 **repair의 선행 조건이 아니라 cutover(첫 push)의 선행 조건**이다.
+이 둘을 분리하는 것이 이번 갱신의 핵심이다.
+
+#### repair와 함께 결정할 항목 (차단 요소 아님)
+
+- **`picked` 처리.** repair로 baseline이 "적용됨"으로 확정되면 `picked`는 이후 모든 로컬 재구성에
+  계속 포함된다. 제약 0건·정책 0건으로 운영에서도 사실상 비활성이다(§10.2). drop 여부는
+  별도 승인 사안(`AGENTS.md` §4).
+- **실행 승인.** `migration repair`는 `AGENTS.md` §1의 건별 승인 대상이다. 이 문서의 판단은
+  기술적 적절성에 대한 것이며 실행 승인을 대체하지 않는다.
+
+---
+
+## 10. 제약·RLS 실측과 baseline 대조 (2026-08-20)
+
+입력: 운영에서 읽기 전용으로 조회한 `pg_constraint` 목록과
+`pg_class.relrowsecurity` + `pg_policy` 집계. 운영 DB에 접근하지 않았고, 값은 사용자 제공 결과다.
+대조 기준은 `supabase/migrations/20260730170602_baseline_remote_schema.sql`이다.
+
+> **수량 표기 주의.** 붙여넣은 제약 결과는 **52행**이다(아래 종류별 합계와 일치).
+> 지시문 본문의 "제약 51건"과 1건 차이가 있으므로, 이 문서는 실제 행 수인 52를 기록한다.
+> 행 목록과 요약 수치가 어긋날 경우 행 목록을 우선한다.
+
+### 10.1 제약 — 52/52 완전 일치
+
+| contype | 운영 | baseline | 일치 |
+|---|---|---|---|
+| `p` PRIMARY KEY | 13 | 13 | ✓ |
+| `f` FOREIGN KEY | 15 | 15 | ✓ |
+| `u` UNIQUE | 10 | 10 | ✓ |
+| `c` CHECK | 14 | 14 | ✓ |
+| **합계** | **52** | **52** | ✓ |
+
+baseline 측 내역: `ALTER TABLE ... ADD CONSTRAINT` 38건 + `CREATE TABLE` 인라인 `CHECK` 14건 = 52건.
+
+- **baseline에만 있는 제약: 0건**
+- **운영에만 있는 제약: 0건**
+
+이름 단위로 52개가 1:1 대응하며, 어느 쪽에도 잉여가 없다.
+
+### 10.2 정의 수준 일치
+
+이름뿐 아니라 정의도 대조했다.
+
+- **CHECK 14건** — 술어 문자열이 전부 일치한다.
+  `game_rooms_player_count_check`의 `((min_players >= 2) AND (max_players >= min_players)
+  AND (max_players <= 30))`을 포함한다(스펙 대비 차이는 §7의 cutover 선행 점검 항목 참조).
+- **FOREIGN KEY 15건** — 참조 테이블·참조 컬럼·`ON DELETE` 동작이 전부 일치한다.
+  참조 대상 분포: `auth.users` 6건, `public.profiles` 5건, `public.game_rooms` 4건.
+  동작 분포: `CASCADE` 10건, `SET NULL` 5건.
+- **UNIQUE 10건** — 대상 컬럼 조합 일치. `match_history_room_unique`,
+  `group_match_history_room_user_unique`처럼 명명 규칙이 다른 것들도 양쪽에 동일하게 존재한다.
+- **`picked` 제약 0건** — 운영 목록에 단 한 행도 없다. §9.4의 "NOT NULL·DEFAULT·PK·UNIQUE 전무"
+  관찰과 일치한다. 사본 테이블이라는 판정을 운영 측에서 독립적으로 확인한 셈이다.
+- **`group_match_history`에 `room_id` FK 없음** — 양쪽 동일하다. `room_id`는 nullable이고
+  FK가 걸려 있지 않아 방이 삭제돼도 기록이 남는 구조다. 드리프트가 아니라 baseline 그대로다.
+
+### 10.3 RLS — 14/14 완전 일치
+
+| 테이블 | 운영 `relrowsecurity` | 운영 정책 수 | baseline RLS | baseline 정책 수 | 일치 |
+|---|---|---|---|---|---|
+| `analytics_events` | true | 1 | ENABLE | 1 | ✓ |
+| `daily_challenge_pool` | true | 0 | ENABLE | 0 | ✓ |
+| `daily_challenges` | true | 1 | ENABLE | 1 | ✓ |
+| `game_records` | true | 4 | ENABLE | 4 | ✓ |
+| `game_rooms` | true | 5 | ENABLE | 5 | ✓ |
+| `group_match_history` | **false** | 0 | **없음** | 0 | ✓ |
+| `group_match_results` | true | 3 | ENABLE | 3 | ✓ |
+| `match_history` | true | 2 | ENABLE | 2 | ✓ |
+| `picked` | true | 0 | ENABLE | 0 | ✓ |
+| `profiles` | true | 5 | ENABLE | 5 | ✓ |
+| `room_events` | true | 2 | ENABLE | 2 | ✓ |
+| `room_players` | true | 4 | ENABLE | 4 | ✓ |
+| `target_candidates` | true | 2 | ENABLE | 2 | ✓ |
+| `user_profile_stats` | **false** | 0 | **없음** | 0 | ✓ |
+
+RLS 활성 12개 / 비활성 2개, 정책 합계 29개가 양쪽 동일하다.
+`picked`는 RLS ENABLE + 정책 0개이므로 `service_role` 외 실질 접근 경로가 없다(§9.4 재확인).
+
+### 10.4 RLS off 2건은 드리프트가 아니라 기록된 상태다
+
+`group_match_history`·`user_profile_stats`의 RLS 비활성은 **문서에 이미 기록된 의도된 상태**다.
+
+- `docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md` **§4.4** "Phase 1에서 의도적으로 남긴 항목" —
+  "`group_match_history`, `user_profile_stats` RLS 비활성화"로 명시
+- 같은 문서 **§5.4** "기록·통계 테이블" — "다음 테이블은 현재 RLS 최종 잠금이 필요하다"로 재확인
+
+따라서 **운영 실측 = baseline = 문서 기록의 3자 일치**다. 미기록 드리프트가 아니다.
+
+해소 시점도 저장소에 있다: `20260813072952_group_security_phase2c.sql:765-766`이
+두 테이블에 `enable row level security`를 적용한다. 이 migration은 **운영 미적용 11개 중 하나**이므로
+(§1), 현재의 RLS off는 미적용 상태에서 예상되는 값이다.
+
+> 단, `docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md`는 `docs/agent/CURRENT.md` §6에서 **stale**로
+> 표시돼 있다(그룹 시간 규칙이 15분/3분으로 남아 있음). RLS off 항목은 그 stale 범위와 무관한
+> 별개 사실이며, 위 3자 일치로 독립 확인됐다.
+
+### 10.5 이 실측이 해소한 것과 남긴 것
+
+**해소:** 제약(52/52), RLS 활성 여부(14/14), 정책 수(14/14).
+§8의 "운영 RLS 활성 테이블 목록" 항목이 해소된다.
+
+**남는 것 — 대조되지 않은 baseline 객체:**
+
+| 대상 | baseline 수량 | 미확인 이유 |
+|---|---|---|
+| `supabase_realtime` publication 멤버십 | 4테이블 | 조회하지 않음 |
+| `GRANT`/ACL | `GRANT` 구문 70행 | 조회하지 않음 |
+| 비제약 인덱스 | `CREATE INDEX` 22건 | 조회하지 않음. UNIQUE 제약은 §10.1에서 확인됨 |
+| 트리거 | 2건(`room_players`) | 조회하지 않음 |
+| 컬럼 전체 목록·타입·기본값·nullable | — | 제약이 참조하는 컬럼은 간접 확인됐으나, **제약이 걸리지 않은 잉여 컬럼은 이 방법으로 검출할 수 없다** |
+
+### 10.6 불일치가 repair를 막는가
+
+**막지 않는다. 불일치 자체가 0건이다.**
+
+제약·RLS 두 축에서 baseline과 운영의 차이가 발견되지 않았으므로,
+`repair --status applied 20260730170602`을 보류할 근거가 이 실측에서 나오지 않았다.
+갱신된 종합 판단은 §9.7에 있다.

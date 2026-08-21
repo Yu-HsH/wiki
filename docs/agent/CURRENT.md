@@ -38,7 +38,8 @@
 | Edge Function 배포 (`wiki-snapshot`, `single-run`) | 미배포 |
 | 운영 dry-run | 미실행 |
 | Release A~D 승인 | 미승인 |
-| baseline 처리 절차 (`schema_migrations` 부재) | 미설계 |
+| baseline 처리 절차 (`schema_migrations` 부재) | **판단 확정** — `repair --status applied 20260730170602`, 4개 축 차이 0건(§5-1). 실행 승인 대기 |
+| publication·`GRANT` 운영 대조 (첫 push 선행) | 미실행. 드리프트 시 런타임에서만 조용히 나타남 |
 | 운영 17.6 권한 거부 경로 SIGSEGV 검증 | 미실행. 로컬 게이트로 대체 불가 |
 | `finish_group_player` 삭제에 따른 배포 순서 | 미설계 |
 | V2 이전 3개 migration(8/4·8/7·8/13) 영향도 | 미검토 |
@@ -121,19 +122,80 @@ Packet 13이 모두 들어 있지 않다.** 원격 백업이 있다는 사실이
 
 ## 5. 다음 작업 (순서대로)
 
-1. ~~**`baseline_remote_schema`와 운영 스키마 대응 관계 확인**~~ — **집합 수준 완료 (2026-08-20).**
-   운영 `public` 테이블 14개와 baseline을 대조했다: 테이블 14/14 일치, baseline-only 0건, 운영-only 0건,
-   함수 7/7 일치(`finish_group_player` 포함). `picked`는 baseline 612행에 이미 있다 —
-   CLI 이력 밖에서 만들어진 사본이지만 덤프에는 포함되어 있어 신규 미기록 객체가 아니다.
-   → **baseline은 이 운영 상태의 덤프로 볼 수 있고, `repair` 대상 버전은 `20260730170602`로 확정된다.**
-   `repair --status applied 20260730170602`을 막는 차이는 발견되지 않았다(**(a) 조건부 성립**).
-   **남은 것:** 컬럼·제약·RLS 정책·publication·GRANT 수준 대조는 미수행이다(운영 조회 승인 필요).
-   미검출 차이가 실재하면 baseline을 "적용됨"으로 기록한 뒤에는 어떤 migration으로도 교정되지 않는다.
-   근거·판단 전문: `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §9.
+1. ~~**`baseline_remote_schema`와 운영 스키마 대응 관계 확인**~~ — **완료 (2026-08-20).**
+   4개 축을 대조해 **차이 0건**이다:
+
+   | 축 | 결과 |
+   |---|---|
+   | 테이블 | 14/14, 양방향 잉여 0 |
+   | 함수 | 7/7, 이름·인자 일치 |
+   | 제약 | 52/52, CHECK 술어·FK 참조 대상·`ON DELETE` 동작까지 일치 |
+   | RLS + 정책 수 | 14/14, 정책 합계 29 일치 |
+
+   → **baseline은 이 운영 상태의 덤프다. `repair` 대상 버전은 `20260730170602`로 확정,
+   판단은 `(a) 성립`으로 확정한다.** `repair`는 스키마를 검사하지 않고 이력 행 하나를 기록하는
+   연산이므로 잔여 드리프트가 성공·실패를 바꾸지 않는다.
+
+   부수 확인 2건: `picked`는 baseline:612에 있고 운영 제약도 0건이라 사본 판정이 양쪽에서 일치한다.
+   `group_match_history`·`user_profile_stats`의 RLS off는 운영·baseline·문서
+   (`docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md` §4.4·§5.4) **3자 일치**이며,
+   Phase 2C(`20260813072952:765-766`)가 잠금을 도입한다.
+
+   **잔여는 repair가 아니라 첫 `db push`의 선행 조건으로 옮겼다** — publication(4테이블)과
+   `GRANT`(70행)는 드리프트가 있어도 어떤 migration도 실패시키지 않고 **런타임에서만 조용히**
+   나타난다(Realtime 미전달, 권한 거부 → §5 SIGSEGV 경로). 컬럼·인덱스·트리거 드리프트는
+   반대로 push 중 트랜잭션 실패로 큰 소리를 낸다.
+   근거·판단 전문: `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §9·§10.
 2. **cutover 계획 재작성** — `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §7의 신규 위험 4건을 반영한다.
    baseline 처리 선행 단계, 운영 17.6 권한 거부 경로 검증, `finish_group_player` 배포 순서,
    V2 이전 3개 migration 범위 재산정. Release A~D 정의를 이 격차 기준으로 다시 계산하며,
    Vercel main 배포와 DB 적용의 순서·다운타임 허용 여부를 함께 확정한다 (§3, `AGENTS.md` §1.1).
+
+   **선행 스키마 점검 — publication·`GRANT` (2026-08-20 추가).** baseline 대응은 확정됐지만
+   (§5-1) publication 멤버십(4테이블)과 `GRANT`(70행)는 대조되지 않았다. 이 둘은 드리프트가 있어도
+   migration을 실패시키지 않고 런타임에서만 나타나므로 — Realtime 미전달, 그리고 cutover의 권한
+   회수와 맞물린 권한 거부(§5 SIGSEGV 경로) — **첫 `db push` 전에 확인해야 한다.**
+   repair의 선행 조건은 아니다.
+
+   **선행 데이터 점검 — `game_rooms` (2026-08-21 추가).**
+   운영은 baseline의 `game_rooms_player_count_check`(`min_players >= 2`, `max_players <= 30`) 상태다.
+   확정 스펙의 그룹 3~8명과 다르지만 **불일치가 아니다** — 3~8 제한은 Packet 13
+   (`20260814103000`)이 도입하므로 미적용 상태에서는 정상값이다.
+
+   Packet 13이 좁히는 조건은 플레이어 수만이 아니다:
+   `min_players between 3 and 8` **and** `max_players between min_players and 8` **and**
+   `finish_rank_limit = 3` **and** `use_items = false` (`20260814103000:28-37`).
+
+   **제약 추가 자체는 실패하지 않는다.** `not valid`로 추가되고(`:37`),
+   hardening(`20260814113000:57-70`)은 위반 행이 **0건일 때만** `validate constraint`를 실행한다.
+   위반 행이 있어도 migration은 성공한다. 실제 위험은 세 가지다:
+
+   1. 제약이 영구히 `NOT VALID`로 남는다. validate를 재시도하는 migration은 없다(1회성 조건부 실행).
+   2. `NOT VALID` 제약도 INSERT·UPDATE 시에는 **행 단위로 강제된다.** 기존 위반 행을 갱신하는
+      모든 경로가 런타임에 실패한다.
+   3. Packet 13 RPC는 `min_players <> 3` 또는 `max_players not between 3 and 8`인 방에서 예외를
+      던진다(`20260814103000:287,336`). legacy 방은 RPC 경로에서 깨진다.
+
+   **점검 쿼리는 플레이어 수만 봐서는 안 된다.** baseline `use_items` 기본값이 `true`이므로
+   `status <> 'waiting'`인 기존 group 방은 플레이어 수가 맞아도 위반이다 — Packet 13 상단 UPDATE는
+   `mode = 'group' and status = 'waiting'` 행만 고친다(`:11-17`, 운영 데이터를 변경하는 구문이므로
+   cutover 승인 범위에 포함된다).
+
+   ```sql
+   -- cutover 전 운영에서 실행 (읽기 전용)
+   select
+     count(*) filter (where mode = 'group' and not (
+       min_players between 3 and 8
+       and max_players between min_players and 8
+       and finish_rank_limit = 3
+       and use_items = false
+     )) as invalid_group_rows,
+     count(*) filter (where mode <> 'group' and host_user_id is null) as invalid_non_group_rows
+   from public.game_rooms;
+   ```
+
+   두 값이 0이 아니면 해당 `validate`가 생략된다. 위반 행 처리(정리 또는 미검증 허용)를 cutover
+   계획에서 결정해야 하고, 데이터 변경은 별도 승인 사안이다(`AGENTS.md` §4).
 3. **`avatars` 버킷 객체 소유자 확인** — **부분 해소 (2026-08-20).** 객체 정보를 확보했다:
    1건, 2026-04-22 생성, `owner`는 UUID 1개(익명 업로드 아님). 업로드 시점이 `origin/main`의
    5월 상태(`e6d8eee`)보다 앞서므로 **현재 작업 브랜치와 무관한 기록**이다.
