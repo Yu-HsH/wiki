@@ -152,3 +152,9 @@ supabase/snippets/
 
 # Packet 13 browser gate artifacts are local QA outputs, not release inputs.
 test-results/packet13-b1/
+
+# 운영 백업 덤프는 커밋하지 않는다. `supabase db dump --data-only`는
+# `auth` 스키마를 제외하지 않으므로 `auth.users`(운영 145행) 전체가 파일에 들어간다.
+# 한 번 커밋되면 계정 정보가 git 이력에 영구히 남는다.
+# 근거: docs/ops/CUTOVER-PLAN.md §4.2·§4.3
+backup/
