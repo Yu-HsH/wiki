@@ -113,7 +113,7 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
 | W1 main push + 배포 | 없음 | 없음 | Vercel 이전 배포로 롤백 `[외부]`, 또는 `main`을 `e6d8eee`로 되돌리는 push. **git 이력상 main push 자체는 남는다** |
 | W2 덤프 | 없음 | 없음 | 파일 삭제 |
 | **W2.5 방 이력 삭제** | 없음 | **있음 (되돌리려면 복원 필요)** | W2 데이터 덤프에서 해당 행만 복원. §6.4 |
-| W3 `migration repair` | **없음** (스키마 미검사) | 이력 테이블에 행 1개 기록 + 테이블 생성 | `migration repair --status reverted 20260730170602 --linked`. 단 `supabase_migrations.schema_migrations` 테이블 자체는 남는다 (U12, §9) |
+| W3 `migration repair` | **없음** (스키마 미검사) | 이력 테이블에 행 1개 기록 + 테이블 생성 (**+ 스키마 자체가 없으면 스키마도 생성** — U12 실측) | `migration repair --status reverted 20260730170602 --linked` — 행이 DELETE된다 `[산출물]`. 단 `supabase_migrations` **스키마와 테이블은 남는다**(빈 테이블). 되돌림은 exit 0이 성공을 증명하지 않으므로 W4 쿼리로 확인한다 (U12, §9) |
 | W4 이력 행 확인 | 없음 | 없음 | — |
 | W5 `--dry-run` | 없음 | 없음 | — |
 | **W6 `db push`** | **있음** | **있음 (F14)** | **없음. §6 덤프 복원이 유일** |
@@ -273,7 +273,23 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
 - **성공 판정:** 명령 exit 0.
 - **실패 시:** 실패 원인이 접속/권한이면 재시도. 스키마 관련 실패는 원리상 나오지 않는다 —
   `repair`는 대상 스키마를 검사하지 않는다 (`PROD-SNAPSHOT-2026-08-20.md` §9.7).
-  되돌림은 `--status reverted`.
+- **되돌림 — `--status reverted` 실측 (U12 (c), 2026-08-21):** 로컬 스택에서 5개 경우를 측정했다
+  `[산출물]`. CLI `2.114.0`.
+
+  | 사전 상태 | 결과 |
+  |---|---|
+  | 해당 버전 행이 **있음** | **exit 0. 행이 삭제된다** — 상태 열이 없으므로 `reverted`는 DELETE다 |
+  | 행이 **없음** (로컬 파일은 있음) | exit 0. 변화 없음 — **멱등** |
+  | 행도 로컬 파일도 **없는 버전** | **exit 0.** "reverted" 보고. 아무것도 넣지 않고 아무것도 지우지 않는다 |
+  | **테이블이 없음** | **exit 0. 빈 테이블을 생성한다** (0행) |
+  | (대조) `--status applied`에 로컬 파일이 없는 버전 | **exit 1** `LegacyMigrationFileNotFoundError` |
+
+  **되돌림 명령은 `npx supabase migration repair --status reverted 20260730170602 --linked`이며
+  W3이 넣은 행 하나를 지운다.** 테이블 자체는 남는다(§2 롤백 표와 일치) — 없으면 오히려 만든다.
+- **`reverted`는 버전 오타를 잡지 못한다:** `applied`는 로컬 파일이 없으면 exit 1로 실패하지만,
+  `reverted`는 **존재하지 않는 버전에도 exit 0으로 성공 보고**한다 `[산출물]`. 되돌림에서 버전을
+  잘못 쓰면 성공처럼 보이고 아무 일도 일어나지 않는다. **되돌림 후에도 W4의 확인 쿼리로
+  행 상태를 직접 봐야 한다** — 명령의 exit code를 근거로 삼지 않는다.
 - **로컬 재현 실측 (U12 해소, 2026-08-21):** 로컬 스택에서 두 경우를 각각 만들고 실행했다.
   CLI `2.114.0`, container-158 `[산출물]`.
 
@@ -314,13 +330,18 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
   order by version;
   ```
   `statements`를 함께 본다. repair가 남기는 행은 버전 마커가 아니라 migration 파일의 SQL 본문을
-  담는다 (W3 실측). 이 열이 `null`이거나 예상과 크게 다르면 repair가 로컬 파일을 읽지 못한 것이다.
+  담는다 (W3 실측). `--status applied`는 로컬 파일이 없으면 exit 1로 **실패**하므로
+  (`LegacyMigrationFileNotFoundError`, W3 실측) repair가 만든 행의 `statements`는 `null`일 수 없다.
+  **`statements`가 `null`인 행은 repair가 아닌 다른 경로로 들어온 행이다** — 그 경우 중단 대상이다.
 - **예상 시간:** 3분 `[추정]`
 - **성공 판정:** 행이 정확히 1개, `version = 20260730170602`, `name = baseline_remote_schema`,
   `statement_count = 250` (로컬 실측값 `[산출물]`. 로컬 migration 파일이 바뀌지 않았다면 같아야 한다).
 - **실패 시:** 행이 0개면 W3 재실행. 예상 외 버전이 있으면 **중단** — 다른 경로로 push된 이력이
   있다는 뜻이고 §1.2의 전제가 깨진다. `statement_count`만 다르면 중단 사유는 아니고 기록에 남긴다 —
-  로컬 파일과 실측 시점(2026-08-21)의 차이를 뜻한다.
+  로컬 파일과 실측 시점(2026-08-21)의 차이를 뜻한다. `statement_count`가 `null`이면 **중단**
+  (위 참조 — repair가 만든 행이 아니다).
+- **되돌림 후에도 이 단계를 쓴다:** `--status reverted`는 존재하지 않는 버전에도 exit 0을 낸다
+  (W3 실측). 되돌림의 성공 여부는 이 쿼리로만 확인된다 — 행이 사라졌는지 직접 본다.
 
 ---
 
@@ -848,23 +869,27 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 | P3 | [x] | 게이트 로컬 확인 | `VITE_MAINTENANCE=true`로 `npm run build` → `npm run preview`에서 점검 화면·바이패스 진입 확인 | 확인함 — 점검 화면 렌더, 요청 2건(문서+진입 청크), `?bypass=<값>` 진입·새로고침 유지·`?bypass=off` 해제 `[산출물]` |
 | P4 | [ ] | **프로젝트 Active 확인** | 창 **당일** Supabase 대시보드에서 Active. Paused면 먼저 복구 | 무료 요금제는 7일 무활동 시 자동 일시정지 `[외부]`. 최종 플레이 2026-08-04 `[실측]` → 일시정지 가능성이 낮지 않다 |
 | P5 | [ ] | DB 접속 자격 준비 | `supabase login` 세션 유효, DB 비밀번호 확보 (`db dump`·`db push`가 요구) | F2 — 두 명령 모두 `--password` 옵션 보유 |
-| P6 | [ ] | **`backup/` gitignore 반영 완료** | `.gitignore`에 `backup/`이 들어 있고, `git check-ignore backup/`이 규칙을 반환한다. **반영 확인 전에는 W2 덤프를 뜨지 않는다** | §4.2·§4.3 — 데이터 덤프에 `auth.users` 145행이 들어간다. 한 번 커밋되면 계정 정보가 git 이력에 영구 잔존한다 |
+| P6 | [x] | **`backup/` gitignore 반영 완료** | `.gitignore`에 `backup/`이 들어 있고, `git check-ignore backup/`이 규칙을 반환한다. **반영 확인 전에는 W2 덤프를 뜨지 않는다** | **충족 확인 2026-08-21** — `.gitignore:160`에 `backup/`이 있고 `git check-ignore -v backup/`이 `.gitignore:160:backup/`을 반환한다 `[산출물]`. 근거: §4.2·§4.3 — 데이터 덤프에 `auth.users` 145행이 들어간다. 한 번 커밋되면 계정 정보가 git 이력에 영구 잔존한다 |
 | P7 | [ ] | W-1 리허설 덤프로 GRANT 대조 | §3.2 W-1 성공 판정 | U5 해소 경로 |
-| P8 | [ ] | link 대상이 운영인지 확인 | **주 축:** `supabase/.temp/project-ref`의 값 == Vercel `VITE_SUPABASE_URL` 호스트의 project ref. **보조 축:** `supabase/.temp/linked-project.json`의 `name`·`organization_slug`가 Supabase 대시보드의 운영 프로젝트와 일치 | F18. U13 해소 경로 (§9). 보조 축은 해당 필드가 실재함을 확인했다 (2026-08-21 `[산출물]`) |
+| P8 | [x] | link 대상이 운영인지 확인 | **주 축:** `supabase/.temp/project-ref`의 값 == Vercel `VITE_SUPABASE_URL` 호스트의 project ref. **보조 축:** `supabase/.temp/linked-project.json`의 `name`·`organization_slug`가 Supabase 대시보드의 운영 프로젝트와 일치 | **주 축 일치 확인 — 사용자가 Vercel Production의 `VITE_SUPABASE_URL`과 `supabase/.temp/project-ref`를 직접 대조, 2026-08-21 `[사용자 확인]`.** 값은 식별자이므로 이 문서에 기재하지 않는다. F18. U13 해소 경로 (§9). 보조 축은 해당 필드가 실재함을 확인했다 (2026-08-21 `[산출물]`) |
 | P9 | [ ] | CLI 버전 확인 | `npx supabase --version` == `2.114.0` | F1 |
 | P10 | [ ] | 삭제 범위 사전 합의 | §5.3 (1)(2) 측정치를 보고 삭제를 승인한 상태. 위반 행을 남긴 채 진행할지도 여기서 정한다 | `AGENTS.md` §4 |
 | P11 | [ ] | 롤백 판단 기준 사전 합의 | "W6 N번째 실패 시 복원인가 전진인가"를 미리 정한다 | §2.1·§6.3 — 창 안에서 결정하기에는 판단 폭이 크다 |
 | P12 | [ ] | 창 기록 파일 준비 | `docs/ops/CUTOVER-LOG-YYYY-MM-DD.md` 틀 | `AGENTS.md` §6 |
 | P13 | [x] | (선택) `npm test`·`npm run build` 커밋 기준 재실행 | **기준 `b24744e`, 2026-08-21 재실행 완료** — `npm test` 142/142 (베이스라인 129 + 게이트 13), `npm run build` 성공 `[산출물]` | `docs/agent/CURRENT.md` §2 `[문서]`가 지적한 "`339fb77` 이후 build 재실행 기록 없음"이 해소됐다 |
 
-**P1~P3·P13 완료 — 기준 커밋 `b24744e`, 2026-08-21 확인.**
-게이트 구현 커밋이 `feat/group-final-gaps`에 들어가 `origin`에 push됐다. `origin/main`은 무변경(`e6d8eee`).
-같은 커밋 기준으로 `npm test` 142/142 (베이스라인 129 + 게이트 13), `npm run build` 성공 — P13 근거다.
-P1의 판정 기준에 있는 "구현은 이 문서 범위 밖"은 작성 시점 서술이다. 구현은 완료됐고
-사용법은 `README.md` §유지보수 게이트, 동작 계약은 `tests/maintenanceGate.test.js`에 고정돼 있다.
-P6은 판정 기준이 이미 충족돼 있다 — `.gitignore:160`에 `backup/`이 있고
-`git check-ignore -v backup/`이 그 규칙을 반환한다 (2026-08-21 확인 `[산출물]`).
-체크 전환은 창 전 점검에서 사용자가 확정한다.
+**완료: P1·P2·P3·P6·P8·P13 (2026-08-21 확인).** 남은 것은 **P4·P5·P7·P9·P10·P11·P12 7건**이다.
+
+- **P1~P3·P13** — 기준 커밋 `b24744e`. 게이트 구현 커밋이 `feat/group-final-gaps`에 들어가
+  `origin`에 push됐고 `origin/main`은 무변경(`e6d8eee`)이다. 같은 커밋 기준으로
+  `npm test` 142/142 (베이스라인 129 + 게이트 13), `npm run build` 성공 — P13 근거다.
+  P1의 판정 기준에 있는 "구현은 이 문서 범위 밖"은 작성 시점 서술이다. 구현은 완료됐고
+  사용법은 `README.md` §유지보수 게이트, 동작 계약은 `tests/maintenanceGate.test.js`에 고정돼 있다.
+- **P6** — `.gitignore:160`의 `backup/`과 `git check-ignore -v backup/`의 반환으로 충족 `[산출물]`.
+- **P8** — 사용자가 Vercel Production 값과 `supabase/.temp/project-ref`를 직접 대조해 일치 확인
+  `[사용자 확인]`. 이로써 §9 U13이 해소됐다.
+- **남은 7건의 성격:** P4·P5·P7·P9는 운영·외부 확인이고 P10·P11은 사용자 합의, P12는 파일 준비다.
+  **저장소 안에서 처리할 수 있는 항목은 남아 있지 않다.**
 
 ---
 
@@ -903,8 +928,8 @@ P6은 판정 기준이 이미 충족돼 있다 — `.gitignore:160`에 `backup/`
 | U5 | `GRANT` 70행 운영 대조 | **미결정** | **W-1 리허설 스키마 덤프**로 창 밖에서 해소한다. 스키마 덤프가 `public` GRANT를 담는다 (F3). baseline `GRANT` 70행과 행 단위 대조 | **막는다** (P7). 드리프트는 런타임 권한 거부로만 나타난다 (`PROD-SNAPSHOT-2026-08-20.md` §9.7) |
 | U6 | 운영 17.6 SIGSEGV 빌드 동일성 | **미결정. 검증 수단 미확정** | 로컬 `.158`과 운영 관리형 배포판의 동일성을 확인할 수단이 없다 (`PROD-SNAPSHOT-2026-08-20.md` §5). 차선책: W9에서 `anon` 차단 경로를 의도적으로 1회 밟고, §8.2-1로 사후 관측 | **막지 않는다.** 확정 위험이 아니라 검증 대상 |
 | U9 | Edge Function 운영 배포 목록, `target-level` 취급 | **부분 확정** | 확정: `target-level`은 로컬 소스가 없다 (F12) → **`--prune` 금지, 이름 명시 배포** (A3). 미확정: 운영에 실제 배포된 함수 전체 목록. 대시보드 Functions 화면에서 읽기 전용 확인 가능 | **막지 않는다.** A3가 사고를 차단한다 |
-| U12 | `repair`의 `schema_migrations` 생성 동작 | **해소 (2026-08-21).** (a)(b) 확정, (c) 미측정 | 로컬 스택(CLI `2.114.0`, container-158)에서 재현 `[산출물]`. **(a) 테이블이 생성된다 — 스키마 자체가 없어도 스키마까지 만든다.** 두 경우 모두 exit 0. **(b) 행은 정확히 1개**이며 `statements`에 migration SQL 250개가 들어간다. 따라서 **W3 앞 선행 단계 불필요.** 부수 확인: 운영의 42P01은 "테이블만 없음"과 "스키마 없음"을 구분하지 못한다(에러 문자열 동일) — 그러나 양쪽 모두 exit 0이므로 구분할 필요가 없다. 전문은 §3.2 W3·W4. **(c) `--status reverted`가 무엇을 남기는지는 측정하지 않았다** — 같은 방식으로 로컬에서 확인할 수 있다 | **막지 않는다.** W4가 결과를 사후 확인한다. (c)는 W3 되돌림 경로(§2 롤백 표)에만 관계되며 창을 막지 않는다 |
-| U13 | link 대상 ref가 운영인지 | **부분 해소 (2026-08-21).** 저장소 내부 대조는 일치. Vercel 실값은 미확인 | 확인한 것 `[산출물]`: `supabase/.temp/project-ref`가 정상 ref 형식이고, `.temp/linked-project.json`의 `ref`와 **일치**하며, `.env.local.remote-backup`의 `VITE_SUPABASE_URL` 호스트 ref와도 **일치**한다. (`.env.local`은 `127.0.0.1`로 로컬 스택을 가리켜 대조 대상이 아니다.) **남는 축: Vercel Production의 `VITE_SUPABASE_URL` 실값** — 저장소가 증명하지 못한다. `.env.local.remote-backup`은 로컬 파일이고 최종 수정이 2026-07-21이라 현재 Vercel 설정과 같다는 보장이 없다. 해소 경로는 P8의 주 축(사용자가 Vercel UI와 눈으로 대조)이며, `.temp/linked-project.json`의 `name`·`organization_slug`를 보조 축으로 쓸 수 있다 | **막는다** (P8). 잘못된 ref에 `db push`하면 다른 프로젝트를 바꾼다 |
+| U12 | `repair`의 `schema_migrations` 생성 동작 | **해소 (2026-08-21).** (a)(b)(c) 전부 측정 완료 | 로컬 스택(CLI `2.114.0`, container-158)에서 재현 `[산출물]`. **(a) 테이블이 생성된다 — 스키마 자체가 없어도 스키마까지 만든다.** 두 경우 모두 exit 0. **(b) 행은 정확히 1개**이며 `statements`에 migration SQL 250개가 들어간다. 따라서 **W3 앞 선행 단계 불필요.** **(c) `--status reverted`는 행을 DELETE한다** (상태 열이 없다). 행이 없으면 멱등, 테이블이 없으면 빈 테이블을 만든다. **존재하지 않는 버전에도 exit 0** — 반면 `--status applied`는 로컬 파일이 없으면 exit 1(`LegacyMigrationFileNotFoundError`)로 실패한다. 되돌림은 exit code로 검증되지 않으므로 W4 쿼리로 확인한다. 부수 확인: 운영의 42P01은 "테이블만 없음"과 "스키마 없음"을 구분하지 못한다(에러 문자열 동일) — 그러나 양쪽 모두 exit 0이므로 구분할 필요가 없다. 전문은 §3.2 W3·W4 | **막지 않는다.** W4가 결과를 사후 확인한다 |
+| U13 | link 대상 ref가 운영인지 | **해소 (2026-08-21).** 두 축이 모두 일치 | **주 축 — 사용자가 Vercel Production의 `VITE_SUPABASE_URL`과 `supabase/.temp/project-ref`를 직접 대조해 일치 확인 `[사용자 확인]` (P8).** 저장소 축 `[산출물]`: `.temp/project-ref`가 정상 ref 형식이고, `.temp/linked-project.json`의 `ref`와 **일치**하며, `.env.local.remote-backup`의 `VITE_SUPABASE_URL` 호스트 ref와도 **일치**한다. (`.env.local`은 `127.0.0.1`로 로컬 스택을 가리켜 대조 대상이 아니다.) 두 축이 독립적으로 같은 ref를 지목한다. 값은 식별자이므로 이 문서에 기재하지 않는다 | **더 이상 막지 않는다.** P8 충족. 남은 관련 위험은 창 당일 link 상태가 바뀌는 경우뿐이며 W-1의 link 대상 확인이 그것을 잡는다 |
 | — | §6.3 전체 복원의 2번 단계 SQL | **미작성** | `public` 스키마를 비우는 SQL이 확정되지 않았다. 복원 리허설 자체가 없다. 별도 승인·리뷰 대상 | **막지 않는다.** 다만 P11 합의 시 "복원 절차가 리허설되지 않았다"를 전제로 판단해야 한다 |
 | — | W2.5의 `match_history` 영향 | **측정 대기** | §5.3 (2) 쿼리로 창 안에서 측정. 0이 아니면 사용자 화면 1:1 전적이 줄어든다 (F9·§5.5) | **막지 않는다.** 삭제 승인 시 함께 판단 |
 | — | Edge Function 선배포 (A5) | **해소 — 기각 (2026-08-21)** | W6 전 배포는 존재하지 않는 테이블을 참조하는 함수를 올리게 되고 검증 순서가 꼬인다. **Edge Function 배포는 W8 고정.** 근거 전문은 §3.0 A5 | — |
