@@ -25,21 +25,34 @@
 | 계획 문서 | `docs/ops/CUTOVER-PLAN.md` | 판단 기준은 **§6.0** |
 | **창 결과** | | `완료` / `W5에서 중단` / `롤백` / `유지보수 유지 후 창 밖 이월` 중 하나 |
 
-### 0.0 실행 전제 확인 (창 시작 직전 — 1분)
+### 0.0 실행 전제 확인 (창 시작 직전 — 2분)
 
 **전부 "명령은 맞는데 환경이 없어서" 실패하는 것들이다.** 하나라도 아니면 그것부터 해결한다.
 
-| 확인 | 명령 | 기대 | 결과 |
-|---|---|---|---|
-| `backup/` 디렉터리 | `Test-Path .\backup` | `True` | |
-| — 없으면 | `New-Item -ItemType Directory -Force -Path .\backup` | — | |
-| CLI 동작 (`npx` 필수) | `npx supabase --version` | `2.114.0` | |
-| 복원 도구 (P14) | `docker exec -i <db컨테이너> psql --version` 또는 `psql --version` | 버전 출력 | |
-| 로컬 스택 (P14 (a) 경로) | `npx supabase status` | 컨테이너 이름 확인 | |
+| # | 확인 | 명령 | 기대 | 결과 |
+|---|---|---|---|---|
+| 1 | `backup/` 디렉터리 | `Test-Path .\backup` | `True` | |
+| — | 없으면 만든다 | `New-Item -ItemType Directory -Force -Path .\backup` | — | |
+| 2 | CLI 동작 (`npx` 필수) | `npx supabase --version` | `2.114.0` | |
+| 3 | **Docker 데몬** (복원 전제, P14) | `docker version` | Client/Server 버전 출력 | |
+| 4 | **승인 이미지 존재** (P14) | `docker images public.ecr.aws/supabase/postgres:17.6.1.158` | 이미지 1행 | |
+| 5 | **운영 연결 문자열 유효 + IPv4** (P14) | §6.3.0-1의 확인 명령 (`select 1`) | `1` | |
 
-> **`npx`를 빼면 `CommandNotFoundException`이다.** 전역 supabase 설치가 없다 (CUTOVER-PLAN §0.1).
+> **3~5는 롤백 수단의 전제다** (CUTOVER-PLAN §6.1). 셋 중 하나라도 아니면 **W6를 시작하지 않는다** —
+> 되돌릴 수 없는 지점을 넘기 전에 되돌릴 수단이 있어야 한다. **로컬 Supabase 스택이 떠 있을
+> 필요는 없다** (§6.3.0 A안은 `docker run`이라 스택과 무관하다).
+>
+> **5의 연결 문자열은 이 기록에 적지 않는다** (§6.3.0-2). "확인됨 / 사용한 형태(direct 또는
+> pooler)"만 적는다.
+>
+> **`npx`를 빼면 `CommandNotFoundException`이다.** 전역 supabase 설치가 없다 (§0.1).
 > **`backup/`이 없으면 `db dump`가 `failed to open dump file: NotFound`로 실패하고, 인증은
 > 이미 성공한 상태라 로그인 문제로 오진하기 쉽다** (§4.3-0).
+
+| 항목 | 값 |
+|---|---|
+| 5에서 사용한 연결 문자열 형태 | `direct` / `pooler` 중 하나만 적는다. **값은 적지 않는다** |
+| 3~5 전부 통과? | 통과 / 미통과 — 미통과면 **W6를 시작하지 않는다** |
 
 ### 0.1 창 당일 재확인 (P4)
 
@@ -65,7 +78,7 @@
 | P11 | 롤백 판단 기준 (§6.0) | | |
 | P12 | 이 기록 파일 | | |
 | P13 | 커밋 기준 `npm test`·`npm run build` | | |
-| **P14** | **복원 도구(`psql`) 확보** | | **§0.0에서 실제로 확인한다.** 없으면 W6 실패 시 복원을 시작할 수 없다 (§6.3.0) |
+| **P14** | **복원 도구 경로 확정 + 실행 전제** | | `[x]` 기대 (명령 형태 확정). **실행 전제 3항목은 §0.0-3~5에서 당일 다시 본다** |
 
 > **하나라도 미완이면 창을 열지 않는다.**
 
@@ -493,7 +506,7 @@
 | 6 | Edge Function 미복원 확인 | | | | | — |
 | 7 | 복원 검증 (W7 쿼리 재실행) | | | | | — |
 
-복원 실행 경로 (§6.3.0 / P14): `docker exec -i <db컨테이너> psql "<CONN>" -v ON_ERROR_STOP=1 -f - < <파일>`
+복원 실행 경로 (§6.3.0 A안): `docker run --rm -i --entrypoint psql public.ecr.aws/supabase/postgres:17.6.1.158 "<CONN>" -v ON_ERROR_STOP=1 -f - < <파일>`
 **`-v ON_ERROR_STOP=1`을 반드시 붙인다.** 연결 문자열은 자격 정보이므로 **이 기록에 적지 않는다.**
 파일: `docs/ops/wipe-public.sql` → 스키마 덤프 → public 전용 데이터 덤프 순서.
 

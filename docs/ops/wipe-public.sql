@@ -1,7 +1,8 @@
 -- ============================================================================
 -- CUTOVER-PLAN §6.3 2단계 — 복원 대상 스키마 비우기
--- 실행: §6.3.0의 경로로. psql이 PATH에 없으면 로컬 스택 컨테이너를 쓴다:
---   docker exec -i <db컨테이너> psql "<CONN>" -v ON_ERROR_STOP=1 -f - < docs/ops/wipe-public.sql
+-- 실행 (§6.3.0 A안 — psql은 이 머신에 설치돼 있지 않다. Docker 이미지의 psql을 쓴다):
+--   docker run --rm -i --entrypoint psql public.ecr.aws/supabase/postgres:17.6.1.158 "<CONN>" \
+--     -v ON_ERROR_STOP=1 -f - < docs/ops/wipe-public.sql
 -- 주의: 이 파일은 자체 begin;/commit;을 갖는다. 바깥에서 감싸도 롤백되지 않는다 (§6.3.1-0)
 -- 전제: 이 SQL 직후에 W2 스키마 덤프 → 데이터 덤프(public 전용)를 복원한다
 -- ============================================================================
