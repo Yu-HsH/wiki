@@ -186,6 +186,43 @@
 - 2026-08-20 운영 실측 이후 릴리스 게이트가 늘어났다. baseline 처리, 운영 17.6 권한 거부 경로 검증, `finish_group_player` 배포 순서, V2 이전 3개 migration 영향도가 추가 선행 조건이다. → §4.4
 - `.104` image 또는 미승인 digest가 기본 경로로 돌아오면 즉시 `CODE NO-GO`. `[문서]` `code/13-GROUP-FINAL-GAPS.md` §9
 
+**런타임 baseline 축의 성질 (2026-08-23 재확인)**
+
+2026-08-23 Docker Desktop 재시작으로 로컬 `.158` 스택의 `pg_postmaster_start_time()`이
+`2026-08-20 23:37:45` → `2026-08-23 14:01:28`로 바뀌었다. 컨테이너 id(`33f879e1ac23`)와
+`RestartCount`(0)는 그대로이고 데이터도 무변경이다
+(`supabase_migrations.schema_migrations` 12행, 내용 md5 지문 재시작 전후 동일 `[산출물]`).
+
+**결론: 갱신할 baseline 산출물이 없다.** postmaster 시각은 **저장된 기대값이 아니다.**
+
+- 게이트 스크립트는 실행마다 값을 **새로 측정한다** — `supabase-clean-gate.mjs`의
+  `readRuntimeBaseline()`/`readPostmaster()`, `supabase-runtime-preflight.mjs:127`의
+  `pg_postmaster_start_time()` `[코드]`.
+- 판정은 **한 실행 안의 before/after 동일성**이다 — `evaluatePacket13RuntimeBaseline`의
+  `postmasterStable`은 `before === after`만 본다. 고정된 문자열과 대조하지 않는다
+  (`scripts/supabase-runtime-validation.mjs:71-82` `[코드]`).
+- 나머지 용도는 로그 라인 주석이다 — `logLineContext`가 fatal marker를 postmaster 시각 이후인지로
+  분류한다 (동일 파일 `:29-46`).
+- 저장소에 남은 `2026-08-18 01:31:36.816875+00`은 **합성 fixture**다
+  (`tests/supabaseRuntimeValidation.test.js:47`, `scripts/supabase-log-window-self-test.mjs:11,64`).
+  라이브 컨테이너 측정값이 아니므로 **바꾸지 않는다.** 특히 self-test의
+  `negative-postmaster-changed`는 "시각이 바뀌면 검증기가 거부해야 한다"를 확인하는 음성 테스트다.
+- `code/11-REPOSITORY-AUDIT.md`의 `.158` 환경 증거 줄에 적힌 postmaster 시각은 그 시점 관찰 기록이다.
+  기대값이 아니므로 소급 수정 대상이 아니다.
+
+**실측으로 확인 (2026-08-23, 기준 커밋 `032caba`)**
+
+| 실행 | 결과 |
+|---|---|
+| `npm run supabase:preflight` | **11/11 PASS.** `postmaster-stability before=2026-08-23 14:01:28.07022+00 after=(동일) restart_before=0 restart_after=0` |
+| `node scripts/supabase-log-window-self-test.mjs --run-id <uuid>` | **12/12 PASS** (`negative-postmaster-changed` 포함) |
+| `npm test` | **142/142** |
+
+고정 기대값을 갖는 축은 전부 그대로 일치했다 — CLI `2.114.0`, image
+`public.ecr.aws/supabase/postgres:17.6.1.158`, digest `sha256:99b1729a…`, `server_version 17.6`.
+**Docker 재시작은 이 축들에 영향을 주지 않는다.** postmaster 시각 변화만으로 게이트를 다시 돌릴
+이유는 없고, 돌려도 판정이 달라지지 않는다.
+
 ### 3.3 자동 테스트 실행 방법
 
 ```bash
