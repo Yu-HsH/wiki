@@ -1,7 +1,7 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: 2026-08-27
-기준 커밋: `77094d1` (`docs: point CURRENT.md base commit at ddfea4e`)
+기준 커밋: `4840ec4` (`docs: frame G2 as a hand-off point and make P10 measurement-led`)
 브랜치: `feat/group-final-gaps`
 
 이 파일이 **"지금 상태"의 단일 기준**이다. `docs/CLAUDE_HANDOFF.md`는 배경 문서(전체 인계 정보)이고,
@@ -17,7 +17,7 @@
 
 ## 1. 판정
 
-### CODE GO — 기준 커밋 `77094d1`
+### CODE GO — 기준 커밋 `4840ec4`
 
 **유효 조건 (아래를 모두 만족하는 local/CI 환경에서만 유효)**
 
@@ -40,7 +40,7 @@
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
-### RELEASE HOLD — 기준 커밋 `77094d1`
+### RELEASE HOLD — 기준 커밋 `4840ec4`
 
 사용자-facing 릴리스는 보류다. **절차는 `docs/ops/CUTOVER-PLAN.md`(W0~W11)로 확정됐고, 남은 것은
 실행과 승인이다.** 각 항목의 처리 위치를 함께 적는다:
@@ -109,15 +109,15 @@
 
 ## 3. 원격 상태
 
-측정 시점: **2026-08-27, 로컬 HEAD `77094d1`.** 아래 값은 그 시점 실측이며 재측정 명령을 함께 적는다.
+측정 시점: **2026-08-27, 로컬 HEAD `4840ec4`.** 아래 값은 그 시점 실측이며 재측정 명령을 함께 적는다.
 
 | 항목 | 값 | 재측정 명령 |
 |---|---|---|
 | `origin/main` HEAD | `e6d8eee` ("0529백업") — **변경 없음** | `git ls-remote origin refs/heads/main` |
-| `origin/feat/group-final-gaps` HEAD | `77094d1` (`git ls-remote` 실측 2026-08-27). 이 파일의 갱신 커밋은 같은 push에 포함되므로 **push 후 값은 그 커밋이다** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
+| `origin/feat/group-final-gaps` HEAD | push 전 원격 값은 `77094d1` (`git ls-remote` 실측 2026-08-27). 이 파일의 갱신 커밋은 같은 push에 포함되므로 **push 후 값은 그 커밋이다** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
 | 현재 브랜치 upstream | `origin/feat/group-final-gaps` (설정됨) | `git rev-parse --abbrev-ref "@{u}"` |
 | upstream 대비 | 0 behind / 0 ahead (push 직후) | `git rev-list --left-right --count "@{u}...HEAD"` |
-| `origin/main...HEAD` | 0 behind / **22 ahead** (`77094d1` 기준, 2026-08-27 실측. 이 파일의 갱신 커밋을 더하면 23) | `git rev-list --left-right --count origin/main...HEAD` |
+| `origin/main...HEAD` | 0 behind / **24 ahead** (`4840ec4` 기준, 2026-08-27 실측. 이 파일의 갱신 커밋을 더하면 25) | `git rev-list --left-right --count origin/main...HEAD` |
 | `37adc69`·`450f63a`·`339fb77`·`f1e61fa`·`b24744e`·`032caba` | `origin/feat/group-final-gaps`에 **포함**, `origin/main`에는 **미포함** | `git branch -r --contains <sha>` |
 
 `git ls-remote`는 원격을 직접 조회하므로 `fetch` 없이도 실제 값을 준다. 이 클론에는
@@ -131,7 +131,7 @@ Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백�
 ### `main` push 금지 — 배포 연동
 
 - **`origin/main`은 Vercel 프로덕션 배포와 연동되어 있다. main push는 즉시 배포를 트리거한다.**
-- 로컬 22개 커밋에는 미배포 서버 권위 V2와 Packet 13이 들어 있고, **운영 DB에는 해당 RPC가 없다**
+- 로컬 24개 커밋에는 미배포 서버 권위 V2와 Packet 13이 들어 있고, **운영 DB에는 해당 RPC가 없다**
   (운영 `public` 함수 7개, V2 RPC 30개 부재 — `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §2).
 - 따라서 **cutover 창 밖에서의 main push는 즉시 장애를 유발한다.** 배포된 프론트가 존재하지 않는 RPC를
   호출하고, 반대로 `finish_group_player`는 cutover 시 삭제되므로 순서를 잘못 잡으면 양방향으로 깨진다.
