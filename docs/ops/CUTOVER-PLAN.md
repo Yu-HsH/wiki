@@ -29,6 +29,36 @@
 시간 열의 값은 별도 표기가 없으면 전부 `[추정]`이다. 저장소에는 운영 대상 실행 이력이 없다
 (`docs/ops/PROD-SNAPSHOT-2026-08-20.md` §1 — CLI push 이력 자체가 없음).
 
+### 0.1 명령 표기 — **모든 `supabase` 명령은 `npx` 접두를 붙인다**
+
+**전역 `supabase` 설치가 없다.** CLI는 `devDependencies`의 로컬 설치본뿐이다 (P9 실측:
+`package.json` 핀·`package-lock.json`·`node_modules` 설치본·런타임 `--version` 네 축이 모두
+`2.114.0`). PowerShell에서 `Get-Command supabase`는 아무것도 돌려주지 않는다
+(2026-08-27 `[산출물]`).
+
+→ **`npx` 없이 `supabase ...`를 실행하면 `CommandNotFoundException`으로 실패한다.**
+설치되지 않았다는 뜻이므로 인증·네트워크 문제로 오진하지 않는다.
+
+```powershell
+npx supabase db push --linked      # 이렇게
+supabase db push --linked          # 이렇게 하면 CommandNotFoundException
+```
+
+**이 문서의 본문에서는 단계 이름으로 `db push`·`db dump`·`migration repair` 같은 짧은 형태를
+쓴다.** 그것은 **명령의 이름**이고, 실제로 실행할 때는 예외 없이 `npx supabase`를 앞에 붙인다.
+코드 블록 안의 명령은 전부 `npx`가 붙은 실행 가능한 형태다 (2026-08-27 전수 점검 `[산출물]`).
+
+### 0.2 실행 전제 — 창 전에 반드시 확인
+
+명령 자체는 맞아도 **환경이 없어서** 실패하는 것들이다. 전부 창 밖에서 해소한다 (§7).
+
+| 전제 | 없으면 나타나는 증상 | 오진하기 쉬운 것 | 해소 |
+|---|---|---|---|
+| **`backup/` 디렉터리 실재** | `failed to open dump file: NotFound` | **로그인·권한 문제로 오진한다.** 인증과 DB 접속이 **성공한 뒤** 파일 쓰기에서 실패한다 | §4.3-0. P6 |
+| **`npx` 접두** | `CommandNotFoundException` | 설치 문제로 보이지만 로컬 설치는 정상이다 | §0.1. P9 |
+| **`psql` 확보** (§6.3 복원 전용) | `psql : 명령을 찾을 수 없습니다` | — | §6.3.0. **P14** |
+| `awk` (§6.3.3 (b) 대체 경로만) | `awk : 명령을 찾을 수 없습니다` | — | Git for Windows에 포함돼 있다. 이 머신에서는 `C:\Program Files\Git\usr\bin\awk.exe`로 PATH에 있다 (2026-08-27 `[산출물]`) |
+
 ---
 
 ## 1. 전제와 결정 사항
@@ -90,11 +120,51 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
 | F19 | `db push`는 migration 적용 **전에 `config.toml`의 vault secret을 갱신**한다 (`--skip-vault`로 생략). 현 `config.toml`의 `[db.vault]`는 주석 처리 상태다 | `db push --help` `[산출물]`; `supabase/config.toml:60-61` `[코드]` |
 | F20 | `single-run`은 `verify_jwt = false`로 config에 선언돼 있다 | `supabase/config.toml:423-424` `[코드]` |
 
+
+### 1.4 W-1 리허설 대조 결과 — U5 해소 (2026-08-27)
+
+**사용자가 운영 스키마 덤프를 뜨고, 그것을 baseline과 대조했다. 차이 0건이다** `[산출물]`.
+
+| 항목 | 값 |
+|---|---|
+| 덤프 파일 | `backup/rehearsal-schema-2026-08-27.sql` (커밋 대상 아님 — `.gitignore:160`) |
+| 크기 / 행 수 | 41,399 bytes / 1,563행 |
+| 실행 | 2026-08-27 22:33, 사용자. **읽기 전용** (`db dump`) |
+| 대조 대상 | `supabase/migrations/20260730170602_baseline_remote_schema.sql` |
+| **결과** | **`cmp` 차이 없음 — 바이트 단위 완전 동일.** md5 양쪽 `e2bfa8059d1b887fdceaa144e052fd0a` |
+
+축별 확인 (전체가 동일하므로 아래는 모두 자동으로 성립한다):
+
+| 축 | 운영 | baseline | 판정 |
+|---|---|---|---|
+| `^GRANT` 행 수 | 70 | 70 | **일치 (내용·순서까지)** |
+| └ 롤별 | `anon` 23 / `authenticated` 23 / `service_role` 23 / `postgres` 1 | 동일 | 일치 |
+| `^REVOKE` 행 수 | 0 | 0 | 일치 |
+| `ALTER PUBLICATION ... ADD TABLE` | `game_rooms`, `group_match_results`, `room_events`, `room_players` | 동일 | **4테이블 일치** |
+| `ALTER PUBLICATION ... OWNER TO` | `postgres` | 동일 | 일치 |
+| `ALTER DEFAULT PRIVILEGES` 행 수 | 12 (전부 `FOR ROLE "postgres"`) | 12 | 일치 |
+| 그 외 전체 DDL | — | — | 차이 0행 |
+
+**해석 3가지.**
+
+1. **U5가 해소됐다. 권한 드리프트는 없다.** §9 U5가 걱정한 것은 "migration을 실패시키지 않고
+   런타임 권한 거부로만 나타나는 차이"였는데, 대조 대상 자체가 동일하므로 그 위험이 사라졌다.
+2. **`REVOKE` 표현 차이 문제는 발생하지 않았다.** 양쪽 모두 `REVOKE` 0행이다 — 판정할 표현 차이가
+   애초에 없다. (덤프가 owner-only ACL을 `REVOKE`로 내지 않는다는 성질은 §6.3.4에 별도로 있다.)
+3. **§5.1-1의 "4개 축 차이 0건"이 더 강한 형태로 재확인됐다.** 그때는 테이블·함수·제약·RLS
+   4축을 세어 비교했고, 이번에는 **덤프 전문이 바이트 단위로 같다.** baseline은 이 운영 상태의
+   덤프라는 판정(`(a) 성립`)이 그대로 유지된다.
+
+> **이 결과가 말하지 않는 것.** 덤프는 `public` 스키마와 그 GRANT·publication만 담는다 (F3·F4).
+> `auth` 설정, Edge Function 배포본, Storage 객체, `supabase_migrations` 이력은 여전히 대조되지
+> 않았다 (§4.5). 특히 **`supabase_migrations.schema_migrations` 부재는 이 덤프로 확인되지 않는다** —
+> 덤프가 그 스키마를 제외하기 때문이다. W3~W4가 그것을 다룬다.
+
 ---
 
 ## 2. 되돌릴 수 없는 지점
 
-### 2.1 경계는 W6 (`supabase db push --linked`)이다
+### 2.1 경계는 W6 (`npx supabase db push --linked`)이다
 
 `db push`가 첫 migration을 커밋하는 순간부터 되돌릴 수 없다. 이유는 세 가지다.
 
@@ -162,6 +232,9 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
 - **목적:** U5(GRANT 70행) 대조를 창 밖에서 끝낸다. 프로젝트 Active 확인. link 대상 확인(U13).
 - **명령:**
   ```powershell
+  # backup/ 디렉터리를 먼저 만든다 — CLI는 출력 경로의 디렉터리를 만들어 주지 않는다 (§0.2)
+  New-Item -ItemType Directory -Force -Path .\backup | Out-Null
+
   npx supabase projects list
   npx supabase db dump --linked -f .\backup\rehearsal-schema.sql
   Select-String -Path .\backup\rehearsal-schema.sql -Pattern '^GRANT' | Measure-Object -Line
@@ -176,6 +249,15 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
   (`PROD-SNAPSHOT-2026-08-20.md` §9.7).
 - **주의:** `db dump --dry-run --linked`가 접속 없이 스크립트만 출력하는지는 **미확인**이다.
   `--dry-run --local`로만 확인했다 (F3).
+- **실행됨 (2026-08-27, 사용자 실행) — 결과: 차이 0건.** 스키마 덤프
+  `backup/rehearsal-schema-2026-08-27.sql`(41,399 bytes)를 baseline과 대조한 결과
+  **바이트 단위 완전 동일**했다 (`cmp` 차이 없음, md5 `e2bfa805…`) `[산출물]`.
+  → `GRANT` 70행 내용·순서 일치, publication `ADD TABLE` 4테이블 일치,
+  `ALTER DEFAULT PRIVILEGES` 12행 일치, 전체 1563행 차이 0건. **U5 해소, P7 충족.**
+  전문은 §1.4.
+- **이때 발견된 실행 전제 2건:** 디렉터리 미생성(`failed to open dump file: NotFound`)과
+  `npx` 접두 누락(`CommandNotFoundException`). 둘 다 §0.1·§0.2에 반영했고 위 명령 블록에
+  `New-Item`을 추가했다.
 
 ---
 
@@ -666,8 +748,27 @@ W9 실패는 원래 롤백 트리거가 아니라 "유지보수 유지 + 조사"
 
 ### 4.3 명령
 
+#### 4.3-0 첫 줄이 디렉터리 생성인 이유 — **건너뛰면 오진한다**
+
+**`db dump`는 출력 경로의 디렉터리를 만들어 주지 않는다.** `backup/`이 없으면 이렇게 실패한다:
+
+```
+failed to open dump file: NotFound
+```
+
+**이 실패는 파일 쓰기 단계에서 일어난다 — 로그인과 DB 접속은 그 전에 이미 성공한 상태다.**
+CLI 출력에 `Initialising login role...`까지 정상으로 찍힌 뒤 마지막에 이 줄이 나오므로,
+**증상만 보면 자격 증명·권한·네트워크 문제로 보인다.** 실제 원인은 디렉터리 부재다.
+2026-08-27 W-1 리허설에서 실제로 이 순서로 발생했다 `[산출물]`.
+
+→ **`Initialising login role`이 찍혔다면 인증은 성공한 것이다.** 그 뒤의 실패는 인증 문제가 아니다.
+`supabase login`을 다시 하거나 비밀번호를 의심하기 전에 **`Test-Path .\backup`을 먼저 본다.**
+
+`-Force`가 붙어 있으므로 이미 있으면 아무 일도 하지 않는다. 매번 실행해도 안전하다.
+W-1(§3.2)에도 같은 줄이 들어 있다 — 전날 리허설이 먼저 만들면 창 당일에는 이미 존재한다.
+
 ```powershell
-New-Item -ItemType Directory -Force .\backup | Out-Null
+New-Item -ItemType Directory -Force -Path .\backup | Out-Null
 $stamp = '20260821-1900'   # 실제 창 시각으로 교체
 
 npx supabase db dump --linked -f ".\backup\prod-schema-$stamp.sql"
@@ -1096,7 +1197,7 @@ W9가 보는 것은 프론트·Edge Function·RPC 호출 경로다. **DB를 되�
 - **down migration이 존재하지 않는다.** 11개 파일 전부 forward-only다
   (`AGENTS.md` §4, `code/18-...md` §롤백 주의사항 `[문서]`).
 - **PITR이 없다** (§4.1).
-- **`supabase db reset --linked`를 롤백에 쓰지 않는다.** 이 명령은 대상 DB를 **로컬 migration 기준으로
+- **`npx supabase db reset --linked`를 롤백에 쓰지 않는다.** 이 명령은 대상 DB를 **로컬 migration 기준으로
   재생성**한다 (`db reset --help` `[산출물]`). 데이터를 지우면서도 되돌리려는 상태로 가지 않는다.
 - **구버전 프론트로 되돌리는 것은 롤백이 아니다.** W6 이후에는 legacy RPC가 삭제돼 있어 구버전이 깨진다.
 
@@ -1131,7 +1232,66 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 있음은 확인했다 `[산출물]`. 운영의 관리형 `postgres` 롤도 같은지는 **확인 필요** — 다만 이 문장은
 CLI가 만든 덤프 자신의 첫 줄이므로 Supabase가 상정한 복원 경로다 `[외부]`.
 
+#### 6.3.0 실행 도구 — **`psql`이 이 머신에 없다**
+
+**§6.3은 `psql`을 전제한다.** 비우기 SQL을 돌리고 덤프 2종을 복원해야 하는데, 이 머신에는
+`psql`·`pg_dump`·`pg_restore`가 **없다** (PowerShell `Get-Command psql` → 없음, 2026-08-27 `[산출물]`).
+**창 안에서 처음 발견하면 롤백 자체를 시작할 수 없다.** → **P14**로 창 전에 해소한다.
+
+**Studio SQL Editor로는 절반만 된다.** 비우기 SQL(약 70행)은 붙여 넣어 실행할 수 있지만,
+**스키마 덤프 41KB와 데이터 덤프 수백 KB는 웹 에디터로 복원할 수 없다.** 파일 복원 경로가 필요하다.
+
+**선택지 2개. (a)를 권장한다.**
+
+**(a) 로컬 스택 컨테이너의 `psql`을 쓴다** (설치 불필요, 권장)
+
+로컬 Supabase db 컨테이너에 `psql 17.6`이 들어 있고 외부 DNS 해석도 된다 (2026-08-27 `[산출물]`).
+파일은 stdin으로 밀어 넣는다.
+
+```powershell
+# <CONN> = 운영 연결 문자열. 자격 정보가 들어 있으므로 문서·기록 파일에 적지 않는다
+docker exec -i supabase_db_wiki-packet13-r2-clean158 psql "<CONN>" -v ON_ERROR_STOP=1 -f - < .\docs\ops\wipe-public.sql
+docker exec -i supabase_db_wiki-packet13-r2-clean158 psql "<CONN>" -v ON_ERROR_STOP=1 -f - < ".\backup\prod-schema-$stamp.sql"
+docker exec -i supabase_db_wiki-packet13-r2-clean158 psql "<CONN>" -v ON_ERROR_STOP=1 -f - < ".\backup\prod-data-public-$stamp.sql"
+```
+
+- **`-v ON_ERROR_STOP=1`을 반드시 붙인다.** 없으면 오류를 넘기고 계속 진행해 부분 복원으로 끝난다.
+- 컨테이너 이름은 `npx supabase status`로 확인한다. 프로젝트가 `wiki-packet13-r2-clean158`이다.
+- **로컬 스택이 떠 있어야 한다** — P14에서 함께 확인한다.
+- 리허설에서 쓴 경로가 이것이다 (§6.5). 다른 점은 접속 대상뿐이다.
+
+**(b) PostgreSQL 클라이언트를 설치한다**
+
+`psql`을 PATH에 넣으면 §6.3.2의 주석에 적힌 형태(`psql -v ON_ERROR_STOP=1 -f wipe-public.sql`)가
+그대로 동작한다. **설치는 창 밖에서 한다** — 창 안에서 설치하지 않는다.
+
+> **연결 문자열 취급.** 자격 정보가 포함되므로 이 문서, 창 기록 파일, 커밋에 적지 않는다.
+> `docker exec`의 인자로 넘기면 컨테이너 프로세스 목록에 남을 수 있다 — 창이 끝나면
+> 셸 히스토리를 정리한다. `AGENTS.md` §5의 식별자 비기재 원칙과 같은 방향이다.
+
+#### 6.3.1-0 `wipe-public.sql`은 **리허설 실행이 불가능하다**
+
+`docs/ops/wipe-public.sql`은 **파일 안에 자체 `begin;`과 `commit;`을 갖고 있다** (§6.3.2).
+따라서 **바깥에서 트랜잭션으로 감싸도 보호되지 않는다.**
+
+```powershell
+# 이렇게 하면 안전하지 않다 — 파일 안의 commit; 이 먼저 실행되어 drop이 확정된다
+# begin;  <파일 내용>  rollback;   ← rollback 할 트랜잭션이 이미 없다
+```
+
+2026-08-27에 이 방식으로 "구문만 검사"하려다 **로컬 public 스키마가 실제로 비워졌다** `[산출물]`.
+`WARNING: there is already a transaction in progress` → 파일의 `commit;` 실행 →
+`WARNING: there is no transaction in progress`로 끝났고, 21테이블·36함수가 사라졌다.
+(로컬은 §6.5의 안전 백업으로 복원했고 지문이 일치했다.)
+
+→ **이 파일은 실행하면 실행된다. 시험 실행이라는 것은 없다.**
+확인이 필요하면 **§6.3.2의 `[1] 사전 확인` 세 쿼리만 따로 떼어** 돌린다 — 그 부분은 읽기 전용이다.
+운영에서 이 파일을 돌리는 것은 **롤백이 승인된 뒤 단 한 번**이다 (R4).
+
 #### 6.3.2 확정된 비우기 SQL (2단계)
+
+**파일: [`docs/ops/wipe-public.sql`](wipe-public.sql)** — 아래 내용과 동일하다.
+창 안에서는 문서에서 복사하지 말고 **파일을 그대로 쓴다.**
 
 리허설에서 **post-W6 상태(테이블 21 / `public` 함수 36 / `private` 함수 10)에 두 번 실행해
 둘 다 잔존 객체 0으로 끝났다** `[산출물]`.
@@ -1139,7 +1299,9 @@ CLI가 만든 덤프 자신의 첫 줄이므로 Supabase가 상정한 복원 경
 ```sql
 -- ============================================================================
 -- CUTOVER-PLAN §6.3 2단계 — 복원 대상 스키마 비우기
--- 실행: psql -v ON_ERROR_STOP=1 -f wipe-public.sql
+-- 실행: §6.3.0의 경로로. psql이 PATH에 없으면 로컬 스택 컨테이너를 쓴다:
+--   docker exec -i <db컨테이너> psql "<CONN>" -v ON_ERROR_STOP=1 -f - < docs/ops/wipe-public.sql
+-- 주의: 이 파일은 자체 begin;/commit;을 갖는다. 바깥에서 감싸도 롤백되지 않는다 (§6.3.1-0)
 -- 전제: 이 SQL 직후에 W2 스키마 덤프 → 데이터 덤프(public 전용)를 복원한다
 -- ============================================================================
 
@@ -1265,9 +1427,17 @@ index($0, "setval") > 0 && index($0, "\"public\".") == 0 { next }
 { print }
 ```
 
+**파일: [`docs/ops/slice-public.awk`](slice-public.awk)** — 위 내용과 동일하다. 저장소에 있으므로
+창 안에서 새로 만들 필요가 없다.
+
 ```powershell
-awk -f slice-public.awk .\backup\prod-data-$stamp.sql > .\backup\prod-data-public-$stamp.sql
+awk -f .\docs\ops\slice-public.awk ".\backup\prod-data-$stamp.sql" > ".\backup\prod-data-public-$stamp.sql"
 ```
+
+- **`awk`는 Git for Windows에 포함돼 있다.** 이 머신에서는 `C:\Program Files\Git\usr\bin\awk.exe`로
+  PATH에 있다 (2026-08-27 `[산출물]`). Git이 없는 환경이라면 이 경로 자체를 쓸 수 없다 — (a)를 쓴다.
+- 2026-08-27 재검증: 이 파일로 리허설 덤프를 잘라 `db dump --schema public` 출력과 대조해
+  **실행문 차이 0행**이었다 `[산출물]`.
 
 **검증됨:** 같은 DB에서 (b)의 출력과 (a)의 출력을 대조해 **실행문 차이 0행**이었다
 (차이는 제거된 테이블의 주석 헤더뿐) `[산출물]`.
@@ -1500,7 +1670,7 @@ where room.mode = 'group'
 
 전부 창 **밖에서** 끝낸다. 하나라도 미완이면 창을 열지 않는다.
 
-**P1~P3·P6·P8~P13은 완료됐다.** 남은 P5·P7은 **전날까지** 끝낸다 (§3.3 (c) 채택).
+**P1~P3·P5~P13은 완료됐다.** 남은 **P14는 전날까지** 끝낸다 (§3.3 (c) 채택).
 **P4만 예외로 창 당일에 한 번 더 확인한다** — 무료 요금제의 자동 일시정지 때문에 전날 값이
 당일을 보장하지 않는다.
 
@@ -1510,31 +1680,35 @@ where room.mode = 'group'
 | P2 | [x] | 게이트가 `main`에 들어갈 커밋에 포함됨 | W1이 push할 커밋에 P1이 포함 | F11 — 빌드 시점 인라인이므로 배포 시점에 코드가 있어야 한다. `b24744e`가 `feat/group-final-gaps` 최신이며 W1의 push 대상에 포함된다 |
 | P3 | [x] | 게이트 로컬 확인 | `VITE_MAINTENANCE=true`로 `npm run build` → `npm run preview`에서 점검 화면·바이패스 진입 확인 | 확인함 — 점검 화면 렌더, 요청 2건(문서+진입 청크), `?bypass=<값>` 진입·새로고침 유지·`?bypass=off` 해제 `[산출물]` |
 | P4 | [ ] | **프로젝트 Active 확인** | 창 **당일** Supabase 대시보드에서 Active. Paused면 먼저 복구 | 무료 요금제는 7일 무활동 시 자동 일시정지 `[외부]`. 최종 플레이 2026-08-04 `[실측]` → 일시정지 가능성이 낮지 않다 |
-| P5 | [ ] | DB 접속 자격 준비 | `supabase login` 세션 유효, DB 비밀번호 확보 (`db dump`·`db push`가 요구) | F2 — 두 명령 모두 `--password` 옵션 보유 |
-| P6 | [x] | **`backup/` gitignore 반영 완료** | `.gitignore`에 `backup/`이 들어 있고, `git check-ignore backup/`이 규칙을 반환한다. **반영 확인 전에는 W2 덤프를 뜨지 않는다** | **충족 확인 2026-08-21** — `.gitignore:160`에 `backup/`이 있고 `git check-ignore -v backup/`이 `.gitignore:160:backup/`을 반환한다 `[산출물]`. 근거: §4.2·§4.3 — 데이터 덤프에 `auth.users` 145행이 들어간다. 한 번 커밋되면 계정 정보가 git 이력에 영구 잔존한다 |
-| P7 | [ ] | W-1 리허설 덤프로 GRANT 대조 | §3.2 W-1 성공 판정 | U5 해소 경로 |
+| P5 | [x] | DB 접속 자격 준비 | **충족 (2026-08-27).** W-1 리허설 덤프가 성공했다 — `npx supabase db dump --linked`가 `Initialising login role...` → `Dumped schema`까지 완주해 41,399 bytes를 냈다 (사용자 실행) `[산출물]`. **로그인 세션과 DB 비밀번호가 유효하다는 것이 실행으로 증명됐다.** 창 당일 세션이 만료되면 `npx supabase login`을 다시 한다 | F2 — 두 명령 모두 `--password` 옵션 보유. 자격 값 자체는 이 문서에 적지 않는다 |
+| P6 | [x] | **`backup/` gitignore 반영 + 디렉터리 실재** | **두 축 모두 충족.** ① **gitignore** (2026-08-21) — `.gitignore:160`의 `backup/`, `git check-ignore -v backup/` → `.gitignore:160:backup/` `[산출물]`. ② **디렉터리 실재** (2026-08-27) — `backup/`이 실제로 존재하고 W-1 덤프 파일이 들어 있으며 `git status`에 나타나지 않는다 `[산출물]`. **②가 없으면 `db dump`가 `failed to open dump file: NotFound`로 실패하고 인증 문제로 오진한다** (§4.3-0) | §4.2·§4.3 — 데이터 덤프에 `auth.users` 145행이 들어간다. 한 번 커밋되면 계정 정보가 git 이력에 영구 잔존한다. ②는 2026-08-27 실제 실패로 확인된 전제다 |
+| P7 | [x] | W-1 리허설 덤프로 GRANT 대조 | **충족 (2026-08-27) — 차이 0건.** 운영 스키마 덤프와 baseline이 **바이트 단위 완전 동일**하다 (`cmp` 차이 없음, md5 양쪽 `e2bfa805…`) `[산출물]`. `GRANT` 70행 내용·순서 일치, publication `ADD TABLE` 4테이블 일치, `ALTER DEFAULT PRIVILEGES` 12행 일치, 전체 1563행 차이 0건. 전문은 **§1.4** | **U5 해소.** 권한 드리프트는 migration을 실패시키지 않고 런타임 권한 거부로만 나타나는데(`PROD-SNAPSHOT-2026-08-20.md` §9.7), 대조 대상이 동일하므로 그 위험이 사라졌다 |
 | P8 | [x] | link 대상이 운영인지 확인 | **주 축:** `supabase/.temp/project-ref`의 값 == Vercel `VITE_SUPABASE_URL` 호스트의 project ref. **보조 축:** `supabase/.temp/linked-project.json`의 `name`·`organization_slug`가 Supabase 대시보드의 운영 프로젝트와 일치 | **주 축 일치 확인 — 사용자가 Vercel Production의 `VITE_SUPABASE_URL`과 `supabase/.temp/project-ref`를 직접 대조, 2026-08-21 `[사용자 확인]`.** 값은 식별자이므로 이 문서에 기재하지 않는다. F18. U13 해소 경로 (§9). 보조 축은 해당 필드가 실재함을 확인했다 (2026-08-21 `[산출물]`) |
 | P9 | [x] | CLI 버전 확인 | **충족 (2026-08-27).** `npx supabase --version` → `2.114.0` `[산출물]`. 네 축이 모두 같은 값이다 — `package.json` devDependencies `"supabase": "2.114.0"`(캐럿 없는 정확한 핀), `package-lock.json`의 `node_modules/supabase` → `2.114.0`, `node_modules/supabase/package.json` → `2.114.0`, 런타임 `--version` → `2.114.0` | F1. **CODE GO의 유효 조건**이므로 불일치는 창 차단 요소다 (`docs/agent/CURRENT.md` §1). 설치·업그레이드는 하지 않았다 |
 | P10 | [x] | **삭제 필수성과 측정 절차 확정** | **충족 (2026-08-27).** P10이 확정하는 것은 **범위 값이 아니라 절차와 필수성**이다 — 실제 측정은 운영 조회이므로 창 안 **W2.5**에 속한다. 확정 3가지: **① 삭제를 건너뛰는 선택지는 없다** (`w6_blocking_rows > 0`이면 W6가 #10에서 `SQLSTATE 23514`로 실패, §6.5.3 리허설 근거). **② 범위는 창 안에서 §5.3-0의 `w6_blocking_rows`와 §5.3 (1)(2)로 측정해 확정한다.** **③ 측정 → 승인 → 삭제 순서를 지킨다** (`AGENTS.md` §1의 건별 승인). **남는 승인 대상은 "삭제할지"가 아니라 "어디까지"다** | `AGENTS.md` §4. **2026-08-27에 성격이 바뀌었다** — 리허설이 F15의 "삭제를 건너뛰어도 migration은 실패하지 않는다"를 반증했다. F15a·§5.3-0·§6.5.3 |
 | P11 | [x] | **롤백 판단 기준 사전 합의** | **충족 (2026-08-27).** §6.0에 확정 원칙 4가지(R1~R4), 시각 게이트 3개(G1~G3), W6·W7·W9 단계별 트리거 등급표, 판단 등급 보고 입력 4가지가 들어갔다. 근거가 된 복원 리허설은 §6.5 | 사용자 결정 2026-08-27 (U14) + 로컬 리허설 `[산출물]` (U15). **P11의 전제였던 "복원 절차가 리허설되지 않았다"가 해소됐다** — §6.3이 실측 SQL·시간을 담는다 |
 | P12 | [x] | 창 기록 파일 준비 | **충족 (2026-08-27).** `docs/ops/CUTOVER-LOG-TEMPLATE.md`를 만들었다. 창 당일 `docs/ops/CUTOVER-LOG-YYYY-MM-DD.md`로 **복사해서** 쓰고 원본은 남긴다. W0~W11 단계별 시각·판정란, G1~G3 게이트란, W2.5 측정값(`w6_blocking_rows` + CASCADE 6열), W4/W5/W6/W7/W9 결과란, 롤백 발생 시 트리거·등급·승인 시각·복원 소요란, 창 후 이월란을 빈칸으로 담았다 | `AGENTS.md` §6. 각 란의 기대값은 §3.2의 성공 판정, 등급은 §6.0.3에서 옮겼다 |
 | P13 | [x] | (선택) `npm test`·`npm run build` 커밋 기준 재실행 | **기준 `b24744e`, 2026-08-21 재실행 완료** — `npm test` 142/142 (베이스라인 129 + 게이트 13), `npm run build` 성공 `[산출물]` | `docs/agent/CURRENT.md` §2 `[문서]`가 지적한 "`339fb77` 이후 build 재실행 기록 없음"이 해소됐다 |
+| **P14** | [ ] | **복원 도구(`psql`) 확보** | **§6.3을 실행할 수 있는 경로가 준비돼 있다.** 아래 중 하나: **(a)** 로컬 스택이 떠 있고 `docker exec -i <db컨테이너> psql --version`이 동작한다 (설치 불필요, 권장) — 컨테이너 이름은 `npx supabase status`로 확인, 또는 **(b)** `psql`이 PATH에 있다. **확인만으로 끝내지 말고 §6.3.0의 명령 형태를 한 번 읽어 둔다** | **2026-08-27 신설.** 이 머신에 `psql`·`pg_dump`·`pg_restore`가 **없다** `[산출물]`. §6.3은 41KB 스키마 덤프와 수백 KB 데이터 덤프를 복원해야 하므로 **Studio SQL Editor로 대체할 수 없다.** 창 안에서 발견하면 롤백을 시작조차 못 한다 (§6.3.0) |
 
-**완료 10건: P1·P2·P3·P6·P8·P13 (2026-08-21), P9·P10·P11·P12 (2026-08-27).**
-**남은 것은 P4·P5·P7 3건**이며 **전부 운영·외부 확인이다. 저장소 안에서 처리할 수 있는 항목은 없다.**
+**완료 12건: P1·P2·P3·P6·P8·P13 (2026-08-21), P5·P7·P9·P10·P11·P12 (2026-08-27).**
+**남은 것은 P4·P14 2건**이다.
 
-| ID | 남은 항목 | 성격 | 언제 |
-|---|---|---|---|
-| P4 | 프로젝트 Active 확인 | 외부 (Supabase 대시보드) | **창 당일** — 전날 확인이 당일을 보장하지 않는다 |
-| P5 | DB 접속 자격 (`supabase login` 세션, DB 비밀번호) | 외부 | 전날까지 |
-| P7 | W-1 리허설 덤프로 GRANT 70행 대조 | 운영 (읽기 전용 덤프) | 전날. **창을 막는 유일한 항목 (U5)** |
+| ID | 남은 항목 | 성격 | 언제 | 창을 막는가 |
+|---|---|---|---|---|
+| P4 | 프로젝트 Active 확인 | 외부 (Supabase 대시보드) | **창 당일** — 전날 확인이 당일을 보장하지 않는다 | 막는다 (Paused면 아무것도 못 한다) |
+| **P14** | **복원 도구(`psql`) 확보** | 로컬 환경 | 전날까지 | **롤백을 막는다.** 창은 열 수 있지만 W6 실패 시 복원을 시작할 수 없다 |
 
 - **P1~P3·P13** — 기준 커밋 `b24744e`. 게이트 구현 커밋이 `feat/group-final-gaps`에 들어가
   `origin`에 push됐고 `origin/main`은 무변경(`e6d8eee`)이다. 같은 커밋 기준으로
   `npm test` 142/142 (베이스라인 129 + 게이트 13), `npm run build` 성공 — P13 근거다.
   P1의 판정 기준에 있는 "구현은 이 문서 범위 밖"은 작성 시점 서술이다. 구현은 완료됐고
   사용법은 `README.md` §유지보수 게이트, 동작 계약은 `tests/maintenanceGate.test.js`에 고정돼 있다.
-- **P6** — `.gitignore:160`의 `backup/`과 `git check-ignore -v backup/`의 반환으로 충족 `[산출물]`.
+- **P5** (2026-08-27) — **덤프 실행 성공이 곧 증명이다.** `Initialising login role...` → `Dumped schema`로
+  완주했으므로 로그인 세션과 DB 비밀번호가 유효하다. 창 당일 세션 만료 시 재로그인만 하면 된다.
+- **P6** — 두 축을 모두 본다. gitignore(2026-08-21)와 **디렉터리 실재**(2026-08-27).
+  후자는 W-1에서 실제로 `NotFound`가 나면서 추가된 항목이다 (§4.3-0).
+- **P7** (2026-08-27) — **차이 0건.** 운영 덤프와 baseline이 바이트 단위로 같다 (§1.4). U5 해소.
 - **P8** — 사용자가 Vercel Production 값과 `supabase/.temp/project-ref`를 직접 대조해 일치 확인
   `[사용자 확인]`. 이로써 §9 U13이 해소됐다.
 - **P9** (2026-08-27) — 네 축(`package.json` 핀·`package-lock.json`·`node_modules` 설치본·런타임
@@ -1544,8 +1718,9 @@ where room.mode = 'group'
   합의할 "삭제 여부"가 사라졌다. **P10이 확정하는 것은 절차와 필수성이고, 범위 값은 창 안
   W2.5에서 측정한다** — 측정 자체가 운영 조회이므로 창 밖에서 미리 정할 수 없다 (§5.3-0).
 - **P12** (2026-08-27) — `docs/ops/CUTOVER-LOG-TEMPLATE.md`. 창 당일 날짜를 넣어 복사해 쓴다.
-- **남은 3건은 전부 창 시점에 묶여 있다.** P4는 당일, P5·P7은 전날이다.
-  **P7이 창을 막는 유일한 항목**이며 W-1 리허설 덤프로만 해소된다 (U5).
+- **P14** (2026-08-27 신설) — `psql`이 이 머신에 없다는 것이 실측으로 드러났다. **P4와 성격이 다르다** —
+  P4는 창을 막고, P14는 **창은 막지 않지만 롤백을 막는다.** 되돌릴 수 없는 지점을 넘기 전에
+  되돌릴 수단이 준비돼 있어야 하므로 창 전 조건으로 세웠다 (§6.3.0).
 
 ---
 
@@ -1581,7 +1756,8 @@ where room.mode = 'group'
 
 | ID | 항목 | 상태 | 해소 방법 | 창을 막는가 |
 |---|---|---|---|---|
-| U5 | `GRANT` 70행 운영 대조 | **미결정** | **W-1 리허설 스키마 덤프**로 창 밖에서 해소한다. 스키마 덤프가 `public` GRANT를 담는다 (F3). baseline `GRANT` 70행과 행 단위 대조 | **막는다** (P7). 드리프트는 런타임 권한 거부로만 나타난다 (`PROD-SNAPSHOT-2026-08-20.md` §9.7) |
+| U5 | `GRANT` 70행 운영 대조 | **해소 (2026-08-27). 차이 0건** | W-1 리허설 스키마 덤프를 baseline과 대조했다 — **바이트 단위 완전 동일**(`cmp` 차이 없음, md5 양쪽 `e2bfa805…`, 1563행 차이 0) `[산출물]`. `GRANT` 70행이 내용·순서까지 같고 `REVOKE`는 양쪽 0행이라 표현 차이를 판정할 대상 자체가 없었다. publication `ADD TABLE` 4테이블·`ALTER DEFAULT PRIVILEGES` 12행도 일치. 전문은 §1.4 | **더 이상 막지 않는다.** P7 충족. 드리프트가 런타임 권한 거부로만 나타나는 위험(`PROD-SNAPSHOT-2026-08-20.md` §9.7)은 대조 대상이 동일하므로 사라졌다 |
+| — | **`psql` 부재** | **신규 (2026-08-27)** | 이 머신에 `psql`·`pg_dump`·`pg_restore`가 없다 `[산출물]`. §6.3은 41KB 스키마 덤프와 수백 KB 데이터 덤프를 복원해야 해서 Studio SQL Editor로 대체할 수 없다. 해소 경로 2개는 §6.3.0에 있고 (a) 로컬 스택 컨테이너의 `psql`(설치 불필요)을 권장한다 | **창은 막지 않는다. 롤백을 막는다** — **P14**로 창 전에 해소한다 |
 | U6 | 운영 17.6 SIGSEGV 빌드 동일성 | **미결정. 검증 수단 미확정** | 로컬 `.158`과 운영 관리형 배포판의 동일성을 확인할 수단이 없다 (`PROD-SNAPSHOT-2026-08-20.md` §5). 차선책: W9에서 `anon` 차단 경로를 의도적으로 1회 밟고, §8.2-1로 사후 관측 | **막지 않는다.** 확정 위험이 아니라 검증 대상 |
 | U9 | Edge Function 운영 배포 목록, `target-level` 취급 | **부분 확정** | 확정: `target-level`은 로컬 소스가 없다 (F12) → **`--prune` 금지, 이름 명시 배포** (A3). 미확정: 운영에 실제 배포된 함수 전체 목록. 대시보드 Functions 화면에서 읽기 전용 확인 가능 | **막지 않는다.** A3가 사고를 차단한다 |
 | U12 | `repair`의 `schema_migrations` 생성 동작 | **해소 (2026-08-21).** (a)(b)(c) 전부 측정 완료 | 로컬 스택(CLI `2.114.0`, container-158)에서 재현 `[산출물]`. **(a) 테이블이 생성된다 — 스키마 자체가 없어도 스키마까지 만든다.** 두 경우 모두 exit 0. **(b) 행은 정확히 1개**이며 `statements`에 migration SQL 250개가 들어간다. 따라서 **W3 앞 선행 단계 불필요.** **(c) `--status reverted`는 행을 DELETE한다** (상태 열이 없다). 행이 없으면 멱등, 테이블이 없으면 빈 테이블을 만든다. **존재하지 않는 버전에도 exit 0** — 반면 `--status applied`는 로컬 파일이 없으면 exit 1(`LegacyMigrationFileNotFoundError`)로 실패한다. 되돌림은 exit code로 검증되지 않으므로 W4 쿼리로 확인한다. 부수 확인: 운영의 42P01은 "테이블만 없음"과 "스키마 없음"을 구분하지 못한다(에러 문자열 동일) — 그러나 양쪽 모두 exit 0이므로 구분할 필요가 없다. 전문은 §3.2 W3·W4 | **막지 않는다.** W4가 결과를 사후 확인한다 |

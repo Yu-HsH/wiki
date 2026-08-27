@@ -25,6 +25,22 @@
 | 계획 문서 | `docs/ops/CUTOVER-PLAN.md` | 판단 기준은 **§6.0** |
 | **창 결과** | | `완료` / `W5에서 중단` / `롤백` / `유지보수 유지 후 창 밖 이월` 중 하나 |
 
+### 0.0 실행 전제 확인 (창 시작 직전 — 1분)
+
+**전부 "명령은 맞는데 환경이 없어서" 실패하는 것들이다.** 하나라도 아니면 그것부터 해결한다.
+
+| 확인 | 명령 | 기대 | 결과 |
+|---|---|---|---|
+| `backup/` 디렉터리 | `Test-Path .\backup` | `True` | |
+| — 없으면 | `New-Item -ItemType Directory -Force -Path .\backup` | — | |
+| CLI 동작 (`npx` 필수) | `npx supabase --version` | `2.114.0` | |
+| 복원 도구 (P14) | `docker exec -i <db컨테이너> psql --version` 또는 `psql --version` | 버전 출력 | |
+| 로컬 스택 (P14 (a) 경로) | `npx supabase status` | 컨테이너 이름 확인 | |
+
+> **`npx`를 빼면 `CommandNotFoundException`이다.** 전역 supabase 설치가 없다 (CUTOVER-PLAN §0.1).
+> **`backup/`이 없으면 `db dump`가 `failed to open dump file: NotFound`로 실패하고, 인증은
+> 이미 성공한 상태라 로그인 문제로 오진하기 쉽다** (§4.3-0).
+
 ### 0.1 창 당일 재확인 (P4)
 
 | 항목 | 값 | 안내 |
@@ -40,15 +56,16 @@
 |---|---|---|---|
 | P1·P2·P3 | 유지보수 게이트 구현·포함·로컬 확인 | | `[x]` 기대 |
 | P4 | 프로젝트 Active | | **당일 §0.1에서 재확인** |
-| P5 | DB 접속 자격 (`supabase login` 세션, DB 비밀번호) | | |
+| P5 | DB 접속 자격 (`npx supabase login` 세션, DB 비밀번호) | | `[x]` 기대 (2026-08-27 덤프 실행으로 확인). 당일 만료 시 재로그인 |
 | P6 | `backup/` gitignore | | `git check-ignore -v backup/` 출력 |
-| P7 | W-1 리허설 덤프로 GRANT 70행 대조 | | **창을 막는 항목.** 결과를 §0.3에 |
+| P7 | W-1 리허설 덤프로 GRANT 70행 대조 | | `[x]` 기대 (2026-08-27 차이 0건). 결과를 §0.3에 |
 | P8 | link 대상이 운영인지 | | |
 | P9 | CLI 버전 `2.114.0` | | |
 | P10 | 삭제 필수성·측정 절차 확정 | | |
 | P11 | 롤백 판단 기준 (§6.0) | | |
 | P12 | 이 기록 파일 | | |
 | P13 | 커밋 기준 `npm test`·`npm run build` | | |
+| **P14** | **복원 도구(`psql`) 확보** | | **§0.0에서 실제로 확인한다.** 없으면 W6 실패 시 복원을 시작할 수 없다 (§6.3.0) |
 
 > **하나라도 미완이면 창을 열지 않는다.**
 
@@ -136,10 +153,10 @@
 
 | 덤프 | 파일명 | 크기 | 안내 |
 |---|---|---|---|
-| 스키마 | | | `db dump --linked -f` |
-| 데이터 (전체) | | | `--data-only --use-copy`. `auth.users` 백업용 |
-| **데이터 (public 전용)** | | | **`--schema public`. §6.3 복원의 실제 소스다 (§6.3.3)** |
-| 롤 (선택) | | | `--role-only` |
+| 스키마 | | | `npx supabase db dump --linked -f ".\backup\prod-schema-$stamp.sql"` |
+| 데이터 (전체) | | | `npx supabase db dump --linked --data-only --use-copy -f ...`. `auth.users` 백업용 |
+| **데이터 (public 전용)** | | | **`npx supabase db dump --linked --data-only --use-copy --schema public -f ...`. §6.3 복원의 실제 소스다 (§6.3.3)** |
+| 롤 (선택) | | | `npx supabase db dump --linked --role-only -f ...` |
 
 §4.4 검증 4항목:
 
@@ -229,6 +246,8 @@
 
 **exit code를 근거로 삼지 않는다. 이 쿼리 결과가 유일한 근거다.**
 
+명령: `npx supabase migration list --linked` 또는 §3.2 W4의 SQL
+
 | `version` | `name` | `statement_count` | 안내 |
 |---|---|---|---|
 | | | | 기대: `20260730170602` / `baseline_remote_schema` / **250** |
@@ -243,6 +262,8 @@
 
 ### W5 — `db push --dry-run --linked`
 
+명령: `npx supabase db push --dry-run --linked`
+
 | 항목 | 값 | 기대 |
 |---|---|---|
 | 시작 / 종료 시각 | / | |
@@ -255,6 +276,8 @@
 > **G1 확인 지점.** 여기서 T+60분을 넘겼으면 W6를 시작하지 않는다 (§1 게이트 표).
 
 ### W6 — `db push --linked` ← **되돌릴 수 없는 지점**
+
+명령: `npx supabase db push --linked` — **`--yes`를 붙이지 않는다.** 프롬프트를 사람이 읽는다
 
 | 항목 | 값 |
 |---|---|
@@ -325,6 +348,9 @@
 > **G2 확인 지점** — 이 단계 진행 중 T+85분을 지난다 (§1 게이트 표).
 
 ### W8 — Edge Function 배포
+
+명령: `npx supabase functions deploy wiki-snapshot` / `npx supabase functions deploy single-run`
+**`--prune` 금지. 이름 생략 금지** (A3·F12·F13)
 
 | 항목 | 값 | 안내 |
 |---|---|---|
@@ -466,6 +492,10 @@
 | 5 | ~~main force push~~ | — | — | — | **폐기 (R3)** | — |
 | 6 | Edge Function 미복원 확인 | | | | | — |
 | 7 | 복원 검증 (W7 쿼리 재실행) | | | | | — |
+
+복원 실행 경로 (§6.3.0 / P14): `docker exec -i <db컨테이너> psql "<CONN>" -v ON_ERROR_STOP=1 -f - < <파일>`
+**`-v ON_ERROR_STOP=1`을 반드시 붙인다.** 연결 문자열은 자격 정보이므로 **이 기록에 적지 않는다.**
+파일: `docs/ops/wipe-public.sql` → 스키마 덤프 → public 전용 데이터 덤프 순서.
 
 **비우기 SQL 사후 확인 5항목 (§6.3.2 [3])**
 
