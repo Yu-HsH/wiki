@@ -1,7 +1,8 @@
 # 운영 cutover 계획 — Wiki Race 2.0
 
-작성일: 2026-08-21
-기준 커밋: `cdb9e79` (`docs: confirm baseline correspondence with constraint and RLS measurements`)
+작성일: 2026-08-21 · 최종 갱신: 2026-08-27 (§6.0 롤백 판단 기준 신설, §6.3 확정, §6.5 리허설 기록)
+기준 커밋: `77094d1` (`docs: point CURRENT.md base commit at ddfea4e`)
+최초 작성 시 기준 커밋: `cdb9e79` (`docs: confirm baseline correspondence with constraint and RLS measurements`)
 브랜치: `feat/group-final-gaps` (upstream `origin/feat/group-final-gaps`, 동기화 완료)
 `origin/main` 대비: 0 behind / **14 ahead** (`git rev-list --count e6d8eee..HEAD` = 14, 2026-08-21 실행)
 
@@ -42,6 +43,8 @@
 | U7 | **`game_rooms` 위반 167건은 과거 방 이력 삭제로 처리.** | 사용자 결정 (2026-08-21). 절차·범위는 §5 |
 | U10 | **`picked` 테이블 보존.** drop 하지 않는다. | 사용자 결정 (2026-08-21) + `AGENTS.md` §4 기본값. 운영 제약 0건·정책 0건으로 실질 비활성 (`PROD-SNAPSHOT-2026-08-20.md` §9.4·§10.2) |
 | U11 | **`avatars` 객체 소유자는 `roeehd2` — 사용자 본인 계정.** 따라서 업로드 기능 제거가 안전하다. | 사용자 확인 (2026-08-21). 계정 식별이 남아 있던 항목(`docs/agent/CURRENT.md` §5-3)이 이로써 해소됐다. 객체 삭제는 이 계획 범위 밖이며 `AGENTS.md` §4 적용 |
+| U14 | **롤백 판단 기준 확정 (P11).** 창 안 즉흥 수정 금지, 시각 게이트 3개, 롤백 후 프론트는 게이트 유지(`main` force push 없음), W6 이후 부분 롤백 불가·전체 복원만·실행은 승인 사안 | 사용자 결정 (2026-08-27). 전문은 **§6.0**. 단계별 트리거 등급표는 §6.0.3 |
+| U15 | **§6.3 전체 복원 절차 리허설 완료.** 비우기 SQL 확정, 소요 시간 실측, 복원되지 않는 항목 확정 | 2026-08-27 로컬 리허설 `[산출물]`. 전문은 **§6.5**. 확정 SQL은 §6.3.2 |
 
 ### 1.2 실측으로 해소된 전제 (2026-08-21)
 
@@ -80,6 +83,7 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
 | F13 | `functions deploy`는 이름을 생략하면 **로컬 전부**를 배포하고, `--prune`은 **로컬에 없는 원격 함수를 삭제한다** | `functions deploy --help` `[산출물]` |
 | F14 | 미적용 11개 중 **2개가 운영 데이터를 UPDATE 한다.** `20260814103000:11-17` (group·waiting 행의 duration·`use_items`), `20260814113000:32-40` (group·waiting 행의 `min_players=3`, `max_players` 클램프, `finish_rank_limit=3`, `use_items=false`, duration) | `[코드]` |
 | F15 | Packet 13 group 제약은 `not valid`로 추가되고, hardening은 위반 행이 **0건일 때만** `validate`를 실행한다. 재시도 migration은 없다 | `20260814103000:19-39`, `20260814113000:45-72` `[코드]` |
+| F15a | **F15에서 "그러므로 migration은 실패하지 않는다"를 도출할 수 없다.** `20260814113000`은 자기가 붙인 `NOT VALID` 제약이 걸린 행을 **스스로 UPDATE**하고(`private.reconcile_group_host_v13`), `NOT VALID` 제약은 UPDATE에 행 단위로 강제된다 → **W2.5를 건너뛰면 W6가 #10에서 `SQLSTATE 23514`로 실패한다** | `20260814113000:150-155` `[코드]`; 2026-08-27 로컬 리허설에서 재현·반사실 확인 `[산출물]` (§6.5.3). 측정 쿼리와 판정은 §5.3-0 |
 | F16 | 저장소에 위반 행 조회용 **읽기 전용 preflight SQL이 이미 있다.** status별 집계와 행 목록을 함께 낸다 | `supabase/tests/group_final_gaps_v13_hardening_preflight.sql` `[코드]` |
 | F17 | `origin/main`(`e6d8eee`)은 `HEAD`의 조상이다 → main으로 **fast-forward push가 가능**하다 | `git merge-base --is-ancestor e6d8eee HEAD` 성공, 2026-08-21 `[산출물]` |
 | F18 | link 상태 파일이 존재한다: `supabase/.temp/project-ref`, `supabase/.temp/linked-project.json` (둘 다 gitignore 대상) | `[산출물]` |
@@ -255,9 +259,16 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
 
 - **예상 시간:** 15분 `[추정]` (측정 → 승인 → 삭제 → 재측정)
 - **성공 판정:** 삭제 후 preflight 위반 집계에 `status <> 'waiting'` 행이 0행.
-- **실패 시:** 삭제를 하지 않고 W6로 갈 수 있다 — migration은 실패하지 않는다 (F15).
-  대신 제약이 영구히 `NOT VALID`로 남고 기존 위반 행의 UPDATE·RPC 경로가 런타임에 깨진다
-  (`docs/agent/CURRENT.md` §5-2). 그 상태를 수용할지는 창 안에서 결정하지 않고 미리 정한다 (P10).
+- **실패 시 — 2026-08-27 리허설로 정정됨:** ~~삭제를 하지 않고 W6로 갈 수 있다 — migration은
+  실패하지 않는다 (F15)~~ **틀렸다.** 삭제를 건너뛰면 **W6가 10번째
+  `20260814113000`에서 SQLSTATE 23514로 실패한다** — 그 migration이 위반 행을 스스로 UPDATE하고
+  `NOT VALID` 제약은 UPDATE에 행 단위로 강제되기 때문이다. 실측·기전·반사실 확인은 §6.5.3,
+  요약은 §5.3-0에 있다.
+  - 정확히는 **위반 행 전부가 아니라 host 참조가 끊긴 위반 행만** 실패를 유발한다.
+    그 수를 세는 읽기 전용 쿼리(`w6_blocking_rows`)가 §5.3-0에 있다. **P10에서 이 값을 먼저 측정한다.**
+  - `w6_blocking_rows = 0`이면 삭제를 건너뛰어도 W6는 통과한다. 대신 제약이 영구히 `NOT VALID`로
+    남고 기존 위반 행의 UPDATE·RPC 경로가 런타임에 깨진다 (`docs/agent/CURRENT.md` §5-2).
+    그 상태를 수용할지는 창 안에서 결정하지 않고 미리 정한다 (P10).
 
 ---
 
@@ -393,9 +404,13 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
   - **down migration이 없다.** 부분 적용 상태를 코드로 되돌릴 수단이 저장소에 존재하지 않는다.
   - → **유일한 되돌림 수단은 §6의 덤프 복원이다.** 재시도(`db push` 재실행)는 실패한 파일부터
     이어서 적용하므로, 실패 원인이 파일 내용이면 같은 지점에서 다시 멈춘다.
+  - **적용 경계는 항상 깨끗한 파일 경계다.** `db push`는 파일 하나를 원자적으로 적용한다 —
+    `begin;`/`commit;`이 없는 `20260814093000`으로 프로브를 돌려도 실패 앞 문장까지 전부
+    롤백됐다 (2026-08-27 실측 `[산출물]`, §6.5.3). **"반쯤 적용된 파일"이라는 상태는 없다.**
   - 실패 시 즉시 할 일: (1) 실패 파일명·에러 전문 보존, (2) `migration list --linked`로 적용 경계 확정,
-    (3) 복원과 전진(보정 migration 추가) 중 어느 쪽인지 결정. 창 안에서 즉흥적으로 forward 보정
-    SQL을 쓰지 않는다 (`AGENTS.md` §3·§4). 판단 기준은 P11에서 미리 합의한다.
+    (3) **§6.0.3의 W6 등급표에서 실패한 파일 번호의 등급을 읽는다.**
+  - **판단 기준은 §6.0에서 확정됐다 (P11).** 창 안에서 즉흥적으로 forward 보정 SQL을 쓰지 않는다
+    — 금지다 (§6.0.1 R1, `AGENTS.md` §3·§4). 선택지는 **복원** 또는 **창을 닫고 다음 창**이다.
 - **부수 효과 2건:**
   - **운영 데이터가 변경된다.** F14의 두 UPDATE가 group·waiting 방의 인원·아이템·시간 규칙을
     덮어쓴다. 이는 승인 범위에 포함된다 (`docs/agent/CURRENT.md` §5-2).
@@ -450,9 +465,11 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
   - publication에 `group_spectator_emoji_rate_limits`가 **없다**
     (의도적 미등록, `20260814103000:41-43` 주석 `[코드]`)
   - 이력 12행 (baseline + 11)
-- **실패 시:** 함수 수 불일치·legacy RPC 잔존은 부분 적용을 뜻한다 → W6 실패 시 절차로 간다.
-  `convalidated = false`만 다르면 기능은 동작한다. 창을 닫고 별도 보정 migration으로 처리한다
-  (`AGENTS.md` §4 — forward-only).
+- **실패 시:** **불일치 항목별 등급은 §6.0.3의 W7 표가 정한다 (P11).** 요약하면 함수 수 불일치·
+  legacy RPC 잔존·RLS 불일치·제약 부재는 **롤백**, `convalidated = false`와 publication 불일치는
+  **판단**이다. `convalidated = false`는 **W2.5를 수행했다면 예상 상태가 아니다** — 리허설에서
+  W2.5 후 두 제약 모두 `convalidated = t`였다 (§6.5.3). 기능 자체는 동작하므로 창을 닫고
+  별도 보정 migration으로 처리한다 (`AGENTS.md` §4 — forward-only).
 
 ---
 
@@ -493,6 +510,10 @@ baseline 대응(테이블 14/14, 함수 7/7, 제약 52/52, RLS 14/14 차이 0건
   `RUN_VERSION_CONFLICT`가 정상 흐름에서 나오지 않는다 (`code/18-...md` §장애 시 확인 지점 `[문서]`).
 - **실패 시:** **W10을 하지 않는다.** 유지보수 상태를 유지한 채 원인을 조사한다.
   유지보수 게이트를 켠 채 조사할 수 있다는 점이 이 계획 구조의 이점이다.
+  **W9 실패는 기본적으로 롤백 트리거가 아니다** — 항목별 등급은 §6.0.3의 W9 표에 있다 (P11).
+  이 단계가 보는 것은 프론트·Edge Function·RPC 호출 경로이고, **DB를 되돌려도 고쳐지지 않는
+  층이 대부분**이기 때문이다. **+120분(G3)에 도달하면 재개를 포기하고 게이트를 켠 채 창을 닫는다**
+  (§6.0.2).
 - **주의:** 운영 17.6의 권한 거부 경로 SIGSEGV 위험(U6, §9)이 실제로 나타난다면 이 단계다.
   `anon`으로 차단된 경로를 의도적으로 한 번 밟아 보고, 응답이 오는지·연결이 끊기는지 기록한다.
 
@@ -564,9 +585,53 @@ P9~P13은 창 밖 어느 시점이어도 되지만, 늦어도 전날까지 끝�
 창 밖으로 빠졌지만, W2.5·W9의 상한이 크고 W6의 20분이 `[추정]`이라 상한 시나리오는 2시간을 넘는다.
 A5는 기각됐으므로(§3.0) 함수 배포 10분은 창 안에 남는다.
 
+#### 3.3.1 상한 누계와 시각 게이트 (2026-08-27 갱신)
+
+위 표의 **상한**을 누계하면 각 단계가 끝나는 시각이 나온다. §6.0.2의 게이트는 이 누계 위에 놓인다.
+
+| 종료 시점 | 단계 | 누계 (상한) | 게이트 |
+|---|---|---|---|
+| W1 | 환경변수·배포 | +15분 | |
+| W2 | 백업 덤프 | +35분 | |
+| W2.5 | 방 이력 삭제 | +50분 | |
+| **W5** | dry-run | **+58분** | **G1 = +60분 — 여기까지 못 오면 W6를 시작하지 않는다** |
+| **W6** | push — 되돌릴 수 없는 지점 | **+78분** | 정상 진행 시 G2까지 **7분 여유** |
+| — | (W7 진행 중) | **+85분** | **G2 — 이후 확정된 W6 실패는 전체 복원이 +120분 안에 끝나지 않는다** |
+| W7 | 적용 결과 검증 | +93분 | |
+| W8 | Edge Function | +103분 | |
+| — | — | **+120분** | **G3 = 사용자 결정 +2시간 — W10 미수행이면 재개 포기** |
+| W9 | 바이패스 스모크 | +133분 | **G3를 이미 넘는다** |
+| W11 | 재개방·기록 | +163분 | |
+
+**"+2시간에 롤백 판단으로 전환"을 그대로 두면 겨냥이 어긋난다.** +120분의 계획 위치가 **W9**이고,
+W9 실패는 원래 롤백 트리거가 아니라 "유지보수 유지 + 조사"이기 때문이다(§3.2 W9 실패 시,
+§6.0.3 W9 표). 되돌릴 수 없는 지점은 그보다 **42분 앞(+78분)** 에서 이미 지나간다.
+→ **+2시간은 뜻을 바꿔 G3로 유지하고, 실제로 판단이 필요한 자리에 G1·G2를 세웠다** (§6.0.2).
+
+**복원 시간이 판단 전환을 앞당기지는 않는다.** 리허설 실측으로 §6.3의 DB 작업은
+**로컬 4.4초**, 운영 보정 후에도 **6~14분** `[추정]`이다 (§6.0.4·§6.5.5).
+전체 복원 26~34분의 대부분은 **보고·승인·검증**이며, 그래서 컷오프가 +85분(G2)으로
++120분에서 25분만 앞당겨진다.
+
 **남은 압축 여지는 W9뿐이다.** 상한을 넘길 조짐이 보이면 W9 항목 1·3(인증 단일 게임, 그룹 방 생성)만
-창 안에서 하고 항목 2·4·5·6은 유지보수 해제 후로 미룬다 — 단 이 판단은 창 안에서 즉흥적으로 하지 않고
-P11 합의에 포함한다. **W7은 축소하지 않는다.** 부분 적용 여부를 판정하는 단계다.
+창 안에서 하고 항목 2·4·5·6은 유지보수 해제 후로 미룬다. **이 판단은 G3가 대신한다** —
++120분에 W10을 포기하고 남은 것을 창 밖으로 넘기므로, 창 안에서 W9 축소를 즉흥 판단할 필요가 없다.
+**W7은 축소하지 않는다.** 부분 적용 여부를 판정하는 단계다.
+
+#### 3.3.2 실측 앵커 (2026-08-27 로컬 리허설 `[산출물]`)
+
+위 표의 값은 여전히 `[추정]`이다. 다만 이제 **로컬 실측 앵커**가 있다. 전문은 §6.5.5.
+
+| 구간 | 계획 `[추정]` | 로컬 실측 | 비고 |
+|---|---|---|---|
+| W2 (덤프) | 10~20분 | 덤프 4종 **13.5초** | 계획값의 대부분은 §4.4 육안 검증 시간이다 |
+| W2.5 (삭제) | 15분 | 삭제 SQL **0.38초** (120방 + CASCADE 840행) | 계획값의 대부분은 측정·승인 시간이다 |
+| W5 (dry-run) | 3분 | **2.35초** | |
+| W6 (push) | 최대 20분 | 11개 성공 **5.97초** | 사용자 제시 상한을 그대로 둔다 — 운영은 네트워크·공유 CPU다 |
+| §6.3 (전체 복원) | (없었음) | **4.4초** | 새로 측정. §6.0.4에서 운영 6~14분으로 보정 |
+
+**계획 시간을 낮추지 않는다.** 로컬은 localhost·전용 CPU이고 운영은 네트워크·무료 요금제
+공유 인스턴스다 `[외부]`. 실측은 **상한이 비현실적이지 않은지 확인하는 용도**이지 단축 근거가 아니다.
 
 ---
 
@@ -686,6 +751,52 @@ hardening의 `validate`가 생략되고 (F15), 다음 세 가지가 따라온다
 
 ### 5.3 절차
 
+#### 5.3-0 먼저 — 삭제를 건너뛰면 W6가 실패한다 (2026-08-27 실측)
+
+**§5.1의 "migration은 실패하지 않는다"는 #9까지만 참이다.** 10번째
+`20260814113000_group_final_gaps_v13_hardening`은 **자기가 붙인 `NOT VALID` 제약이 걸린 행을
+스스로 UPDATE한다** — `private.reconcile_group_host_v13`가
+`update public.game_rooms set host_user_id = ..., state_version = state_version + 1`을 실행한다
+(`20260814113000:150-155` `[코드]`). `NOT VALID` 제약도 UPDATE에는 행 단위로 강제되므로(§5.1-2)
+그 순간 `SQLSTATE 23514`로 실패하고 **9개만 적용된 채 멈춘다.**
+
+로컬 리허설에서 재현했고, 삭제를 수행한 뒤에는 11개 전부 적용됐다 (§6.5.3 `[산출물]`).
+
+**실패를 유발하는 것은 위반 행 전부가 아니라 `host` 참조가 끊긴 위반 행뿐이다.**
+운영 SQL Editor에서 **삭제 전에** 이 값을 먼저 측정한다 — 읽기 전용이다.
+
+```sql
+-- W6 #10을 실패시키는 행 수. 0이면 삭제를 건너뛰어도 #10은 통과한다
+select count(*) as w6_blocking_rows
+from public.game_rooms room
+where room.mode = 'group'
+  and room.status <> 'waiting'
+  and not (
+    room.min_players between 3 and 8
+    and room.max_players between room.min_players and 8
+    and room.finish_rank_limit = 3
+    and room.use_items = false
+  )
+  and (
+    (room.host_user_id is null
+     and exists (select 1 from public.room_players p where p.room_id = room.id))
+    or
+    (room.host_user_id is not null
+     and not exists (select 1 from public.room_players p
+                     where p.room_id = room.id and p.user_id = room.host_user_id))
+  );
+```
+
+**이 쿼리는 근사가 아니라 정확하다.** 실제 `do` 블록은 `player_status <> 'retired'`로 한 번 더
+거르지만 `player_status`는 #2(`20260807003609:37`)가 추가하며 기존 행을
+`waiting`/`playing`/`finished` 중 하나로만 backfill한다 — **`retired`는 생기지 않는다** `[코드]`.
+(`player_status` 컬럼은 W6 이전 운영에 **없으므로** 이 쿼리에서 빼는 것이 맞다.)
+
+| 측정값 | 뜻 |
+|---|---|
+| `w6_blocking_rows > 0` | **삭제는 선택이 아니다.** 건너뛰면 W6가 #10에서 실패한다 |
+| `w6_blocking_rows = 0` | 삭제를 건너뛰어도 W6는 통과한다. 대신 제약이 영구히 `NOT VALID`로 남는다 (§5.1의 3가지 결과). 수용 여부는 P10에서 정한다 |
+
 **(1) 측정 — 저장소의 읽기 전용 preflight를 그대로 쓴다 (F16)**
 
 `supabase/tests/group_final_gaps_v13_hardening_preflight.sql`을 운영 SQL Editor에서 실행한다.
@@ -803,6 +914,153 @@ W2 데이터 덤프에 삭제된 행이 그대로 있다. 복원 방법은 §6.4
 
 ## 6. 롤백 절차
 
+### 6.0 롤백 판단 기준 (P11 — 확정)
+
+**창 중에 이 절만 펼치면 판단이 끝나도록 쓴다.** W6·W7·W9의 "실패 시" 항목이 전부 이 절을 가리킨다.
+
+확정: 사용자 결정 2026-08-27. 등급표의 근거는 2026-08-27 로컬 복원 리허설 `[산출물]`이며 전문은 §6.5에 있다.
+
+#### 6.0.1 확정 원칙 4가지
+
+| # | 원칙 | 근거 |
+|---|---|---|
+| R1 | **W6 중간 실패 시 즉흥 수정 금지.** 실패한 migration을 창 안에서 손으로 고쳐 이어서 push하지 않는다. 수정은 로컬 재현·검증을 거쳐 **다음 창**으로 넘긴다 | 사용자 결정 (2026-08-27). 창 안에서 고치면 로컬과 운영이 영구히 갈라지고, 그 뒤로는 `db push`가 근거를 잃는다. `AGENTS.md` §3·§4(forward-only, 감사 전 변경 금지)와 같은 방향이다 |
+| R2 | **시각 기준을 둔다.** §6.0.2의 게이트 3개를 쓴다 | 사용자 결정 (2026-08-27) — 창 시작 +2시간. §6.0.2에서 실측 복원 시간을 반영해 게이트를 3개로 분리했다 |
+| R3 | **롤백 후 프론트는 유지보수 게이트를 켠 채 유지한다. `main`을 `e6d8eee`로 force push 하지 않는다** | 사용자 결정 (2026-08-27). 이력 보존, 실사용자 사실상 없음(최종 플레이 2026-08-04 `[실측]`). **→ §6.3의 5번 단계를 폐기한다** |
+| R4 | **W6 이후 부분 롤백은 선택지가 아니다.** W6를 지난 뒤의 되돌림은 **전체 복원 하나뿐**이다 | W2.5 삭제분은 정의상 새 CHECK 제약을 위반하는 행이고, `NOT VALID` 제약도 INSERT에 **행 단위로 강제**된다 (§5.1-2). 승인 여부와 무관하게 기술적으로 불가능하다. **단 전체 복원의 실행은 승인 사안이다** — 트리거 충족은 자동 실행이 아니라 **보고 → 승인 → 실행** 순서다 (`AGENTS.md` §1) |
+
+> **R4의 범위 주의.** "부분 롤백 불가"는 **데이터를 되돌리는 것**에 대한 서술이다.
+> W6 자체의 실패는 파일 단위로 깨끗하게 멈춘다(§6.0.3 머리말) — 그 둘은 다른 이야기다.
+
+#### 6.0.2 시각 게이트 3개
+
+사용자 결정은 **창 시작 +2시간**이었다. 실측 복원 시간을 넣어 보니 그 한 점만으로는 판단이 서지 않는다.
+**+2시간 시점의 계획 위치가 W9**이기 때문이다 (§3.3 누계: W8 종료 +103분, W9 종료 +133분).
+W9 실패는 원래 롤백 트리거가 아니라 "유지보수 유지 + 조사"다 (§3.2 W9 실패 시). 즉 +2시간 단일 기준은
+**롤백이 답이 아닌 구간에서 발화한다.** 그래서 **+2시간은 유지하되 뜻을 바꾸고, 앞에 게이트 2개를 세운다.**
+
+| 게이트 | 시점 | 조건 | 행동 |
+|---|---|---|---|
+| **G1 — W6 진입 컷오프** | **창 시작 +60분** | 이 시점까지 **W5가 끝나지 않았다** | **W6를 시작하지 않는다.** W5에서 창을 닫는다. 손해는 창 시간·main 배포 사실·W2.5 삭제분뿐이고 운영 스키마는 한 글자도 바뀌지 않았다 (§2.2). W2.5를 했다면 §6.4로 되돌린다 |
+| **G2 — 전체 복원 개시 컷오프** | **창 시작 +85분** | W6 실패가 **이 시점 이후**에 확정됐다 | **자동으로 복원하지 않는다.** (a) 창을 연장해 복원할지 (b) 유지보수 게이트를 켠 채 창을 닫고 복원을 창 밖으로 넘길지를 **명시적으로 정한다.** 근거: 전체 복원에 **최대 34분**이 든다 `[추정]` (§6.0.4) → +85분을 넘기면 +2시간 안에 끝나지 않는다 |
+| **G3 — 서비스 재개 포기 시점** | **창 시작 +120분 (= 사용자 결정 +2시간)** | W10이 아직 수행되지 않았다 | **재개를 포기한다.** 유지보수 게이트를 **켠 채** 창을 닫고, W9 잔여 항목과 W10을 창 밖으로 넘긴다. DB는 이미 신버전이므로 구버전 프론트로 되돌리지 않는다 (§3.2 W10 실패 시) |
+
+**G1이 +60분인 이유:** §3.3 상한 누계로 W5 종료가 +58분이다. +60분은 계획 경계 그 자체이며 여유를
+얹은 값이 아니다. 이 시점에 W5에 못 갔다면 이미 계획 밖이고, 그 상태로 **되돌릴 수 없는 지점을
+넘을 이유가 없다.**
+
+**G2가 +85분인 이유:** +120분 − 복원 상한 34분 = +86분 → 안전하게 **+85분**으로 둔다.
+34분의 내역은 §6.0.4에 있다. 계획상 W6 종료가 +78분이므로 **여유는 7분뿐이다.**
+
+> **여유가 7분이라는 것이 이 계산의 핵심 결과다.** W6가 상한(20분)까지 걸리면
+> **전체 복원을 창 안에서 끝낼 여지가 거의 없다.** G2는 W7이 진행 중인 시각(+78~+93분)에
+> 걸리므로, **W7에서 부분 적용을 발견해 롤백 등급이 나오는 경우는 이미 G2를 지났을 가능성이 높다.**
+> 그때는 자동 복원이 아니라 §6.0.2 G2의 (a)/(b) 선택으로 간다 — 이것이 G2를 둔 이유다.
+
+> **G1~G3은 시계일 뿐 트리거가 아니다.** 무엇을 근거로 롤백하는지는 §6.0.3의 등급표가 정한다.
+> 시계와 등급이 충돌하면(예: +50분에 W6 #7 실패) **등급이 우선한다.**
+
+#### 6.0.3 단계별 트리거 등급표
+
+등급은 3개다.
+
+| 등급 | 뜻 | 행동 |
+|---|---|---|
+| **롤백** | 전체 복원을 **제안한다** | 즉시 진행을 멈추고 증거를 보존한 뒤 **보고 → 승인 → §6.3 실행** (R4) |
+| **판단** | 자동으로 정해지지 않는다 | 멈추고 §6.0.5의 판단 입력 4가지를 채워 보고한다. 승인 없이 전진도 복원도 하지 않는다 |
+| **롤백 아님** | 창을 계속한다 | 기록에만 남긴다 |
+
+##### W6 — `db push --linked` 실패 위치별
+
+**전제 (2026-08-27 실측 `[산출물]`): `db push`는 migration 파일 하나를 원자적으로 적용한다.**
+11개 중 10개는 파일 안에 `begin;`/`commit;`이 있고 `20260814093000_server_authority_cutover_v2`
+**하나만 없다** `[코드]`. 그럼에도 begin/commit이 없는 파일로 프로브를 돌린 결과
+**실패 앞 문장까지 전부 롤백됐다** — CLI가 파일 단위 트랜잭션을 보장한다 `[산출물]`.
+→ **적용 경계는 항상 깨끗한 파일 경계다.** "반쯤 적용된 파일"이라는 상태는 없다.
+따라서 등급은 **실패한 파일 번호만으로** 정해진다.
+
+| 실패 위치 | 파일 | 등급 | 근거 |
+|---|---|---|---|
+| **#1~#3** | `20260804004535` phase1<br>`20260807003609` phase2a<br>`20260813072952` phase2c | **롤백** | 이 3개는 **운영이 baseline과 같다는 전제 위에서만** 성립한다. 실패는 그 전제(4개 축 차이 0건, §5.1-1)가 깨졌다는 뜻이므로 이후 8개의 성공 예측이 전부 무효가 된다. 계속 밀어붙일 근거가 없다 |
+| **#4~#6** | `20260814090000` server_authority_v2<br>`20260814091000` server_authority_rpc_v2<br>`20260814092000` duel_authority_v2 | **판단** | 이 3개는 **추가만 한다** — 새 테이블·새 함수. 삭제·권한 회수가 없다. 실패 시 DB는 "baseline + 일부 신규 객체"이고 legacy RPC가 **살아 있다.** 되돌리지 않고 창을 닫아도 운영은 구버전 계약대로 동작한다. 복원과 전진 중 어느 쪽도 강제되지 않는다 |
+| **#7** | `20260814093000` server_authority_cutover_v2 | **롤백** | **유일한 파괴적 migration이다** — legacy RPC `finish_group_player`·`update_group_progress`를 DROP하고 `anon`·`authenticated` 직접 쓰기를 REVOKE한다 (§2.1-2). 원자성이 보장되므로 실패해도 효과는 남지 않지만, **이 파일이 실패했다는 것 자체가 운영 권한 상태가 예상과 다르다는 신호**다. 뒤의 4개(#8~#11)는 전부 이 cutover가 성립한 뒤를 가정한다 |
+| **#8~#9** | `20260814094000` duel_item_authority_v2<br>`20260814103000` group_final_gaps_v13 | **판단** | #7이 이미 성공했으므로 legacy RPC는 사라졌고 **구버전 계약으로 되돌아갈 수 없다.** 그러나 신규 RPC 계약은 #7까지로 이미 성립한다. 남은 것은 Packet 13 기능이다. "복원" vs "기능 일부 없이 개방" 판단 |
+| **#10** | `20260814113000` group_final_gaps_v13_hardening | **판단** | **W2.5를 건너뛰면 여기서 실패한다** — 2026-08-27 실측으로 재현했다 (§6.5-3). 실패 시 상태는 `NOT VALID` 제약 1개만 존재, `game_rooms_non_group_host_required_v13_check` 부재, host 정합성 보정 미수행. **원인이 "W2.5 미수행"으로 확인되면 복원이 아니라 창을 닫고 다음 창에서 W2.5부터 다시 하는 쪽이 싸다** — #1~#9는 재적용할 필요가 없다 |
+| **#11** | `20260814123000` group_spectator_emoji_atomicity_fix | **롤백 아님** | 관전 이모티콘 원자성 보정 하나다. 없어도 나머지 전부가 동작한다. 창을 닫고 다음 창에서 이 1개만 적용한다 |
+
+> **사용자 초안 대비 변경 2건과 근거**
+>
+> 1. 초안은 "4~11번 실패 → 판단"이었다. **#7을 판단에서 롤백으로 올린다.** #7만이 파괴적이고
+>    (DROP FUNCTION + REVOKE), #8 이후 전부가 #7 성립을 전제하기 때문이다 (§2.1-2 `[코드]`).
+> 2. 초안은 #11도 판단이었다. **#11을 롤백 아님으로 내린다.** 단일 기능 보정이고 다른 파일과
+>    의존이 없다 (`20260814123000` `[코드]`).
+>
+> 또한 초안이 전제한 "부분 적용 범위 확인"은 **파일 경계로 확정된다** — 위 원자성 실측 덕분에
+> 창 안에서 범위를 추정할 일이 없다. 확인 명령은 `npx supabase migration list --linked` 하나다.
+
+##### W7 — 적용 결과 검증, 불일치 항목별
+
+| 불일치 | 등급 | 근거 |
+|---|---|---|
+| **`public` 함수 수 ≠ 36** | **롤백** | `db push`가 exit 0인데 함수 수가 다르면 W6 성공 판정 자체가 거짓이다. 어떤 파일이 어디까지 반영됐는지 알 수 없다는 뜻이므로 W6 등급표로는 판단할 수 없다 |
+| **legacy RPC 2개가 `null`이 아니다** | **롤백** | #7이 반영되지 않았는데 이력에는 적용으로 남아 있다는 뜻이다. 위와 같은 사유 |
+| **RLS 불일치** (`group_match_history`·`user_profile_stats`가 `true`가 아니다) | **롤백** | Phase 2C(`20260813072952:765-766` `[코드]`)가 반영되지 않았다는 뜻이다. 이 두 테이블은 잠금 전까지 **정책 없이 노출된다** |
+| **제약이 존재하지 않는다** (`game_rooms_group_limits_v13_check` 또는 `game_rooms_non_group_host_required_v13_check` 부재) | **롤백** | #9 또는 #10 미반영. 위와 같은 사유 |
+| **`convalidated = false`** (제약은 있으나 validate 안 됨) | **판단** | 초안은 "롤백 아님(예상된 상태)"이었다. **수정 제안:** W2.5를 수행했다면 `true`가 정상이다 — 2026-08-27 리허설에서 W2.5 후 두 제약 모두 `convalidated = t`였다 `[산출물]`. 따라서 `false`는 **W2.5가 위반 행을 다 걷어내지 못했다는 신호**이지 예상 상태가 아니다. 다만 기능은 동작하므로(신규 행은 계속 강제된다) 롤백은 아니다. **W2.5를 의도적으로 건너뛴 경우에만 "롤백 아님, 예상된 상태"다** |
+| **publication 멤버십 불일치** | **판단** | 초안 유지. 멤버십은 migration이 바꾸지 않는다 — 2026-08-27 리허설에서 W6 전후 모두 4개로 동일했다 `[산출물]`. 불일치는 migration 밖 원인을 뜻하므로 원인 규명 전에는 등급이 정해지지 않는다. 증상은 Realtime 미전달이며 DB 정합성 문제가 아니다 |
+| **`group_spectator_emoji_rate_limits`가 publication에 있다** | **롤백 아님** | 의도적 미등록이다 (`20260814103000:41-43` 주석 `[코드]`). 있으면 기록에 남기고 창 밖에서 제거한다 |
+| **이력 행 ≠ 12** | **판단** | 12보다 적으면 부분 적용 → W6 등급표로 간다. 많으면 다른 경로로 들어온 이력이므로 §1.2 전제가 깨진다 |
+
+##### W9 — 바이패스 스모크 실패 항목별
+
+**대전제: W9 실패는 기본적으로 롤백 트리거가 아니다.** 유지보수 게이트가 켜져 있어 사용자 영향이 0이고,
+W9가 보는 것은 프론트·Edge Function·RPC 호출 경로다. **DB를 되돌려도 고쳐지지 않는 층이 대부분이다.**
+§3.2 W9의 "실패 시"(W10을 하지 않고 유지보수 상태를 유지한 채 조사)가 모든 항목의 기본값이다.
+
+| 실패 항목 | 등급 | 근거 |
+|---|---|---|
+| **싱글 플레이 불가** | **판단** | 초안은 롤백이었다. **수정 제안:** 싱글 경로는 `single-run` Edge Function(W8)과 `create_single_game_run`·`apply_single_move_v2`(W6)에 걸쳐 있다. **원인이 W8이면 재배포로 끝나고 DB 복원은 무관하다** (§3.2 W8 실패 시). 원인을 W7 축으로 좁힌 뒤에야 등급이 정해진다 |
+| **그룹 방 생성·참가 불가** | **판단** | 초안은 롤백이었다. **수정 제안:** 같은 이유에 더해, 이 경로의 대표적 실패 원인이 **Packet 13 제약 위반**이고 그것은 §5.3 삭제 범위 문제이지 복원 대상이 아니다. `20260814103000:287,336`은 `min_players <> 3` 등에서 예외를 던진다 `[코드]` — 신규 방이 이걸 밟으면 RPC 인자 문제이지 DB 파손이 아니다 |
+| **관전·이모티콘 불가** | **롤백 아님** | 초안은 판단이었다. **수정 제안:** `20260814123000`(#11) 하나에 대응하는 기능이고 다른 경로와 의존이 없다. W6 등급표에서 #11을 "롤백 아님"으로 둔 것과 같은 근거로 내린다 |
+| **스타일 깨짐** | **롤백 아님** | 초안 유지. 운영 DB와 무관하다. §3.2 W1-4의 CSS 비동기 청크 항목과 같은 사안이며 기록 대상이다 |
+| **권한 거부 경로에서 연결이 끊긴다 (SIGSEGV 의심)** | **판단** | 초안에 없던 항목. U6의 관측 대상이 실제로 나타난 경우다 (§9). 복원해도 재현될 수 있으므로(운영 런타임 문제이지 스키마 문제가 아니다) 자동 롤백이 아니다. §8.2-1의 사후 관측으로 넘긴다 |
+
+#### 6.0.4 전체 복원에 드는 시간
+
+로컬 리허설 실측이 앵커다. 운영 값은 전부 `[추정]`이며 근거는 §6.5-5에 있다.
+
+| 항목 | 로컬 실측 `[산출물]` | 운영 `[추정]` |
+|---|---|---|
+| 증거 보존 + 적용 경계 확정 (W6 실패 시 (1)(2)) | — | 5분 |
+| 보고 → 승인 (R4) | — | **사용자 의존.** 최소 5분으로 잡는다 |
+| §6.3-2 비우기 SQL | **0.45초** | 1~3분 |
+| §6.3-3 스키마 덤프 복원 | **1.09초** | 2~5분 |
+| §6.3-3 데이터 덤프 복원 (public 전용) | **0.45초** | 1~3분 |
+| §6.3-4 `migration repair` | **2.41초** | 2~3분 |
+| 복원 검증 (W7 쿼리 재실행) | — | 10분 |
+| **합계** | **약 4.4초** (DB 작업만) | **26~34분** |
+
+**핵심: 복원 자체는 병목이 아니다.** DB 작업은 로컬에서 5초 미만이고, 운영에서 수십 배 느려져도
+분 단위다. **시간을 쓰는 것은 보고·승인·검증이다** — 26~34분 중 DB 작업은 6~14분뿐이다.
+
+#### 6.0.5 "판단" 등급에서 보고할 입력 4가지
+
+판단 등급에서는 아래를 채워 보고한다. 창 안에서 추측으로 채우지 않는다 (`AGENTS.md` §5).
+
+1. **적용 경계** — `npx supabase migration list --linked` 출력 전문. 파일 경계로 확정된다 (§6.0.3 머리말).
+2. **실패 전문** — 실패 파일명, SQLSTATE, `At statement: N`, 에러 메시지 전문.
+3. **현재 운영 상태** — §3.2 W7의 6개 쿼리 결과. 함수 수·legacy RPC·제약·RLS·publication·이력.
+4. **경과 시각** — 창 시작으로부터 몇 분인지. §6.0.2의 어느 게이트 구간인지.
+
+#### 6.0.6 이 절이 바꾼 기존 서술
+
+| 위치 | 기존 | 변경 |
+|---|---|---|
+| §3.2 W6 "실패 시" (3) | "복원과 전진(보정 migration 추가) 중 어느 쪽인지 결정" | **전진 = 창 안 즉흥 보정은 금지다 (R1).** 선택지는 "복원" 또는 "창을 닫고 다음 창"이다 |
+| §3.2 W2.5 "실패 시" | "삭제를 하지 않고 W6로 갈 수 있다 — migration은 실패하지 않는다 (F15)" | **틀렸다. §5.3-0 참조** — 삭제를 건너뛰면 #10이 실패한다 (2026-08-27 실측) |
+| §6.3 5번 단계 | "`main`을 `e6d8eee`로 되돌리고(force push) 유지보수 게이트를 해제한다" | **폐기 (R3).** 게이트를 켠 채 유지하고 force push 하지 않는다 |
+| §3.3 "남은 압축 여지는 W9뿐" | W9 축소 판단을 P11 합의에 포함 | **G3(+120분)로 대체한다.** 창 안에서 W9를 축소할지 고민하지 않고, +120분에 W10을 포기하고 남은 것을 창 밖으로 넘긴다 |
+
 ### 6.1 원칙 — 덤프 복원이 유일한 수단이다
 
 - **down migration이 존재하지 않는다.** 11개 파일 전부 forward-only다
@@ -820,23 +1078,186 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 ### 6.3 W6 이후 — 전체 복원
 
 이것은 **최후 수단**이며, 실행하면 창 중 들어온 모든 쓰기가 사라진다.
+실행 조건과 등급은 §6.0이 정한다. **트리거 충족은 자동 실행이 아니다 — 보고 → 승인 → 실행이다** (R4).
 
-1. 유지보수 게이트를 켠 상태를 유지한다(또는 다시 켠다).
-2. 운영 `public` 스키마를 비운다. **이 단계에 저장소가 제공하는 명령이 없다.**
-   `drop schema public cascade; create schema public;` 계열의 수동 SQL이 필요하고,
-   그 SQL은 이 문서에 없다 — 실행 시점에 별도 승인·리뷰 대상으로 작성한다.
-   `supabase_migrations.schema_migrations`도 함께 비운다(덤프에 없으므로 §4.2-2).
-3. 스키마 덤프 복원 → 데이터 덤프 복원. 순서를 바꾸면 FK가 깨진다.
-   데이터 덤프는 `SET session_replication_role = replica;`로 트리거를 끈 상태를 전제한다 `[산출물]`.
-4. `migration repair --status applied 20260730170602 --linked`를 **다시** 실행한다.
-   이력은 백업되지 않았다 (§4.2-2).
-5. `main`을 `e6d8eee`로 되돌리고(force push) 유지보수 게이트를 해제한다.
-   구버전 프론트 + baseline DB 조합으로 복귀한다.
-6. Edge Function은 되돌리지 않는다. `wiki-snapshot`·`single-run`은 baseline DB에서 실패하지만
-   구버전 프론트가 호출하지 않는다. **`--prune`을 쓰지 않았으므로 `target-level`은 그대로 있다** (W8).
+**이 절차는 2026-08-27에 로컬 스택에서 리허설했다.** 아래 SQL·순서·시간은 그 실측 결과다.
+리허설 전문·한계는 §6.5에 있다.
 
-**이 절차는 리허설되지 않았다.** 2번 단계의 SQL이 확정되지 않았고, 복원 소요 시간도 `[추정]`조차 없다.
-→ §9 미결정 항목에 넣었다.
+#### 6.3.1 순서
+
+| # | 단계 | 명령 | 로컬 실측 `[산출물]` |
+|---|---|---|---|
+| 1 | 유지보수 게이트가 켜져 있는지 확인 (또는 다시 켠다) | Vercel `VITE_MAINTENANCE=true` + 재배포 (F11) | — |
+| 2 | **복원 대상 스키마 비우기** | §6.3.2의 SQL | **0.45초** |
+| 3a | **스키마 덤프 복원** | `psql -v ON_ERROR_STOP=1 -f prod-schema-<stamp>.sql` | **1.09초** |
+| 3b | **데이터 덤프 복원 — `public`만** | §6.3.3 참조. `psql -v ON_ERROR_STOP=1 -f prod-data-public-<stamp>.sql` | **0.45초** |
+| 4 | migration 이력 재기록 | `npx supabase migration repair --status applied 20260730170602 --linked` | **2.41초** |
+| 5 | ~~`main`을 `e6d8eee`로 force push~~ | **폐기 (R3)** — 게이트를 켠 채 유지한다 | — |
+| 6 | Edge Function은 되돌리지 않는다 | `--prune`을 쓰지 않았으므로 `target-level`은 그대로 있다 (W8) | — |
+| 7 | **복원 검증** | §3.2 W7의 6개 쿼리를 다시 돌려 baseline 값(테이블 14 / 함수 7 / 이력 1행)과 대조 | — |
+
+3a → 3b **순서를 바꾸지 않는다.** 데이터 덤프는 `SET session_replication_role = replica;`로
+시작해 트리거·FK 검사를 끈 상태를 전제한다 `[산출물]`. 로컬 `postgres` 롤이 이 설정을 바꿀 수
+있음은 확인했다 `[산출물]`. 운영의 관리형 `postgres` 롤도 같은지는 **확인 필요** — 다만 이 문장은
+CLI가 만든 덤프 자신의 첫 줄이므로 Supabase가 상정한 복원 경로다 `[외부]`.
+
+#### 6.3.2 확정된 비우기 SQL (2단계)
+
+리허설에서 **post-W6 상태(테이블 21 / `public` 함수 36 / `private` 함수 10)에 두 번 실행해
+둘 다 잔존 객체 0으로 끝났다** `[산출물]`.
+
+```sql
+-- ============================================================================
+-- CUTOVER-PLAN §6.3 2단계 — 복원 대상 스키마 비우기
+-- 실행: psql -v ON_ERROR_STOP=1 -f wipe-public.sql
+-- 전제: 이 SQL 직후에 W2 스키마 덤프 → 데이터 덤프(public 전용)를 복원한다
+-- ============================================================================
+
+\set ON_ERROR_STOP on
+
+-- [1] 사전 확인 — 무엇이 사라지는지 눈으로 본 뒤 진행한다
+select n.nspname as schema,
+       count(*) filter (where c.relkind = 'r') as tables,
+       count(*) filter (where c.relkind = 'v') as views
+from pg_namespace n left join pg_class c on c.relnamespace = n.oid
+where n.nspname in ('public', 'private') group by 1 order by 1;
+
+select n.nspname as schema, count(*) as functions
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname in ('public', 'private') group by 1 order by 1;
+
+select count(*) as migration_history_rows from supabase_migrations.schema_migrations;
+
+-- [2] 비우기
+begin;
+
+-- public: 덤프가 CREATE SCHEMA를 내지 않으므로 여기서 다시 만든다
+drop schema if exists public cascade;
+
+-- private: 20260813072952(Phase 2C)가 만드는 스키마다. public을 cascade drop해도
+-- public 객체를 참조하지 않는 함수는 살아남는다 (로컬 실측: 10개 중 7개 잔존).
+-- 스키마 덤프는 private를 제외 목록에 넣지 않으므로 CREATE SCHEMA IF NOT EXISTS "private"와
+-- 함수 전체를 담는다 → 여기서 지우고 덤프가 복원하게 둔다.
+drop schema if exists private cascade;
+
+create schema public;
+-- 덤프가 담지 않는 스키마 수준 속성 2가지를 여기서 복원한다.
+--   owner : 덤프에 ALTER SCHEMA "public" OWNER TO 가 없다
+--   PUBLIC 롤 USAGE : 덤프의 GRANT는 postgres/anon/authenticated/service_role 4개뿐이다
+-- (COMMENT ON SCHEMA "public"과 ALTER DEFAULT PRIVILEGES 12행은 덤프가 담는다)
+alter schema public owner to pg_database_owner;
+grant usage on schema public to public;
+
+-- migration 이력: 어느 덤프에도 없다 (§4.2-2). 비워야 복원 후 repair가 baseline 한 행만 남긴다
+do $$
+begin
+  if to_regclass('supabase_migrations.schema_migrations') is not null then
+    delete from supabase_migrations.schema_migrations;
+  end if;
+end
+$$;
+
+commit;
+
+-- [3] 사후 확인 — 5개 값이 모두 기대치여야 복원으로 넘어간다
+select nspname, pg_get_userbyid(nspowner) as owner, array_to_string(nspacl, ',') as acl
+from pg_namespace where nspname in ('public', 'private');
+-- 기대: public 1행만. owner = pg_database_owner,
+--       acl = pg_database_owner=UC/pg_database_owner,=U/pg_database_owner
+--       private 행은 없어야 한다
+
+select count(*) as remaining_objects
+from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname in ('public', 'private');            -- 기대 0
+
+select count(*) as remaining_functions
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname in ('public', 'private');            -- 기대 0
+
+select count(*) as migration_history_rows
+from supabase_migrations.schema_migrations;          -- 기대 0
+
+select count(*) as realtime_publication_members
+from pg_publication_tables where pubname = 'supabase_realtime';   -- 기대 0 (덤프가 4로 되돌린다)
+```
+
+**설계 근거 4가지 (전부 2026-08-27 실측 `[산출물]`)**
+
+| # | 사실 | 그래서 SQL이 하는 일 |
+|---|---|---|
+| 1 | `drop schema public cascade`는 **`private` 스키마의 함수 10개 중 3개만 끌고 간다.** `public` 타입을 참조하지 않는 7개(`normalize_wiki_title`, `reconcile_group_host_v13`, `sync_group_records` 등)는 **살아남는다** | `drop schema if exists private cascade`를 추가했다. 스키마 덤프가 `CREATE SCHEMA IF NOT EXISTS "private"`와 함수 전체를 담으므로 지워도 복원된다 |
+| 2 | 덤프에 **`CREATE SCHEMA "public"`도 `ALTER SCHEMA "public" OWNER TO`도 없다.** `public` 소유자는 `pg_database_owner`다 | `create schema public` + `alter schema public owner to pg_database_owner` |
+| 3 | 덤프의 `GRANT USAGE ON SCHEMA "public"`은 **postgres/anon/authenticated/service_role 4행뿐**이고 `PUBLIC` 롤 항목(`=U`)이 없다 | `grant usage on schema public to public` |
+| 4 | `supabase_realtime` publication은 스키마 밖 객체라 **drop에 살아남고**, 테이블이 사라지면서 멤버십만 비워진다. 덤프의 `ALTER PUBLICATION ... ADD TABLE` 4행이 되돌린다 | 별도 처리 불필요. 사후 확인에서 0을 기대값으로 둔다 |
+
+> **`public` 밖은 건드리지 않는다.** 리허설에서 `auth`·`storage`·`realtime`·`extensions`·`vault`·
+> `supabase_functions` 테이블/함수 수, event trigger 6개, publication 2개, 롤 16개를 실행 전후로
+> 대조해 **차이 0건**이었다 `[산출물]`. `auth`·`storage` 트리거가 `public` 함수를 참조하지 않음도
+> 확인했다 — 그래서 cascade가 인증을 조용히 망가뜨리지 않는다.
+
+#### 6.3.3 데이터 덤프는 `public`만 복원한다 — **§6.3의 가장 큰 수정**
+
+**기존 서술("데이터 덤프 복원")대로 하면 실패한다.** 리허설에서 재현했다 `[산출물]`.
+
+- §4.2 데이터 덤프는 `public`뿐 아니라 **`auth`·`storage` 데이터도 담는다** (F4).
+- §6.3 2단계는 **`public`만 비운다.** `auth`·`storage`는 W6가 건드리지 않았으므로 비울 이유도 없다.
+- 따라서 전체 데이터 덤프를 복원하면 **이미 있는 `auth` 행과 PK가 충돌한다.**
+  실측 결과: `ERROR: duplicate key value violates unique constraint "audit_log_entries_pkey"`,
+  `psql` 종료 코드 3, **`public` 복원 행 0** — `auth` 블록이 파일 앞쪽에 있어 public까지 가지도 못한다.
+- `SET session_replication_role = replica`는 **트리거·FK만 끄고 PK/UNIQUE는 끄지 못한다.**
+
+**해결 — 둘 중 하나. (a)를 권장한다.**
+
+**(a) W2에서 `public` 전용 데이터 덤프를 하나 더 뜬다** (권장)
+
+```powershell
+# §4.3에 추가. 기존 2종은 그대로 두고 3번째를 더 뜬다
+npx supabase db dump --linked --data-only --use-copy --schema public -f ".\backup\prod-data-public-$stamp.sql"
+```
+
+- `--schema public`은 `2.114.0`에 존재한다 `[산출물]`. `pg_dump --schema "public"`으로 내려간다.
+- 전체 덤프는 **버리지 않는다.** `auth.users` 145행의 유일한 백업이며(§4.2-1), 계정 유실 시 그쪽을 쓴다.
+- 리허설에서 이 덤프는 `COPY "public"` 블록 14개 + `public` 시퀀스 `setval` 1개를 담았고
+  `auth` 블록은 0개였다 `[산출물]`.
+
+**(b) 이미 뜬 전체 덤프에서 `public`만 잘라낸다** (W2에서 (a)를 잊었을 때)
+
+```awk
+# slice-public.awk — 전체 데이터 덤프에서 public 이외 스키마의 COPY 블록과 setval만 제거한다.
+# 나머지(preamble의 SET 문, 주석, RESET ALL)는 그대로 통과시킨다.
+# COPY 블록 종료는 단독 종료행뿐이다 — 데이터 행이 --로 시작할 수 있으므로 주석을 지우지 않는다.
+BEGIN { TERM = sprintf("%c.", 92); mode = 0 }
+mode == 1 { print; if ($0 == TERM) mode = 0; next }          # public COPY 본문: 통과
+mode == 2 { if ($0 == TERM) mode = 0; next }                 # 비-public COPY 본문: 제거
+index($0, "COPY \"public\".") == 1 { print; mode = 1; next }
+index($0, "COPY \"") == 1 { mode = 2; next }
+index($0, "setval") > 0 && index($0, "\"public\".") == 0 { next }
+{ print }
+```
+
+```powershell
+awk -f slice-public.awk .\backup\prod-data-$stamp.sql > .\backup\prod-data-public-$stamp.sql
+```
+
+**검증됨:** 같은 DB에서 (b)의 출력과 (a)의 출력을 대조해 **실행문 차이 0행**이었다
+(차이는 제거된 테이블의 주석 헤더뿐) `[산출물]`.
+
+> **`--exclude`(`-x`)로 auth를 빼는 방법은 쓰지 않는다.** `auth` 테이블이 23개, `storage`가 10개라
+> 열거가 길고 플랫폼이 테이블을 늘리면 조용히 깨진다. `--schema public`이 화이트리스트라 안전하다.
+
+#### 6.3.4 복원되지 않는 것
+
+| 대상 | 복원 여부 | 비고 |
+|---|---|---|
+| `public` 스키마 구조·데이터 | **완전 복원** | 리허설에서 구조 지문·행 수·이력 **차이 0건** (§6.5-4) |
+| `private` 스키마 | **완전 복원** | 스키마 덤프가 담는다 (§6.3.2 근거 1) |
+| `supabase_realtime` publication 멤버십 | **완전 복원** | 덤프의 `ADD TABLE` 4행 |
+| `supabase_migrations.schema_migrations` | **재생성** (복원 아님) | 어느 덤프에도 없다 (F4·§4.2-2). 4단계 `repair`가 **로컬 파일에서** 다시 만든다. 운영에 있던 원본이 아니라 동등물이다 |
+| **`supabase_admin` 소유 default privileges 3행** | **복원 불가** | **새로 확인된 항목.** `drop schema public cascade`가 `pg_default_acl` 항목을 지우는데, 덤프에는 `ALTER DEFAULT PRIVILEGES FOR ROLE "postgres"` 12행만 있고 `supabase_admin` 것은 **0행**이다. 게다가 `postgres` 롤로는 재생성할 수 없다 — `ERROR: permission denied to change default privileges` `[산출물]`. **영향:** `supabase_admin`이 `public`에 새로 만드는 객체에만 걸리는 설정이라 이 앱의 동작에는 영향이 없다(앱 migration은 `postgres`로 실행되고 그쪽 12행은 복원된다). 그러나 **되돌릴 수 없는 플랫폼 설정 드리프트**이며, 필요하면 Supabase 지원을 통해야 한다 |
+| 제약의 **텍스트 표현** | 의미 동일, 표현 다름 | `pg_get_constraintdef` 렌더링이 덤프 왕복에서 괄호 구조만 달라진다(`between`이 평탄화된다). 술어는 같다. 덤프 기반 복원의 고유 성질이다 |
+| `REVOKE`로 소유자 전용이 된 테이블 ACL | 의미 동일, 표현 다름 | `relacl`이 명시값에서 `null`로 돌아간다. 둘 다 "소유자만"이라 효과가 같다 |
+| Edge Function 소스(운영 배포본), Storage 객체 바이너리, Vercel 환경변수, auth 설정 | **복원 대상 아님** | §4.5 그대로 |
+| **W2 덤프 이후 창 중에 들어온 쓰기** | **유실** | §3.1의 수용된 잔여 위험 |
 
 ### 6.4 W2.5 삭제분만 복원
 
@@ -851,6 +1272,197 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 **주의 — 시점이 중요하다.** W6 이후에는 `20260814093000`이 직접 쓰기 권한을 회수한 상태이고,
 `NOT VALID` 제약이 INSERT를 **행 단위로 강제한다** (§5.1-2).
 즉 **W6 이후에는 위반 행을 되돌려 넣을 수 없다.** W2.5 삭제를 되돌리려면 W6 이전에 해야 한다.
+
+---
+
+### 6.5 복원 리허설 기록 (2026-08-27, 로컬)
+
+§9의 미결정 항목 "§6.3 전체 복원의 2번 단계 SQL — 미작성, 복원 리허설 자체가 없다"를 해소한 기록이다.
+
+**환경:** 로컬 스택 `wiki-packet13-r2-clean158`, 이미지 `public.ecr.aws/supabase/postgres:17.6.1.158`,
+CLI `2.114.0`, 기준 커밋 `77094d1`, 2026-08-27 `[산출물]`.
+**운영 DB에는 접근하지 않았다.** `--linked`를 쓴 명령은 하나도 없다.
+
+#### 6.5.1 무엇을 재현했는가
+
+리허설은 §6.3이 실제로 놓이는 상황을 그대로 만들었다 — **W2 시점 상태에서 덤프를 뜨고, W6를
+적용해 되돌릴 수 없는 지점을 넘긴 뒤, 그 상태에서 복원**한다.
+
+| 단계 | 한 일 |
+|---|---|
+| A | 로컬을 **운영 baseline 상태**로 되돌렸다 — `supabase/baseline/remote_schema.sql`(실제 운영 덤프)을 복원해 테이블 14 / 함수 7 / publication 4를 만들었다. 운영 실측(`PROD-SNAPSHOT-2026-08-20.md` §2·§9.1, §1.2)과 일치한다 |
+| A | **운영 비례 데이터를 시드했다** — `auth.users` 145, `profiles` 142, `game_records` 57, `game_rooms` 316(**group 위반 167건 = 실측치와 동일**, 그중 `status <> 'waiting'` 120 / `waiting` 47), `room_players` 632, `room_events` 948, `group_match_results` 414, `match_history` 109, `group_match_history` 453. `public` 합계 **4108행** |
+| A | `migration repair --status applied 20260730170602 --local` → 이력 1행, `statements` **250개** (W4 기대값과 일치) |
+| B | **W2 덤프 4종**을 떴다. §4.4 검증 4항목 전부 통과 |
+| C | **W6를 적용했다** (`db push --local`) |
+| D | **§6.3 전체 복원을 실행했다** |
+| E | **W2.5 반사실 검증** — 삭제를 한 경우와 안 한 경우를 각각 돌렸다 |
+| F | **로컬을 실험 전 상태로 원복했다** |
+
+#### 6.5.2 W2 덤프 검증 (§4.4 4항목)
+
+| # | 항목 | 결과 |
+|---|---|---|
+| 1 | 스키마 덤프의 `CREATE TABLE` | **14** — 운영 `public` 테이블 수와 일치 |
+| 2 | 스키마 덤프의 `^GRANT` 행 수 | **70** — `supabase/baseline/remote_schema.sql`의 70행과 **정확히 일치** |
+| 2 | `ALTER PUBLICATION "supabase_realtime" ADD TABLE` | **4** — §1.2 실측과 일치 |
+| 3 | 데이터 덤프의 `auth.users` COPY 블록 | **존재** (F4 확인) |
+| 4 | 파일 종료 | `RESET ALL;` 정상 종료 |
+
+> **P7(U5)에 대한 참고.** 이 70행 일치는 **로컬 baseline 파일끼리의 일치**이지 운영 대조가 아니다.
+> P7은 여전히 미완이며 W-1 리허설 덤프로만 해소된다. 다만 **덤프 명령이 GRANT 70행을 그대로
+> 실어 나른다는 것(F3)은 이번에 실측으로 확인됐다.**
+
+#### 6.5.3 W6에서 나온 사실 2건 — **계획 수정 사유**
+
+**(1) `db push`는 migration 파일을 원자적으로 적용한다.**
+
+11개 중 `20260814093000_server_authority_cutover_v2` 하나만 `begin;`/`commit;`이 없다 `[코드]`.
+begin/commit 없는 파일에 일부러 실패 문장을 넣은 프로브를 별도 workdir로 돌린 결과
+(`db push --db-url <local> --workdir <temp>`), **실패 앞의 `create table` 2개와 `insert` 1개가
+전부 롤백됐다** `[산출물]`. → **CLI가 파일 단위 트랜잭션을 보장한다.**
+그래서 §6.0.3의 W6 등급표를 **파일 번호만으로** 세울 수 있다.
+(프로브는 임시 디렉터리에서만 돌렸고 저장소 `supabase/migrations/`는 변경하지 않았다.)
+
+**(2) W2.5를 건너뛰면 W6가 #10에서 실패한다. §3.2 W2.5의 "실패 시" 서술은 틀렸다.**
+
+W2.5 삭제 없이 `db push`를 돌리자 **9개까지 적용되고 10번째
+`20260814113000_group_final_gaps_v13_hardening`이 실패**했다 `[산출물]`.
+
+```
+ERROR: new row for relation "game_rooms" violates check constraint
+       "game_rooms_group_limits_v13_check" (SQLSTATE 23514)
+At statement: 8
+```
+
+**기전:** #9(`20260814103000`)가 제약을 `not valid`로 추가한다. #10의 8번째 문장은
+`private.reconcile_group_host_v13`를 도는 `do` 블록이고, 그 함수는
+`update public.game_rooms set host_user_id = ..., state_version = state_version + 1`을 실행한다
+(`20260814113000:150-155` `[코드]`). **`NOT VALID` 제약도 UPDATE에는 행 단위로 강제되므로**
+(§5.1-2에 이미 적혀 있던 성질) 위반 행을 갱신하는 순간 23514가 난다.
+
+**반사실 확인:** 같은 DB에서 §5.3 (4)의 삭제 SQL을 돌려 120행을 지운 뒤 다시 `db push`하자
+**11개 전부 적용, exit 0**이었다 `[산출물]`. 그리고 W7 성공 판정이 전부 충족됐다 —
+함수 36, legacy RPC 2개 `null`, 이력 12행, publication 4,
+**두 제약 모두 `convalidated = t`**, `group_match_history`·`user_profile_stats` RLS `true`.
+
+→ **F15의 "제약이 `not valid`라서 migration은 실패하지 않는다"는 #9까지만 참이다.**
+#10은 그 제약이 붙은 행을 스스로 UPDATE하므로 예외다. 수정 반영: §5.3-0, §3.2 W2.5.
+
+**실패를 유발하는 행의 정확한 조건.** 위반 행 전부가 아니라 **host 참조가 끊긴 위반 행**만이다.
+창 밖(P10)에서 운영에 다음 읽기 전용 쿼리를 돌려 수를 확인한다.
+
+```sql
+-- W6 #10을 실패시키는 행 수. W2.5 전에 측정한다. 0이면 삭제를 건너뛰어도 #10은 통과한다
+select count(*) as w6_blocking_rows
+from public.game_rooms room
+where room.mode = 'group'
+  and room.status <> 'waiting'
+  and not (
+    room.min_players between 3 and 8
+    and room.max_players between room.min_players and 8
+    and room.finish_rank_limit = 3
+    and room.use_items = false
+  )
+  and (
+    (room.host_user_id is null
+     and exists (select 1 from public.room_players p where p.room_id = room.id))
+    or
+    (room.host_user_id is not null
+     and not exists (select 1 from public.room_players p
+                     where p.room_id = room.id and p.user_id = room.host_user_id))
+  );
+```
+
+**이 쿼리는 근사가 아니라 정확하다.** 실제 `do` 블록은 `player_status <> 'retired'`로 한 번 더
+거르지만, `player_status`는 #2(`20260807003609:37`)가 `default 'waiting'`으로 추가하고
+`waiting`/`playing`/`finished` 중 하나로만 backfill한다 — **기존 행에 `retired`는 생기지 않는다**
+`[코드]`. 그래서 W6 이전 시점의 위 쿼리가 #10 시점의 대상 집합과 같다.
+(`player_status` 컬럼은 W6 이전 운영에 **없다.** 그래서 이 쿼리에서 빼는 것이 맞다.)
+
+#### 6.5.4 복원 결과 — 대조
+
+복원은 **부분 적용 상태(9/11)** 에서 시작했다. 이것이 §6.3이 실제로 놓이는 자리다.
+
+| 대조 축 | 덤프 시점 (W2) | 복원 후 | 판정 |
+|---|---|---|---|
+| 구조 지문 md5 (테이블·컬럼·제약·인덱스·RLS·정책·함수·트리거·시퀀스·ACL·default privileges·publication·소유자 **631행**) | `a806ad9c…09506` | `a806ad9c…09506` | **완전 일치** |
+| `public` 테이블 수 | 14 | 14 | 일치 |
+| `public` 함수 수 | 7 | 7 | 일치 |
+| `public` 행 수 (14테이블 합계) | 4108 | 4108 | **테이블별 전부 일치** |
+| `auth` / `storage` 행 수 | — | — | **손대지 않음** (비우기 대상이 아니다) |
+| migration 이력 | 1행 `20260730170602` / `statements` 250 | 동일 | 일치 |
+| `public` 밖 전역 상태 (스키마별 테이블·함수 수, event trigger 6, publication 2, 롤 16) | — | — | **차이 0건** |
+
+즉 **§6.3은 `public`을 W2 시점으로 정확히 되돌린다.** 되돌리지 못하는 것은 §6.3.4의 표에 있고,
+그중 실질적인 항목은 **`supabase_admin` default privileges 3행 하나뿐**이다.
+
+#### 6.5.5 시간 실측과 운영 환경 보정
+
+**로컬 실측** (Docker, localhost, `public` 4108행 + `auth.users` 145):
+
+| 명령 | 실측 |
+|---|---|
+| §6.3-2 비우기 SQL (post-W6 21테이블/36함수/private 10함수) | **0.45초** |
+| §6.3-3a 스키마 덤프 복원 (41KB, 14테이블/7함수) | **1.09초** |
+| §6.3-3b 데이터 덤프 복원 (public 전용, 701KB, 4108행) | **0.45초** |
+| §6.3-4 `migration repair` | **2.41초** |
+| **§6.3 합계 (DB 작업만)** | **약 4.4초** |
+| W2 스키마 덤프 | 3.28초 |
+| W2 데이터 덤프 (전체) | 3.14초 |
+| W2 데이터 덤프 (public 전용) | 3.98초 |
+| W2 롤 덤프 | 3.11초 |
+| **W2 합계 (4종)** | **약 13.5초** |
+| W2.5 삭제 (120방 + CASCADE 840행) | 0.38초 |
+| W5 `db push --dry-run` | 2.35초 |
+| W6 `db push` 11개 성공 | 5.97초 |
+| W6 `db push` #10 실패까지 (9개 적용) | 3.25초 |
+
+> **`npx supabase` 명령에는 2~3초의 고정 오버헤드가 있다** — 위 표에서 CLI 명령이 전부
+> 3초 안팎인 것은 그 때문이다. 순수 SQL 작업(`psql`)은 전부 1초 미만이다.
+
+**운영(무료 요금제)에서 달라질 수 있는 요인 — 전부 `[추정]`이며 저장소로 확인되지 않는다 `[외부]`**
+
+| 요인 | 방향 | 크기 `[추정]` |
+|---|---|---|
+| **네트워크** | 느려짐 | localhost → 인터넷. 스키마 복원은 약 1500개 DDL 문장을 순차 전송하므로 **왕복 지연에 선형으로 비례한다.** 여기가 가장 큰 배수다 |
+| **공유 CPU** | 느려짐 | 무료 요금제는 공유·버스트 인스턴스다. DDL은 카탈로그 쓰기가 많아 영향을 받는다 |
+| **데이터 크기** | 거의 동일 | 운영 실측 규모(`auth.users` 145, `profiles` 142, `game_records` 57)가 리허설 시드와 같은 자릿수다. **COPY 스트리밍이라 행 수는 병목이 아니다** |
+| **자동 일시정지** | **차단 요인** | 7일 무활동 시 일시정지된다. 정지 상태면 복원 자체가 불가능하고 먼저 복구해야 한다 (P4가 창 당일 확인을 요구하는 이유) |
+| **PITR 부재** | — | 대안이 없다는 뜻. 덤프가 유일한 수단이라는 §4.1 전제 그대로 |
+
+이 요인들을 넣어 §6.0.4에서 **DB 작업 4단계를 6~14분**으로 잡았다. 로컬 4.4초의 **약 100~200배**다.
+보수적으로 크게 잡은 값이며, **실제로는 훨씬 짧을 가능성이 높다.**
+그렇게 잡아도 §6.0.4 합계 26~34분에서 DB 작업은 절반 이하다 — **병목은 보고·승인·검증이다.**
+
+#### 6.5.6 로컬 원복 증거
+
+실험 전 상태(post-migration, 테이블 21 / `public` 함수 36 / 이력 12행)로 되돌렸다.
+
+| 대조 축 | 실험 전 | 원복 후 | 판정 |
+|---|---|---|---|
+| 구조 지문 md5 (631행) | `d742830bd8b3cacb6accc964dc4d0940` | `d742830bd8b3cacb6accc964dc4d0940` | **완전 일치** |
+| 행 수 지문 md5 (`public`·`auth`·`storage` 전 테이블) | `1adf0356f94847acacc827f6d5edf5f3` | 동일 | **완전 일치** |
+| migration 이력 12행 (`statements` 개수 포함) | 250/22/27/64/41/57/14/13/5/37/16/8 | 동일 | **완전 일치** |
+| `public` 밖 전역 상태 | — | — | **차이 0건** |
+| `npm run supabase:preflight` | 11/11 PASS (2026-08-23, `032caba`) | **11/11 PASS** | 일치 |
+| `postmaster` 시작 시각 | `2026-08-23 14:01:28.07022+00` | **동일**, restart 0/0 | **컨테이너 재시작 없음** |
+
+원복 과정에서 **`postgres` 롤로 되돌릴 수 없는 항목 1건**이 나왔고, 이것이 §6.3.4의
+`supabase_admin` default privileges 항목의 근거다. 로컬에서는 `supabase_admin`(superuser)으로
+접속해 복구했으나 **운영에서는 그 경로가 없다.**
+
+저장소 변경은 없었다 — `git status supabase/` 무변경 확인 `[산출물]`.
+
+#### 6.5.7 이 리허설이 증명하지 않는 것
+
+- **운영에서의 동작.** 전부 로컬 실측이다. 운영은 관리형 배포판이고 `postgres` 롤 권한이 다를 수 있다.
+  특히 `drop schema public cascade`와 `set session_replication_role = replica`의 **운영 실행 권한은
+  확인되지 않았다** — 로컬에서는 둘 다 `postgres`로 성공했다 `[산출물]`.
+- **운영 데이터 고유의 실패.** 시드는 운영 규모를 흉내 낸 것이지 운영 데이터가 아니다.
+  §6.5.3의 `w6_blocking_rows` 실측이 필요한 이유다.
+- **P7(GRANT 70행 운영 대조).** 여전히 미완이다 (§6.5.2 주석).
+- **창 중 들어온 쓰기의 유실.** 리허설은 그 상황을 만들지 않았다. §3.1의 수용된 위험 그대로다.
 
 ---
 
@@ -873,12 +1485,13 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 | P7 | [ ] | W-1 리허설 덤프로 GRANT 대조 | §3.2 W-1 성공 판정 | U5 해소 경로 |
 | P8 | [x] | link 대상이 운영인지 확인 | **주 축:** `supabase/.temp/project-ref`의 값 == Vercel `VITE_SUPABASE_URL` 호스트의 project ref. **보조 축:** `supabase/.temp/linked-project.json`의 `name`·`organization_slug`가 Supabase 대시보드의 운영 프로젝트와 일치 | **주 축 일치 확인 — 사용자가 Vercel Production의 `VITE_SUPABASE_URL`과 `supabase/.temp/project-ref`를 직접 대조, 2026-08-21 `[사용자 확인]`.** 값은 식별자이므로 이 문서에 기재하지 않는다. F18. U13 해소 경로 (§9). 보조 축은 해당 필드가 실재함을 확인했다 (2026-08-21 `[산출물]`) |
 | P9 | [ ] | CLI 버전 확인 | `npx supabase --version` == `2.114.0` | F1 |
-| P10 | [ ] | 삭제 범위 사전 합의 | §5.3 (1)(2) 측정치를 보고 삭제를 승인한 상태. 위반 행을 남긴 채 진행할지도 여기서 정한다 | `AGENTS.md` §4 |
-| P11 | [ ] | 롤백 판단 기준 사전 합의 | "W6 N번째 실패 시 복원인가 전진인가"를 미리 정한다 | §2.1·§6.3 — 창 안에서 결정하기에는 판단 폭이 크다 |
+| P10 | [ ] | 삭제 범위 사전 합의 | **§5.3-0의 `w6_blocking_rows`를 먼저 측정한다** — 0보다 크면 삭제는 선택이 아니다. 그 다음 §5.3 (1)(2) 측정치를 보고 삭제를 승인한다. 위반 행을 남긴 채 진행할지도 여기서 정한다 | `AGENTS.md` §4. **판정 기준이 2026-08-27에 바뀌었다** — F15a·§5.3-0 |
+| P11 | [x] | **롤백 판단 기준 사전 합의** | **충족 (2026-08-27).** §6.0에 확정 원칙 4가지(R1~R4), 시각 게이트 3개(G1~G3), W6·W7·W9 단계별 트리거 등급표, 판단 등급 보고 입력 4가지가 들어갔다. 근거가 된 복원 리허설은 §6.5 | 사용자 결정 2026-08-27 (U14) + 로컬 리허설 `[산출물]` (U15). **P11의 전제였던 "복원 절차가 리허설되지 않았다"가 해소됐다** — §6.3이 실측 SQL·시간을 담는다 |
 | P12 | [ ] | 창 기록 파일 준비 | `docs/ops/CUTOVER-LOG-YYYY-MM-DD.md` 틀 | `AGENTS.md` §6 |
 | P13 | [x] | (선택) `npm test`·`npm run build` 커밋 기준 재실행 | **기준 `b24744e`, 2026-08-21 재실행 완료** — `npm test` 142/142 (베이스라인 129 + 게이트 13), `npm run build` 성공 `[산출물]` | `docs/agent/CURRENT.md` §2 `[문서]`가 지적한 "`339fb77` 이후 build 재실행 기록 없음"이 해소됐다 |
 
-**완료: P1·P2·P3·P6·P8·P13 (2026-08-21 확인).** 남은 것은 **P4·P5·P7·P9·P10·P11·P12 7건**이다.
+**완료: P1·P2·P3·P6·P8·P13 (2026-08-21 확인), P11 (2026-08-27 확인).**
+남은 것은 **P4·P5·P7·P9·P10·P12 6건**이다.
 
 - **P1~P3·P13** — 기준 커밋 `b24744e`. 게이트 구현 커밋이 `feat/group-final-gaps`에 들어가
   `origin`에 push됐고 `origin/main`은 무변경(`e6d8eee`)이다. 같은 커밋 기준으로
@@ -888,7 +1501,7 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 - **P6** — `.gitignore:160`의 `backup/`과 `git check-ignore -v backup/`의 반환으로 충족 `[산출물]`.
 - **P8** — 사용자가 Vercel Production 값과 `supabase/.temp/project-ref`를 직접 대조해 일치 확인
   `[사용자 확인]`. 이로써 §9 U13이 해소됐다.
-- **남은 7건의 성격:** P4·P5·P7·P9는 운영·외부 확인이고 P10·P11은 사용자 합의, P12는 파일 준비다.
+- **남은 6건의 성격:** P4·P5·P7·P9는 운영·외부 확인이고 P10은 사용자 합의, P12는 파일 준비다.
   **저장소 안에서 처리할 수 있는 항목은 남아 있지 않다.**
 
 ---
@@ -930,10 +1543,10 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 | U9 | Edge Function 운영 배포 목록, `target-level` 취급 | **부분 확정** | 확정: `target-level`은 로컬 소스가 없다 (F12) → **`--prune` 금지, 이름 명시 배포** (A3). 미확정: 운영에 실제 배포된 함수 전체 목록. 대시보드 Functions 화면에서 읽기 전용 확인 가능 | **막지 않는다.** A3가 사고를 차단한다 |
 | U12 | `repair`의 `schema_migrations` 생성 동작 | **해소 (2026-08-21).** (a)(b)(c) 전부 측정 완료 | 로컬 스택(CLI `2.114.0`, container-158)에서 재현 `[산출물]`. **(a) 테이블이 생성된다 — 스키마 자체가 없어도 스키마까지 만든다.** 두 경우 모두 exit 0. **(b) 행은 정확히 1개**이며 `statements`에 migration SQL 250개가 들어간다. 따라서 **W3 앞 선행 단계 불필요.** **(c) `--status reverted`는 행을 DELETE한다** (상태 열이 없다). 행이 없으면 멱등, 테이블이 없으면 빈 테이블을 만든다. **존재하지 않는 버전에도 exit 0** — 반면 `--status applied`는 로컬 파일이 없으면 exit 1(`LegacyMigrationFileNotFoundError`)로 실패한다. 되돌림은 exit code로 검증되지 않으므로 W4 쿼리로 확인한다. 부수 확인: 운영의 42P01은 "테이블만 없음"과 "스키마 없음"을 구분하지 못한다(에러 문자열 동일) — 그러나 양쪽 모두 exit 0이므로 구분할 필요가 없다. 전문은 §3.2 W3·W4 | **막지 않는다.** W4가 결과를 사후 확인한다 |
 | U13 | link 대상 ref가 운영인지 | **해소 (2026-08-21).** 두 축이 모두 일치 | **주 축 — 사용자가 Vercel Production의 `VITE_SUPABASE_URL`과 `supabase/.temp/project-ref`를 직접 대조해 일치 확인 `[사용자 확인]` (P8).** 저장소 축 `[산출물]`: `.temp/project-ref`가 정상 ref 형식이고, `.temp/linked-project.json`의 `ref`와 **일치**하며, `.env.local.remote-backup`의 `VITE_SUPABASE_URL` 호스트 ref와도 **일치**한다. (`.env.local`은 `127.0.0.1`로 로컬 스택을 가리켜 대조 대상이 아니다.) 두 축이 독립적으로 같은 ref를 지목한다. 값은 식별자이므로 이 문서에 기재하지 않는다 | **더 이상 막지 않는다.** P8 충족. 남은 관련 위험은 창 당일 link 상태가 바뀌는 경우뿐이며 W-1의 link 대상 확인이 그것을 잡는다 |
-| — | §6.3 전체 복원의 2번 단계 SQL | **미작성** | `public` 스키마를 비우는 SQL이 확정되지 않았다. 복원 리허설 자체가 없다. 별도 승인·리뷰 대상 | **막지 않는다.** 다만 P11 합의 시 "복원 절차가 리허설되지 않았다"를 전제로 판단해야 한다 |
+| — | §6.3 전체 복원의 2번 단계 SQL | **해소 (2026-08-27).** 확정·리허설 완료 | 로컬 스택에서 전 과정을 리허설했다 `[산출물]`. **비우기 SQL 확정 → §6.3.2** (post-W6 상태에 2회 실행, 잔존 객체 0). **복원 결과 → §6.5.4** (구조 지문·행 수·이력 차이 0건). **소요 시간 → §6.5.5** (DB 작업 로컬 4.4초). 리허설이 잡아낸 수정 2건: (a) `private` 스키마를 함께 지워야 한다, (b) 데이터 덤프는 `public`만 복원해야 한다 — 전체 덤프는 `auth` PK 충돌로 실패한다 (§6.3.3). 복원되지 않는 항목도 확정됐다 (§6.3.4) | **막지 않는다.** P11이 이 결과 위에서 확정됐다 (§6.0) |
 | — | W2.5의 `match_history` 영향 | **측정 대기** | §5.3 (2) 쿼리로 창 안에서 측정. 0이 아니면 사용자 화면 1:1 전적이 줄어든다 (F9·§5.5) | **막지 않는다.** 삭제 승인 시 함께 판단 |
 | — | Edge Function 선배포 (A5) | **해소 — 기각 (2026-08-21)** | W6 전 배포는 존재하지 않는 테이블을 참조하는 함수를 올리게 되고 검증 순서가 꼬인다. **Edge Function 배포는 W8 고정.** 근거 전문은 §3.0 A5 | — |
-| — | 창 시간 초과 | **부분 해소 (2026-08-21)** | (c) 채택 — W-1·P1~P8을 전날로 분리, 창은 W0부터. §3.3. **상한 시나리오는 여전히 2시간을 넘는다** → 남은 압축 여지는 W9 축소뿐이고 그 판단은 P11 합의에 포함한다 | 막지 않는다 |
+| — | 창 시간 초과 | **해소 (2026-08-27)** | (c) 채택 — W-1·P1~P8을 전날로 분리, 창은 W0부터. §3.3. 상한 시나리오는 여전히 2시간을 넘지만 **시각 게이트 3개(G1 +60분 / G2 +85분 / G3 +120분)로 처리한다** (§6.0.2·§3.3.1). W9 축소를 창 안에서 즉흥 판단하지 않고 **G3에서 W10을 포기하고 창 밖으로 넘긴다** | 막지 않는다 |
 
 ---
 
@@ -979,9 +1592,14 @@ W2.5를 이미 했다면 §6.4로 해당 행만 복원한다.
 
 ## 11. 이 문서의 한계
 
-- 창 절차를 **실행하지 않았고**, 어떤 단계도 리허설되지 않았다. §6.3 복원 절차는 특히 미검증이다.
-- 시간 값은 전부 `[추정]`이다. 저장소에 운영 대상 실행 이력이 없다
-  (`PROD-SNAPSHOT-2026-08-20.md` §1).
+- 창 절차를 **운영에서 실행하지 않았다.** 다만 **2026-08-27에 W2~W6과 §6.3 전체 복원을
+  로컬 스택에서 리허설했다** (§6.5). 리허설이 증명하지 않는 것은 §6.5.7에 열거돼 있다 —
+  요약하면 **운영에서의 동작은 여전히 미검증**이다. 특히 `drop schema public cascade`와
+  `set session_replication_role = replica`의 **운영 `postgres` 롤 실행 권한은 확인되지 않았다.**
+- W-1·W0·W1·W8·W9~W11은 여전히 어떤 형태로도 리허설되지 않았다.
+- 시간 값은 별도 표기가 없으면 `[추정]`이다. 저장소에 **운영 대상** 실행 이력이 없다
+  (`PROD-SNAPSHOT-2026-08-20.md` §1). §6.5.5의 `[산출물]` 값은 **로컬 실측**이며
+  운영 값이 아니다 — 운영 보정은 §6.5.5의 표에 `[추정]`으로 따로 적었다.
 - `[실측]` 값은 사용자가 운영에서 읽기 전용으로 조회해 보고한 것이다. 작성자는 운영 DB에 접근하지 않았다.
 - Vercel 관련 서술(환경변수, 배포 트리거, 이전 배포 롤백)은 `[외부]`다.
   저장소의 `vercel.json`은 SPA rewrite만 담고 있어 git 연동을 증명하지 않는다 (`AGENTS.md` §1.1).
