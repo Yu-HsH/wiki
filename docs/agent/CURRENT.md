@@ -1,7 +1,7 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: 2026-08-27
-기준 커밋: `9fbd1c5` (`docs: record runtime baseline axis after docker restart`)
+기준 커밋: `ddfea4e` (`docs: allow the one-commit lag in the CURRENT.md drift check`)
 브랜치: `feat/group-final-gaps`
 
 이 파일이 **"지금 상태"의 단일 기준**이다. `docs/CLAUDE_HANDOFF.md`는 배경 문서(전체 인계 정보)이고,
@@ -9,14 +9,15 @@
 확인되지 않은 것은 `미확인`으로 둔다.
 
 **갱신 규칙:** 커밋을 만든 세션이 이 파일의 기준 커밋·갱신 날짜를 같은 커밋 또는 직후 커밋에서
-갱신한다 (`AGENTS.md` §7). 이 파일을 담은 갱신 커밋 자체는 `9fbd1c5` 직후이며 문서만 변경하므로
-아래 수치의 기준을 바꾸지 않는다.
+갱신한다 (`AGENTS.md` §7). 갱신 커밋은 자신의 해시를 담을 수 없으므로 **기준 커밋이 그 갱신
+커밋의 부모인 상태가 정상이다** — 그 한 커밋 차이는 뒤처진 것이 아니다. 이 갱신 커밋은 문서만
+변경하므로 아래 수치의 기준을 바꾸지 않는다.
 
 ---
 
 ## 1. 판정
 
-### CODE GO — 기준 커밋 `9fbd1c5`
+### CODE GO — 기준 커밋 `ddfea4e`
 
 **유효 조건 (아래를 모두 만족하는 local/CI 환경에서만 유효)**
 
@@ -34,12 +35,12 @@
 `utils/maintenanceGate.js`, `components/MaintenanceScreen.jsx`, `main.jsx`, `appStyles.js`,
 `tests/maintenanceGate.test.js`, `.env.example`, `.gitignore`, `README.md`, `AGENTS.md`
 (`git diff --name-only 339fb77..HEAD`, 2026-08-27 `[산출물]`). 나머지 커밋은 `docs/`와
-`wiki-race-2.0-handoff/` 문서다. 게이트는 `npm test` 142/142와 `npm run build` 성공으로 덮였고,
+`wiki-race-2.0-handoff/` 문서이며, `b24744e` 이후 비문서 변경은 없다. 게이트는 `npm test` 142/142와 `npm run build` 성공으로 덮였고,
 `032caba` 기준 `npm run supabase:preflight` 11/11로 런타임 축이 재확인됐다 (§2).
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
-### RELEASE HOLD — 기준 커밋 `9fbd1c5`
+### RELEASE HOLD — 기준 커밋 `ddfea4e`
 
 사용자-facing 릴리스는 보류다. **절차는 `docs/ops/CUTOVER-PLAN.md`(W0~W11)로 확정됐고, 남은 것은
 실행과 승인이다.** 각 항목의 처리 위치를 함께 적는다:
@@ -105,15 +106,15 @@
 
 ## 3. 원격 상태
 
-측정 시점: **2026-08-27, 로컬 HEAD `9fbd1c5`.** 아래 값은 그 시점 실측이며 재측정 명령을 함께 적는다.
+측정 시점: **2026-08-27, 로컬 HEAD `ddfea4e`.** 아래 값은 그 시점 실측이며 재측정 명령을 함께 적는다.
 
 | 항목 | 값 | 재측정 명령 |
 |---|---|---|
 | `origin/main` HEAD | `e6d8eee` ("0529백업") — **변경 없음** | `git ls-remote origin refs/heads/main` |
-| `origin/feat/group-final-gaps` HEAD | `9fbd1c5`. 이 파일의 갱신 커밋은 같은 push에 포함되므로 **push 후 값은 그 커밋이다** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
+| `origin/feat/group-final-gaps` HEAD | `ddfea4e`. 이 파일의 갱신 커밋은 같은 push에 포함되므로 **push 후 값은 그 커밋이다** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
 | 현재 브랜치 upstream | `origin/feat/group-final-gaps` (설정됨) | `git rev-parse --abbrev-ref "@{u}"` |
 | upstream 대비 | 0 behind / 0 ahead (push 직후) | `git rev-list --left-right --count "@{u}...HEAD"` |
-| `origin/main...HEAD` | 0 behind / **19 ahead** (`9fbd1c5` 기준. 이 파일의 갱신 커밋을 더하면 20) | `git rev-list --left-right --count origin/main...HEAD` |
+| `origin/main...HEAD` | 0 behind / **21 ahead** (`ddfea4e` 기준. 이 파일의 갱신 커밋을 더하면 22) | `git rev-list --left-right --count origin/main...HEAD` |
 | `37adc69`·`450f63a`·`339fb77`·`f1e61fa`·`b24744e`·`032caba` | `origin/feat/group-final-gaps`에 **포함**, `origin/main`에는 **미포함** | `git branch -r --contains <sha>` |
 
 `git ls-remote`는 원격을 직접 조회하므로 `fetch` 없이도 실제 값을 준다. 이 클론에는
@@ -127,7 +128,7 @@ Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백�
 ### `main` push 금지 — 배포 연동
 
 - **`origin/main`은 Vercel 프로덕션 배포와 연동되어 있다. main push는 즉시 배포를 트리거한다.**
-- 로컬 19개 커밋에는 미배포 서버 권위 V2와 Packet 13이 들어 있고, **운영 DB에는 해당 RPC가 없다**
+- 로컬 21개 커밋에는 미배포 서버 권위 V2와 Packet 13이 들어 있고, **운영 DB에는 해당 RPC가 없다**
   (운영 `public` 함수 7개, V2 RPC 30개 부재 — `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §2).
 - 따라서 **cutover 창 밖에서의 main push는 즉시 장애를 유발한다.** 배포된 프론트가 존재하지 않는 RPC를
   호출하고, 반대로 `finish_group_player`는 cutover 시 삭제되므로 순서를 잘못 잡으면 양방향으로 깨진다.
