@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+// 이 파일은 JSX를 쓴다. vite.config.js가 없어 esbuild 기본값인 classic 변환이
+// 적용되므로 JSX는 React.createElement로 컴파일된다 — React가 스코프에 있어야 한다.
+import React, { useEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
 
 /**

@@ -11,6 +11,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Wikimedia User-Agent 정책은 앱 이름·버전과 연락 가능한 경로를 요구한다. 헤더를 생략하면
+// 런타임 기본값(Deno/x.y.z)이 나가고 정책 위반으로 429를 받는다 (2026-08-28 운영 확인).
+// 형태는 scripts/verifyWikiLinks.mjs:28-31의 선례를 따른다.
+// TODO(연락처): 배포 도메인과 연락 이메일을 실제 값으로 채운다. 사용자 확인 대기 중이다.
+const USER_AGENT =
+  "WikiRace/2.0 (https://TODO-DEPLOY-DOMAIN; TODO-CONTACT-EMAIL) supabase-edge-functions";
+
 const blockedNamespaces = /^(분류|파일|틀|위키백과|도움말|포털|특수|토론|사용자|모듈|미디어위키|category|file|template|wikipedia|help|portal|special|talk|user|module|mediawiki):/i;
 
 function normalizeTitle(value: unknown) {
@@ -27,7 +34,9 @@ function apiUrl(params: Record<string, string>) {
 }
 
 async function wikiJson(params: Record<string, string>) {
-  const response = await fetch(apiUrl(params), { headers: { accept: "application/json" } });
+  const response = await fetch(apiUrl(params), {
+    headers: { accept: "application/json", "User-Agent": USER_AGENT },
+  });
   if (!response.ok) throw new Error(`Wikipedia 요청 실패: ${response.status}`);
   return await response.json();
 }
@@ -53,6 +62,19 @@ function extractBodyLinks(html: string) {
     links.push({ title, linkText });
   }
   return links;
+}
+
+// 본문 링크에는 같은 문서가 여러 번 나온다. identities는 titleKey로 키를 잡으므로 같은 key를
+// 두 번 조회해도 Map 내용은 같다 — 배치 전에 접으면 요청 수만 줄고 결과는 그대로다.
+// 최초 등장 순서를 보존한다 (링크 순서·ordinal은 아래 bodyLinks 루프가 따로 정한다).
+function uniqueTitles(titles: string[]) {
+  const seen = new Set<string>();
+  return titles.filter((title) => {
+    const key = titleKey(title);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // MediaWiki's prop=links resolves revids to the latest page revision. To keep
@@ -168,7 +190,9 @@ Deno.serve(async (req) => {
     const revisionId = String(parsedPage.revid);
     const canonicalTitle = normalizeTitle(parsedPage.title);
     const bodyLinks = extractBodyLinks(parsedPage?.text?.["*"] ?? "");
-    const pageIdentities = await fetchPageIdentities(bodyLinks.map((link) => link.title));
+    const pageIdentities = await fetchPageIdentities(
+      uniqueTitles(bodyLinks.map((link) => link.title))
+    );
     const uniqueLinks = new Map<string, any>();
     for (const bodyLink of bodyLinks) {
       const identity = pageIdentities.get(titleKey(bodyLink.title));

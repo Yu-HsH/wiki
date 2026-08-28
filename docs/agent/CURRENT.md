@@ -1,6 +1,6 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: 2026-08-27
+갱신 날짜: 2026-08-28
 기준 커밋: `b5d6177` (`docs: pin the restore toolchain on docker run and close P14`)
 브랜치: `feat/group-final-gaps`
 
@@ -31,12 +31,23 @@
 - `.104` 이미지 또는 미승인 digest가 기본 경로로 선택되면 그 시점에 `CODE NO-GO`
 - 운영 런타임은 이 고정 범위 **밖**이다. 이 판정은 운영 적용 근거가 아니다
 
-**이전 판정 기준(`339fb77`) 이후의 코드 변경분.** 비문서 변경은 **유지보수 게이트 하나뿐**이다 —
-`utils/maintenanceGate.js`, `components/MaintenanceScreen.jsx`, `main.jsx`, `appStyles.js`,
-`tests/maintenanceGate.test.js`, `.env.example`, `.gitignore`, `README.md`, `AGENTS.md`
-(`git diff --name-only 339fb77..HEAD`, 2026-08-27 `[산출물]`). 나머지 커밋은 `docs/`와
-`wiki-race-2.0-handoff/` 문서이며, `b24744e` 이후 비문서 변경은 없다. 게이트는 `npm test` 142/142와 `npm run build` 성공으로 덮였고,
-`032caba` 기준 `npm run supabase:preflight` 11/11로 런타임 축이 재확인됐다 (§2).
+**이전 판정 기준(`339fb77`) 이후의 코드 변경분.** 비문서 변경은 **두 묶음**이다.
+
+1. **유지보수 게이트** (`b24744e`) — `utils/maintenanceGate.js`,
+   `components/MaintenanceScreen.jsx`, `main.jsx`, `appStyles.js`,
+   `tests/maintenanceGate.test.js`, `.env.example`, `.gitignore`, `README.md`, `AGENTS.md`
+   (`git diff --name-only 339fb77..HEAD`, 2026-08-27 `[산출물]`).
+2. **2026-08-28 운영 장애 최소 수정 3건** — `components/ExitGuard.jsx`(React import),
+   `supabase/functions/wiki-snapshot/index.ts`(User-Agent 헤더, info 배치 dedup).
+   설계 변경 없음. 보류한 항목은 §5.4에 있다.
+
+나머지 커밋은 `docs/`와 `wiki-race-2.0-handoff/` 문서다. 두 묶음 모두 `npm test` 142/142와
+`npm run build` 성공으로 덮였고(2026-08-28 재실행), `032caba` 기준
+`npm run supabase:preflight` 11/11로 런타임 축이 재확인됐다 (§2).
+
+> **`wiki-snapshot`의 UA 문자열에 `TODO-DEPLOY-DOMAIN`·`TODO-CONTACT-EMAIL` 자리표시자가 남아 있다.**
+> 배포 도메인과 연락처가 저장소에 기록된 적이 없어 사용자 확인 대기 중이다. **W8 재배포 전에 채운다** —
+> 연락 불가능한 UA는 Wikimedia 정책을 충족하지 않는다.
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
@@ -272,7 +283,36 @@ Docker 데몬 동작, 승인 이미지 로컬 존재, 운영 연결 문자열이
 - **실제 Wikipedia snapshot smoke (B2)** — B1은 fixture 인터셉트 기반이므로 실제 API 경로의
   429·revision 변경·`WIKI_SNAPSHOT_IDENTITY_MISMATCH` 처리는 아직 미검증이다.
   창 후 항목으로도 등록돼 있다 (CUTOVER-PLAN §8.2-3).
+  **B1이 이 경로를 덮지 못하는 것은 설계상 그렇다** — `scripts/packet13-browser-b1.mjs:788-789`가
+  Wikipedia를 fixture로 라우팅하고 `:1726`이 `unexpectedWikipediaRequests !== 0`을 실패로 처리한다.
+  따라서 §2의 "B1 wiki_snapshot 429 = 0"은 **검증이 아니라 미측정**이다.
+  `qa/30-INTEGRATION-CHECKLIST.md` §21에는 B2 항목 자체가 없다 (CUTOVER-PLAN §10이 명시).
 - `npm run supabase:clean-gate`·`npm run supabase:postgrest-smoke`의 현재 커밋 기준 재실행 (§2).
+
+### 5.4 2026-08-28 운영 장애에서 갈라져 나온 후속 작업
+
+2026-08-28에 **최소 수정 3건만** 적용했다 (§1의 변경분 2번). 아래는 **의도적으로 보류**한 것이며,
+전부 `supabase/functions/wiki-snapshot/index.ts` 축이다. 판단 예정: **2026-08-29.**
+
+배경 실측 — 문서 1건당 Wikipedia 요청 수는 `대한민국` 기준 **78건**
+(parse 2 + info 46 + revisions 30, 2026-08-28 `[산출물]`). dedup 적용 후 **62건**이다.
+운영 429는 이 요청량과 UA 부재가 겹쳐 발생했다 (`execution_time_ms 4988`, `fetchPageIdentities`).
+
+| # | 항목 | 왜 보류했나 | 비고 |
+|---|---|---|---|
+| 1 | **스냅샷 재사용 (조기 반환)** | **최대 레버리지지만 로직 변경**이다. 최소 수정 범위 밖 | `wiki_page_snapshots`에 `(page_id, revision_id)` unique가 있고 RPC가 upsert다. 재방문 시 78 → 1~2건 |
+| 2 | **`fetchRevisionIds` 제거** | **테스트가 계약으로 고정 중이다** — `tests/serverAuthorityMigration.test.js:62-63`이 `fetchRevisionIds`와 `targetRevisionId: targetRevisionIds.get`를 match한다. 제거는 고정된 계약의 변경이다 | 요청 30건 축소. `wiki_snapshot_links.target_revision_id`는 nullable |
+| 3 | **429 재시도·백오프** | **요청 62건이 남은 상태에서는 실행 예산을 태운다.** 요청 수를 먼저 줄여야 의미가 있다 | 넣는다면 `wikiJson` 한 곳. `Retry-After` 존중. 선례는 `scripts/verifyWikiLinks.mjs:23-43` |
+| 4 | **상태코드 분리 / 프론트 에러 메시지** | 별도 작업 | 지금은 상위 rate limit과 `WIKI_PAGE_INVALID`가 **둘 다 502**다. 프론트는 `FunctionsHttpError`의 고정 영문 문구를 그대로 노출하고 `error.context`의 `code`를 읽지 않는다 (`services/wikiSnapshotService.js:42`) |
+| 5 | **`config.toml`의 `[functions.wiki-snapshot]`** | 별도 판단 | 선언이 없어 `verify_jwt`가 **기본 true**로 배포된다. `single-run`만 F20으로 고정돼 있다 (`supabase/config.toml:423-424`) |
+
+**B2 로컬 검증 경로** (§5.3의 B2와 같은 항목이다. 2026-08-28 실측):
+로컬 `supabase_edge_runtime_*` 컨테이너는 `Exited (255)` 상태이고 `deno`는 PATH에 없다.
+1단계는 Docker 없이 가능하다 — 실제 Wikipedia에 대고 `extractBodyLinks`·배치 수를 재는 독립
+하네스이며, 78건·dedup 등가성이 이 방식으로 측정됐다. 2단계는
+`npx supabase functions serve wiki-snapshot`으로 fixture 없이 전 경로를 태우는 것이다.
+**어느 쪽도 `npm test`에 넣지 않는다** — 3자 API를 실제로 호출하므로
+`verifyWikiLinks.mjs`처럼 명시 실행 스크립트여야 한다.
 
 ---
 
