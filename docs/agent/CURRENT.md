@@ -1,8 +1,13 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: 2026-08-28
-기준 커밋: `6725c96` (`docs: settle the wiki-snapshot UA and record the in-window main push exception`)
+기준 커밋: `4a78a0d` (`docs: sync CURRENT.md base commit to 6725c96`)
 브랜치: `feat/group-final-gaps`
+
+> **2026-08-27~28 cutover 창이 실행됐고 종료됐다.** W6(`db push --linked`)로 **운영 migration 11개
+> 전량이 적용됐고**, W7 검증이 전항목 통과했으며, W8로 Edge Function 2개가 배포됐다.
+> **W10(게이트 해제)은 수행하지 않았다** — W9에서 결함 6건이 나왔고 그중 4건이 미해결이다.
+> **유지보수 게이트는 켜진 채다.** 실행 기록 전문: `docs/ops/CUTOVER-LOG-2026-08-27.md`.
 
 이 파일이 **"지금 상태"의 단일 기준**이다. `docs/CLAUDE_HANDOFF.md`는 배경 문서(전체 인계 정보)이고,
 상시 금지·의무 사항은 `AGENTS.md`에 있다. 수치는 저장소 기록과 실측에서 그대로 옮겼고,
@@ -17,7 +22,7 @@
 
 ## 1. 판정
 
-### CODE GO — 기준 커밋 `6725c96`
+### CODE GO — 기준 커밋 `4a78a0d`
 
 **유효 조건 (아래를 모두 만족하는 local/CI 환경에서만 유효)**
 
@@ -45,40 +50,66 @@
 `npm run build` 성공으로 덮였고(2026-08-28 재실행), `032caba` 기준
 `npm run supabase:preflight` 11/11로 런타임 축이 재확인됐다 (§2).
 
-> **`wiki-snapshot`의 UA 문자열은 확정됐다** —
+> **`wiki-snapshot`의 UA 문자열은 확정됐고 운영에 반영됐다** —
 > `WikiRace/2.0 (https://wiki-dusky-one.vercel.app) supabase-edge-functions`.
 > 도메인은 2026-08-28 운영 스택트레이스에서 확인된 실제 값이다 `[사용자 확인]`. 자리표시자는 없다.
 > 이메일은 넣지 않는다 — Wikimedia 정책은 연락 가능한 **URL 또는 이메일 중 하나**면 충족한다.
-> **이 값은 아직 운영에 반영되지 않았다** — Edge Function 재배포(W8)가 있어야 429가 풀린다.
+> **W8(2026-08-28)이 이 값을 운영에 올렸고 싱글 경로의 429는 풀렸다.**
+> **그룹 경로는 풀리지 않았다** — 62요청이 참가자 수만큼 곱해져 4인 그룹에서 502가 재발한다
+> (§5.5 발견 3). UA와 dedup만으로는 부족하다는 것이 창에서 실측됐다.
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
-### RELEASE HOLD — 기준 커밋 `6725c96`
+### RELEASE HOLD — 기준 커밋 `4a78a0d`
 
-사용자-facing 릴리스는 보류다. **절차는 `docs/ops/CUTOVER-PLAN.md`(W0~W11)로 확정됐고, 남은 것은
-실행과 승인이다.** 각 항목의 처리 위치를 함께 적는다:
+**사용자-facing 릴리스는 여전히 보류다. 그러나 HOLD의 성격이 바뀌었다.**
+2026-08-27~28 창이 **DB·배포 축을 전부 닫았고**, 남은 HOLD 사유는 **W9에서 발견된 결함 4건**뿐이다.
+유지보수 게이트는 켜진 채이며 **사용자 노출은 0**이다 (최종 플레이 2026-08-04 `[실측]`).
+
+#### 창이 닫은 항목 (2026-08-27~28)
+
+| 항목 | 상태 | 근거 |
+|---|---|---|
+| 운영/linked DB migration 적용 | **완료.** W6에서 **11개 전량 적용 성공**, 오류 없음 | CUTOVER-LOG §W6 |
+| 운영 dry-run | **완료.** pending 정확히 11개, 순서 표와 완전 일치 | CUTOVER-LOG §W5 |
+| baseline 처리 (`schema_migrations` 부재) | **완료.** `repair` exit 0, 이력 1행 / `baseline_remote_schema` / `statement_count` 250 — 기대값 정확히 일치 | CUTOVER-LOG §W3·§W4 |
+| 적용 결과 검증 | **완료. 전항목 통과** — 함수 36 / legacy RPC 2개 부재 / v13 제약 2개 `convalidated = true` / `rls_off_tables` 0 / publication 4테이블 / 이력 12행 | CUTOVER-LOG §W7 |
+| Edge Function 배포 (`wiki-snapshot`, `single-run`) | **완료.** 이름 명시·`--prune` 미사용 | CUTOVER-LOG §W8 |
+| Release A~D 승인 | **완료.** U2대로 11개를 한 창에서 전량 적용했다 | 대체 매핑 CUTOVER-PLAN §10 |
+| `finish_group_player` 삭제에 따른 배포 순서 | **완료.** W0(게이트 on) → W1(main push) → W6 순서대로 실행됐고 구버전 세션 drain 문제는 발생하지 않았다 | CUTOVER-LOG §W1·§W6 |
+| V2 이전 3개 migration(8/4·8/7·8/13) | **완료.** 11개 집합에 포함되어 적용됐다 | CUTOVER-LOG §W5·§W6 |
+| **W2.5 삭제의 성격** | **운영에서는 "선택"이었다.** `w6_blocking_rows` **실측 0** — 리허설이 확정한 #10 실패 경로가 **운영에는 존재하지 않았다.** 그래도 삭제를 택했고(근거 3가지) 그 덕에 W7의 `convalidated = true`가 나왔다 | CUTOVER-LOG §W2.5. **CUTOVER-PLAN §5.3-0의 두 갈래 중 "선택" 쪽** |
+| **롤백** | **발생하지 않았다.** §6.0.3의 트리거가 한 건도 발화하지 않았다 | CUTOVER-LOG §4 |
+
+#### 남은 HOLD 사유 — W9 발견 4건 (게이트 해제를 막는 것)
+
+| # | 항목 | 상태 | 게이트 해제 차단? |
+|---|---|---|---|
+| **3** | **`wiki-snapshot` 502 대량 재발 (4인 그룹).** 준비 버튼 11회 연속 실패. **62요청 × 참가자 수**로 곱해지는 구조 | **미해결.** 원인 축은 확정 | **예** |
+| **4** | **"유효하지 않은 RETIRE 사유"** — 결과 화면에서 로비 나가기 실패 | **미해결.** 원인 미확정 | **예** |
+| 5 | **`username-lookup` 404** | **미해결.** 원인 미확정 | 조사 필요 |
+| 6 | **관전 이모티콘이 다른 참가자에게 전달되지 않음** | **미해결.** publication은 4테이블로 정상 확인됨(W7 #5) | 조사 필요 |
+
+**W10 미수행 판정 근거:** 발견 3·4가 그룹 모드의 정상 이용을 막는다. 게이트를 해제하면 사용자가
+준비 버튼 실패와 결과 화면 이탈 실패를 직접 만난다. **G3 경로(재개 포기, 게이트 켠 채 창 종료)를
+채택했다** — CUTOVER-PLAN §6.0.2가 정의한 예정 경로이며 실패가 아니다.
+
+#### 창이 닫지 않은 나머지
 
 | 항목 | 상태 | 처리 위치 |
 |---|---|---|
-| 운영/linked DB migration 적용 | **미적용** (11개, CLI push 이력 없음) | W3~W7. 목록·순서는 §3.2 W5 |
-| Edge Function 배포 (`wiki-snapshot`, `single-run`) | **미배포** | W8 고정. 선배포(A5)는 기각 |
-| 운영 dry-run | **미실행** | W5 (`db push --dry-run --linked`) |
-| Release A~D 승인 | **분할 자체가 대체됐다** — U2로 미적용 11개를 한 창에서 전량 적용. 창 실행 승인은 **미완** | 대체 매핑 §10 |
-| baseline 처리 (`schema_migrations` 부재) | **판단·절차 확정.** `repair --status applied 20260730170602`, 4개 축 차이 0건(§5.1-1), `repair` 동작은 U12로 실측 해소. **실행 승인 대기** | W3~W4 |
-| publication 운영 대조 | **해소 (2026-08-21 실측).** 4테이블 baseline과 완전 일치, 드리프트 없음 | CUTOVER-PLAN §1.2 |
-| `GRANT` 70행 운영 대조 | **해소 (2026-08-27). 차이 0건** — 운영 스키마 덤프와 baseline이 **바이트 단위 완전 동일**(md5 양쪽 `e2bfa805…`, 1563행 차이 0). `REVOKE`는 양쪽 0행 | CUTOVER-PLAN **§1.4**. U5·P7 충족 |
-| 운영 17.6 권한 거부 경로 SIGSEGV 검증 | **미실행.** 로컬 게이트로 대체 불가 | U6 — W9에서 의도적 1회 + §8.2-1 사후 관측. 창을 막지 않음 |
-| `finish_group_player` 삭제에 따른 배포 순서 | **설계됨.** 삭제는 W6(`20260814093000`) 안에서 일어나고, 순서는 W0(게이트 on) → W1(main push·배포) → W6이다. 구버전 세션 drain은 유지보수 게이트가 담당(U3) | §2.1, §3.2 |
-| V2 이전 3개 migration(8/4·8/7·8/13) | **범위·순서 확정.** 11개 전량 적용 집합에 포함되고 W5가 목록을 검증한다. Phase 2C의 `user_profile_stats` 전량 재집계는 F8·§5.4로 검토됐다. **phase1·phase2a의 개별 영향도 문서는 없다** | §3.2 W5, §5.4 |
-| 실제 브라우저 1:1 2세션 수동 검증 | **미실행** | W9-4 + §8.2-2 |
+| publication 운영 대조 | **해소 (2026-08-21 실측 → 2026-08-28 W7 재확인).** 4테이블, `group_spectator_emoji_rate_limits` 미포함 | CUTOVER-PLAN §1.2, CUTOVER-LOG §W7 |
+| `GRANT` 70행 운영 대조 | **해소 (2026-08-27 → 2026-08-28 W2 재확인). 차이 0건** — 운영 스키마 덤프와 baseline이 **바이트 단위 완전 동일**(md5 양쪽 `e2bfa805…`, 1563행). W2 덤프도 리허설 덤프와 바이트 동일 | CUTOVER-PLAN **§1.4**, CUTOVER-LOG §W2 |
+| 운영 17.6 권한 거부 경로 SIGSEGV 검증 | **미실행.** W9에서 의도적 1회도 수행하지 않았다 | §8.2-1로 이월 |
+| 실제 브라우저 1:1 2세션 수동 검증 | **미실행.** 4인 그룹은 실제로 돌렸다(발견 3·6의 관측 경로) | §8.2-2 |
 | 모바일 viewport / 키보드 / reduced-motion 검증 | **미실행** | §8.2-4 |
-| **롤백 판단 기준 (P11)** | **확정 (2026-08-27).** 원칙 4가지, 시각 게이트 3개(G1 +60분 / G2 +85분 / G3 +120분), W6·W7·W9 단계별 트리거 등급표 | CUTOVER-PLAN **§6.0** |
-| **§6.3 전체 복원 절차** | **확정·리허설 완료 (2026-08-27, 로컬).** 비우기 SQL 확정, 복원 결과 지문 차이 0건, DB 작업 4.4초 실측. **실행 도구도 확정됐다** — `psql`이 이 머신에 없어 Docker 이미지의 `psql`을 쓴다 (§6.3.0 A안). **운영 실행 권한과 운영 호스트 접속은 여전히 미검증** | CUTOVER-PLAN **§6.3**·**§6.5** |
-| **W2.5 삭제의 성격** | **뒤집혔다 (2026-08-27 실측).** 기존 "삭제를 건너뛰어도 migration은 실패하지 않는다"는 **틀렸다** — `w6_blocking_rows > 0`이면 W6가 #10에서 실패한다 | CUTOVER-PLAN **§5.3-0**·F15a·§6.5.3 |
-| **창 전 선행 조건 (P1~P14)** | **13/14 완료.** 남은 것은 **P4 하나**이며 **창 당일에만 확인할 수 있다.** P14(복원 도구)는 경로 확정으로 충족됐다 — 실행 전제 3항목(Docker·승인 이미지·IPv4 연결)은 창 당일 기록 파일 §0.0에서 다시 본다 | CUTOVER-PLAN §7·§6.3.0. 목록은 §5.2 |
+| **새 운영 스냅샷** | **필수가 됐다.** `PROD-SNAPSHOT-2026-08-20.md`는 **이 창으로 무효다** — 함수 7→36, RLS 12/14→14/14, 이력 0→12행 | §8.2-6. 운영 재조회 필요 |
+| `target-level` Edge Function 존재 확인 | **미확인.** `--prune` 미사용은 확인됐으므로 삭제됐을 이유가 없다 | §8.1-7로 이월 |
+| **§6.3 전체 복원 절차** | **쓰이지 않았다** (롤백 미발생). 운영 실행 권한은 **여전히 미검증**이다. 창 §0.0의 실행 전제 3항목(Docker·승인 이미지·IPv4 연결)도 **당일 확인 기록이 없다** | CUTOVER-PLAN **§6.3**·**§6.5**, CUTOVER-LOG §0.0 |
+| **`public` 전용 데이터 덤프** | **W2에서 빠졌다.** §6.3.3이 "§4.3에 추가"라고만 하고 §4.3 명령 목록에 실제로 추가되지 않은 것이 원인이다. 복원 시 `slice-public.awk`(§6.3.3 (b))로 대체 가능 | CUTOVER-PLAN §4.3 수정 대상 |
 
-근거: `docs/ops/CUTOVER-PLAN.md` §1·§7·§8·§9·§10,
-`docs/ops/PROD-SNAPSHOT-2026-08-20.md` §6·§7·§8,
+근거: `docs/ops/CUTOVER-LOG-2026-08-27.md` (창 실행 기록 전문),
+`docs/ops/CUTOVER-PLAN.md` §1·§7·§8·§9·§10·§11,
 `wiki-race-2.0-handoff/qa/30-INTEGRATION-CHECKLIST.md` §21, `docs/CLAUDE_HANDOFF.md` §4.4
 
 ---
@@ -115,7 +146,10 @@
 | `npm run supabase:preflight` | **11/11 PASS** | 2026-08-23 | `032caba` 실측. `postmaster-stability before == after`, restart 0/0 |
 | log window self-test | **12/12 PASS** | 2026-08-23 | `032caba` 실측. `negative-postmaster-changed` 포함 |
 | `npm run supabase:clean-gate` / `supabase:postgrest-smoke` 재실행 | 미확인 | — | `339fb77` 이후 재실행 기록 없음. `supabase:preflight`와 별개 스크립트다 |
-| 운영 dry-run | 미확인 | — | 미실행 (W5) |
+| 운영 dry-run (`db push --dry-run --linked`) | **pending 11개, 순서 표와 완전 일치** | 2026-08-28 | 창 W5 `[사용자 보고]`. `--include-all` 미사용 |
+| **운영 migration 적용 (`db push --linked`)** | **11/11 적용 성공, 오류 없음** | 2026-08-28 | 창 W6 `[사용자 보고]`. **소요 시간은 미기록** — 시작 21:47만 남았다 |
+| **운영 적용 검증 (W7)** | **전항목 통과** — 함수 **36** / legacy RPC 2개 `null` / v13 제약 2개 `convalidated=true` / `rls_off_tables` **0** / publication **4테이블** / 이력 **12행** | 2026-08-28 | 창 W7 `[사용자 보고]` |
+| 운영 스키마 덤프 ↔ baseline | **바이트 단위 동일** (41,399 B / 1,563행, md5 `e2bfa805…`) | 2026-08-28 | 창 W2 덤프를 로컬에서 재측정 `[산출물]`. W-1 리허설 덤프와도 동일 |
 
 수치 출처: `wiki-race-2.0-handoff/code/10-CODE-MASTER-TODO.md` §9.8,
 `test-results/packet13-b1/b1.3-2026-08-19T01-19-11-669Z-7c95d293/summary.json` (gitignore 대상 로컬 산출물),
@@ -125,28 +159,26 @@
 
 ## 3. 원격 상태
 
-측정 시점: **2026-08-27, 로컬 HEAD `b5d6177`.** 아래 값은 그 시점 실측이며 재측정 명령을 함께 적는다.
-
-> **아래 표는 창 진입 전 값이다. W1(main push, 31커밋)이 이를 넘어섰다** — `origin/main`은 더 이상
-> `e6d8eee`가 아니다. 표를 그대로 읽지 말고 각 행의 재측정 명령으로 대조한다. 창 안 변화는
-> 바로 아래 2026-08-28 항목에 적는다.
+측정 시점: **2026-08-28 23:21, 로컬 HEAD `4a78a0d`** (`git ls-remote origin` 실측 `[산출물]`).
+아래 값은 **창 종료 후 실측**이며 재측정 명령을 함께 적는다.
 
 | 항목 | 값 | 재측정 명령 |
 |---|---|---|
-| `origin/main` HEAD | `e6d8eee` ("0529백업") — **변경 없음** | `git ls-remote origin refs/heads/main` |
-| `origin/feat/group-final-gaps` HEAD | 직전 push로 `58b0d6f` (`git ls-remote` 실측 2026-08-27). 이 파일의 갱신 커밋은 같은 push에 포함되므로 **push 후 값은 그 커밋이다** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
+| `origin/main` HEAD | **`4a78a0d`** — `e6d8eee`에서 **36커밋 앞으로 이동했다.** W1이 `7a70a04`(31커밋)까지, W1-a가 `4a78a0d`까지 올렸다 | `git ls-remote origin refs/heads/main` |
+| `origin/feat/group-final-gaps` HEAD | **`4a78a0d`** — `main`과 **동일 값** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
 | 현재 브랜치 upstream | `origin/feat/group-final-gaps` (설정됨) | `git rev-parse --abbrev-ref "@{u}"` |
-| upstream 대비 | 0 behind / 0 ahead (push 직후) | `git rev-list --left-right --count "@{u}...HEAD"` |
-| `origin/main...HEAD` | 0 behind / **30 ahead** (`b5d6177` 기준, 2026-08-27 실측. 이 파일의 갱신 커밋을 더하면 31) | `git rev-list --left-right --count origin/main...HEAD` |
-| `37adc69`·`450f63a`·`339fb77`·`f1e61fa`·`b24744e`·`032caba` | `origin/feat/group-final-gaps`에 **포함**, `origin/main`에는 **미포함** | `git branch -r --contains <sha>` |
+| upstream 대비 | 0 behind / 0 ahead | `git rev-list --left-right --count "@{u}...HEAD"` |
+| `origin/main...HEAD` | **0 behind / 0 ahead** — 두 ref가 같은 커밋을 가리킨다 | `git rev-list --left-right --count origin/main...HEAD` |
+| `e6d8eee..HEAD` 커밋 수 | **36** (`4a78a0d` 기준, 2026-08-28 실측) | `git rev-list --count e6d8eee..HEAD` |
+| `37adc69`·`450f63a`·`339fb77`·`f1e61fa`·`b24744e`·`032caba`·`be520c3` | `origin/main`·`origin/feat/group-final-gaps` **양쪽에 포함** | `git branch -r --contains <sha>` |
 
 `git ls-remote`는 원격을 직접 조회하므로 `fetch` 없이도 실제 값을 준다. 이 클론에는
 `.git/FETCH_HEAD`가 없어 remote-tracking ref는 push 결과만 반영한다 — **`git status`의
 ahead/behind만 믿지 말고 `ls-remote`로 대조한다.**
 
-작업 브랜치는 원격 백업됐다. **`main`은 여전히 5월 상태(`e6d8eee`)이며 그룹 보안 하드닝, 서버 권위 V2,
-Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백업이 있다는 사실이 배포 가능 상태를
-뜻하지 않는다.
+**`main`은 더 이상 5월 상태가 아니다.** 그룹 보안 하드닝, 서버 권위 V2, Packet 13, 유지보수 게이트,
+2026-08-28 최소 수정 3건이 전부 들어 있고 Vercel 프로덕션에 배포된 상태다.
+**사용자에게는 점검 화면만 보인다** — `VITE_MAINTENANCE=true`가 켜져 있기 때문이다 (W10 미수행).
 
 ### 2026-08-28 — 창 안 추가 `main` push (W1 이후 예외)
 
@@ -155,28 +187,46 @@ Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백�
 
 | 항목 | 값 |
 |---|---|
-| 대상 커밋 | `be520c3`(수정 3건) + `861051c`·`3fe6fc1`·이 커밋(문서) |
+| 대상 커밋 | `be520c3`(수정 3건) + `861051c`·`3fe6fc1`·`6725c96`·`4a78a0d`(문서). **push 후 `origin/main` = `4a78a0d`** (`ls-remote` 실측) |
 | 사유 | **W1으로 배포된 프론트가 `ExitGuard`의 `ReferenceError: React is not defined`로 깨져 있다.** 게임 중 이탈 다이얼로그와 앱 내부 이동 전체가 죽는다. 수정을 올리지 않으면 창이 끝나도 그 상태가 남는다 |
 | 전제 | **유지보수 게이트가 켜져 있다.** 배포돼도 사용자에게는 점검 화면이 뜬다. 게이트는 이 작업에서 건드리지 않았다 |
 | 규칙 해석 | "`main` push는 W1에서만"은 **창 밖 push를 막는 규칙**이다. 지금은 창 안이고 게이트가 켜져 있어 규칙이 막으려던 위험(게이트 없는 상태에서 미배포 RPC를 호출하는 프론트가 뜨는 것)이 성립하지 않는다 |
-| 이 push가 고치지 **못하는** 것 | **`wiki-snapshot`의 429는 그대로다.** Edge Function은 Vercel 배포에 포함되지 않는다 — `npx supabase functions deploy wiki-snapshot`(W8 형태, `--prune` 금지·이름 명시)이 따로 필요하다 |
+| 이 push가 고치지 **못한** 것 | **`wiki-snapshot`의 429.** Edge Function은 Vercel 배포에 포함되지 않는다. **W8이 그것을 해결했고 싱글 경로는 통과했다** — 그러나 **그룹 경로는 여전히 502**다 (§5.5 발견 3) |
 | DB 영향 | 없음. migration·RPC 무변경, 운영 DB 접근 없음 |
+| 결과 | **성공.** 점검 화면 유지 확인, ExitGuard 정상 동작 확인 |
 
-기록 위치: 이 절과 `docs/ops/CUTOVER-LOG-2026-08-27.md` §W1 하단.
+기록 위치: 이 절과 `docs/ops/CUTOVER-LOG-2026-08-27.md` §W1-a.
 
-### `main` push 금지 — 배포 연동
+### `main` push 금지 — **금지 사유가 바뀌었다 (2026-08-28 창 이후)**
+
+> **`AGENTS.md` §1.1의 근거 서술은 이 창으로 낡았다.** 그 조항은 "운영 DB에 V2 RPC가 없으므로
+> main push가 즉시 장애를 만든다"를 금지 근거로 든다. **운영 DB에는 이제 그 RPC가 있다** (W6·W7).
+> 조항 본문 갱신은 별도 작업이며 §5.6에 등재했다. **그동안에도 금지는 유지된다** — 아래의
+> 바뀐 근거 때문이다.
+
+**여전히 사실인 것**
 
 - **`origin/main`은 Vercel 프로덕션 배포와 연동되어 있다. main push는 즉시 배포를 트리거한다.**
-- 로컬 30개 커밋에는 미배포 서버 권위 V2와 Packet 13이 들어 있고, **운영 DB에는 해당 RPC가 없다**
-  (운영 `public` 함수 7개, V2 RPC 30개 부재 — `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §2).
-- 따라서 **cutover 창 밖에서의 main push는 즉시 장애를 유발한다.** 배포된 프론트가 존재하지 않는 RPC를
-  호출하고, 반대로 `finish_group_player`는 cutover 시 삭제되므로 순서를 잘못 잡으면 양방향으로 깨진다.
-- main push는 **cutover 창의 W1 단계에서만** 수행한다. 그 시점에는 W0에서 `VITE_MAINTENANCE=true`가
-  이미 켜져 있어 배포된 프론트가 점검 화면을 낸다 (`docs/ops/CUTOVER-PLAN.md` §3.2 W0·W1).
-  `origin/main`은 `HEAD`의 조상이므로 fast-forward push가 가능하다 (CUTOVER-PLAN F17).
 - 백업 push는 `origin/feat/group-final-gaps`로만 한다. Vercel Production Branch = `main`,
   Ignored Build Step = Automatic이므로(사용자 확인, 2026-08-20) 이 브랜치 push는 프로덕션 배포를
-  만들지 않는다. preview 배포 생성 여부는 미확인. 상시 규칙: `AGENTS.md` §1.1.
+  만들지 않는다. preview 배포 생성 여부는 미확인.
+
+**바뀐 것**
+
+- **"미배포 RPC 호출" 위험은 해소됐다.** 운영 `public` 함수는 7개에서 **36개**가 됐고 legacy RPC
+  2개는 삭제됐다 (W7). `origin/main`과 `HEAD`가 같은 커밋이므로 프론트/DB 버전 어긋남도 없다.
+- **`PROD-SNAPSHOT-2026-08-20.md` §2의 "함수 7개 / V2 RPC 30개 부재"는 무효다.**
+
+**새 금지 근거 — 지금 main push가 위험한 이유**
+
+1. **유지보수 게이트가 유일한 방패다.** W9 미해결 4건(발견 3·4·5·6)이 그대로 있고, 사용자를
+   막고 있는 것은 `VITE_MAINTENANCE=true` 하나뿐이다. `VITE_*`는 **빌드 시점 인라인**이므로
+   (F11) **게이트 값이 바뀐 상태에서의 push는 곧 서비스 오픈이다.**
+2. **게이트 해제는 W10이고, W10은 별도 판단이다.** 발견 3·4가 해결되기 전의 해제는
+   사용자가 준비 버튼 실패와 결과 화면 이탈 실패를 직접 만나는 결과가 된다.
+
+→ **결론: main push는 계속 건별 승인 대상이다.** 다만 승인 시 확인할 것이 "RPC가 있는가"에서
+**"`VITE_MAINTENANCE`가 여전히 `true`인가"** 로 바뀌었다. 상시 규칙: `AGENTS.md` §1.1.
 
 ---
 
@@ -190,12 +240,16 @@ Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백�
 - **유지보수 게이트 — 완료 (`b24744e`, 2026-08-21).** `utils/maintenanceGate.js`,
   `components/MaintenanceScreen.jsx`, `main.jsx` 분기. 계약은 `tests/maintenanceGate.test.js` 13개로
   고정, 사용법은 `README.md` §유지보수 게이트. 로컬 확인(점검 화면 렌더·`?bypass=` 진입·새로고침
-  유지·`?bypass=off` 해제)까지 끝났다 (CUTOVER-PLAN §7 P1~P3). **운영 반영은 창의 W0에서 이뤄진다.**
+  유지·`?bypass=off` 해제)까지 끝났다 (CUTOVER-PLAN §7 P1~P3). **W0에서 운영에 반영됐고
+  (2026-08-27) 지금도 켜져 있다** — W10 미수행이므로 해제되지 않았다. Vercel Type은 `Secret`이
+  아니라 **`Config`** 다 (`VITE_*`는 번들 인라인이라 Secret 저장이 거부된다).
 - Packet 13은 커밋됨(`339fb77`). 코드 작업은 종료.
-- **cutover 계획은 작성 완료** (`docs/ops/CUTOVER-PLAN.md`). 2026-08-27에 **§6.0 롤백 판단 기준(P11)**과
-  **§6.3 확정 복원 절차·§6.5 리허설 기록**이 추가됐고, 선행 조건 P9·P10·P11·P12가 충족됐다.
-  남은 것은 창 밖 선행 조건 **1건(P4, 창 당일 확인)**과
-  창 실행 승인이다 (§5.2).
+- **cutover 창 — 실행 완료, W10 미수행으로 종료 (2026-08-27~28).**
+  W0~W9를 2세션으로 실행했다. **W6에서 migration 11개 전량 적용 성공, W7 전항목 통과,
+  W8 Edge Function 2개 배포 성공.** W9에서 결함 6건이 나와 2건은 창 안에서 고쳤고
+  **4건이 미해결이라 W10을 하지 않고 G3 경로로 창을 닫았다.** 롤백은 발생하지 않았다.
+  실행 기록: **`docs/ops/CUTOVER-LOG-2026-08-27.md`**.
+  **다음 창의 범위는 W9 잔여 4건 + W10 하나다** (§5.5).
 - 디자인 개편: 저장소 밖에서 별도 진행 중. 확정 시안 산출물 없음 (`code/10-CODE-MASTER-TODO.md` §2 순서 7 = `[~]`).
 - `GROUP_SPECTATOR_MIGRATION.sql`(저장소 루트)은 미적용 제안 파일이며 의도적으로 미추적 상태다.
 
@@ -243,11 +297,14 @@ Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백�
 
    **리허설이 뒤집은 사실 3건 — 다음 세션이 반드시 알아야 한다:**
 
-   - **W2.5는 선택이 아니다.** `w6_blocking_rows > 0`이면 **W6가 10번째
+   - ~~**W2.5는 선택이 아니다.**~~ — **운영에서는 선택이었다 (2026-08-28 창 실측).**
+     리허설이 재현한 실패 경로 자체는 실재한다: `w6_blocking_rows > 0`이면 **W6가 10번째
      `20260814113000`에서 SQLSTATE 23514로 실패한다** — 그 migration이 자기가 붙인 `NOT VALID`
-     제약이 걸린 행을 스스로 UPDATE하기 때문이다. 로컬에서 재현했고, 삭제 후에는 11개 전부
-     적용됐다. 기존 F15 해석("삭제를 건너뛰어도 실패하지 않는다")은 **틀렸다**
-     (CUTOVER-PLAN §5.3-0·F15a·§6.5.3).
+     제약이 걸린 행을 스스로 UPDATE하기 때문이다.
+     **그러나 운영의 `w6_blocking_rows`는 `0`이었다** — 그 경로를 발화시킬 행(`host` 참조가 끊긴
+     위반 행)이 운영에 없었다. 즉 **CUTOVER-PLAN §5.3-0의 두 갈래 중 운영이 놓인 쪽은 "선택"**
+     이었다. 삭제는 그래도 수행했고 근거는 W7의 조건부 `validate`였다 (CUTOVER-LOG §W2.5).
+     **교훈은 "리허설이 틀렸다"가 아니라 "삭제 전에 먼저 재라"는 §5.3-0의 설계가 옳았다**는 것이다.
    - **§6.3의 데이터 덤프 복원은 그대로 하면 실패한다.** 전체 데이터 덤프에는 `auth`·`storage`
      데이터가 들어 있고 §6.3-2는 `public`만 비우므로 **`auth` PK 충돌로 중단된다**
      (`duplicate key ... audit_log_entries_pkey`, public 복원 0행). **`--schema public` 덤프를
@@ -262,17 +319,17 @@ Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백�
    **여전히 미검증:** 운영에서의 실행. 특히 `drop schema public cascade`와
    `set session_replication_role = replica`의 **운영 `postgres` 롤 권한** (CUTOVER-PLAN §6.5.7).
 
-### 5.2 남은 작업 — CUTOVER-PLAN §7의 미완 선행 조건 1건
+### 5.2 CUTOVER-PLAN §7 선행 조건 — **창이 열렸고 닫혔다 (2026-08-27~28)**
 
-**절차·확정 항목은 남아 있지 않다. 창 당일 확인 하나뿐이다.**
+**P1~P14는 이 절의 역할을 다했다.** P4(프로젝트 Active)는 명시적 대시보드 확인 기록이 없지만
+**W2 덤프와 W6 `db push`가 모두 성공했으므로 창 시점에 `Active`였다는 사실은 사후 확정된다** —
+`Paused`였다면 두 명령 모두 접속 단계에서 실패한다 (CUTOVER-LOG §0.1).
 
-| ID | 항목 | 성격 | 비고 |
-|---|---|---|---|
-| P4 | **프로젝트 Active 확인** | 외부 (Supabase 대시보드) | **창 당일에 확인한다.** 무료 요금제는 7일 무활동 시 자동 일시정지하고 최종 플레이가 2026-08-04이므로 전날 값이 당일을 보장하지 않는다. **창을 막는다** |
-
-**창 당일 §0.0에서 다시 보는 것 (완료 표기와 별개):** P14의 실행 전제 3항목 —
-Docker 데몬 동작, 승인 이미지 로컬 존재, 운영 연결 문자열이 IPv4로 해석되고 접속됨.
-**절차는 확정됐고 남은 것은 그날의 확인이다** (CUTOVER-PLAN §6.1 표, §0.0).
+> **다만 절차 이탈 1건이 있었다.** CUTOVER-LOG §0.0의 실행 전제 3항목(Docker 데몬, 승인 이미지,
+> 운영 연결 문자열 IPv4)에 **당일 확인 기록이 없다.** §0.0은 "셋 중 하나라도 아니면 W6를
+> 시작하지 않는다"고 정하므로, **되돌릴 수단의 전제를 확인하지 않은 채 되돌릴 수 없는 지점을
+> 넘었다.** 결과적으로 복원은 필요 없었지만 그것은 사후 결과이지 절차 충족이 아니다.
+> 다음 창의 개선안은 CUTOVER-LOG §6.2-5·§6.3에 있다.
 
 **완료 13건.** 2026-08-21: **P1·P2·P3**(게이트 구현·포함·로컬 확인), **P6**(`backup/` gitignore),
 **P8**(link 대상 확인), **P13**(커밋 기준 `npm test`·`npm run build`).
@@ -296,9 +353,10 @@ Docker 데몬 동작, 승인 이미지 로컬 존재, 운영 연결 문자열이
 - **P9** — `npx supabase --version` → `2.114.0` `[산출물]`. `package.json` 핀(캐럿 없는 정확한 값)·
   `package-lock.json`·`node_modules` 설치본·런타임 네 축이 모두 일치한다.
   **CODE GO의 유효 조건**이라 불일치는 창 차단 요소였다. 설치·업그레이드는 하지 않았다.
-- **P10** — 리허설로 **삭제가 선택에서 필수가 되면서** 합의할 "삭제 여부"가 사라졌다.
-  **P10이 확정하는 것은 절차와 필수성이고, 범위 값은 창 안 W2.5에서 측정한다** —
-  측정 자체가 운영 조회이므로 창 밖에서 미리 정할 수 없다 (CUTOVER-PLAN §5.3-0).
+- **P10** — 리허설로 삭제가 선택에서 필수가 되면서 합의할 "삭제 여부"가 사라졌다고 봤으나,
+  **창 실측이 다시 "선택"으로 되돌렸다** (`w6_blocking_rows = 0`). **P10이 실제로 값을 낸 부분은
+  "범위 값은 창 안 W2.5에서 측정한다"였다** — 그 측정이 필수/선택 판정을 뒤집었다
+  (CUTOVER-PLAN §5.3-0, CUTOVER-LOG §W2.5).
 - **P11** — 롤백 판단 기준. CUTOVER-PLAN §6.0.
 - **P12** — `docs/ops/CUTOVER-LOG-TEMPLATE.md`. 창 당일 `CUTOVER-LOG-YYYY-MM-DD.md`로 복사해 쓴다.
 
@@ -306,17 +364,26 @@ Docker 데몬 동작, 승인 이미지 로컬 존재, 운영 연결 문자열이
 
 - **실제 Wikipedia snapshot smoke (B2)** — B1은 fixture 인터셉트 기반이므로 실제 API 경로의
   429·revision 변경·`WIKI_SNAPSHOT_IDENTITY_MISMATCH` 처리는 아직 미검증이다.
-  창 후 항목으로도 등록돼 있다 (CUTOVER-PLAN §8.2-3).
   **B1이 이 경로를 덮지 못하는 것은 설계상 그렇다** — `scripts/packet13-browser-b1.mjs:788-789`가
   Wikipedia를 fixture로 라우팅하고 `:1726`이 `unexpectedWikipediaRequests !== 0`을 실패로 처리한다.
   따라서 §2의 "B1 wiki_snapshot 429 = 0"은 **검증이 아니라 미측정**이다.
   `qa/30-INTEGRATION-CHECKLIST.md` §21에는 B2 항목 자체가 없다 (CUTOVER-PLAN §10이 명시).
+
+  > **2026-08-28 창이 이 미측정 구간을 운영에서 밟았다.** W9 발견 1·3이 정확히 그 결과다 —
+  > B1이 fixture로 가려 둔 실제 429 경로가 운영에서 터졌다. **형식적 B2 하네스는 여전히
+  > 미작성이지만, "실제 API 경로가 어떻게 실패하는가"는 더 이상 미지가 아니다** (§5.5).
 - `npm run supabase:clean-gate`·`npm run supabase:postgrest-smoke`의 현재 커밋 기준 재실행 (§2).
 
 ### 5.4 2026-08-28 운영 장애에서 갈라져 나온 후속 작업
 
 2026-08-28에 **최소 수정 3건만** 적용했다 (§1의 변경분 2번). 아래는 **의도적으로 보류**한 것이며,
 전부 `supabase/functions/wiki-snapshot/index.ts` 축이다. 판단 예정: **2026-08-29.**
+
+> **창이 이 보류 목록을 검증했다.** 최소 수정 3건은 W8로 운영에 반영됐고 **싱글 경로의 429는
+> 풀렸다.** 그러나 **4인 그룹에서 502가 대량 재발했다** (§5.5 발견 3) — 62요청이 참가자 수만큼
+> 곱해지기 때문이다. **즉 아래 1번(스냅샷 재사용)이 "최대 레버리지"라는 판단이 운영에서
+> 확인됐고, 동시에 보류 상태를 유지할 수 없는 항목이 됐다.** 1번은 §5.5 발견 3의 해결 후보이며
+> **두 항목은 같은 뿌리다** — 2026-08-29 판단에서 1번을 최우선으로 올린다.
 
 배경 실측 — 문서 1건당 Wikipedia 요청 수는 `대한민국` 기준 **78건**
 (parse 2 + info 46 + revisions 30, 2026-08-28 `[산출물]`). dedup 적용 후 **62건**이다.
@@ -338,6 +405,41 @@ Docker 데몬 동작, 승인 이미지 로컬 존재, 운영 연결 문자열이
 **어느 쪽도 `npm test`에 넣지 않는다** — 3자 API를 실제로 호출하므로
 `verifyWikiLinks.mjs`처럼 명시 실행 스크립트여야 한다.
 
+### 5.5 W9 미해결 4건 — **다음 작업의 1순위. 게이트 해제를 막는 것**
+
+2026-08-27~28 창의 W9에서 결함 6건이 나왔다. 2건은 창 안에서 고쳤고(`be520c3`) **4건이 남았다.**
+**이 4건이 지금 `RELEASE HOLD`의 전부이며, W10(게이트 해제)의 선행 조건이다** (§1).
+전문·발견 순서·통과 항목은 `docs/ops/CUTOVER-LOG-2026-08-27.md` §W9.
+
+| # | 항목 | 관측 | 원인 | 해제 차단 |
+|---|---|---|---|---|
+| **3** | **`wiki-snapshot` 502 대량 재발 (4인 그룹)** | 준비 버튼 **11회 연속 실패** | **구조 확정.** dedup 후에도 문서 1건당 **62요청**이고 이것이 **참가자 수만큼 곱해진다.** UA·dedup으로는 부족 | **예** |
+| **4** | **"유효하지 않은 RETIRE 사유"** | 결과 화면에서 로비 나가기 실패 | **미확정.** RETIRE 사유 코드 계약(프론트 ↔ RPC)을 대조해야 한다 | **예** |
+| 5 | **`username-lookup` 404** | — | **미확정.** U9(운영 배포 함수 목록 미확인)와 같은 축일 가능성. **W8은 이름을 명시했으므로 이 함수를 덮지 않았다** | 조사 필요 |
+| 6 | **관전 이모티콘이 다른 참가자에게 전달되지 않음** | — | **미확정.** publication은 W7 #5에서 4테이블 정상 확인됨 — publication 누락은 원인이 아니다 | 조사 필요 |
+
+**발견 3과 §5.4-1은 같은 뿌리다.** §5.4-1(스냅샷 재사용, 재방문 시 78→1~2건)이 유일하게
+곱셈 구조를 깨는 수정이다. **§5.4의 2026-08-29 판단에서 1번을 최우선으로 올린다.**
+
+**착수 순서 제안:** 3 → 4 → 5 → 6. 3·4가 게이트 해제를 직접 막고, 3은 해결 후보가 이미
+특정돼 있어(§5.4-1) 착수 비용이 가장 낮다.
+
+**부수 관찰 (수정 대상 아님, CUTOVER-LOG §W9):** 문서 전환 애니메이션 없음(디자인 범위),
+문서 전환 7~20초(발견 3과 같은 뿌리일 가능성),
+대기실 "최대 6명" 표시 — **이것은 결함이 아니다.** `services/groupMultiplayerService.js:19`의
+`createGroupRoom` 기본값이 `maxPlayers = 6`이고 Packet 13 제약은 `max_players between
+min_players and 8`이므로 **6은 유효 범위 안**이다 `[코드, 2026-08-28 확인]`. 기본값을 8로 올릴지는
+제품 판단이다.
+
+### 5.6 창이 만든 문서 정합 작업
+
+| # | 항목 | 왜 |
+|---|---|---|
+| 1 | **새 운영 스냅샷 `PROD-SNAPSHOT-YYYY-MM-DD.md` 작성** | `PROD-SNAPSHOT-2026-08-20.md`가 **무효다.** 함수 7→36, RLS 12/14→14/14, 이력 0→12행. 기존 파일은 **보존**한다. 운영 재조회가 필요하므로 별도 작업 |
+| 2 | **`AGENTS.md` §1.1 근거 서술 갱신** | "운영 DB에 V2 RPC가 없다"를 금지 근거로 든다 — **이제 있다.** 금지 자체는 유지되지만 근거가 바뀌었다 (§3) |
+| 3 | **`qa/30-INTEGRATION-CHECKLIST.md` §21 갱신** | 창 실행 결과 반영 (CUTOVER-PLAN §10.2) |
+| 4 | `target-level` Edge Function 존재 확인 | §8.1-7. `--prune` 미사용은 확인됐으나 실물 확인은 안 했다 |
+
 ---
 
 ## 6. 참조 문서
@@ -350,8 +452,9 @@ Docker 데몬 동작, 승인 이미지 로컬 존재, 운영 연결 문자열이
 | `docs/ops/wipe-public.sql` | **§6.3 2단계 실행 파일.** 실행은 `docker run --rm -i --entrypoint psql <승인이미지> "<CONN>" -v ON_ERROR_STOP=1 -f -`로 한다 (§6.3.0 A안 — 이 머신에 `psql`이 없다). `public`·`private` 스키마를 비우고 덤프가 담지 않는 스키마 속성 2건(owner, PUBLIC USAGE)을 복원한다. **파일 안에 자체 `begin;`/`commit;`이 있어 바깥에서 감싸도 롤백되지 않는다 — 시험 실행이라는 것이 없다** (§6.3.1-0) |
 | `docs/ops/slice-public.awk` | **§6.3.3 (b) 대체 경로.** 전체 데이터 덤프에서 `public` COPY 블록만 남긴다. W2에서 `--schema public` 덤프를 떴다면 필요 없다 |
 | `docs/ops/CUTOVER-LOG-TEMPLATE.md` | **창 기록 틀 (P12).** 창 당일 `docs/ops/CUTOVER-LOG-YYYY-MM-DD.md`로 **복사해서** 쓰고 원본은 남긴다. W0~W11 단계별 시각·판정, G1~G3 게이트, W2.5 측정값, W4~W9 결과, 롤백 시 트리거·등급·승인 시각·복원 소요, 창 후 이월을 빈칸으로 담았다 |
+| **`docs/ops/CUTOVER-LOG-2026-08-27.md`** | **실제 창 실행 기록 (2026-08-27~28).** W0~W9 단계별 결과, G1~G3 도달 시각, W2.5 실측값, W7 검증 전항목, **W9 결함 6건**, W10 미수행 판정 근거, **§6 총평(계획 검증·수정 대상 5건·템플릿 개선안)**. **다음 창을 여는 세션은 §6 총평부터 읽는다** |
 | `docs/CLAUDE_HANDOFF.md` | 배경 인계 문서. 확정 스펙 근거 매핑, 의도적 제외 vs 미구현 구분, 확인 필요 항목, 런타임 baseline 축의 성질 |
-| `docs/ops/PROD-SNAPSHOT-2026-08-20.md` | 운영 Supabase 읽기 전용 실측(2026-08-20). 운영에 변경이 가해지면 무효, 갱신 시 새 날짜 파일. **cutover 창이 이 문서를 무효화한다** (CUTOVER-PLAN §8.2-6) |
+| `docs/ops/PROD-SNAPSHOT-2026-08-20.md` | 운영 Supabase 읽기 전용 실측(2026-08-20). **⚠ 무효 — 2026-08-28 창이 이 문서를 무효화했다** (CUTOVER-PLAN §8.2-6). 함수 7→36, RLS 12/14→14/14, 이력 0→12행. **역사 기록으로만 읽고 현재 상태의 근거로 쓰지 않는다.** 새 날짜 스냅샷 작성은 §5.6-1 |
 | `wiki-race-2.0-handoff/01-CONFIRMED-SPEC.md` | 게임 규칙 **단일 기준선**. 다른 문서와 충돌하면 이 문서 우선 |
 | `wiki-race-2.0-handoff/code/10-CODE-MASTER-TODO.md` | 작업 순서·의존성·Packet 13 검증 이력(§9~§9.8) |
 | `wiki-race-2.0-handoff/code/11-REPOSITORY-AUDIT.md` | 저장소 감사 결과와 보존 원칙 |
