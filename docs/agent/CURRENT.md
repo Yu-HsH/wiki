@@ -17,7 +17,7 @@
 
 ## 1. 판정
 
-### CODE GO — 기준 커밋 `b5d6177`
+### CODE GO — 기준 커밋 `be520c3`
 
 **유효 조건 (아래를 모두 만족하는 local/CI 환경에서만 유효)**
 
@@ -51,7 +51,7 @@
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
-### RELEASE HOLD — 기준 커밋 `b5d6177`
+### RELEASE HOLD — 기준 커밋 `be520c3`
 
 사용자-facing 릴리스는 보류다. **절차는 `docs/ops/CUTOVER-PLAN.md`(W0~W11)로 확정됐고, 남은 것은
 실행과 승인이다.** 각 항목의 처리 위치를 함께 적는다:
@@ -100,6 +100,7 @@
 | `npm test` | 129/129 | 2026-08-20 | `339fb77` 실측. 08-19에 추가된 B1 시나리오 계약 테스트 3개가 늘어난 차이다 |
 | `npm test` | **142/142** | 2026-08-21 | `b24744e` 실측. 베이스라인 129 + 유지보수 게이트 13 (`tests/maintenanceGate.test.js`) |
 | `npm test` | **142/142** | 2026-08-23 | `032caba` 실측. Docker Desktop 재시작 후 재확인 |
+| `npm test` | **142/142** | 2026-08-28 | `be520c3` 실측. 운영 장애 최소 수정 3건 후 재실행. **테스트 수는 늘지 않았다** — 수정이 기존 계약 안에 들어간다 (`serverAuthorityMigration.test.js:62-65`, `groupFinalGaps.test.js:66-68` 무영향) |
 | pgTAP Packet 13 | 33/33 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP spectator emoji atomicity | 22/22 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP Server Authority V2 | 97/97 | 2026-08-18 | `339fb77` 이전 |
@@ -108,6 +109,7 @@
 | crash regression | 4종 PASS | 2026-08-18 | `339fb77` 이전 |
 | production build (`npm run build`) | PASS (약 689KB chunk 경고) | 2026-08-18 | `339fb77` 이전 |
 | production build (`npm run build`) | **PASS** | 2026-08-21 | `b24744e` 실측. **커밋 기준 재실행 완료** — CUTOVER-PLAN §7 P13 |
+| production build (`npm run build`) | **PASS** | 2026-08-28 | `be520c3` 실측. 산출물의 바 `React.createElement`가 **7건 → 0건** — ExitGuard 수정이 번들 수준에서 확인됐다 |
 | `npm run supabase:preflight` | **11/11 PASS** | 2026-08-23 | `032caba` 실측. `postmaster-stability before == after`, restart 0/0 |
 | log window self-test | **12/12 PASS** | 2026-08-23 | `032caba` 실측. `negative-postmaster-changed` 포함 |
 | `npm run supabase:clean-gate` / `supabase:postgrest-smoke` 재실행 | 미확인 | — | `339fb77` 이후 재실행 기록 없음. `supabase:preflight`와 별개 스크립트다 |
