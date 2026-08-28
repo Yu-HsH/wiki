@@ -1,7 +1,7 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: 2026-08-28
-기준 커밋: `b5d6177` (`docs: pin the restore toolchain on docker run and close P14`)
+기준 커밋: `be520c3` (`fix: restore the exit dialog and stop wiki-snapshot tripping Wikimedia's rate limit`)
 브랜치: `feat/group-final-gaps`
 
 이 파일이 **"지금 상태"의 단일 기준**이다. `docs/CLAUDE_HANDOFF.md`는 배경 문서(전체 인계 정보)이고,
