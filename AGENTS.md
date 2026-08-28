@@ -9,8 +9,12 @@
 - 게임 규칙 단일 기준: `wiki-race-2.0-handoff/01-CONFIRMED-SPEC.md`
 - **지금 상태의 단일 기준: `docs/agent/CURRENT.md`** (갱신 의무는 §7)
 - 배경 인계·구현 상세: `docs/CLAUDE_HANDOFF.md`
+  — **⚠ 운영 상태 서술은 2026-08-20 기준이라 낡았다** (§3.1·§4가 "운영 미적용 / 함수 7개"로 단정).
+  운영 상태는 `docs/agent/CURRENT.md`가 우선한다. 갱신 대기: `CURRENT.md` §5.6
 - 운영 환경 실측: `docs/ops/PROD-SNAPSHOT-2026-08-20.md`
+  — **⚠ 무효.** 2026-08-28 창이 운영을 바꿨다. **현재 상태의 근거로 인용하지 않는다** (§1.1)
 - 운영 cutover 실행 계획: `docs/ops/CUTOVER-PLAN.md`
+- **운영 cutover 실행 기록: `docs/ops/CUTOVER-LOG-2026-08-27.md`** (2026-08-27~28 창, W0~W9 실행)
 
 ---
 
@@ -22,26 +26,56 @@
 - `supabase db push --linked`, `db reset --linked`, `migration repair`, `functions deploy`는
   승인 없이 실행하지 않는다.
 - 로컬 스택 적용 결과를 운영 적용 근거로 사용하지 않는다.
+- **2026-08-27~28 cutover 창에서 이 명령들이 승인 아래 실제로 실행됐다** (migration 11개 적용,
+  Edge Function 2개 배포 — `docs/ops/CUTOVER-LOG-2026-08-27.md`). **그 승인은 그 창에서 끝났다.**
+  다음 적용은 새 승인이 필요하다 — 위 문장 그대로다.
 - 근거: `wiki-race-2.0-handoff/code/10-CODE-MASTER-TODO.md` §3-7,
   `code/18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md` (Release A~D 승인 절차)
 
 ### 1.1 `origin/main` push 금지 — 배포 파이프라인 사실
 
+**금지의 근거가 2026-08-28에 바뀌었다.** 이 조항은 원래 "운영 DB에 V2 RPC가 없으니 프론트가
+존재하지 않는 RPC를 호출한다"를 근거로 삼았다. **그 전제는 사라졌다** — W6(`db push --linked`,
+2026-08-28)로 migration 11개가 전량 적용됐고 W7 실측에서 **운영 `public` 함수 36개, legacy RPC
+0개**가 확인됐다 (`docs/ops/CUTOVER-LOG-2026-08-27.md` §W6·§W7).
+**금지는 유지된다. 아래가 현재의 근거다.**
+
 - **`origin/main`은 Vercel 프로덕션 배포와 연동되어 있다. main push는 즉시 배포를 트리거한다.**
-- 현재 로컬은 미배포 서버 권위 V2와 Packet 13을 포함하며, **운영 DB에는 해당 RPC가 존재하지 않는다.**
-  운영 `public` 함수는 7개뿐이고 V2 RPC 30개가 없다 (`docs/ops/PROD-SNAPSHOT-2026-08-20.md` §2).
-- 따라서 **cutover 창 밖에서의 main push는 즉시 장애를 유발한다.** 프론트가 존재하지 않는 RPC를 호출한다.
-  main push는 `docs/ops/CUTOVER-PLAN.md` §3.2의 **W1 단계에서만, 건별 승인 아래** 수행한다 —
-  그 시점에는 W0에서 유지보수 게이트(`VITE_MAINTENANCE=true`)가 이미 켜져 있다.
+- **유지보수 게이트(`VITE_MAINTENANCE=true`)가 사용자 노출을 막는 유일한 방패다.**
+  W10(게이트 해제)은 수행되지 않았고 게이트는 켜진 채다. **게이트를 끈 상태로 main push하면
+  W9 미해결 결함 4건이 즉시 사용자에게 노출된다:**
+
+  | # | 결함 | 사용자가 겪는 것 |
+  |---|---|---|
+  | 3 | `wiki-snapshot` 429 대량 재발 (그룹) | 준비 버튼이 연속 실패한다 |
+  | 4 | RETIRE 사유 불일치 | 결과 화면에서 로비로 나갈 수 없다 |
+  | 5 | `username-lookup` 404 | — |
+  | 6 | 관전 이모티콘 미전달 | — |
+
+  목록과 상태는 `docs/agent/CURRENT.md` §5.5가 단일 기준이다.
+- **따라서 main push는 계속 건별 승인 대상이다.** 승인 시 확인할 것이 "운영에 RPC가 있는가"에서
+  **"`VITE_MAINTENANCE`가 여전히 `true`인가"** 로 바뀌었다.
+- **창 안에서의 예외적 main push는 게이트가 켜져 있음을 확인한 뒤에만 한다.**
+  선례: 2026-08-28 W1-a — W9에서 발견한 `ExitGuard` 오류 수정을 창 안에서 배포했다.
+  게이트가 켜져 있어 **사용자 노출은 0**이었고, 게이트 자체는 건드리지 않았다
+  (`docs/agent/CURRENT.md` §3, `docs/ops/CUTOVER-LOG-2026-08-27.md` §W1-a).
+  **게이트 상태를 확인하지 않은 main push는 이 선례에 해당하지 않는다.**
 - 백업 목적의 push는 **`origin/feat/group-final-gaps`로만** 수행한다. `main`에는 하지 않는다.
-  이 브랜치가 현재 작업 브랜치의 upstream이며 원격 백업이 존재한다 (최신 값은
-  `docs/agent/CURRENT.md` §3. `git ls-remote origin`으로 재측정한다).
+  이 브랜치가 현재 작업 브랜치의 upstream이다. 창 이후 두 ref는 같은 커밋을 가리키므로
+  **`main`이 뒤처져 있다는 이유로 push하지 않는다** (최신 값은 `docs/agent/CURRENT.md` §3.
+  `git ls-remote origin`으로 재측정한다).
 - Vercel 설정: **Production Branch = `main`**, **Ignored Build Step = Automatic** (사용자 확인, 2026-08-20).
   따라서 feature 브랜치 push는 프로덕션 배포를 만들지 않는다. preview 배포 생성 여부는 미확인이다.
-- 배포와 DB 적용의 순서는 **`docs/ops/CUTOVER-PLAN.md`의 W0~W11이 확정한다** (2026-08-21 작성).
+- **`VITE_*`는 빌드 시점에 번들로 인라인된다.** 값 변경만으로는 반영되지 않고 재배포가 필요하며
+  (CUTOVER-PLAN F11), 같은 이유로 Vercel에 **`Secret`이 아니라 `Config`로 저장된다**
+  (2026-08-27 창 실측). **게이트 해제는 곧 재배포이므로 W10과 분리해서 다룰 수 없다.**
+- 배포와 DB 적용의 순서는 **`docs/ops/CUTOVER-PLAN.md`의 W0~W11이 확정한다.**
+  **W0~W9는 2026-08-27~28에 실행됐고 남은 것은 W10뿐이다** (CUTOVER-PLAN §0.-1).
   `code/18-...md`의 Release A~D artifact 분할은 U2 결정으로 대체됐다 — 대체 매핑은 CUTOVER-PLAN §10.
 - 이 항목의 Vercel 연동 사실은 사용자가 제공한 정보다. 저장소의 `vercel.json`은 SPA rewrite 설정만
   담고 있어 git 연동 자체를 증명하지 않는다.
+- **`docs/ops/PROD-SNAPSHOT-2026-08-20.md`를 현재 운영 상태의 근거로 인용하지 않는다.**
+  2026-08-28 창이 무효화했다 (함수 7→36, RLS 12/14→14/14, 이력 0→12행).
 
 ## 2. commit·push 금지
 
