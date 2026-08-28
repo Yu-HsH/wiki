@@ -45,9 +45,11 @@
 `npm run build` 성공으로 덮였고(2026-08-28 재실행), `032caba` 기준
 `npm run supabase:preflight` 11/11로 런타임 축이 재확인됐다 (§2).
 
-> **`wiki-snapshot`의 UA 문자열에 `TODO-DEPLOY-DOMAIN`·`TODO-CONTACT-EMAIL` 자리표시자가 남아 있다.**
-> 배포 도메인과 연락처가 저장소에 기록된 적이 없어 사용자 확인 대기 중이다. **W8 재배포 전에 채운다** —
-> 연락 불가능한 UA는 Wikimedia 정책을 충족하지 않는다.
+> **`wiki-snapshot`의 UA 문자열은 확정됐다** —
+> `WikiRace/2.0 (https://wiki-dusky-one.vercel.app) supabase-edge-functions`.
+> 도메인은 2026-08-28 운영 스택트레이스에서 확인된 실제 값이다 `[사용자 확인]`. 자리표시자는 없다.
+> 이메일은 넣지 않는다 — Wikimedia 정책은 연락 가능한 **URL 또는 이메일 중 하나**면 충족한다.
+> **이 값은 아직 운영에 반영되지 않았다** — Edge Function 재배포(W8)가 있어야 429가 풀린다.
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
@@ -125,6 +127,10 @@
 
 측정 시점: **2026-08-27, 로컬 HEAD `b5d6177`.** 아래 값은 그 시점 실측이며 재측정 명령을 함께 적는다.
 
+> **아래 표는 창 진입 전 값이다. W1(main push, 31커밋)이 이를 넘어섰다** — `origin/main`은 더 이상
+> `e6d8eee`가 아니다. 표를 그대로 읽지 말고 각 행의 재측정 명령으로 대조한다. 창 안 변화는
+> 바로 아래 2026-08-28 항목에 적는다.
+
 | 항목 | 값 | 재측정 명령 |
 |---|---|---|
 | `origin/main` HEAD | `e6d8eee` ("0529백업") — **변경 없음** | `git ls-remote origin refs/heads/main` |
@@ -141,6 +147,22 @@ ahead/behind만 믿지 말고 `ls-remote`로 대조한다.**
 작업 브랜치는 원격 백업됐다. **`main`은 여전히 5월 상태(`e6d8eee`)이며 그룹 보안 하드닝, 서버 권위 V2,
 Packet 13, 유지보수 게이트가 모두 들어 있지 않다.** 원격 백업이 있다는 사실이 배포 가능 상태를
 뜻하지 않는다.
+
+### 2026-08-28 — 창 안 추가 `main` push (W1 이후 예외)
+
+**W1 이후에 `main` push가 한 번 더 발생했다.** 아래 "`main` push 금지" 규칙의 예외이며,
+사유·판단 주체·전제를 남긴다 `[사용자 결정, 2026-08-28]`.
+
+| 항목 | 값 |
+|---|---|
+| 대상 커밋 | `be520c3`(수정 3건) + `861051c`·`3fe6fc1`·이 커밋(문서) |
+| 사유 | **W1으로 배포된 프론트가 `ExitGuard`의 `ReferenceError: React is not defined`로 깨져 있다.** 게임 중 이탈 다이얼로그와 앱 내부 이동 전체가 죽는다. 수정을 올리지 않으면 창이 끝나도 그 상태가 남는다 |
+| 전제 | **유지보수 게이트가 켜져 있다.** 배포돼도 사용자에게는 점검 화면이 뜬다. 게이트는 이 작업에서 건드리지 않았다 |
+| 규칙 해석 | "`main` push는 W1에서만"은 **창 밖 push를 막는 규칙**이다. 지금은 창 안이고 게이트가 켜져 있어 규칙이 막으려던 위험(게이트 없는 상태에서 미배포 RPC를 호출하는 프론트가 뜨는 것)이 성립하지 않는다 |
+| 이 push가 고치지 **못하는** 것 | **`wiki-snapshot`의 429는 그대로다.** Edge Function은 Vercel 배포에 포함되지 않는다 — `npx supabase functions deploy wiki-snapshot`(W8 형태, `--prune` 금지·이름 명시)이 따로 필요하다 |
+| DB 영향 | 없음. migration·RPC 무변경, 운영 DB 접근 없음 |
+
+기록 위치: 이 절과 `docs/ops/CUTOVER-LOG-2026-08-27.md` §W1 하단.
 
 ### `main` push 금지 — 배포 연동
 
