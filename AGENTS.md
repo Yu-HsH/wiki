@@ -9,8 +9,8 @@
 - 게임 규칙 단일 기준: `wiki-race-2.0-handoff/01-CONFIRMED-SPEC.md`
 - **지금 상태의 단일 기준: `docs/agent/CURRENT.md`** (갱신 의무는 §7)
 - 배경 인계·구현 상세: `docs/CLAUDE_HANDOFF.md`
-  — **⚠ 운영 상태 서술은 2026-08-20 기준이라 낡았다** (§3.1·§4가 "운영 미적용 / 함수 7개"로 단정).
-  운영 상태는 `docs/agent/CURRENT.md`가 우선한다. 갱신 대기: `CURRENT.md` §5.6
+  — 2026-08-29에 창 결과를 반영했다. 바뀐 지점 목록은 그 문서 **§0.2**.
+  판정·현재 상태가 어긋나면 `docs/agent/CURRENT.md`가 우선한다
 - 운영 환경 실측: `docs/ops/PROD-SNAPSHOT-2026-08-20.md`
   — **⚠ 무효.** 2026-08-28 창이 운영을 바꿨다. **현재 상태의 근거로 인용하지 않는다** (§1.1)
 - 운영 cutover 실행 계획: `docs/ops/CUTOVER-PLAN.md`

@@ -3,7 +3,23 @@
 기준 문서: `../01-CONFIRMED-SPEC.md`  
 원칙: 저장소 감사 후 기능별 채팅에서 순차 구현
 
-## 1. 현재 확인된 코드 상태
+## 1. 코드 상태 — **2026-08-14 시점 기록 (봉인)**
+
+> #### ⚠ 이 절은 현재 상태가 아니다 (2026-08-29 봉인)
+>
+> **아래는 2026-08-14 조사 시점의 관찰이다. 본문은 보존한다.** 절 끝의 "이 목록은 인수인계
+> 정보이지 현재 저장소의 사실을 대신하지 않는다"가 원래 있었지만 **본문 아래에 있어 먼저 읽히지
+> 않았다.** 그래서 머리로 옮긴다.
+>
+> **특히 낡은 3건:**
+>
+> | 본문 | 실제 |
+> |---|---|
+> | "upstream은 설정되어 있지 않으며 working tree에는 서버 권위 V2 원자적 작업이 **미커밋 상태**로 남아 있다" | upstream은 `origin/feat/group-final-gaps`로 **설정돼 있고**, V2·Packet 13은 **커밋됐다**(`450f63a`·`339fb77`). `origin/main`까지 올라갔다(2026-08-28 W1·W1-a) |
+> | "위 커밋은 현재 브랜치 HEAD에 포함됐지만 **원격 포함 여부는 확인되지 않았다**" | `origin/main`·`origin/feat/group-final-gaps` 양쪽에 포함 (`ls-remote` 실측) |
+> | "**Supabase CLI가 없어** SQL lint, 로컬 DB 적용, RPC/RLS 실제 호출과 다중 세션 수동 검증은 아직 완료되지 않았다" | CLI `2.114.0` 고정 사용 중. 로컬 pgTAP·concurrency 게이트 통과, **운영 적용까지 완료**(2026-08-28 W6·W7) |
+>
+> 현재 상태의 단일 기준은 **`docs/agent/CURRENT.md`**, 작업 순서는 이 문서 **§2**(날짜 있는 표)다.
 
 - 2026-08-14 확인 브랜치: `chore/local-supabase-validation`
 - 확인 HEAD: `37adc698c40356ec61af0faf0aff84eb6fadf90b` (`feat: secure group mode database writes`)
@@ -23,17 +39,29 @@
 
 ## 2. 작업 순서
 
+> **최종 갱신: 2026-08-29 · 기준 커밋 `29a21d0` · 브랜치 `feat/group-final-gaps`**
+>
+> **이 표는 날짜가 붙은 현재 상태표다.** 갱신 없이 두면 낡은 값이 현재 사실처럼 읽힌다 —
+> 실제로 2026-08-28 cutover 창까지 순서 1이 `[~] DB 런타임 검증 필요`, 순서 2가 `[ ]`로 남아
+> 있었고 둘 다 사실이 아니었다. **표를 바꿀 때 위 세 값(날짜·커밋·브랜치)을 함께 바꾼다**
+> (`AGENTS.md` §6). 상태 판정의 단일 기준은 `docs/agent/CURRENT.md`다.
+
 | 순서 | 기능 묶음 | 파일 | 선행 조건 | 상태 |
 |---:|---|---|---|---|
 | 0 | 저장소 감사·차이 분석 | `11-REPOSITORY-AUDIT.md` | 없음 | `[x]` 저장소·프로필 감사 완료 |
-| 1 | 서버 권위·복구·명시적 이탈 | `12-SERVER-AUTHORITY-RECOVERY.md`, `18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md` | 감사 완료 | `[~]` 코드·JS 검증 완료, DB 런타임 검증 필요 |
-| 2 | 그룹 최종 차이 | `13-GROUP-FINAL-GAPS.md` | 1 또는 영향 분석 | `[ ]` |
+| 1 | 서버 권위·복구·명시적 이탈 | `12-SERVER-AUTHORITY-RECOVERY.md`, `18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md` | 감사 완료 | **`[x]`** 코드·JS 검증 완료. **DB 런타임 검증 완료 — 2026-08-28 W6로 운영 적용, W7 전항목 통과** (함수 36 / legacy RPC 0 / 이력 12행). 근거: `docs/ops/CUTOVER-LOG-2026-08-27.md` §W6·§W7 |
+| 2 | 그룹 최종 차이 | `13-GROUP-FINAL-GAPS.md` | 1 또는 영향 분석 | **`[x]`** 코드 완료·커밋 `339fb77`(2026-08-20), **운영 적용 완료 2026-08-28 W6.** Packet 13 제약 2개 `convalidated = true` 확인 (W7). **단 W9에서 그룹 경로 결함 4건이 남았다** — `docs/agent/CURRENT.md` §5.5 |
 | 3 | 1:1·아이템전 | `14-DUEL-ITEMS.md` | 서버 이벤트 계약 | `[ ]` |
 | 4 | XP·레벨·랭킹 | `15-XP-LEVEL-RANKING.md` | 결과 서버 권위 | `[ ]` |
 | 5 | 업적·보상 카탈로그·프로필 꾸미기 데이터 | `16-ACHIEVEMENTS-REWARDS.md` | 3·4 이벤트 계약 | `[ ]` |
 | 6 | 탐험·프로필 카드·게스트 | `17-EXPLORATION-PROFILE-GUEST.md` | 4·5 | `[ ]` |
 | 7 | 확정 디자인 통합 | 별도 디자인 결과물 | 디자인 승인 | `[~]` 디자인 작업 별도 진행 중 |
-| 8 | 통합 QA | `../qa/30-INTEGRATION-CHECKLIST.md` | 1~7 | `[ ]` |
+| 8 | 통합 QA | `../qa/30-INTEGRATION-CHECKLIST.md` | 1~7 | `[~]` §21까지 기록됨. **§21에 2026-08-29 봉인 헤더로 창 결과를 반영했다. 새 게이트 기록(§22)은 미작성** — `docs/agent/CURRENT.md` §5.6-8 |
+
+> **순서 1·2가 `[x]`가 됐다고 사용자-facing 릴리스가 열린 것은 아니다.**
+> `RELEASE HOLD`는 유지되며 사유는 **W9 미해결 4건**이다. 유지보수 게이트가 켜진 채이고
+> W10(게이트 해제)은 수행되지 않았다. 판정의 현재 값은 `docs/agent/CURRENT.md` §1에서 읽는다 —
+> **이 파일 §9.8의 판정줄은 2026-08-18 시점 기록이다.**
 
 ## 3. 우선순위 원칙
 

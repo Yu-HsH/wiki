@@ -292,6 +292,32 @@
 
 ## 21. 2026-08-18 Packet 13 Final Log-Window Gate
 
+> #### ⚠ 봉인 — 이 절은 **2026-08-18 시점의 게이트 기록**이다 (2026-08-29 봉인)
+>
+> **아래 체크박스와 판정줄은 그날의 실행 결과다. 지우지 않고 그대로 둔다.**
+> 다만 **미체크 항목과 판정 사유는 2026-08-27~28 cutover 창으로 낡았다.**
+>
+> **`RELEASE HOLD` 판정 자체는 유지된다. 사유가 완전히 바뀌었다.**
+>
+> | | HOLD 사유 |
+> |---|---|
+> | **2026-08-18 (아래 기록)** | 운영/linked runtime read-only confirmation, **운영 dry-run**, **Release A~D 승인**, browser 2~8세션 Realtime |
+> | **2026-08-29 (현재)** | **W9 미해결 4건** — `wiki-snapshot` 429 대량 재발(그룹), RETIRE 사유 불일치, `username-lookup` 404, 관전 이모티콘 미전달 |
+>
+> 위 표 왼쪽 항목이 어떻게 닫혔는지:
+>
+> | 미체크 항목 | 2026-08-28 창 |
+> |---|---|
+> | 운영/linked runtime read-only confirmation | **해소** — W7이 함수 36 / legacy RPC 0 / RLS 14/14 / publication 4테이블 / 이력 12행을 실측 |
+> | 운영 dry-run | **해소** — W5에서 pending 정확히 11개, 순서 계획 표와 완전 일치 |
+> | Release A~D 승인 | **대체됨** — U2로 11개를 한 창에서 전량 적용 (CUTOVER-PLAN §10) |
+> | browser 2~8세션 Realtime | **부분.** 4인 그룹은 실제로 돌렸다(W9 발견 3·6의 관측 경로). 1:1 2세션은 여전히 미수행 (CUTOVER-PLAN §8.2-2) |
+>
+> **이 절을 대체하는 새 게이트 기록(§22)은 아직 작성되지 않았다** —
+> `docs/agent/CURRENT.md` §5.6-8의 작업이다. 그때까지 **판정의 현재 값은
+> `docs/agent/CURRENT.md` §1**에서 읽고, 창 실행 결과는
+> **`docs/ops/CUTOVER-LOG-2026-08-27.md`** 에서 읽는다.
+
 - [x] DB-free log-window parser self-test: historical fatal outside window PASS, marker missing/duplicate/reversed, current signal 11/PANIC, container/postmaster/restart change, log command failure 모두 reject.
 - [x] approved `.158` preflight/baseline: CLI `2.114.0`, image/digest, PG `17.6`, healthy, container ID stable, postmaster stable, restart `0`.
 - [x] clean gate run `packet13-f7f2779b-9d76-4670-a65a-bb8172adfeda`: START/END each 1, ordered, current fatal 0, historical fatal 30, migration/TAP `33/22/97/49`, deterministic concurrency 3회, crash regression 4종, exit 0.

@@ -1,9 +1,20 @@
 # Wiki Race 2.0 인수인계 (Claude 세션용) — 초안
 
 작성일: 2026-08-20
-갱신: 2026-08-20 — 상시 가드레일을 `AGENTS.md`로 분리, 운영 실측(`docs/ops/PROD-SNAPSHOT-2026-08-20.md`) 반영
-작성 방식: 저장소 읽기 전용 조사 (코드 수정·commit·push 없음). 운영 DB에는 접근하지 않았고, 운영 수치는 전달받은 스냅샷 문서를 근거로 인용한다.
-조사 기준: 브랜치 `feat/group-final-gaps`, HEAD `450f63a` (`feat: complete server authority v2 cutover`)
+갱신: **2026-08-29 — 2026-08-27~28 cutover 창 결과 반영** (§0.2에 변경 지점 목록)
+이전 갱신: 2026-08-20 — 상시 가드레일을 `AGENTS.md`로 분리, 운영 실측(`docs/ops/PROD-SNAPSHOT-2026-08-20.md`) 반영
+작성 방식: 저장소 읽기 전용 조사 (코드 수정·commit·push 없음). 운영 DB에는 접근하지 않았고, 운영 수치는 전달받은 스냅샷 문서와 창 실행 기록을 근거로 인용한다.
+최초 조사 기준: 브랜치 `feat/group-final-gaps`, HEAD `450f63a` (`feat: complete server authority v2 cutover`)
+현재 기준: HEAD `29a21d0` 계열, `origin/main` = `4a78a0d` (2026-08-28 실측)
+
+> **⚠ 이 문서의 운영 상태 서술은 2026-08-27~28 cutover 창으로 한 번 크게 뒤집혔다.**
+> **운영 migration 11개가 전량 적용됐고**(W6) 검증이 전항목 통과했으며(W7) Edge Function 2개가
+> 배포됐다(W8). **W10(유지보수 게이트 해제)만 수행되지 않았다.**
+> 낡은 서술은 지우지 않고 **"언제까지 참이었고 무엇이 바꿨는지"를 병기하는 방식**으로 갱신했다 —
+> 이 문서는 인계 문서이므로 판단이 뒤집힌 경위 자체가 정보다.
+>
+> **지금 상태의 단일 기준은 `docs/agent/CURRENT.md`다.** 이 문서와 어긋나면 그쪽이 우선한다.
+> 창 실행 기록 전문은 **`docs/ops/CUTOVER-LOG-2026-08-27.md`**. 바뀐 지점 목록은 **§0.2**.
 
 ## 0. 이 문서의 규칙
 
@@ -15,13 +26,37 @@
 - 저장소에서 확인되지 않는 것은 추측하지 않고 §4 `확인 필요`로만 기록한다 (상시 규칙: `AGENTS.md` §5).
 - 단일 기준 문서는 `wiki-race-2.0-handoff/01-CONFIRMED-SPEC.md`다. 다른 문서와 충돌하면 이 문서를 우선한다.
 - **상시 금지·의무 사항은 이 문서가 아니라 `AGENTS.md`에 있다.** 이 문서는 인계 정보(현재 상태·근거·미확인 항목)만 담는다. 핸드오프를 첨부하지 않은 세션에서도 가드레일이 적용되도록 분리했다.
-- 운영 환경 실측 기록은 `docs/ops/PROD-SNAPSHOT-2026-08-20.md`다. 특정 시점 관찰이므로 운영에 변경이 가해지면 무효이며, 갱신 시 새 날짜 파일을 만든다.
+- 운영 환경 실측 기록은 `docs/ops/PROD-SNAPSHOT-2026-08-20.md`였다. **그 문서는 2026-08-28 창으로 무효가 됐다** — 현재 상태의 근거로 인용하지 않는다 (`AGENTS.md` §1.1). 새 날짜 스냅샷은 아직 없다 (`docs/agent/CURRENT.md` §5.6-1).
 
-### 0.1 저장소 상태 (조사 시점)
+### 0.1 저장소 상태 (조사 시점 = 2026-08-20)
 
-- 브랜치: `feat/group-final-gaps`. 최근 커밋은 `450f63a`, `37adc69`, `aa756e1`, `8a77e53`, `94f422b`.
-- Packet 13(그룹 최종 차이)과 로컬 런타임 게이트 관련 변경은 **전부 미커밋 작업 트리 상태**다. `git status`에서 `supabase/migrations/20260814103000_group_final_gaps_v13.sql`, `20260814113000_group_final_gaps_v13_hardening.sql`, `20260814123000_group_spectator_emoji_atomicity_fix.sql`, `services/groupSpectatorService.js`, `scripts/supabase-*.mjs`, `scripts/packet13-browser-b1*.mjs`, `wiki-race-2.0-handoff/`가 untracked/modified로 확인된다.
+- 브랜치: `feat/group-final-gaps`. 조사 시점 최근 커밋은 `450f63a`, `37adc69`, `aa756e1`, `8a77e53`, `94f422b`.
+- ~~Packet 13과 로컬 런타임 게이트 관련 변경은 **전부 미커밋 작업 트리 상태**다.~~
+  **2026-08-20에 `339fb77`로 커밋됐다.** 조사 시점에는 `20260814103000_group_final_gaps_v13.sql`,
+  `20260814113000_group_final_gaps_v13_hardening.sql`,
+  `20260814123000_group_spectator_emoji_atomicity_fix.sql`, `services/groupSpectatorService.js`,
+  `scripts/supabase-*.mjs`, `scripts/packet13-browser-b1*.mjs`, `wiki-race-2.0-handoff/`가
+  untracked/modified였고, 그 상태는 **같은 날 종료됐다.**
 - 상시 가드레일은 2026-08-20에 저장소 루트 `AGENTS.md`로 분리했다(신규 파일, 그 이전에는 없었음). `CLAUDE.md`는 없고 `.agents/`는 빈 디렉터리다.
+
+### 0.2 2026-08-29 갱신에서 바뀐 지점
+
+**2026-08-27~28 cutover 창이 이 문서의 운영 상태 서술을 뒤집었다.** 아래가 그 목록이다.
+각 절에서 원문을 취소선으로 남기고 무엇이 언제 바꿨는지 병기했다 — 근거는 전부
+`docs/ops/CUTOVER-LOG-2026-08-27.md`의 해당 단계다.
+
+| 절 | 무엇이 낡았었나 | 지금 | 바꾼 단계 |
+|---|---|---|---|
+| §0.1 | "Packet 13 변경은 **전부 미커밋 작업 트리 상태**" | `339fb77`로 커밋됨 (2026-08-20) | 창 이전 |
+| §1.4 | Release A~D 4단계를 **확정 절차**로 기술 | **U2로 대체됐다** — 11개를 한 창에서 전량 적용 | CUTOVER-PLAN §10 |
+| §3.1 | "운영 **미적용**, 함수 **7개뿐**, V2 RPC 30개 없음, CLI push 이력 없음" | 적용됨. 함수 **36개**, legacy RPC **0**, 이력 **12행** | **W3·W4·W6·W7** |
+| §3.2 | RELEASE HOLD 사유 = 운영 적용·Edge Function·dry-run·Release A~D 승인 | **4개 전부 완료.** 지금 HOLD 사유는 **W9 미해결 4건** | W5·W6·W8·**W9** |
+| §4.1 | publication·RLS·Edge Function 배포 목록 **미확인** | publication 4테이블, RLS 14/14, 함수 2개 배포 | **W7·W8** |
+| §4.4 | `schema_migrations` 부재 = **cutover 차단 요소** / `finish_group_player` 배포 순서 **설계 필요** / 3개 migration **미적용** | 전부 해소 | **W3·W6·W7** |
+| §5 | "Release A~D 재설계 전에는 운영 적용을 시작하지 않는다" | 이미 U2로 실행됐다 | 창 전체 |
+
+**바뀌지 않은 것:** §1(확정 스펙), §2(의도적 제외 vs 미구현), §3.3(테스트 실행 방법),
+§4.3(스펙 공백)은 창의 영향을 받지 않는다. §4.2는 일부만 바뀌었다 — 해당 절에 표시했다.
 
 ---
 
@@ -68,10 +103,18 @@
 | 양쪽 동시 만료는 무효(취소) 처리 | `[문서]` §4.2 / `[코드]` 같은 함수 (`finished_reason='cancelled'`, `result_reason='disconnect_cancelled'`) |
 | 아이템전 SWAP은 서버 inventory 구현 전까지 비활성 | `[문서]` `code/18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md` / `[코드]` `supabase/migrations/20260814094000_duel_item_authority_v2.sql` (`apply_duel_swap_v2` → `SWAP_DISABLED`), `tests/duelSwapDisabled.test.js` |
 
-### 1.4 배포 릴리스 게이트 (확정 절차)
+### 1.4 배포 릴리스 게이트 — **Release A~D는 대체됐다 (U2, 2026-08-21)**
 
-`Release A`(additive schema/RPC) → `Release B`(Edge Functions) → `Release C`(V2 프론트) → `Release D`(최종 breaking cutover)의 4단계 승인 절차와 각 단계 명령이 확정되어 있다.
-근거: `[문서]` `wiki-race-2.0-handoff/code/18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md` "적용 순서".
+~~`Release A`(additive schema/RPC) → `Release B`(Edge Functions) → `Release C`(V2 프론트) →
+`Release D`(최종 breaking cutover)의 4단계 승인 절차와 각 단계 명령이 확정되어 있다.~~
+
+**이 4단계 분할은 실행되지 않았다.** U2 결정(2026-08-21)으로 **미적용 11개를 한 창에서 순서대로
+전량 적용**하는 방식으로 대체됐고, 실제 절차는 `docs/ops/CUTOVER-PLAN.md`의 **W0~W11**이다.
+**2026-08-27~28에 W0~W9가 그대로 실행됐다** (`docs/ops/CUTOVER-LOG-2026-08-27.md`).
+A~D와 W단계의 대체 매핑은 **CUTOVER-PLAN §10**에 있다.
+
+근거: `[문서]` `wiki-race-2.0-handoff/code/18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md` "적용 순서"
+(원 4단계 절차 — 그 파일 서두에 대체 표시를 붙였다), `docs/ops/CUTOVER-PLAN.md` §10.
 
 - `20260814093000_server_authority_cutover_v2.sql`은 additive patch가 아니라 **의도된 최종 breaking cutover**이며 legacy RPC 두 개(`update_group_progress`, `finish_group_player`)를 삭제한다. 근거: `[코드]` 해당 마이그레이션 / `[문서]` `18-...md` "Legacy 그룹 mutation RPC 최종 breaking cutover".
 - 로컬 런타임은 Supabase CLI `2.114.0` + image `public.ecr.aws/supabase/postgres:17.6.1.158` (digest `sha256:99b1729a...`)로 고정한다. 근거: `[코드]` `package.json` (`supabase` exact `2.114.0`), `supabase/config.toml` `[db]` 섹션의 런타임 게이트 주석, `scripts/supabase-runtime-preflight.mjs`.
@@ -131,7 +174,7 @@
 
 ## 3. 서버 권위 V2 / Packet 13 실제 구현 상태
 
-### 3.1 서버 권위 V2 — 커밋 완료, 운영 미적용
+### 3.1 서버 권위 V2 — 커밋 완료, **운영 적용 완료 (2026-08-28, W6)**
 
 - 커밋 상태: HEAD `450f63a` (`feat: complete server authority v2 cutover`)에 포함. `[코드]` `git log`
 - 마이그레이션 5개 (모두 tracked):
@@ -143,12 +186,35 @@
 - 권한 경계: V2 RPC 전체가 `revoke ... from public, anon` + `grant execute to authenticated, service_role`. 게스트 이동은 `apply_guest_single_move_v2`가 service_role 전용이므로 Edge Function 경유다. `[코드]` `20260814091000_server_authority_rpc_v2.sql` 말미 GRANT 블록, `supabase/functions/single-run/index.ts`, `supabase/config.toml` (`[functions.single-run] verify_jwt = false`)
 - 프론트 계약: `utils/serverAuthority.js` (`request_id`/`correlation_id`, `progress_version` 기반 `classifyRealtimeVersion`·`isStaleRealtimeVersion`, 입력 잠금), `services/wikiSnapshotService.js` (Edge Function `wiki-snapshot` 경유 캐시 적재)
 - 테스트: `tests/serverAuthority.test.js`, `tests/serverAuthorityMigration.test.js`, `tests/duelSwapDisabled.test.js`, `supabase/tests/server_authority_v2.sql` (pgTAP 97), `supabase/tests/server_authority_concurrency_v2.ps1`
-- 운영 적용 상태: **미적용 (2026-08-20 실측 확인)**. 운영에는 `supabase_migrations.schema_migrations`가 존재하지 않아 CLI push 이력 자체가 없고, 로컬 기준 미적용 migration은 V2 5개를 포함해 총 11개다. `[산출물]` `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §1 / `[문서]` `code/18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md`, `code/10-CODE-MASTER-TODO.md` §2 (순서 1 = `[~]`)
-- 운영 `public` 스키마 함수는 7개뿐이고 그중 `finish_group_player`는 운영 전용(구버전, 클라이언트 값 신뢰)이다. V2 RPC 30개는 운영에 없다. `[산출물]` `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §2
+- **운영 적용 상태: 적용 완료 (2026-08-28).** ~~미적용 (2026-08-20 실측 확인)~~ —
+  **2026-08-20 실측 시점에는 미적용이었다.** 그때 운영에는 `supabase_migrations.schema_migrations`가
+  존재하지 않아 CLI push 이력 자체가 없었고, 로컬 기준 미적용 migration이 V2 5개를 포함해 총 11개였다.
+  **cutover 창이 그 상태를 끝냈다:**
+  - **W3** — `migration repair --status applied 20260730170602 --linked` (exit 0,
+    `Repaired migration history: [20260730170602] => applied`)
+  - **W4** — 이력 1행 / `baseline_remote_schema` / `statement_count` 250 확인
+  - **W5** — `db push --dry-run --linked`에서 pending **정확히 11개**, 순서 계획 표와 완전 일치
+  - **W6** — `db push --linked`로 **11개 전량 적용 성공**, 오류 없음
+  - **W7** — migration 이력 **12행** (baseline + 11)
 
-### 3.2 Packet 13 (그룹 최종 차이) — 코드 완료, 미커밋, 로컬 게이트 통과 / 릴리스 보류
+  `[산출물]` `docs/ops/CUTOVER-LOG-2026-08-27.md` §W3·§W4·§W5·§W6·§W7 /
+  `[산출물]` `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §1 (**무효 — 2026-08-20 시점 기록**) /
+  `[문서]` `code/18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md` (Release A~D는 U2로 대체, §1.4)
+- **운영 `public` 함수는 36개다** (2026-08-28 W7 실측).
+  ~~운영 `public` 스키마 함수는 7개뿐이고 그중 `finish_group_player`는 운영 전용(구버전,
+  클라이언트 값 신뢰)이다. V2 RPC 30개는 운영에 없다.~~ — **2026-08-20 시점의 사실이었다.**
+  W6가 적용한 `20260814093000_server_authority_cutover_v2`가 legacy RPC 2개
+  (`finish_group_player`, `update_group_progress`)를 삭제했고, **W7에서 둘 다 `null`로 확인됐다.**
+  `[산출물]` `docs/ops/CUTOVER-LOG-2026-08-27.md` §W7 (항목 1·2)
+- **RLS도 함께 닫혔다.** `group_match_history`·`user_profile_stats`의 RLS off는 2026-08-20까지
+  운영·baseline·`docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md` §4.4 **3자 일치** 상태였다.
+  Phase 2C(`20260813072952`)가 W6에서 적용되어 **W7 실측 `rls_off_tables = 0` (14/14)**.
+  `[산출물]` `docs/ops/CUTOVER-LOG-2026-08-27.md` §W7 (항목 4)
 
-**코드 구현 (모두 untracked 또는 미커밋 수정)**
+### 3.2 Packet 13 (그룹 최종 차이) — 코드 완료·커밋(`339fb77`), **운영 적용 완료 (W6)** / 릴리스 보류
+
+**코드 구현** — ~~(모두 untracked 또는 미커밋 수정)~~ **2026-08-20에 `339fb77`로 전부 커밋됐다.**
+아래 목록은 조사 시점(2026-08-20)의 파일 구성이며 경로는 그대로 유효하다.
 
 | 범위 | 파일 |
 |---|---|
@@ -179,11 +245,30 @@
 - 산출물 디렉터리는 릴리스 입력이 아니라 로컬 QA 출력으로 `.gitignore`에 추가되어 있다. `[코드]` `.gitignore` 마지막 항목
 - **주의**: Wikipedia 요청은 Playwright `context.route`로 fixture 응답으로 대체된다 (`scripts/packet13-browser-b1.mjs:698-788`). 따라서 "실제 Wikipedia 429 없는 snapshot smoke"는 이 게이트로 충족되지 않는다.
 
-**현재 판정 (저장소 근거 기준)**
+**현재 판정 — 단일 기준은 `docs/agent/CURRENT.md` §1이다**
 
-- CODE: approved local `.158` + CLI `2.114.0` 범위에서 `GO`. `[문서]` `code/10-CODE-MASTER-TODO.md` §9.8 / `[산출물]` B1 summary
-- RELEASE: `HOLD`. 남은 게이트 — 운영/linked DB 적용, Edge Function 배포, 운영 dry-run, Release A~D 승인. `[문서]` `code/10-CODE-MASTER-TODO.md` §9.8, `qa/30-INTEGRATION-CHECKLIST.md` §21
-- 2026-08-20 운영 실측 이후 릴리스 게이트가 늘어났다. baseline 처리, 운영 17.6 권한 거부 경로 검증, `finish_group_player` 배포 순서, V2 이전 3개 migration 영향도가 추가 선행 조건이다. → §4.4
+> **아래 `code/10-CODE-MASTER-TODO.md` §9.8과 `qa/30-INTEGRATION-CHECKLIST.md` §21은
+> 날짜가 붙은 실행 기록이지 현재 판정이 아니다.** 이전 판(2026-08-20)은 그 두 문서를
+> "현재 판정"의 근거로 인용했는데, 그 인용이 **낡은 HOLD 사유를 현재 사유처럼 보이게 했다.**
+> 판정의 현재 값은 `CURRENT.md` §1에서 읽고, 아래 두 문서는 **그 시점 기록으로만** 읽는다.
+
+- **CODE: `GO`** (approved local `.158` + CLI `2.114.0` 범위). 유효 조건과 무효화 조건은
+  `docs/agent/CURRENT.md` §1. `[문서]` `code/10-CODE-MASTER-TODO.md` §9.8 (2026-08-18 기록) /
+  `[산출물]` B1 summary
+- **RELEASE: `HOLD` — 그러나 사유가 완전히 바뀌었다.**
+
+  | 시점 | HOLD 사유 |
+  |---|---|
+  | ~~2026-08-20~~ | ~~운영/linked DB 적용, Edge Function 배포, 운영 dry-run, Release A~D 승인~~ — **네 항목 전부 2026-08-28 창에서 완료됐다** (W6·W8·W5, Release A~D는 U2로 대체) |
+  | **2026-08-29 (현재)** | **W9 미해결 4건** — `wiki-snapshot` 429 대량 재발(그룹), RETIRE 사유 불일치, `username-lookup` 404, 관전 이모티콘 미전달. 목록은 `CURRENT.md` §5.5 |
+
+  즉 **HOLD를 만드는 층이 DB에서 프론트·Edge Function으로 옮겨갔다.** 유지보수 게이트가
+  켜진 채이며 사용자 노출은 0이다. `[산출물]` `docs/ops/CUTOVER-LOG-2026-08-27.md` §W9·§W10
+- ~~2026-08-20 운영 실측 이후 늘어난 릴리스 게이트 — baseline 처리, 운영 17.6 권한 거부 경로 검증,
+  `finish_group_player` 배포 순서, V2 이전 3개 migration 영향도~~ →
+  **4개 중 3개가 창에서 해소됐다** (baseline = W3·W4, `finish_group_player` 순서 = W0→W1→W6,
+  3개 migration = W6에 포함). **남은 것은 권한 거부 경로 SIGSEGV 검증 하나**이며,
+  W9에서 의도적 1회도 수행하지 않아 창 밖으로 이월됐다 (§4.4, CUTOVER-PLAN §8.2-1).
 - `.104` image 또는 미승인 digest가 기본 경로로 돌아오면 즉시 `CODE NO-GO`. `[문서]` `code/13-GROUP-FINAL-GAPS.md` §9
 
 **런타임 baseline 축의 성질 (2026-08-23 재확인)**
@@ -236,28 +321,32 @@ npm test
 ## 4. 확인 필요 (저장소에서 근거를 찾지 못한 항목)
 
 아래는 **추측하지 않고 미확인으로 남긴** 항목이다. 다음 세션에서 사람 확인 또는 외부 접근이 필요하다.
-2026-08-20 운영 읽기 전용 실측으로 해소된 항목은 `docs/ops/PROD-SNAPSHOT-2026-08-20.md` 참조로 대체했다.
+2026-08-20 운영 읽기 전용 실측으로 해소된 항목은 `docs/ops/PROD-SNAPSHOT-2026-08-20.md` 참조로 대체했고,
+**2026-08-27~28 cutover 창이 해소한 항목은 `docs/ops/CUTOVER-LOG-2026-08-27.md`의 단계를 명시했다.**
+
+> **창이 이 절을 크게 줄였다.** §4.1의 마지막 행과 §4.4의 4개 항목 중 3개가 해소됐다.
+> **대신 창이 새 미해결 4건을 만들었다** — §4.5에 등재했다.
 
 ### 4.1 원격 / 운영 환경
 
 | 항목 | 상태 |
 |---|---|
-| `37adc69`·`450f63a`의 원격(`origin/main`) 포함 여부 | **해소 (2026-08-20).** `origin/main`에는 미포함(HEAD `e6d8eee` "0529백업", 5월 상태). 같은 날 `origin/feat/group-final-gaps`로 push해 `f1e61fa`까지 원격 백업됨. 상세는 `docs/agent/CURRENT.md` §3. **`origin/main`은 Vercel 프로덕션 배포와 연동되어 있어 cutover 계획 확정 전 main push가 금지된다 (`AGENTS.md` §1.1)** |
-| 운영/linked Supabase 프로젝트의 실제 migration 적용 상태 | **해소.** 미적용 11개, `supabase_migrations.schema_migrations` 부재로 CLI push 이력 자체 없음 → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §1. 격차는 V2 5개에 더해 8/4·8/7·8/13 3개를 포함한다 |
-| 운영 PostgreSQL/Supabase 런타임 버전 | **해소.** `PostgreSQL 17.6 on aarch64-unknown-linux-gnu` → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §5. 파생 위험은 §4.4로 이관 |
+| `37adc69`·`450f63a`의 원격(`origin/main`) 포함 여부 | **해소 (2026-08-20) → 상태가 바뀌었다 (2026-08-28).** 2026-08-20에는 `origin/main`이 5월 상태(`e6d8eee`)라 미포함이었다. **창의 W1·W1-a가 `main`을 `4a78a0d`까지 옮겨 두 커밋 모두 포함됐고, `origin/main`과 `origin/feat/group-final-gaps`가 같은 커밋을 가리킨다** (2026-08-28 `ls-remote` 실측). **main push 금지는 유지되지만 근거가 바뀌었다** — 지금은 유지보수 게이트가 유일한 방패이기 때문이다 (`AGENTS.md` §1.1). 상세: `docs/agent/CURRENT.md` §3 |
+| 운영/linked Supabase 프로젝트의 실제 migration 적용 상태 | **해소 → 그 뒤 상태가 바뀌었다.** ~~미적용 11개, `schema_migrations` 부재로 CLI push 이력 자체 없음~~ 은 **2026-08-20 시점의 값**이다. **2026-08-28 창에서 11개 전량이 적용됐고 이력은 12행이다** (W3·W6·W7). 격차에 포함됐던 8/4·8/7·8/13 3개도 함께 적용됐다 → `docs/ops/CUTOVER-LOG-2026-08-27.md` §W6·§W7 |
+| 운영 PostgreSQL/Supabase 런타임 버전 | **해소.** `PostgreSQL 17.6 on aarch64-unknown-linux-gnu` → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §5. 창이 바꾸지 않은 값이다. 파생 위험은 §4.4로 이관 |
 | 운영 DB의 `onboarding_full_avatar` 사용 여부 | **해소.** avatar/achievement/reward 관련 테이블·컬럼 0행이므로 저장 구조 자체가 없고 업적 ID rename이 안전 → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §4. 이전 "확인 전 rename/update 금지" 제약은 해제됨 |
-| `avatars` Storage 버킷의 실제 업로드 이미지 존재 여부 | **부분 해소.** 객체 1개·소유자 1명 존재 → `docs/ops/PROD-SNAPSHOT-2026-08-20.md` §3. **남은 확인**: 소유자가 실제 사용자인지 개발 테스트 계정인지 식별(§8 후속 쿼리 미실행). 삭제·변환은 `AGENTS.md` §4에 따라 금지 |
-| 운영 Realtime publication 구성, RLS 활성 테이블 목록, Edge Function 배포 목록 | **미확인.** 스냅샷 §8이 미실행 항목으로 명시 |
+| `avatars` Storage 버킷의 실제 업로드 이미지 존재 여부 | **해소 (2026-08-21).** 소유자는 **`roeehd2` — 사용자 본인 계정**이다 `[사용자 확인]` (CUTOVER-PLAN §1.1 U11). 실사용자 데이터가 아니다. 객체 삭제는 cutover 범위 밖이며 `AGENTS.md` §4가 그대로 적용된다 |
+| 운영 Realtime publication 구성, RLS 활성 테이블 목록, Edge Function 배포 목록 | **해소 (2026-08-28, W7·W8).** publication **4테이블**(`game_rooms`·`group_match_results`·`room_events`·`room_players`, `group_spectator_emoji_rate_limits` 미포함), RLS **14/14**(`rls_off_tables = 0`), Edge Function **`wiki-snapshot`·`single-run` 배포 완료** → `docs/ops/CUTOVER-LOG-2026-08-27.md` §W7·§W8. **남은 확인 하나**: `target-level`이 여전히 배포돼 있는지 (`--prune` 미사용은 확인됐으나 실물 미확인 — `CURRENT.md` §5.6-4) |
 
 ### 4.2 검증 게이트
 
 | 항목 | 상태 |
 |---|---|
-| 실제 Wikipedia API를 사용하는 429-free snapshot smoke | B1은 fixture 인터셉트 기반(§3.2)이라 미충족 |
-| 모바일 viewport / 키보드 / `prefers-reduced-motion` 검증 | `qa/30-INTEGRATION-CHECKLIST.md` §10 전 항목 미체크. 코드에도 검증 산출물 없음 |
-| 1:1 2브라우저 수동 검증, 실제 60초 재접속 시나리오 | `code/10-CODE-MASTER-TODO.md` §6 미체크. B1 게이트는 그룹 전용 |
-| `historical_fatal` 로그 39건의 근본 원인 | `.158` 로그의 window 밖 startup recovery / `unexpected EOF` 증거로 보존만 되어 있고 원인 미확정 (`code/10-CODE-MASTER-TODO.md` §9.8) |
-| Packet 13 변경의 commit/push 시점 | 모든 문서가 "commit/push하지 않는다"로 기록. 언제 커밋할지에 대한 결정 기록이 저장소에 없다 |
+| 실제 Wikipedia API를 사용하는 429-free snapshot smoke | **형식적 하네스는 여전히 없다.** 다만 **창이 이 경로를 운영에서 실제로 밟았다** — W9 발견 1·3이 그 결과이며 429가 실제로 터졌다. 즉 "실제 API 경로가 어떻게 실패하는가"는 더 이상 미지가 아니다. B1이 fixture 인터셉트 기반(§3.2)인 것은 그대로다 (`CURRENT.md` §5.3) |
+| 모바일 viewport / 키보드 / `prefers-reduced-motion` 검증 | **미충족.** `qa/30-INTEGRATION-CHECKLIST.md` §10 전 항목 미체크. 창에서도 수행하지 않았다 (CUTOVER-PLAN §8.2-4) |
+| 1:1 2브라우저 수동 검증, 실제 60초 재접속 시나리오 | **미충족.** W9 항목 4가 미수행이다. 다만 **4인 그룹 다중 세션은 창에서 실제로 돌렸다**(발견 3·6의 관측 경로) → CUTOVER-PLAN §8.2-2 |
+| `historical_fatal` 로그 39건의 근본 원인 | `.158` 로그의 window 밖 startup recovery / `unexpected EOF` 증거로 보존만 되어 있고 원인 미확정 (`code/10-CODE-MASTER-TODO.md` §9.8). 창과 무관 |
+| ~~Packet 13 변경의 commit/push 시점~~ | **해소.** 2026-08-20에 `339fb77`로 커밋됐고, 2026-08-27~28 창의 W1·W1-a가 `origin/main`까지 올렸다 |
 
 ### 4.3 스펙 공백
 
@@ -269,26 +358,61 @@ npm test
 | 아이템 ID 확정값 | `code/14-DUEL-ITEMS.md` §2가 "ID는 예시다. 현재 코드 ID와 마이그레이션 호환성을 감사한 뒤 결정한다"로 명시 |
 | `docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md` 갱신 주체·시점 | 15분/3분 stale 값이 남아 있으나 폐기·갱신 결정 기록이 없다 (§2.3 참고) |
 
-### 4.4 운영 스냅샷(2026-08-20)이 새로 만든 항목
+### 4.4 운영 스냅샷(2026-08-20)이 새로 만든 항목 — **4건 중 3건 해소 (2026-08-28 창)**
 
-전부 `docs/ops/PROD-SNAPSHOT-2026-08-20.md` 실측에서 파생된 항목이다. 아래 성격 분류는 스냅샷 §7의 기재를 그대로 따른다.
+전부 `docs/ops/PROD-SNAPSHOT-2026-08-20.md` 실측에서 파생된 항목이었다. **원 성격 분류를 남기고
+창이 무엇을 어떻게 닫았는지 병기한다.**
 
-| 항목 | 성격 / 남은 결정 |
-|---|---|
-| `supabase_migrations.schema_migrations` 부재 → 첫 push 시 baseline 재적용 위험 | **cutover 차단 요소.** 운영 스키마가 CLI 이력 밖에서 구성됐으므로 첫 `db push`가 `20260730170602_baseline_remote_schema`를 다시 적용하려 할 수 있다. `migration repair --status applied 20260730170602` 등 baseline 처리 절차를 cutover 계획의 **선행 단계**로 추가해야 한다. 근거: 스냅샷 §1, §7 |
-| 운영 PostgreSQL 17.6 + 권한 거부 경로 SIGSEGV | **릴리스 게이트 추가 대상.** `20260814093000_server_authority_cutover_v2`가 `public`·`anon` 실행 권한을 회수하므로 cutover 직후 권한 거부 경로 빈도가 증가하고, 이는 08-14 Crash Diagnostic에서 signal 11이 관측된 경로와 겹친다. 로컬 `CODE GO`는 승인 이미지 `.158` + CLI `2.114.0` 범위 한정이므로 **로컬 게이트로 대체 불가**. 단 로컬 `.104`/`.158`은 CLI 개발용 이미지이고 운영은 별도 관리형 배포판이므로 동일 빌드 여부는 미확인 — 확정 위험이 아니라 **검증 대상**으로 분류한다. 근거: 스냅샷 §5, §7 |
-| `finish_group_player`가 cutover에서 삭제됨 → 운영 클라이언트 파손 가능 | **배포 순서 설계 필요.** 이 함수는 현재 운영에만 존재하고 로컬 목록에는 없다. 운영 클라이언트가 호출 중이면 cutover 시점에 즉시 깨진다. 프론트 배포와 migration 적용의 순서·동시성·다운타임 허용 여부를 결정해야 한다 (`code/18-SERVER-AUTHORITY-V2-IMPLEMENTATION.md`의 Release C → Release D 순서와 함께 검토). 근거: 스냅샷 §2, §7 |
-| 운영 격차가 V2 이전 3개 migration(8/4·8/7·8/13)까지 포함 | **cutover 범위 재산정.** `group_security_hardening_phase1`, `group_match_lifecycle_phase2a`, `group_security_phase2c`가 운영에 미적용이다. 이 3개가 운영 기존 데이터에 미치는 영향은 미검토이며, Release A 범위 정의를 이 격차 기준으로 다시 계산해야 한다. 근거: 스냅샷 §1, §7, §8 |
+| 항목 | 2026-08-20 판정 | 지금 |
+|---|---|---|
+| `supabase_migrations.schema_migrations` 부재 → 첫 push 시 baseline 재적용 위험 | **cutover 차단 요소.** 운영 스키마가 CLI 이력 밖에서 구성돼 첫 `db push`가 `20260730170602_baseline_remote_schema`를 다시 적용하려 할 수 있다. baseline 처리 절차를 선행 단계로 추가해야 한다 | **해소 (W3·W4·W5).** `migration repair --status applied 20260730170602 --linked` exit 0 → 이력 1행 / `statement_count` 250 확인 → dry-run pending **11개**(12개가 아니다 = baseline 재적용 없음). 근거: `CUTOVER-LOG-2026-08-27.md` §W3·§W4·§W5 |
+| 운영 PostgreSQL 17.6 + 권한 거부 경로 SIGSEGV | **릴리스 게이트 추가 대상.** `20260814093000_server_authority_cutover_v2`가 `public`·`anon` 실행 권한을 회수하므로 cutover 직후 권한 거부 경로 빈도가 증가하고, 이는 08-14 Crash Diagnostic의 signal 11 경로와 겹친다. **로컬 게이트로 대체 불가** | **미해소 — 이 절에서 유일하게 남은 항목.** W6가 그 migration을 실제로 적용했으므로 **위험 조건은 이제 성립한다.** W9에서 의도적 1회 확인을 하기로 돼 있었으나 **수행하지 않았다.** 창 밖 관측으로 이월 (CUTOVER-PLAN §8.2-1, `CURRENT.md` §1) |
+| `finish_group_player`가 cutover에서 삭제됨 → 운영 클라이언트 파손 가능 | **배포 순서 설계 필요.** 이 함수는 현재 운영에만 존재하고 로컬 목록에는 없다. 운영 클라이언트가 호출 중이면 cutover 시점에 즉시 깨진다 | **해소.** 순서를 **W0(게이트 on) → W1(프론트 배포) → W6(삭제)** 로 설계해 실행했고, 구버전 세션 drain은 유지보수 게이트가 담당했다(U3). W7에서 `finish_group_player`·`update_group_progress` 둘 다 `null` 확인. **파손은 발생하지 않았다.** 근거: `CUTOVER-LOG-2026-08-27.md` §W1·§W6·§W7 |
+| 운영 격차가 V2 이전 3개 migration(8/4·8/7·8/13)까지 포함 | **cutover 범위 재산정.** `group_security_hardening_phase1`, `group_match_lifecycle_phase2a`, `group_security_phase2c`가 운영에 미적용이며 기존 데이터 영향은 미검토다. Release A 범위를 다시 계산해야 한다 | **해소.** U2로 Release 분할 자체가 대체됐고 3개가 **11개 전량 적용 집합에 포함**되어 W5가 목록을 검증하고 W6가 적용했다. Phase 2C의 `user_profile_stats` 전량 재집계 검토는 CUTOVER-PLAN F8·§5.4에 있다. **phase1·phase2a의 개별 영향도 문서는 여전히 없다** |
+
+### 4.5 2026-08-27~28 창이 새로 만든 항목
+
+**창은 §4.4를 줄였지만 새 미해결을 만들었다.** 이 4건이 지금 `RELEASE HOLD`의 전부다.
+목록·착수 순서의 단일 기준은 **`docs/agent/CURRENT.md` §5.5**이며, 관측 전문은
+`docs/ops/CUTOVER-LOG-2026-08-27.md` §W9에 있다.
+
+| # | 항목 | 원인 | 게이트 해제 차단 |
+|---|---|---|---|
+| 3 | `wiki-snapshot` 502 대량 재발 (4인 그룹, 준비 버튼 11회 연속 실패) | **구조 확정.** dedup 후에도 문서 1건당 62요청이고 **참가자 수만큼 곱해진다** | **예** |
+| 4 | "유효하지 않은 RETIRE 사유" — 결과 화면에서 로비 나가기 실패 | 미확정 | **예** |
+| 5 | `username-lookup` 404 | 미확정. U9(운영 배포 함수 목록 미확인)와 같은 축일 가능성 | 조사 필요 |
+| 6 | 관전 이모티콘이 다른 참가자에게 전달되지 않음 | 미확정. publication은 W7에서 4테이블 정상 확인 — publication 누락은 원인이 아니다 | 조사 필요 |
+
+**발견 3은 `CURRENT.md` §5.4-1(스냅샷 재사용)과 같은 뿌리다** — 그 항목이 "최대 레버리지"로
+지목돼 보류돼 있었고, 창이 보류를 유지할 수 없게 만들었다.
+
+**창이 남긴 절차 공백 2건도 함께 기록한다** (CUTOVER-LOG §0.0·§6.3):
+`§0.0`의 복원 전제 3항목(Docker·승인 이미지·IPv4 연결)에 **당일 확인 기록이 없고**,
+**W6 종료 시각이 기록되지 않아** 되돌릴 수 없는 단계의 운영 소요를 얻지 못했다.
 
 ---
 
 ## 5. 다음 세션 권장 진입점
 
 > **작업 순서의 단일 기준은 `docs/agent/CURRENT.md` §5다.** 이 절은 배경 설명으로만 남긴다.
-> Packet 13은 2026-08-20에 `339fb77`로 커밋됐으므로 이전 초안의 "커밋 범위 결정" 항목은 종료됐다.
+> Packet 13은 2026-08-20에 `339fb77`로 커밋됐고, **cutover는 2026-08-27~28에 W0~W9까지 실행됐다.**
+> 이전 판의 1~3번은 그 과정에서 전부 종료됐으므로 아래로 교체한다.
 
-1. `docs/agent/CURRENT.md` §5의 순서(baseline 대응 확인 → cutover 재작성 → `avatars` 소유자 확인 → B2)를 따른다.
-2. §4.4의 네 항목은 cutover 계획 자체를 바꾼다. Release A~D 재설계 전에는 운영 적용을 시작하지 않고 `origin/main`에 push하지 않는다 (`AGENTS.md` §1, §1.1).
-3. §4.1에 남은 읽기 전용 확인 항목(`avatars` 소유자, Realtime publication, RLS 활성 테이블, Edge Function 배포 목록)을 해소한다.
-4. `code/10-CODE-MASTER-TODO.md` §2의 순서 3(1:1·아이템전) 이후 패킷은 **미구현**이므로, 새 기능 착수 전 XP·업적 이벤트 계약(같은 문서 §4·§5 공통 TODO)을 먼저 확정한다.
-5. `docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md`의 15분/3분 기재를 20분/2분으로 정정하거나 supersede 표시를 붙인다.
+1. **`docs/agent/CURRENT.md` §5.5의 W9 미해결 4건이 1순위다.** 착수 순서 제안은 3 → 4 → 5 → 6이며,
+   3·4가 유지보수 게이트 해제(W10)를 직접 막는다.
+2. ~~§4.4의 네 항목은 cutover 계획 자체를 바꾼다. Release A~D 재설계 전에는 운영 적용을 시작하지
+   않고 `origin/main`에 push하지 않는다.~~ → **cutover는 U2 방식으로 이미 실행됐다.**
+   **`origin/main` push 금지는 유지되지만 근거가 바뀌었다** — 지금은 "운영에 RPC가 없어서"가
+   아니라 **"유지보수 게이트가 W9 미해결 4건을 막는 유일한 방패이기 때문"** 이다.
+   승인 시 확인할 것은 **`VITE_MAINTENANCE`가 여전히 `true`인가**다 (`AGENTS.md` §1, §1.1).
+3. ~~§4.1에 남은 읽기 전용 확인 항목을 해소한다.~~ → **`avatars` 소유자(U11), publication,
+   RLS, Edge Function 배포 목록은 전부 해소됐다.** 남은 것은 `target-level` 실물 확인 하나다
+   (`CURRENT.md` §5.6-4).
+4. **문서 정합 작업은 2026-08-29에 대부분 끝났다** — 이 문서를 포함해 6개 문서를 갱신·봉인했다.
+   **운영 재조회가 필요한 2건만 남았다**: 새 운영 스냅샷 작성
+   (`PROD-SNAPSHOT-2026-08-20.md`가 무효), `target-level` Edge Function 실물 확인.
+   `qa/30-INTEGRATION-CHECKLIST.md` §22(새 게이트 기록) 작성도 미수행이다 — §21은 봉인만 했다.
+   목록은 `CURRENT.md` §5.6.
+5. `code/10-CODE-MASTER-TODO.md` §2의 순서 3(1:1·아이템전) 이후 패킷은 **미구현**이므로, 새 기능 착수 전 XP·업적 이벤트 계약(같은 문서 §4·§5 공통 TODO)을 먼저 확정한다.
+6. `docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md`는 **2026-08-29에 봉인 헤더를 붙였다** (시간 규칙
+   15분/3분 + 운영 상태 서술 양쪽). 본문 정정은 여전히 미수행이다.
