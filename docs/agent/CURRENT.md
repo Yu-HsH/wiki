@@ -1,7 +1,7 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: 2026-08-28
-기준 커밋: `be520c3` (`fix: restore the exit dialog and stop wiki-snapshot tripping Wikimedia's rate limit`)
+기준 커밋: `6725c96` (`docs: settle the wiki-snapshot UA and record the in-window main push exception`)
 브랜치: `feat/group-final-gaps`
 
 이 파일이 **"지금 상태"의 단일 기준**이다. `docs/CLAUDE_HANDOFF.md`는 배경 문서(전체 인계 정보)이고,
@@ -17,7 +17,7 @@
 
 ## 1. 판정
 
-### CODE GO — 기준 커밋 `be520c3`
+### CODE GO — 기준 커밋 `6725c96`
 
 **유효 조건 (아래를 모두 만족하는 local/CI 환경에서만 유효)**
 
@@ -53,7 +53,7 @@
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
-### RELEASE HOLD — 기준 커밋 `be520c3`
+### RELEASE HOLD — 기준 커밋 `6725c96`
 
 사용자-facing 릴리스는 보류다. **절차는 `docs/ops/CUTOVER-PLAN.md`(W0~W11)로 확정됐고, 남은 것은
 실행과 승인이다.** 각 항목의 처리 위치를 함께 적는다:
