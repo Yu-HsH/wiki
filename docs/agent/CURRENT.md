@@ -1,8 +1,12 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: 2026-08-29
-기준 커밋: `29a21d0` (`docs: rebase the main-push ban on the maintenance gate`)
+기준 커밋: `579a338` (`fix: bind group lobby-exit buttons so RETIRE reason is not a click event`)
+이전 기준: `29a21d0`
 브랜치: `feat/group-final-gaps`
+
+> **`579a338`은 창 종료 이후 첫 코드 변경이다** (`pages/GroupGamePage.jsx` 3줄, W9 발견 4).
+> 그 앞의 `29a21d0`·`357a330`은 문서 전용이었으므로 코드 기준선이 움직인 것은 여기서가 처음이다.
 
 > **2026-08-27~28 cutover 창이 실행됐고 종료됐다.** W6(`db push --linked`)로 **운영 migration 11개
 > 전량이 적용됐고**, W7 검증이 전항목 통과했으며, W8로 Edge Function 2개가 배포됐다.
@@ -17,12 +21,13 @@
 갱신한다 (`AGENTS.md` §7). 갱신 커밋은 자신의 해시를 담을 수 없으므로 **기준 커밋이 그 갱신
 커밋의 부모인 상태가 정상이다** — 그 한 커밋 차이는 뒤처진 것이 아니다. 이 갱신 커밋은 문서만
 변경하므로 아래 수치의 기준을 바꾸지 않는다.
+**다만 부모인 `579a338`은 코드를 바꿨다** — §2의 2026-08-29 행이 그 커밋 기준 실측이다.
 
 ---
 
 ## 1. 판정
 
-### CODE GO — 기준 커밋 `29a21d0`
+### CODE GO — 기준 커밋 `579a338`
 
 **유효 조건 (아래를 모두 만족하는 local/CI 환경에서만 유효)**
 
@@ -60,7 +65,7 @@
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
-### RELEASE HOLD — 기준 커밋 `29a21d0`
+### RELEASE HOLD — 기준 커밋 `579a338`
 
 **사용자-facing 릴리스는 여전히 보류다. 그러나 HOLD의 성격이 바뀌었다.**
 2026-08-27~28 창이 **DB·배포 축을 전부 닫았고**, 남은 HOLD 사유는 **W9에서 발견된 결함 4건**뿐이다.
@@ -141,6 +146,7 @@
 | `npm test` | **142/142** | 2026-08-21 | `b24744e` 실측. 베이스라인 129 + 유지보수 게이트 13 (`tests/maintenanceGate.test.js`) |
 | `npm test` | **142/142** | 2026-08-23 | `032caba` 실측. Docker Desktop 재시작 후 재확인 |
 | `npm test` | **142/142** | 2026-08-28 | `be520c3` 실측. 운영 장애 최소 수정 3건 후 재실행. **테스트 수는 늘지 않았다** — 수정이 기존 계약 안에 들어간다 (`serverAuthorityMigration.test.js:62-65`, `groupFinalGaps.test.js:66-68` 무영향) |
+| `npm test` | **142/142** | 2026-08-29 | `579a338` 실측. RETIRE 3줄 수정 후 재실행. **테스트 수는 늘지 않았다** — `onClick` 바인딩은 기존 계약(`groupGameFlow.test.js:198`의 `shouldRetireGroupPlayer`)을 건드리지 않는다 |
 | pgTAP Packet 13 | 33/33 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP spectator emoji atomicity | 22/22 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP Server Authority V2 | 97/97 | 2026-08-18 | `339fb77` 이전 |
@@ -150,6 +156,7 @@
 | production build (`npm run build`) | PASS (약 689KB chunk 경고) | 2026-08-18 | `339fb77` 이전 |
 | production build (`npm run build`) | **PASS** | 2026-08-21 | `b24744e` 실측. **커밋 기준 재실행 완료** — CUTOVER-PLAN §7 P13 |
 | production build (`npm run build`) | **PASS** | 2026-08-28 | `be520c3` 실측. 산출물의 바 `React.createElement`가 **7건 → 0건** — ExitGuard 수정이 번들 수준에서 확인됐다 |
+| production build (`npm run build`) | **PASS** (exit 0) | 2026-08-29 | `579a338` 실측. 청크 경고는 기존과 동일 |
 | `npm run supabase:preflight` | **11/11 PASS** | 2026-08-23 | `032caba` 실측. `postmaster-stability before == after`, restart 0/0 |
 | log window self-test | **12/12 PASS** | 2026-08-23 | `032caba` 실측. `negative-postmaster-changed` 포함 |
 | `npm run supabase:clean-gate` / `supabase:postgrest-smoke` 재실행 | 미확인 | — | `339fb77` 이후 재실행 기록 없음. `supabase:preflight`와 별개 스크립트다 |
