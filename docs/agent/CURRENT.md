@@ -1,12 +1,14 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: 2026-08-29
-기준 커밋: `579a338` (`fix: bind group lobby-exit buttons so RETIRE reason is not a click event`)
-이전 기준: `29a21d0`
+갱신 날짜: 2026-09-02
+기준 커밋: `0ad3cde` (`perf: cut wiki-snapshot Wikipedia requests from 61 to 31 cold and 0 warm`)
+이전 기준: `579a338` · `29a21d0`
 브랜치: `feat/group-final-gaps`
 
-> **`579a338`은 창 종료 이후 첫 코드 변경이다** (`pages/GroupGamePage.jsx` 3줄, W9 발견 4).
-> 그 앞의 `29a21d0`·`357a330`은 문서 전용이었으므로 코드 기준선이 움직인 것은 여기서가 처음이다.
+> **창 종료 이후 코드 커밋은 둘이다.** `579a338`(RETIRE 3줄, W9 발견 4)과
+> `0ad3cde`(`wiki-snapshot` 요청 감축, W9 발견 3). **둘 다 미배포다** — 운영 번들과
+> 운영 Edge Function은 아직 `4a78a0d` 시점이다 (§3).
+> 그 사이의 `29a21d0`·`357a330`·`e272b44`·`298cf54`·`aa58bac`은 문서 전용이다.
 
 > **2026-08-27~28 cutover 창이 실행됐고 종료됐다.** W6(`db push --linked`)로 **운영 migration 11개
 > 전량이 적용됐고**, W7 검증이 전항목 통과했으며, W8로 Edge Function 2개가 배포됐다.
@@ -27,7 +29,7 @@
 
 ## 1. 판정
 
-### CODE GO — 기준 커밋 `579a338`
+### CODE GO — 기준 커밋 `0ad3cde`
 
 **유효 조건 (아래를 모두 만족하는 local/CI 환경에서만 유효)**
 
@@ -65,7 +67,7 @@
 
 근거: `wiki-race-2.0-handoff/code/13-GROUP-FINAL-GAPS.md` §9·§21, `code/10-CODE-MASTER-TODO.md` §9.8
 
-### RELEASE HOLD — 기준 커밋 `579a338`
+### RELEASE HOLD — 기준 커밋 `0ad3cde`
 
 **사용자-facing 릴리스는 여전히 보류다. 그러나 HOLD의 성격이 바뀌었다.**
 2026-08-27~28 창이 **DB·배포 축을 전부 닫았고**, 남은 HOLD 사유는 **W9에서 발견된 결함 4건**뿐이다.
@@ -147,7 +149,7 @@
 | `npm test` | **142/142** | 2026-08-23 | `032caba` 실측. Docker Desktop 재시작 후 재확인 |
 | `npm test` | **142/142** | 2026-08-28 | `be520c3` 실측. 운영 장애 최소 수정 3건 후 재실행. **테스트 수는 늘지 않았다** — 수정이 기존 계약 안에 들어간다 (`serverAuthorityMigration.test.js:62-65`, `groupFinalGaps.test.js:66-68` 무영향) |
 | `npm test` | **142/142** | 2026-08-29 | `579a338` 실측. RETIRE 3줄 수정 후 재실행. **테스트 수는 늘지 않았다** — `onClick` 바인딩은 기존 계약(`groupGameFlow.test.js:198`의 `shouldRetireGroupPlayer`)을 건드리지 않는다 |
-| `npm test` | **144/144** | 2026-09-02 | `aa58bac` + wiki-snapshot 감축(미커밋) 실측. **+2** — `serverAuthorityMigration.test.js`의 목적지 revision 계약이 **제거의 유지**로 뒤집히면서 재사용·본문 플래그 계약 2건이 늘었다 |
+| `npm test` | **144/144** | 2026-09-02 | `0ad3cde` 실측 (측정은 커밋 직전 작업 트리). **+2** — `serverAuthorityMigration.test.js`의 목적지 revision 계약이 **제거의 유지**로 뒤집히면서 재사용·본문 플래그 계약 2건이 늘었다 |
 | pgTAP Packet 13 | 33/33 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP spectator emoji atomicity | 22/22 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP Server Authority V2 | 97/97 | 2026-08-18 | `339fb77` 이전 |
@@ -158,8 +160,8 @@
 | production build (`npm run build`) | **PASS** | 2026-08-21 | `b24744e` 실측. **커밋 기준 재실행 완료** — CUTOVER-PLAN §7 P13 |
 | production build (`npm run build`) | **PASS** | 2026-08-28 | `be520c3` 실측. 산출물의 바 `React.createElement`가 **7건 → 0건** — ExitGuard 수정이 번들 수준에서 확인됐다 |
 | production build (`npm run build`) | **PASS** (exit 0) | 2026-08-29 | `579a338` 실측. 청크 경고는 기존과 동일 |
-| production build (`npm run build`) | **PASS** (exit 0) | 2026-09-02 | `aa58bac` + wiki-snapshot 감축(미커밋) 실측 |
-| **`wiki-snapshot` Wikipedia 요청 수** | cold **61 → 31**, warm **61 → 0**, 관전 **61 → 1** / 4인 대기실 **244 → 124**, 4인 진입 **244 → 31** | 2026-09-02 | `scripts/wikiSnapshotRequestCount.mjs` 실측 `[산출물]`. before = `aa58bac`, after = 미커밋 작업 트리. **baseline "제목만" 62건이 2026-08-28 기록과 일치**해 하네스가 검증됐다 |
+| production build (`npm run build`) | **PASS** (exit 0) | 2026-09-02 | `0ad3cde` 실측 (측정은 커밋 직전 작업 트리) |
+| **`wiki-snapshot` Wikipedia 요청 수** | cold **61 → 31**, warm **61 → 0**, 관전 **61 → 1** / 4인 대기실 **244 → 124**, 4인 진입 **244 → 31** | 2026-09-02 | `scripts/wikiSnapshotRequestCount.mjs` 실측 `[산출물]`. before = `aa58bac`, after = `0ad3cde`. **baseline "제목만" 62건이 2026-08-28 기록과 일치**해 하네스가 검증됐다 |
 | `npm run supabase:preflight` | **11/11 PASS** | 2026-08-23 | `032caba` 실측. `postmaster-stability before == after`, restart 0/0 |
 | log window self-test | **12/12 PASS** | 2026-08-23 | `032caba` 실측. `negative-postmaster-changed` 포함 |
 | `npm run supabase:clean-gate` / `supabase:postgrest-smoke` 재실행 | 미확인 | — | `339fb77` 이후 재실행 기록 없음. `supabase:preflight`와 별개 스크립트다 |
@@ -186,7 +188,7 @@
 > **아래 커밋 수는 측정 시점 값이고, 이 절을 기록·갱신하는 커밋 자신은 포함되지 않는다**
 > (서두의 갱신 규칙과 같은 이유 — 커밋은 자기 해시를 담을 수 없다). 측정 당시 5였다.
 > **정확한 현재 값은 오른쪽 재측정 명령으로 읽는다.** 변하지 않는 것은
-> **"코드 차이는 `579a338` 하나뿐"** 이며, 그 뒤로는 문서 커밋만 쌓였다.
+> **"코드 커밋은 `579a338`(RETIRE)과 `0ad3cde`(요청 감축) 둘뿐"** 이며 나머지는 문서다.
 
 | 항목 | 값 | 재측정 명령 |
 |---|---|---|
@@ -194,28 +196,34 @@
 | `origin/feat/group-final-gaps` HEAD | **`e272b44`** — ~~`main`과 동일 값~~ → **`main`보다 5커밋 앞** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
 | 현재 브랜치 upstream | `origin/feat/group-final-gaps` (설정됨) | `git rev-parse --abbrev-ref "@{u}"` |
 | upstream 대비 | **0 behind / 0 ahead** — push 완료 | `git rev-list --left-right --count "@{u}...HEAD"` |
-| `origin/main...HEAD` | ~~0 behind / 0 ahead~~ → **0 behind / 5 ahead** | `git rev-list --left-right --count origin/main...HEAD` |
-| `e6d8eee..HEAD` 커밋 수 | **41** (`e272b44` 기준, 2026-08-29 실측) | `git rev-list --count e6d8eee..HEAD` |
+| `origin/main...HEAD` | ~~0 behind / 0 ahead~~ → **0 behind / 8 ahead** (2026-09-02) | `git rev-list --left-right --count origin/main...HEAD` |
+| `e6d8eee..HEAD` 커밋 수 | **44** (`0ad3cde` 기준, 2026-09-02 실측) | `git rev-list --count e6d8eee..HEAD` |
 | `37adc69`·`450f63a`·`339fb77`·`f1e61fa`·`b24744e`·`032caba`·`be520c3` | `origin/main`·`origin/feat/group-final-gaps` **양쪽에 포함** | `git branch -r --contains <sha>` |
 
-**`main`에 없는 5커밋 — 무엇이 미배포인가:**
+**`main`에 없는 커밋 — 무엇이 미배포인가** (2026-09-02 실측 `[산출물]`):
 
 | 커밋 | 성격 | 운영 영향 |
 |---|---|---|
-| `e272b44` | 문서 | 없음 |
-| **`579a338`** | **코드 — `pages/GroupGamePage.jsx` 3줄** (`git diff --stat origin/main..HEAD` 실측) | **W9 발견 4(RETIRE) 수정이 운영에 없다** |
-| `357a330` | 문서 | 없음 |
-| `29a21d0` | 문서 | 없음 |
-| `1599be9` | 문서 | 없음 |
+| **`0ad3cde`** | **코드 — Edge Function + 프론트 + 테스트 + 계측 스크립트** | **W9 발견 3 요청 감축이 운영에 없다.** `supabase/functions/wiki-snapshot/index.ts`가 포함되므로 **Vercel 배포만으로는 반영되지 않는다** |
+| `aa58bac`·`298cf54`·`e272b44` | 문서 | 없음 |
+| **`579a338`** | **코드 — `pages/GroupGamePage.jsx` 3줄** | **W9 발견 4(RETIRE) 수정이 운영에 없다** |
+| `357a330`·`29a21d0`·`1599be9` | 문서 | 없음 |
 
-**즉 운영 번들과 이 브랜치의 코드 차이는 `579a338` 하나뿐이다** (`git diff origin/main..HEAD`에서
-`docs/`·`wiki-race-2.0-handoff/`·`AGENTS.md`를 빼면 그 파일 한 개만 남는다, 2026-08-29 실측
-`[산출물]`).
+**운영과의 코드 차이는 이제 두 커밋이고, 배포 경로가 서로 다르다:**
+
+| | 배포 경로 | 담긴 것 |
+|---|---|---|
+| 프론트 | `main` push → Vercel | `579a338` 전부 + `0ad3cde`의 `pages/`·`services/` |
+| **Edge Function** | **`supabase functions deploy wiki-snapshot`** | `0ad3cde`의 `supabase/functions/` |
+
+**순서가 있다 — 프론트를 먼저 올린다.** 반대로 하면 옛 프론트가 `includeDocument`를 보내지
+않아 관전 화면이 깨진다 (§5.4-1·2의 경고 상자).
 
 **`main` push를 보류한 이유** `[사용자 결정, 2026-08-29]`: **`579a338`만 올려도 그룹 모드는 쓸 수
 없다.** 발견 3(준비 버튼 502)이 미해결이라 **결과 화면까지 도달하지 못하므로** 이 수정이 고치는
 지점에 사용자가 닿지 않는다. **발견 3 수정과 함께 한 번의 배포로 올리고 스모크도 한 번에 한다.**
-→ **다음 `main` push의 묶음은 `579a338` + 발견 3 수정 + 그때까지의 문서다.**
+→ **그 조건이 2026-09-02에 갖춰졌다** — 다음 `main` push의 묶음은 `579a338` + `0ad3cde` +
+그때까지의 문서이고, **Edge Function 배포가 뒤따라야 한 벌이 된다.**
 
 `git ls-remote`는 원격을 직접 조회하므로 `fetch` 없이도 실제 값을 준다. 이 클론에는
 `.git/FETCH_HEAD`가 없어 remote-tracking ref는 push 결과만 반영한다 — **`git status`의
@@ -300,6 +308,10 @@ ahead/behind만 믿지 말고 `ls-remote`로 대조한다.**
   실행 기록: **`docs/ops/CUTOVER-LOG-2026-08-27.md`**.
   ~~**다음 창의 범위는 W9 잔여 4건 + W10 하나다**~~ → **2026-08-29 조사로 4건 중 2건이 닫혔다.
   다음 창의 범위는 W9 잔여 2건(발견 3·6) + 발견 4 수정의 배포 + W10이다** (§5.5).
+  **2026-09-02 갱신 — 발견 3의 코드 수정도 끝났다.** 다음 창은 이제
+  **① 프론트 배포(`main` push) → ② Edge Function 배포 → ③ 4인 그룹 재스모크
+  (대기실 124건이 통과하는가) → ④ 통과하면 발견 6 재검증, 실패하면 §5.4-3 백오프 → ⑤ W10**
+  순서다. 순서 ①②를 뒤집으면 관전 화면이 깨진다 (§5.4-1·2).
 - **W9 발견 4 "유효하지 않은 RETIRE 사유" — 코드 수정 완료 (2026-08-29). 미배포.**
   `pages/GroupGamePage.jsx:1267`·`:1434`·`:1491` 3줄을
   `onClick={() => handleReturnToLobby("left")}`로 교체했다. 원인은 RPC 계약 불일치가 아니라
