@@ -173,18 +173,41 @@
 
 ## 3. 원격 상태
 
-측정 시점: **2026-08-28 23:21, 로컬 HEAD `4a78a0d`** (`git ls-remote origin` 실측 `[산출물]`).
-아래 값은 **창 종료 후 실측**이며 재측정 명령을 함께 적는다.
+측정 시점: **2026-08-29, 로컬 HEAD `e272b44`** (`git ls-remote origin` 실측 `[산출물]`).
+이전 측정: 2026-08-28 23:21, `4a78a0d` — 그때는 두 ref가 같은 커밋이었다.
+아래 값은 **feat push 후 실측**이며 재측정 명령을 함께 적는다.
+
+> **`main`과 `feat`가 갈라졌다 (2026-08-29).** 창 종료 후 처음이다.
+> **차이는 정확히 5커밋 = 코드 1 + 문서 4**이고, `main` push를 보류했기 때문에 생긴 것이다.
 
 | 항목 | 값 | 재측정 명령 |
 |---|---|---|
-| `origin/main` HEAD | **`4a78a0d`** — `e6d8eee`에서 **36커밋 앞으로 이동했다.** W1이 `7a70a04`(31커밋)까지, W1-a가 `4a78a0d`까지 올렸다 | `git ls-remote origin refs/heads/main` |
-| `origin/feat/group-final-gaps` HEAD | **`4a78a0d`** — `main`과 **동일 값** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
+| `origin/main` HEAD | **`4a78a0d`** — 2026-08-28 W1-a 이후 **움직이지 않았다.** `e6d8eee`에서 36커밋 앞 | `git ls-remote origin refs/heads/main` |
+| `origin/feat/group-final-gaps` HEAD | **`e272b44`** — ~~`main`과 동일 값~~ → **`main`보다 5커밋 앞** | `git ls-remote origin refs/heads/feat/group-final-gaps` |
 | 현재 브랜치 upstream | `origin/feat/group-final-gaps` (설정됨) | `git rev-parse --abbrev-ref "@{u}"` |
-| upstream 대비 | 0 behind / 0 ahead | `git rev-list --left-right --count "@{u}...HEAD"` |
-| `origin/main...HEAD` | **0 behind / 0 ahead** — 두 ref가 같은 커밋을 가리킨다 | `git rev-list --left-right --count origin/main...HEAD` |
-| `e6d8eee..HEAD` 커밋 수 | **36** (`4a78a0d` 기준, 2026-08-28 실측) | `git rev-list --count e6d8eee..HEAD` |
+| upstream 대비 | **0 behind / 0 ahead** — push 완료 | `git rev-list --left-right --count "@{u}...HEAD"` |
+| `origin/main...HEAD` | ~~0 behind / 0 ahead~~ → **0 behind / 5 ahead** | `git rev-list --left-right --count origin/main...HEAD` |
+| `e6d8eee..HEAD` 커밋 수 | **41** (`e272b44` 기준, 2026-08-29 실측) | `git rev-list --count e6d8eee..HEAD` |
 | `37adc69`·`450f63a`·`339fb77`·`f1e61fa`·`b24744e`·`032caba`·`be520c3` | `origin/main`·`origin/feat/group-final-gaps` **양쪽에 포함** | `git branch -r --contains <sha>` |
+
+**`main`에 없는 5커밋 — 무엇이 미배포인가:**
+
+| 커밋 | 성격 | 운영 영향 |
+|---|---|---|
+| `e272b44` | 문서 | 없음 |
+| **`579a338`** | **코드 — `pages/GroupGamePage.jsx` 3줄** (`git diff --stat origin/main..HEAD` 실측) | **W9 발견 4(RETIRE) 수정이 운영에 없다** |
+| `357a330` | 문서 | 없음 |
+| `29a21d0` | 문서 | 없음 |
+| `1599be9` | 문서 | 없음 |
+
+**즉 운영 번들과 이 브랜치의 코드 차이는 `579a338` 하나뿐이다** (`git diff origin/main..HEAD`에서
+`docs/`·`wiki-race-2.0-handoff/`·`AGENTS.md`를 빼면 그 파일 한 개만 남는다, 2026-08-29 실측
+`[산출물]`).
+
+**`main` push를 보류한 이유** `[사용자 결정, 2026-08-29]`: **`579a338`만 올려도 그룹 모드는 쓸 수
+없다.** 발견 3(준비 버튼 502)이 미해결이라 **결과 화면까지 도달하지 못하므로** 이 수정이 고치는
+지점에 사용자가 닿지 않는다. **발견 3 수정과 함께 한 번의 배포로 올리고 스모크도 한 번에 한다.**
+→ **다음 `main` push의 묶음은 `579a338` + 발견 3 수정 + 그때까지의 문서다.**
 
 `git ls-remote`는 원격을 직접 조회하므로 `fetch` 없이도 실제 값을 준다. 이 클론에는
 `.git/FETCH_HEAD`가 없어 remote-tracking ref는 push 결과만 반영한다 — **`git status`의
@@ -228,16 +251,20 @@ ahead/behind만 믿지 말고 `ls-remote`로 대조한다.**
 **바뀐 것**
 
 - **"미배포 RPC 호출" 위험은 해소됐다.** 운영 `public` 함수는 7개에서 **36개**가 됐고 legacy RPC
-  2개는 삭제됐다 (W7). `origin/main`과 `HEAD`가 같은 커밋이므로 프론트/DB 버전 어긋남도 없다.
+  2개는 삭제됐다 (W7). ~~`origin/main`과 `HEAD`가 같은 커밋이므로 프론트/DB 버전 어긋남도 없다.~~
+  **2026-08-29부터 두 ref는 5커밋 갈라져 있다** (위 표). 다만 **DB 스키마를 건드리는 커밋은 없고**
+  차이의 코드분은 `579a338`의 프론트 3줄뿐이므로 **프론트/DB 버전 어긋남은 여전히 없다.**
 - **`PROD-SNAPSHOT-2026-08-20.md` §2의 "함수 7개 / V2 RPC 30개 부재"는 무효다.**
 
 **새 금지 근거 — 지금 main push가 위험한 이유**
 
-1. **유지보수 게이트가 유일한 방패다.** W9 미해결 4건(발견 3·4·5·6)이 그대로 있고, 사용자를
+1. **유지보수 게이트가 유일한 방패다.** ~~W9 미해결 4건(발견 3·4·5·6)~~ →
+   **2026-08-29 조사 후 발견 3·6이 남았고 발견 4는 수정됐으나 미배포다** (§5.5). 사용자를
    막고 있는 것은 `VITE_MAINTENANCE=true` 하나뿐이다. `VITE_*`는 **빌드 시점 인라인**이므로
    (F11) **게이트 값이 바뀐 상태에서의 push는 곧 서비스 오픈이다.**
-2. **게이트 해제는 W10이고, W10은 별도 판단이다.** 발견 3·4가 해결되기 전의 해제는
-   사용자가 준비 버튼 실패와 결과 화면 이탈 실패를 직접 만나는 결과가 된다.
+2. **게이트 해제는 W10이고, W10은 별도 판단이다.** ~~발견 3·4~~ → **발견 3**이 해결되기 전의
+   해제는 사용자가 **준비 버튼 실패**를 직접 만나는 결과가 된다. 발견 4는 코드에서는 고쳤지만
+   **미배포이므로 지금 게이트를 열면 결과 화면 이탈 실패도 함께 노출된다.**
 
 → **결론: main push는 계속 건별 승인 대상이다.** 다만 승인 시 확인할 것이 "RPC가 있는가"에서
 **"`VITE_MAINTENANCE`가 여전히 `true`인가"** 로 바뀌었다. 상시 규칙: `AGENTS.md` §1.1.
