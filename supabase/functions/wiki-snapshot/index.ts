@@ -105,25 +105,65 @@ async function fetchPageIdentities(titles: string[]) {
   return identities;
 }
 
-async function fetchRevisionIds(pageIds: string[]) {
-  const revisions = new Map<string, string>();
-  for (let index = 0; index < pageIds.length; index += 50) {
-    const batch = pageIds.slice(index, index + 50);
-    const data = await wikiJson({
-      action: "query",
-      pageids: batch.join("|"),
-      prop: "revisions",
-      rvprop: "ids",
-      rvlimit: "1",
-      format: "json",
-    });
-    for (const page of Object.values(data?.query?.pages ?? {}) as any[]) {
-      const pageId = page?.pageid == null ? "" : String(page.pageid);
-      const revisionId = page?.revisions?.[0]?.revid;
-      if (pageId && revisionId != null) revisions.set(pageId, String(revisionId));
+// `fetchRevisionIds`(목적지 문서마다 최신 revid를 50개씩 조회하던 배치)는 2026-08-29에
+// 제거했다. 문서 1건당 요청이 62 → 32로 줄고, 이 감축은 cold·warm 경로 모두에 적용된다.
+//
+// 안전한 이유 — `wiki_snapshot_links.target_revision_id`는 nullable이고, 이 값을 읽는 곳은
+// `private.resolve_wiki_revision(page_id, revision_id)` 하나뿐이다. 그 함수는
+//   revision_id 있음 → `wiki_page_snapshots`에 (page_id, revision_id)가 있어야 값을 준다
+//   revision_id 없음 → 그 page_id의 최근 스냅샷 revision을 준다
+// 이므로 **null이 되면 결과가 null인 경우가 늘지 않고 줄어든다.** 즉 제거는 이동 판정을
+// 더 엄격하게 만들지 않는다. 오히려 목적지 문서가 그사이 편집돼 링크에 기록된 revid와
+// 실제 스냅샷 revid가 어긋나던 경우가 사라진다.
+//
+// **클라이언트 계약:** 이동 RPC를 부르기 전에 목적지 문서를 이 함수로 스냅샷해야 한다
+// (`pages/GroupGamePage.jsx`의 `handleMove`, `pages/MultiplayerGamePage.jsx`,
+// `pages/GamePage.jsx`가 그 순서를 지킨다). 그래야 `resolve_wiki_revision`이 값을 돌려준다.
+// 그룹 경로만 이 값이 null일 때 `coalesce(v_to_revision, current_revision_id)`로 이전 문서의
+// revision을 남기므로(단일·1:1은 `LINK_SNAPSHOT_MISSING`으로 거절한다) 계약이 특히 중요하다.
+// 근거: `docs/agent/CURRENT.md` §5.5-3.
+
+// 같은 (page_id, revision_id) 스냅샷이 이미 있으면 Wikipedia를 다시 긁지 않는다.
+// 행이 있다는 것 자체가 **생성 시점에 pinned parse로 신원이 검증됐다는 증거**이므로
+// 여기서 신원을 다시 확인할 필요가 없다.
+// 링크가 0건인 행은 재사용하지 않는다 — 정상적인 무링크 문서와 실패한 쓰기를 구분할 수 없어서다.
+async function loadCachedSnapshot(pageId: string, revisionId: string) {
+  const { data: snapshot, error } = await supabase
+    .from("wiki_page_snapshots")
+    .select("id, canonical_title_snapshot")
+    .eq("page_id", pageId)
+    .eq("revision_id", revisionId)
+    .maybeSingle();
+  if (error || !snapshot?.id) return null;
+
+  // PostgREST는 한 응답의 행 수를 제한한다. 링크가 1000건을 넘는 문서가 있으므로
+  // 명시 range로 끝까지 읽는다 — 조용히 잘리면 이동이 LINK_NOT_ALLOWED로 막힌다.
+  const pageSize = 1000;
+  const links: { pageId: string; title: string; linkText: string }[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data: rows, error: linkError } = await supabase
+      .from("wiki_snapshot_links")
+      .select("target_page_id, target_title_snapshot, link_text")
+      .eq("snapshot_id", snapshot.id)
+      .order("ordinal", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (linkError) return null;
+    for (const row of rows ?? []) {
+      links.push({
+        pageId: String(row.target_page_id),
+        title: row.target_title_snapshot,
+        linkText: row.link_text || row.target_title_snapshot,
+      });
     }
+    if (!rows || rows.length < pageSize) break;
   }
-  return revisions;
+  if (!links.length) return null;
+
+  return {
+    snapshotId: snapshot.id,
+    canonicalTitle: normalizeTitle(snapshot.canonical_title_snapshot),
+    links,
+  };
 }
 
 function json(data: unknown, status = 200) {
@@ -143,7 +183,27 @@ Deno.serve(async (req) => {
     const requestId = body?.requestId || null;
     const expectedPageId = body?.pageId == null ? "" : String(body.pageId);
     const expectedRevisionId = body?.revisionId == null ? "" : String(body.revisionId);
+    // 본문 HTML은 관전 화면만 쓴다 (`services/groupSpectatorService.js:92-96`).
+    // 나머지 9개 호출부는 반환값을 통째로 버리므로 기본값은 false다 — 그래야 warm 경로에서
+    // pinned parse 1건까지 없앨 수 있다. HTML은 DB에 없어서 요청할 때만 Wikipedia를 탄다.
+    const includeDocument = body?.includeDocument === true;
     if (!requestedTitle) return json({ code: "INVALID_TITLE" }, 400);
+
+    // warm + HTML 불필요 → Wikipedia 요청 0건.
+    if (expectedPageId && expectedRevisionId && !includeDocument) {
+      const cached = await loadCachedSnapshot(expectedPageId, expectedRevisionId);
+      if (cached) {
+        return json({
+          snapshotId: cached.snapshotId,
+          pageId: expectedPageId,
+          revisionId: expectedRevisionId,
+          canonicalTitle: cached.canonicalTitle,
+          documentHtml: "",
+          links: cached.links,
+          reused: true,
+        });
+      }
+    }
 
     let parsedPage: any;
     if (expectedPageId && expectedRevisionId) {
@@ -189,6 +249,22 @@ Deno.serve(async (req) => {
     const pageId = String(parsedPage.pageid);
     const revisionId = String(parsedPage.revid);
     const canonicalTitle = normalizeTitle(parsedPage.title);
+
+    // HTML이 필요해 parse는 했지만, 링크 그래프는 이미 있으면 다시 만들지 않는다.
+    // 여기서 아끼는 것이 요청의 대부분이다 (parse 2 + info ~30 = 32 → 1~2).
+    const cachedAfterParse = await loadCachedSnapshot(pageId, revisionId);
+    if (cachedAfterParse) {
+      return json({
+        snapshotId: cachedAfterParse.snapshotId,
+        pageId,
+        revisionId,
+        canonicalTitle,
+        documentHtml: parsedPage?.text?.["*"] ?? "",
+        links: cachedAfterParse.links,
+        reused: true,
+      });
+    }
+
     const bodyLinks = extractBodyLinks(parsedPage?.text?.["*"] ?? "");
     const pageIdentities = await fetchPageIdentities(
       uniqueTitles(bodyLinks.map((link) => link.title))
@@ -206,13 +282,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const targetRevisionIds = await fetchRevisionIds(
-      [...uniqueLinks.values()].map((link) => link.targetPageId)
-    );
-
+    // targetRevisionId는 더 이상 보내지 않는다 (위 주석 참조).
+    // `replace_wiki_snapshot_v2`는 키가 없으면 null로 저장하고, 컬럼은 nullable이다.
     const links = [...uniqueLinks.values()].map((link) => ({
       targetPageId: link.targetPageId,
-      targetRevisionId: targetRevisionIds.get(link.targetPageId) ?? null,
       targetTitle: link.targetTitle,
       linkText: link.linkText,
     }));

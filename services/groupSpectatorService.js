@@ -79,7 +79,9 @@ export async function fetchGroupSpectatorPage(
     throw error;
   }
 
-  const snapshot = await snapshotLoader(identity);
+  // 관전만 본문 HTML을 쓴다. HTML은 `wiki_page_snapshots`에 없으므로 이 플래그가 있어야
+  // Edge Function이 pinned parse를 태운다 — 없으면 아래 documentHtml 검사에서 막힌다.
+  const snapshot = await snapshotLoader(identity, { includeDocument: true });
   if (
     String(snapshot?.pageId) !== identity.pageId ||
     String(snapshot?.revisionId) !== identity.revisionId

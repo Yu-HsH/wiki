@@ -14,6 +14,8 @@ const duelItems = read("supabase/migrations/20260814094000_duel_item_authority_v
 const cutover = read("supabase/migrations/20260814093000_server_authority_cutover_v2.sql");
 const guestFunction = read("supabase/functions/single-run/index.ts");
 const snapshotFunction = read("supabase/functions/wiki-snapshot/index.ts");
+const snapshotService = read("services/wikiSnapshotService.js");
+const spectatorService = read("services/groupSpectatorService.js");
 
 test("서버 권위 마이그레이션은 immutable event와 버전 projection을 만든다", () => {
   assert.match(foundation, /create table if not exists public\.game_move_events/);
@@ -58,9 +60,49 @@ test("게스트 Edge Function은 raw token 대신 SHA-256 hash를 저장한다",
   assert.doesNotMatch(guestFunction, /guest_token:\s*token/);
 });
 
-test("위키 snapshot 링크는 목적지 page revision도 캐시한다", () => {
-  assert.match(snapshotFunction, /fetchRevisionIds/);
-  assert.match(snapshotFunction, /targetRevisionId: targetRevisionIds\.get/);
+// 2026-08-29 계약 변경. 이전 계약은 "위키 snapshot 링크는 목적지 page revision도 캐시한다"로
+// `fetchRevisionIds` 호출과 `targetRevisionId: targetRevisionIds.get`을 고정하고 있었다.
+// 그 배치를 제거하면서(문서 1건당 62 → 32요청) 계약을 **제거의 유지**로 뒤집는다.
+// 판단 근거는 `docs/agent/CURRENT.md` §5.5-3 — `target_revision_id`를 읽는 곳은
+// `private.resolve_wiki_revision` 하나뿐이고, null이면 그 함수가 null을 돌려주는 경우가
+// 늘지 않고 줄어든다.
+test("위키 snapshot은 목적지 revision 배치를 다시 만들지 않는다", () => {
+  // 식별자는 제거 사유를 적은 주석에 남아 있으므로 **호출·정의 형태**로 검사한다.
+  assert.doesNotMatch(snapshotFunction, /async function fetchRevisionIds/);
+  assert.doesNotMatch(snapshotFunction, /await fetchRevisionIds\(/);
+  assert.doesNotMatch(snapshotFunction, /targetRevisionIds/);
+  assert.doesNotMatch(snapshotFunction, /targetRevisionId:/);
+  // 제거해도 되는 근거가 코드에 남아 있어야 한다.
+  assert.match(snapshotFunction, /resolve_wiki_revision/);
+  // pinned parse와 서버 쓰기 경로는 그대로다.
   assert.match(snapshotFunction, /oldid: String\(initialPage\.revid\)/);
   assert.match(snapshotFunction, /replace_wiki_snapshot_v2/);
+});
+
+test("위키 snapshot은 같은 page/revision을 재사용하고 본문은 요청할 때만 가져온다", () => {
+  // warm 경로 두 개: 신원이 주어지고 본문이 필요 없으면 Wikipedia 요청 0건,
+  // 본문이 필요하면 parse 뒤에 링크 그래프만 재사용한다.
+  assert.match(snapshotFunction, /async function loadCachedSnapshot/);
+  assert.match(
+    snapshotFunction,
+    /if \(expectedPageId && expectedRevisionId && !includeDocument\)/
+  );
+  assert.match(snapshotFunction, /const cachedAfterParse = await loadCachedSnapshot\(/);
+  // 링크가 0건인 행은 재사용하지 않는다.
+  assert.match(snapshotFunction, /if \(!links\.length\) return null;/);
+  // PostgREST 행 제한 때문에 링크는 range로 끝까지 읽어야 한다.
+  assert.match(snapshotFunction, /\.range\(offset, offset \+ pageSize - 1\)/);
+});
+
+test("본문 HTML은 관전 경로만 요청한다", () => {
+  // 기본값이 false여야 나머지 호출부가 warm 시 Wikipedia를 0건으로 끝낸다.
+  assert.match(
+    snapshotService,
+    /\{ requestId = createRequestId\(\), includeDocument = false \} = \{\}/
+  );
+  assert.match(snapshotService, /includeDocument,/);
+  // 관전만 명시적으로 켠다.
+  assert.match(spectatorService, /snapshotLoader\(identity, \{ includeDocument: true \}\)/);
+  // 본문이 비면 관전은 조용히 넘어가지 않고 실패해야 한다.
+  assert.match(spectatorService, /SPECTATOR_DOCUMENT_UNAVAILABLE/);
 });
