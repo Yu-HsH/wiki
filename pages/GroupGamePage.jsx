@@ -1264,7 +1264,7 @@ export default function GroupGamePage() {
                             <button
                                 type="button"
                                 className="mp-action-btn"
-                                onClick={handleReturnToLobby}
+                                onClick={() => handleReturnToLobby("left")}
                                 disabled={leaving}
                             >
                                 {leaving ? "게임 정리 중..." : "게임 로비로 나가기"}
@@ -1431,7 +1431,7 @@ export default function GroupGamePage() {
                     <button
                         type="button"
                         className="mp-action-btn group-spectator-leave"
-                        onClick={handleReturnToLobby}
+                        onClick={() => handleReturnToLobby("left")}
                         disabled={leaving}
                     >
                         {leaving ? "게임 정리 중..." : "게임 로비로 나가기"}
@@ -1488,7 +1488,7 @@ export default function GroupGamePage() {
                         <button
                             type="button"
                             className="mp-action-btn mp-action-btn--primary group-final-leave"
-                            onClick={handleReturnToLobby}
+                            onClick={() => handleReturnToLobby("left")}
                             disabled={leaving}
                         >
                             {leaving ? "게임 정리 중..." : "게임 로비로 이동"}

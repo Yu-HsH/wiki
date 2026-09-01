@@ -302,7 +302,7 @@
 > | | HOLD 사유 |
 > |---|---|
 > | **2026-08-18 (아래 기록)** | 운영/linked runtime read-only confirmation, **운영 dry-run**, **Release A~D 승인**, browser 2~8세션 Realtime |
-> | **2026-08-29 (현재)** | **W9 미해결 4건** — `wiki-snapshot` 429 대량 재발(그룹), RETIRE 사유 불일치, `username-lookup` 404, 관전 이모티콘 미전달 |
+> | **2026-08-29 (현재)** | ~~**W9 미해결 4건**~~ → **조사 후 2건** — `wiki-snapshot` 429 대량 재발(그룹), 관전 이모티콘 미전달. ~~RETIRE 사유 불일치~~ 수정 완료·**미배포**, ~~`username-lookup` 404~~ **결함 아님으로 종결**. 단일 기준은 `docs/agent/CURRENT.md` §5.5 |
 >
 > 위 표 왼쪽 항목이 어떻게 닫혔는지:
 >
