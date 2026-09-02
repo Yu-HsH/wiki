@@ -205,6 +205,53 @@ md5 `e2bfa8059d1b887fdceaa144e052fd0a`. `supabase/migrations/20260730170602_base
 | 성공 판정 | **통과** |
 | 특이사항 | 이 예외는 `docs/agent/CURRENT.md` §3에 이미 기록돼 있다 |
 
+#### W1-b — 창 밖 `main` push (2026-09-02) `[예외]` `[창 종료 후]`
+
+**W1-a 이후 `main` push가 한 번 더 발생했다. 이번에는 창이 닫힌 뒤다** — W1-a는 창 안이었고
+이것은 창 밖이므로 예외의 성격이 다르다. 사유를 여기 남긴다 `[사용자 승인, 2026-09-02]`.
+
+| 항목 | 값 |
+|---|---|
+| push 시각 | **2026-09-02 09:03 경** (기록 시각 기준). 커밋 시각은 `0ad3cde` 00:04:29 +0900, tip `9eba7e9` 00:06:09 +0900 `[산출물]` |
+| 대상 커밋 | 코드 `579a338`·`0ad3cde` + 문서 7건. `4a78a0d..9eba7e9` **9커밋** |
+| push 명령 | `git push origin feat/group-final-gaps` → `git push origin HEAD:main` (feat 먼저) |
+| push 전 `origin/main` | `4a78a0d` (W1-a가 올린 값. 2026-08-28 이후 움직이지 않았다) |
+| push 후 `origin/main` | **`9eba7e9`** — `git ls-remote` 실측 `[산출물]`. `refs/heads/feat/group-final-gaps`와 **동일 값** |
+| 검증 | `npm test` **144/144**, `npm run build` **exit 0** — `0ad3cde` 기준 `[산출물]` |
+| Vercel 빌드 결과 | **미확인** — push 직후이며 이 기록 시점에 결과가 남아 있지 않다 |
+
+**왜 올렸나 — W9 발견 3·4 수정 반영**
+
+> **번호 정정.** 승인 요청에는 "W9 발견 1·2"로 적혀 있었으나 그 둘은 **이미 해소된 항목**이다 —
+> 발견 1(싱글 429)은 W8 재배포로, 발견 2(`React is not defined`)는 `be520c3`/W1-a로 끝났다.
+> **이 push가 나르는 것은 발견 3과 4다.** W1-a 표의 "1·2"는 그 블록 안의 지역 번호이고
+> W9 발견 번호와 다르다 — 혼동의 출처로 보인다.
+
+| W9 발견 | 커밋 | 이 push로 해결되나 |
+|---|---|---|
+| **4** — "유효하지 않은 RETIRE 사유" (결과 화면 로비 나가기 실패) | `579a338` | **예.** 프론트 3줄이므로 Vercel 배포로 완결된다 |
+| **3** — `wiki-snapshot` 502 대량 재발 (4인 그룹) | `0ad3cde` | **아니오 — 절반만.** 프론트분(`includeDocument` 전송)만 반영된다. **`supabase/functions/wiki-snapshot/index.ts`는 Vercel 배포에 포함되지 않는다** — W1-a의 오류 2와 같은 구조다 |
+
+**배포 순서를 프론트 → Edge Function으로 정한 이유 (역순 금지):**
+`0ad3cde`는 요청 body에 `includeDocument` 플래그를 새로 넣는다. **프론트가 먼저면 안전하다** —
+새 프론트가 플래그를 보내도 옛 함수는 무시하고 늘 본문 HTML을 주므로 감축 효과만 늦게 나온다.
+**역순이면 관전 화면이 깨진다** — 옛 프론트는 플래그를 보내지 않아 새 함수가 warm 경로에서
+빈 HTML을 돌려주고 `services/groupSpectatorService.js:92-96`이
+`SPECTATOR_DOCUMENT_UNAVAILABLE`로 실패한다.
+
+**전제:** 유지보수 게이트가 켜져 있다. **push 전에 프로덕션 URL에서 점검 화면 렌더를
+확인했다** `[사용자 확인, 2026-08-29]`. 사용자 노출 0. 게이트는 이 작업에서 건드리지 않았다.
+**DB 영향:** 없음 (migration·RPC 무변경, 운영 DB 접근 없음).
+
+**남은 것**
+
+| 항목 | 상태 |
+|---|---|
+| `npx supabase functions deploy wiki-snapshot` | **미실행 — 사용자가 직접 수행.** Vercel 배포 완료를 확인한 뒤 |
+| 4인 그룹 재스모크 (대기실 준비 버튼) | **미실행.** Edge Function 배포 **후에** 돌려야 유효하다 — 그전에는 운영 요청 수가 여전히 61건이라 발견 3이 그대로 재현된다 |
+| 발견 3 판정 | **보류.** 대기실 4인은 244 → 124건으로 절반만 준다 (`scripts/wikiSnapshotRequestCount.mjs` 실측). 통과 여부는 재스모크로만 확정된다 |
+| 발견 6 (관전 이모티콘) | 미해결. 재검증에 관전자 2명이 필요해 위 스모크 이후다 |
+
 ### W2 — 백업 덤프 `[세션 1]`
 
 | 항목 | 값 |
