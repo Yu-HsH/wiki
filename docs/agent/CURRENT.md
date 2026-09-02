@@ -244,12 +244,14 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 
 > ### `main` push 실행 (2026-09-02) — **W1-b**
 >
-> ~~`main`과 `feat`가 갈라졌다 (2026-08-29).~~ → **다시 같은 커밋이 됐다.**
-> 2026-08-29에 보류했던 `main` push를 **W9 발견 3의 코드 수정이 갖춰진 뒤 실행했다**
-> `[사용자 승인, 2026-09-02]`. 전제였던 **유지보수 게이트 ON은 프로덕션 URL에서 점검 화면
-> 렌더로 확인했다** `[사용자 확인, 2026-08-29]`. 기록: `CUTOVER-LOG-2026-08-27.md` §W1-b.
+> **이 절은 W1-b 시점의 기록이다.** 2026-08-29에 보류했던 `main` push를
+> **W9 발견 3의 코드 수정이 갖춰진 뒤 실행했다** `[사용자 승인, 2026-09-02]`.
+> 전제였던 **유지보수 게이트 ON은 프로덕션 URL에서 점검 화면 렌더로 확인했다**
+> `[사용자 확인, 2026-08-29]`. 기록: `CUTOVER-LOG-2026-08-27.md` §W1-b.
+> **이 push로 두 ref가 잠시 같은 커밋이 됐다** — 그 뒤 문서 커밋이 쌓이며 다시 갈라졌고
+> **그것이 의도된 상태다** (위 상자).
 >
-> **이 push는 프론트만 배포한다. Edge Function은 아직이다** — 아래 "미완료" 참조.
+> **이 push는 프론트만 배포했다. Edge Function은 W8-b에서 별도로 올렸다** — 아래 상자 참조.
 >
 > **아래 커밋 수는 측정 시점 값이고, 이 절을 기록·갱신하는 커밋 자신은 포함되지 않는다**
 > (서두의 갱신 규칙과 같은 이유 — 커밋은 자기 해시를 담을 수 없다).
@@ -258,7 +260,7 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 | 항목 | 값 | 재측정 명령 |
 |---|---|---|
 | `origin/main` HEAD | **`9eba7e9`** (2026-09-02 W1-b가 올린 값). `4a78a0d`에서 9커밋 앞, `e6d8eee`에서 45커밋 앞 | `git ls-remote origin refs/heads/main` |
-| `origin/feat/group-final-gaps` HEAD | ~~`9eba7e9`~~ → **`48e3f2d`** — `main`보다 **1커밋 앞**(문서 전용) | `git ls-remote origin refs/heads/feat/group-final-gaps` |
+| `origin/feat/group-final-gaps` HEAD | ~~`9eba7e9`~~ → **`48e3f2d`** — `main`보다 **1커밋 앞**(문서 전용). **이 절을 갱신한 커밋을 push하면 2커밋이 된다** — 위 자기참조 주의 | `git ls-remote origin refs/heads/feat/group-final-gaps` |
 | 현재 브랜치 upstream | `origin/feat/group-final-gaps` (설정됨) | `git rev-parse --abbrev-ref "@{u}"` |
 | upstream 대비 | **0 behind / 0 ahead** — push 완료 | `git rev-list --left-right --count "@{u}...HEAD"` |
 | `origin/main...HEAD` | ~~0 behind / 0 ahead~~ → **0 behind / 1 ahead** (`48e3f2d`, 문서) | `git rev-list --left-right --count origin/main...HEAD` |
