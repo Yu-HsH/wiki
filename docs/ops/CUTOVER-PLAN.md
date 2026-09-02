@@ -2092,7 +2092,7 @@ Docker가 꺼져 있을 수 있고, 연결 문자열 유효성도 시간에 따�
 | 3 | 실제 Wikipedia snapshot smoke (B2) | B1은 fixture 인터셉트다 (`docs/agent/CURRENT.md` §5-4) |
 | 4 | 모바일 viewport / 키보드 / reduced-motion | `docs/agent/CURRENT.md` §1 RELEASE HOLD 표 |
 | 5 | 불변식 모니터링 | `game_move_events`, `game_mutation_requests`, `match_history.result_status`, `game_records.run_id` — 최종 결과가 event·기록에 각각 한 번만 (`code/18-...md` §장애 시 확인 지점) |
-| 6 | 새 운영 스냅샷 작성 | `PROD-SNAPSHOT-2026-08-20.md`는 이 창으로 무효가 된다 |
+| 6 | ~~새 운영 스냅샷 작성~~ **완료 (2026-09-02)** | `PROD-SNAPSHOT-2026-08-20.md`는 이 창으로 무효가 됐고 **`PROD-SNAPSHOT-2026-09-02.md`가 대체했다** |
 
 ---
 

@@ -434,9 +434,11 @@ npm test
    RLS, Edge Function 배포 목록은 전부 해소됐다.** 남은 것은 `target-level` 실물 확인 하나다
    (`CURRENT.md` §5.6-4).
 4. **문서 정합 작업은 2026-08-29에 대부분 끝났다** — 이 문서를 포함해 6개 문서를 갱신·봉인했다.
-   **운영 재조회가 필요한 2건만 남았다**: 새 운영 스냅샷 작성
-   (`PROD-SNAPSHOT-2026-08-20.md`가 무효), `target-level` Edge Function 실물 확인.
-   `qa/30-INTEGRATION-CHECKLIST.md` §22(새 게이트 기록) 작성도 미수행이다 — §21은 봉인만 했다.
+   ~~**운영 재조회가 필요한 2건만 남았다**~~ → **2026-09-02에 그중 하나가 닫혔다.**
+   **새 운영 스냅샷은 작성됐다 — `docs/ops/PROD-SNAPSHOT-2026-09-02.md`가 현재 기준이고
+   `PROD-SNAPSHOT-2026-08-20.md`는 역사 기록이다.** 남은 것은
+   **`target-level` Edge Function 실물 확인**과
+   `qa/30-INTEGRATION-CHECKLIST.md` §22(새 게이트 기록) 작성이다 — §21은 봉인만 했다.
    목록은 `CURRENT.md` §5.6.
 5. `code/10-CODE-MASTER-TODO.md` §2의 순서 3(1:1·아이템전) 이후 패킷은 **미구현**이므로, 새 기능 착수 전 XP·업적 이벤트 계약(같은 문서 §4·§5 공통 TODO)을 먼저 확정한다.
 6. `docs/WIKI_RACE_GROUP_DB_SECURITY_SPEC.md`는 **2026-08-29에 봉인 헤더를 붙였다** (시간 규칙
