@@ -21,7 +21,7 @@
 |---|---|---|---|---|
 | **C1** | [보상 3테이블](C1-REWARD-TABLES.md) | `reward_catalog` · `user_reward_inventory` · `user_profile_equipment` | **G1** | 16 · 17 |
 | **C2** | [XP 원장](C2-XP-LEDGER.md) | `xp_ledger` | **G4** | 15 · 16 |
-| **C3** | [레벨 저장 위치](C3-LEVEL-STORAGE.md) | `profiles.total_xp` + `level_from_total_xp()` | **G6** | 15 · 16 · 17 |
+| **C3** | [레벨 저장 위치](C3-LEVEL-STORAGE.md) **⚠ 정정 1건** | `profiles.total_xp` + `level_from_total_xp()` | **G6** | 15 · 16 · 17 |
 | **C4** | [결과 사유 어휘](C4-RESULT-REASON.md) | 표시 매핑 + CHECK 2건 | **G11** | 14 · 15 · 16 · 17 |
 | **C5** | [프로필 카드 렌더 계약](C5-PROFILE-CARD.md) | 4개 렌더 지점 공통 규칙 | **G10** | 15 · 16 · 17 |
 
@@ -91,11 +91,19 @@ grant execute on function public.<name>(...) to authenticated;
 |---|---|---|
 | C1 | 신규 테이블 3 + RPC | **신규 테이블은 창이 가볍다** — 기존 객체를 건드리지 않는다 |
 | C2 | 신규 테이블 1 + RPC | 동일 |
-| C3 | **`profiles` 컬럼 추가** + 함수 | 기존 테이블 변경. `add column`은 잠금이 짧다 `[추정]` |
+| C3 | **`profiles` 컬럼 추가** + 함수 + **컬럼 단위 grant 축소(C3-①)** | 기존 테이블 변경. `add column`은 잠금이 짧다 `[추정]`. **grant 축소 → `total_xp` 추가 순서가 강제된다** — `docs/agent/TRACKS.md` §7.2 |
 | C4 | **CHECK 추가 2건** | **기존 테이블 제약 변경** → `PACKET-CONTRACT-GAPS.md` §5.5의 **3코스 창에 묶는다** |
 | C5 | **없음** | 프론트 전용 |
 
 > **C5는 DDL이 전혀 없다.** 가장 먼저 착수할 수 있고 다른 넷을 기다리지 않는다.
+
+### 정정 이력
+
+**계약은 동결이지만 무오류는 아니다.** 고칠 때는 해당 문서에 정정 표를 남긴다.
+
+| 날짜 | 계약 | 무엇을 | 근거 |
+|---|---|---|---|
+| **2026-09-02** | **C3** | C3-①의 grant 컬럼을 **2개 → 3개**(`updated_at` 추가)로 정정하고 **확정으로 전환** | **코드 실측.** 배포된 프론트의 두 update가 `updated_at`을 함께 보내므로 2컬럼안은 닉네임·사진 저장을 깬다. **C3 §0** |
 
 ---
 

@@ -8,6 +8,22 @@
 
 ---
 
+## 0. ⚠ 정정 이력 — **동결 계약을 한 번 고쳤다**
+
+| 날짜 | 무엇을 | 어떻게 | 왜 |
+|---|---|---|---|
+| **2026-09-02** | **§5의 C3-① 대응안 ①** | `grant update (nickname, profile_image_url)` **2컬럼** → **`(nickname, profile_image_url, updated_at)` 3컬럼**. 그리고 **"권한다"에서 "확정"으로** `[사용자 결정]` | **2컬럼으로 적용하면 배포된 프론트가 깨진다.** `ProfilePage.jsx:86`·`:149`의 두 update가 **`updated_at`을 함께 보낸다** `[코드]`. 컬럼 권한이 없는 컬럼을 UPDATE 목록에 넣으면 PostgreSQL이 거부하므로 **닉네임 저장과 프로필 사진 변경이 둘 다 실패한다.** 게이트가 해제된 상태여서 사용자가 즉시 겪는다 (`AGENTS.md` §1.1) |
+
+**정정의 성격:** 결정을 바꾼 것이 아니라 **결정을 실행 가능하게 만든 것이다.**
+저장 위치(§1)·레벨 비저장(§3)·함수 정의(§4)는 바뀌지 않았고, **`total_xp` 보호도 그대로다** —
+3컬럼 목록에 `total_xp`가 없기 때문이다.
+
+> **동결 계약을 고칠 때의 규칙을 이 항목이 만든다.**
+> ① 무엇이 왜 바뀌었는지 이 표에 남긴다 ② 본문에서 옛 값을 지우지 않고 취소선으로 남긴다
+> ③ 근거는 코드 실측이어야 한다. **문서 대 문서의 취향 차이로는 고치지 않는다.**
+
+---
+
 ## 1. 결정
 
 | | 결정 |
@@ -169,10 +185,42 @@ end if;
 > **클라이언트에서 직접** 한다. baseline 정책에 `Users can update own profile`류가 있기 때문이다.
 > **`total_xp`가 같은 테이블에 들어가면 그 경로로 XP를 위조할 수 있다.**
 >
-> **대응 2안:** ① 컬럼 단위 `grant update (nickname, profile_image_url)`로 좁힌다 —
-> **DDL이므로 창 대상**, ② `total_xp`를 별도 테이블(`user_xp_totals`)에 두고 공개 읽기 정책을 준다.
-> **①을 권한다** — 조인이 늘지 않는다는 §2의 이점을 지키기 때문이다.
-> **이 판단은 15 착수 전에 내려야 한다.**
+> **대응 2안:** ① 컬럼 단위 grant로 좁힌다 — **DDL이므로 창 대상**,
+> ② `total_xp`를 별도 테이블(`user_xp_totals`)에 두고 공개 읽기 정책을 준다.
+> **①로 확정됐다** `[사용자 결정, 2026-09-02]` — 조인이 늘지 않는다는 §2의 이점을 지키기 때문이다.
+
+### 5.1 C3-① 확정 — 컬럼 **3개** `[사용자 결정, 2026-09-02]`
+
+```sql
+-- 테이블 단위 UPDATE를 회수한다. 나중에 추가되는 컬럼까지 덮기 때문이다.
+revoke update on table public.profiles from anon, authenticated;
+
+-- 배포된 프론트가 실제로 쓰는 컬럼만 되돌려 준다.
+grant update (nickname, profile_image_url, updated_at)
+  on table public.profiles to authenticated;
+```
+
+| 컬럼 | 왜 목록에 있는가 | 근거 |
+|---|---|---|
+| `nickname` | 닉네임 저장 | `ProfilePage.jsx:85-87` `[코드]` |
+| `profile_image_url` | 프로필 사진 변경 | `ProfilePage.jsx:147-150` `[코드]` |
+| **`updated_at`** | **두 update가 모두 이것을 함께 보낸다.** 빠지면 둘 다 권한 오류로 실패한다 | `:86`(`{nickname, updated_at}`) · `:149`(`{profile_image_url, updated_at}`) `[코드]` |
+| ~~`total_xp`~~ | **넣지 않는다.** 이것이 이 항목의 목적이다 | §5의 ⚠ |
+
+- ~~`grant update (nickname, profile_image_url)`~~ — **2컬럼안은 폐기됐다** (§0).
+- **`anon`에서도 회수한다.** `anon`은 `auth.uid() = id` 정책을 만족할 수 없어 동작 변화는 없지만,
+  `GRANT ALL`이 남아 있을 이유도 없다 (`baseline:1467`) `[코드]`.
+- **RLS 정책은 건드리지 않는다.** `Users can update own profile`·`Users can update their own profile`
+  두 정책이 그대로 남는다 (`baseline:1117`·`1125`) `[코드]`. **컬럼 권한과 정책은 별개의 층이고,
+  컬럼 권한만으로 `total_xp` 위조가 막힌다.**
+- **INSERT 경로는 영향이 없다.** `username-signup` Edge Function이 `profiles`에 insert하지만
+  회수 대상은 UPDATE뿐이다 (`supabase/functions/username-signup/index.ts:166`) `[코드]`.
+- **적용 순서가 중요하다** — 이 회수를 **`total_xp` 추가보다 먼저** 해야 한다.
+  테이블 단위 UPDATE는 나중에 추가되는 컬럼까지 덮으므로, 순서를 바꾸면 창 안에 위조 가능 구간이
+  생긴다. `docs/agent/TRACKS.md` §7.2.
+- **재검증 방법:** 창 후 `ProfilePage`에서 닉네임 저장·사진 변경을 각각 1회 수행한다.
+  실패하면 grant 목록이 부족하다는 뜻이며, `profiles`를 update하는 클라이언트 경로가
+  **2곳뿐임을 다시 확인한다** (2026-09-02 전수 검색 결과 2곳) `[코드]`.
 
 ---
 
@@ -195,5 +243,5 @@ having p.total_xp <> coalesce(sum(l.amount), 0);
 
 | 상태 | 항목 |
 |---|---|
-| **확정** | **저장 위치 = `profiles.total_xp`** (근거: `user_profile_stats`의 본인만 RLS) · **레벨은 저장하지 않고 함수로 계산** · `xp_to_next_level`·`level_from_total_xp` 정의와 검산 · 갱신 경로 단일화 · 불변식 쿼리 |
-| **확인 필요** | ① **`profiles`의 클라이언트 update 경로를 좁힐 것인가** (§5의 ⚠ — **15 착수 전 결정**) ② `immutable` 선언 유지(§4.1) ③ **누적 XP 표시 단위** — Freeze v1 `02-02`가 `누적 12,480 XP`를 랭킹에 노출하는데 `15` §5.3은 "누적 XP와 현재 레벨 표시"만 규정한다. 표시 형식은 프론트 판단 |
+| **확정** | **저장 위치 = `profiles.total_xp`** (근거: `user_profile_stats`의 본인만 RLS) · **레벨은 저장하지 않고 함수로 계산** · `xp_to_next_level`·`level_from_total_xp` 정의와 검산 · 갱신 경로 단일화 · 불변식 쿼리 · **C3-① = 컬럼 단위 grant 3개(`nickname`·`profile_image_url`·`updated_at`)와 그 적용 순서** (§5.1, 2026-09-02) |
+| **확인 필요** | ~~① `profiles`의 클라이언트 update 경로를 좁힐 것인가~~ → **확정 (2026-09-02). §5.1** ② `immutable` 선언 유지(§4.1) ③ **누적 XP 표시 단위** — Freeze v1 `02-02`가 `누적 12,480 XP`를 랭킹에 노출하는데 `15` §5.3은 "누적 XP와 현재 레벨 표시"만 규정한다. 표시 형식은 프론트 판단 |
