@@ -1,9 +1,9 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: 2026-09-02
-기준 커밋: `e1b5546` (`docs: set up four parallel tracks with exclusive file ownership`)
+기준 커밋: `b281e01` (`docs: confirm three decisions and freeze the three-course window at four items`)
 마지막 **코드** 커밋: `0ad3cde` — 그 뒤는 전부 문서다. 판정의 코드 축은 여기서 움직이지 않았다
-이전 기준: `f40e071` · `682fc9c`
+이전 기준: `e1b5546` · `f40e071`
 브랜치: `feat/group-final-gaps`
 
 > # ⚑ 2026-09-02 — **유지보수 게이트가 해제됐다. 서비스가 열려 있다.**
@@ -190,6 +190,7 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 | `npm test` | **144/144** (fail 0, skipped 0) | 2026-09-02 | `48e3f2d` 실측 `[산출물]`. **W10 완료 세션의 재확인.** 이 세션은 문서만 바꿨으므로 수치가 같은 것이 정상이다 |
 | `npm test` | **144/144** (fail 0, skipped 0) | 2026-09-02 | `f40e071` 실측 `[산출물]`. **병렬 트랙 세팅 세션(`TRACKS.md` 신설)의 재확인.** 문서만 바꿨으므로 수치가 같은 것이 정상이다 |
 | `npm test` | **144/144** (fail 0, skipped 0) | 2026-09-02 | `e1b5546` 실측 `[산출물]`. **결정 3건 확정·창 범위 확정 세션.** 문서만 바꿨다 |
+| `npm test` | **144/144** (fail 0, skipped 0) | 2026-09-02 | `b281e01` 실측 `[산출물]`. **C4-① 확정·ACL 절차·A·B 착수 티켓 세션.** 문서만 바꿨다 |
 | pgTAP Packet 13 | 33/33 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP spectator emoji atomicity | 22/22 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP Server Authority V2 | 97/97 | 2026-08-18 | `339fb77` 이전 |
@@ -542,6 +543,48 @@ W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[�
 > **`"wiki-single-items"` localStorage 키** — import 없이 **문자열이 4곳에 복제**돼 있어
 > 한쪽이 바꾸면 다른 쪽이 조용히 아무것도 지우지 않는다.
 
+> ### ▶ **C4-① 확정 · 창 ACL 절차 보강 · A·B 착수 (2026-09-02, 3차)** `[사용자 확정]`
+>
+> **C4-①(부제 문구)이 닫혔다. 규칙은 `시안 > 코드 > 발명`이다.**
+>
+> | `retire_reason` | 확정 부제 | 출처 |
+> |---|---|---|
+> | `time_limit` | **제한 시간 초과** | **코드** — `groupResultFormatter.js:2`가 운영에서 쓰는 문자열 |
+> | `grace_timeout` | **유예 시간 초과** | **코드** — `:3` |
+> | `disconnected_timeout` | **재접속 유예 종료** (용어는 **몰수**) | **시안** §07 RESULT |
+>
+> **`"연결 끊김"`과 `몰수`는 같은 상태다** `[코드 확인]` — 따라서 **정정이고, 둘 다 필요한 것이
+> 아니다.** 근거 셋: ① `formatGroupRetireReason`은 **`retire_reason`만** 받는다
+> (`GroupGamePage.jsx:1336`·`:1483`) ② `"연결 끊김"` 문자열은 저장소에 **한 곳**뿐이다
+> ③ **살아 있는 끊김 상태(`player_status = 'disconnected'`)에는 라벨이 아예 없다** —
+> `INACTIVE_STATUSES`에 그 값이 없어서 유예 중 참가자는 `진행 중`으로 렌더된다
+> (`groupGameFlow.js:14-22`). **즉 그 문자열이 다른 상태를 표시하고 있던 것이 아니다.**
+>
+> **두 문자열은 서로 다른 슬롯에 있다.** 헤드라인은 지금 **`"RETIRE"` 고정**이고
+> (`GroupGamePage.jsx:1479`) 구분은 부제에서만 난다 — **4용어 매핑은 아직 코드에 없다.**
+> 그래서 정정 대상은 둘이다: 부제 문자열 1개 + 헤드라인 4용어.
+> **실행 트랙은 그룹 결과 화면 소유자다 — 트랙 B가 아니다.** `groupResultFormatter.js`의 유일한
+> 소비자가 **동결된 `GroupGamePage.jsx`**이고 테스트가 옛 문자열을 assert한다.
+> **정답은 B의 신규 `utils/resultReasonLabels.js`에 먼저 담긴다** (C4-③ = 신규 모듈로 확정).
+>
+> **창 절차에 ACL 3지점을 보강했다** (`TRACKS.md` **§7.9** 신설):
+> **T-1 스냅샷**(`pg_proc.proacl` + `aclexplode` 쿼리 2개 — `drop` 전에만 뜰 수 있다) ·
+> **T3에서 같은 트랜잭션 안 `grant execute ... to anon/authenticated/service_role`** ·
+> **T4 검증 3번이 T-1 스냅샷과 대조** · **T5에 게스트 오늘 코스 스모크**.
+>
+> **⚠ 그 과정에서 2차 갱신의 서술 하나를 자체 정정했다.**
+> "ACL 재부여를 빠뜨리면 게스트의 오늘 코스가 사라진다"는 **기제가 틀렸다** — 함수는 grant를
+> 하지 않으면 **`PUBLIC`에 EXECUTE가 붙는 것이 기본값**이라 `anon`도 실행된다.
+> **진짜 함정은 반대쪽이다:** `contracts/README.md`의 신규 RPC 패턴
+> (`revoke all ... from public, anon`)을 이 함수에 적용하면 **게스트 경로가 끊긴다.**
+> **이 함수는 그 패턴의 예외라고 §7.9에 명시했다.**
+>
+> **착수 트랙은 A·B다.** 둘 다 선행 0이고 **DB를 건드리지 않는다.**
+> **C는 G7이 차단**이고, **D는 코드 충돌이 0인데도 순차다** — 충돌 축이 파일이 아니라
+> **로컬 Supabase 스택**이기 때문이다. 티켓은 착수 가능 상태로 다듬었다
+> (`TRACKS.md` §8-A·§8-B — 읽을 파일 3분류 · §2.3 공유 자원 중 각 트랙이 걸리는 항목 ·
+> `npm test` 신규 항목 · **grep 불변식 7~8개** · 첫 수).
+
 > ### ▶ **병렬 트랙 4개가 열렸다 (2026-09-02) — `docs/agent/TRACKS.md`**
 >
 > **트랙이 넷 동시에 열린 것은 처음이다.** 계약이 *무엇을 만드는지*를 고정했고,
@@ -582,7 +625,8 @@ W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[�
 > **`utils/groupResultFormatter.js:2-3`에 운영 문자열이 이미 있다** `[코드]` —
 > `time_limit`→"제한 시간 초과", `grace_timeout`→"유예 시간 초과". 반대로
 > `disconnected_timeout`은 **코드 "연결 끊김" vs 계약 "몰수"로 어긋난다.**
-> **C4-①은 여전히 미결이지만 "발명 대신 기존 문자열 채택"이라는 선택지가 생겼다.**
+> ~~**C4-①은 여전히 미결이지만**~~ → **확정됐다 (3차 갱신).** "발명 대신 기존 문자열 채택"이
+> 채택됐고, `disconnected_timeout`은 **시안이 상위**라 코드가 정정 대상이 됐다. 위 3차 블록 참조.
 
 **릴리스가 열렸으므로 이제 여기가 본류다.** 순서·선행 조건은
 `wiki-race-2.0-handoff/code/10-CODE-MASTER-TODO.md` §2가 단일 기준이다.

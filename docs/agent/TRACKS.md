@@ -1,15 +1,22 @@
 # 병렬 트랙 파일 소유권 — 단일 기준
 
-갱신 날짜: 2026-09-02 (2차)
-기준 커밋: `e1b5546` (`docs: set up four parallel tracks with exclusive file ownership`)
-이전 기준: `f40e071`
+갱신 날짜: 2026-09-02 (3차)
+기준 커밋: `b281e01` (`docs: confirm three decisions and freeze the three-course window at four items`)
+이전 기준: `e1b5546` · `f40e071`
 브랜치: `feat/group-final-gaps`
 
-> **2차 갱신에서 바뀐 것 (2026-09-02):** **결정 3건이 확정됐다** (§9.1) ·
-> **창 범위가 4항목으로 확정됐다** (§7.1, G2-② 제외) · **창 절차 초안 T-1~T6 신설** (§7.6) ·
-> **공유 자원 감사 7건 신설** (§2.3 — 파일은 갈렸는데 배열·리터럴·CSS 이름을 공유하는 곳) ·
-> **미배정 파일 21개를 동결로 명시** (§2.1) · **`ensure_today_daily_challenge`가
-> `drop function`을 요구한다는 발견** (§7.2).
+> **3차 갱신 (2026-09-02):** **C4-①이 확정됐다** — 부제 문구는 **코드 문자열 채택**,
+> `disconnected_timeout`은 **시안이 상위**이고 코드의 `"연결 끊김"`은 **정정 대상**이다
+> (§2.1·§9-④, `C4-RESULT-REASON.md` §3.1·**§3.1.1**). **`몰수`와 `"연결 끊김"`이 같은 상태임을
+> 코드로 확인했다** — 정정이며 둘 다 필요한 것이 아니다.
+> **창 절차에 ACL 3지점을 보강했다** (**§7.9** 신설 · T-1 스냅샷 쿼리 · T3 재부여 · T5 게스트 스모크).
+> **⚠ 그 과정에서 2차 갱신의 서술 하나를 자체 정정했다** — §9-⑤.
+> **A·B를 착수 트랙으로 확정하고 티켓을 착수 가능 상태로 다듬었다** (§1.1·§8-A·§8-B).
+
+> **2차 갱신 (2026-09-02):** 결정 3건 확정 (§9.1) · 창 범위 4항목 확정 (§7.1, G2-② 제외) ·
+> 창 절차 초안 T-1~T6 신설 (§7.6) · **공유 자원 감사 7건** 신설 (§2.3) ·
+> 미배정 파일 21개를 동결로 명시 (§2.1) · `ensure_today_daily_challenge`가
+> `drop function`을 요구한다는 발견 (§7.2).
 
 > ## 이 문서가 **병렬 작업의 SSOT**다
 >
@@ -54,6 +61,20 @@
 
 > **A는 아무것도 기다리지 않지만, A를 기다리는 것은 많다** (§5).
 > **이 웨이브에서는 아무 트랙도 A를 기다리지 않게 범위를 잘랐다** — 그래서 넷이 동시에 열린다.
+
+### 1.1 착수 순서 — **A·B로 시작한다** `[사용자 확정, 2026-09-02]`
+
+| 트랙 | 지금 | 근거 |
+|---|---|---|
+| **A** C5 프로필 카드 | **착수** | 선행 0 · **DB를 건드리지 않는다** · 티켓 §8-A |
+| **B** 17a-2 기록·게스트 | **착수** | 선행 0 · **DB를 건드리지 않는다** · 티켓 §8-B |
+| **C** 14 아이템 서버 권위 | **대기** | **G7이 차단이다.** 아이템 ID가 event_type·payload·파일명을 전부 결정한다 |
+| **D** 15a XP 원장 | **순차** | **로컬 Supabase 스택을 쓴다** — pgTAP·migration 검증이 그 스택에 묶여 있고, A·B와 자원이 겹친다 |
+
+> **A·B가 먼저인 이유는 "쉬워서"가 아니라 자원이 겹치지 않아서다.**
+> 둘은 프론트만 만지고 파일이 갈려 있어 **동시에 돌려도 서로를 기다리지 않는다.**
+> **D는 코드 충돌이 0인데도 순차다** — 충돌 축이 파일이 아니라 **로컬 DB 스택**이기 때문이다
+> (승인 이미지·볼륨 격리 `wiki-packet13-r2-clean158`. §1의 CODE GO 유효 조건).
 
 ---
 
@@ -118,7 +139,8 @@
 | **pages/GroupGamePage.jsx** (1603) | **한 파일이 세 역할을 한다** — 그룹 게임 + 관전 + **그룹 결과 2블록**(`:1212-1280` 내 기록, `:1450-1500` 최종 순위) `[코드]`. 어느 트랙에 줘도 그 트랙이 그룹 결과 화면의 소유자가 된다. **이 웨이브에는 그룹 결과를 바꿀 트랙이 없다** (§3) |
 | **services/dailyChallengeService.js** (109) | 17a-1(3코스) 소유. B의 범위는 "3코스 제외"다 |
 | **utils/serverAuthority.js** (91) | 싱글·1:1·그룹 3경로가 전부 import한다 `[코드]`. 여기를 고치면 트랙 셋이 동시에 흔들린다 |
-| **services/groupMultiplayerService.js** · **services/groupSpectatorService.js** · **utils/groupGameFlow.js** · **utils/groupGameTimer.js** · **utils/groupResultFormatter.js** · **css/group.css** · **css/groupSpectator.css** | 그룹 축. 이 웨이브에 그룹 트랙이 없다 |
+| **services/groupMultiplayerService.js** · **services/groupSpectatorService.js** · **utils/groupGameFlow.js** · **utils/groupGameTimer.js** · **css/group.css** · **css/groupSpectator.css** | 그룹 축. 이 웨이브에 그룹 트랙이 없다 |
+| **utils/groupResultFormatter.js** · **tests/groupResultFormatter.test.js** | 그룹 축 + **⚠ 정정 대상이 등재돼 있다.** `disconnected_timeout: "연결 끊김"` → `"재접속 유예 종료"`, 그리고 `GroupGamePage.jsx:1479`의 `"RETIRE"` 고정 → 4용어 매핑 (C4 §3.1.1) `[사용자 결정]`. **실행은 그룹 결과 화면을 소유하는 트랙이 한다 — 트랙 B가 아니다.** 유일한 소비자가 동결된 `GroupGamePage.jsx`이고, 테스트가 옛 문자열을 assert한다 (`:11`) `[코드]` |
 | **utils/maintenanceGate.js** · **components/MaintenanceScreen.jsx** · **main.jsx** · **tests/maintenanceGate.test.js** | **다음 창에서 다시 쓴다.** `VITE_MAINTENANCE_BYPASS`는 유지돼 있다 (`AGENTS.md` §1.1) |
 | **supabase/migrations/** 기존 12개 · **supabase/baseline/remote_schema.sql** | append-only (R5) |
 | **docs/contracts/** C1~C5 · README | **계약이다.** 트랙이 계약을 바꾸려면 트랙 밖 결정이 먼저다. 발견한 불일치는 §9에 모은다 |
@@ -141,7 +163,7 @@
 | **pages/MainPage.jsx** | **B** | 한 파일에 **게스트 게이팅(B) + 오늘 코스 조회(`:155-167`, 17a-1) + 랭킹 탭(`:169-`의 `today/weekly/all`, 15b)** 이 함께 있다 `[코드]` | **B는 게스트 영역만 고친다.** 오늘 코스 블록과 랭킹 탭 블록은 **범위 밖** |
 | **components/UserProfileModal.jsx** | **A** | 호출자가 셋이고 그중 **`RoomPage.jsx`는 C 소유**다 (`RankingPage:188` · `GroupRoomPage:551` · `RoomPage:658`) `[코드]` | **A는 prop 계약 `{userId, isOpen, onClose}`를 바꾸지 않는다** |
 | **data/items.js · data/itemPools.js · utils/itemSystem.js · hooks/useItemSystem.js · components/ItemBar.jsx** | **C** | **싱글과 1:1이 같은 카탈로그를 쓴다.** `highlight_links`가 `SINGLE_ITEM_IDS`와 `MULTI_ITEM_IDS`에 **둘 다 있다** (`itemPools.js:2·13`) `[코드]`. `GamePage.jsx`(B)가 `useItemSystem`·`ItemBar`를 import한다 `:29·31` | **① `data/itemPools.js`에서 C는 `MULTI_ITEM_IDS` 배열만 수정한다. `SINGLE_ITEM_IDS`는 읽기 전용·동결** `[사용자 결정, 2026-09-02]` — §2.3-① **② `data/items.js`의 기존 11개 정의를 삭제하지 않는다** (`AGENTS.md` §4) **③ `ItemBar.jsx`의 기존 prop 계약을 바꾸지 않는다** — 새 HUD는 `DuelItemBar.jsx`로 만든다 **④ `useItemSystem`의 반환 형태를 바꾸지 않는다** — §2.3-③ **⑤ 신규 duel 카탈로그는 `data/duelItems.js`에 둔다** |
-| **utils/resultReasonLabels.js** (신규) | **B** | **B(싱글 3경우)와 C(1:1 5경우)가 둘 다 이 모듈을 필요로 한다.** 각자 만들면 C4가 막으려던 어휘 분산이 그대로 재발한다 | **B가 C4 §3.1~§3.3을 한 번에 옮겨 적는다** — 그룹·1:1·싱글 세 표 전부. **계약이 동결됐으므로 이것은 설계가 아니라 전사(轉寫)다.** C는 **읽기 전용으로 호출만 한다.** ⚠ **C4-③(신규 모듈 vs `groupResultFormatter.js` 확장)이 "확장"으로 결정되면 이 배정은 무효다** — `groupResultFormatter.js`는 동결이므로 트랙을 멈추고 이 문서를 고친다 |
+| **utils/resultReasonLabels.js** (신규) | **B** | **B(싱글 3경우)와 C(1:1 5경우)가 둘 다 이 모듈을 필요로 한다.** 각자 만들면 C4가 막으려던 어휘 분산이 그대로 재발한다 | **B가 C4 §3.1~§3.3을 한 번에 옮겨 적는다** — 그룹·1:1·싱글 세 표 전부. **계약이 동결됐으므로 이것은 설계가 아니라 전사(轉寫)다.** C는 **읽기 전용으로 호출만 한다.** ✅ **C4-③이 "신규 모듈"로 확정됐다 (2026-09-02)** — `groupResultFormatter.js` 확장안은 폐기됐고 이 배정이 확정이다 (C4 §5·§3.1.1). **부제 문구도 확정됐으므로 발명할 것이 없다** (C4 §3.1) |
 
 > **`highlight_links`가 이 웨이브에서 가장 조용한 함정이다.**
 > `PACKET-CONTRACT-GAPS.md` §1.2가 "제거"로 판정한 3종 중 하나인데 **싱글 풀에도 들어 있다.**
@@ -429,14 +451,15 @@ if found then
 | 따라오는 것 | 처리 |
 |---|---|
 | **`drop function` + `create function`이 된다** | **같은 migration(한 트랜잭션) 안에서 연달아 한다.** 이름과 인자 목록은 유지되므로 **8월 창의 "함수 삭제 → 구버전 세션 붕괴"와 성격이 다르다** — 트랜잭션이 끝나면 같은 이름의 함수가 있다 |
-| **⚠ `drop`이 ACL을 지운다** | 지금 `anon`·`authenticated`·`service_role`에 `GRANT ALL`이 있다 (`baseline:1362-1364`) `[코드]`. 재생성 후 **명시적으로 다시 부여해야 한다.** 빠뜨리면 **게스트의 오늘 코스가 사라진다** — `anon` EXECUTE가 그 경로다 |
+| **⚠ `drop`이 ACL을 지운다 — 다만 위험의 방향이 반대다** | 지금 `anon`·`authenticated`·`service_role`에 `GRANT ALL`이 있다 (`baseline:1362-1364`) `[코드]`. **재생성 후 명시적으로 다시 부여한다** (§7.9). **⚠ 2026-09-02 정정:** 이 문서가 앞서 "재부여를 빠뜨리면 게스트의 오늘 코스가 사라진다"고 적었는데 **기제가 그렇지 않다.** 함수는 **아무 grant도 하지 않으면 `PUBLIC`에 EXECUTE가 붙는 것이 PostgreSQL 기본값**이므로 `anon`도 실행할 수 있다 — 즉 **빠뜨리면 깨지는 것이 아니라 기록된 ACL과 어긋나고 의도보다 넓어진다.** **진짜 함정은 그 반대쪽이다 — §7.9** |
 | **의존 객체** | **없다.** SQL 안의 호출자 0건, 정책·뷰 참조 0건. 유일한 호출자는 프론트다 (`dailyChallengeService.js:78`) `[코드]` |
 | `search_path` | 현재 `set search_path to 'public'`. 재생성 시 계약 규칙대로 비운 값으로 갈 수 있다 — 본문 참조가 이미 전부 스키마 한정이다 `[코드]` |
 | **경합 가드** | `where not exists`를 **`on conflict (challenge_date, course_slot) do nothing`으로 바꾼다.** UNIQUE 교체가 이중 안전장치를 없애기 때문이다 (`PACKET-CONTRACT-GAPS.md` §5.2) |
 
-> **`PACKET-CONTRACT-GAPS.md` §5.5.2의 "함수 삭제는 없다"는 전제를 이 발견이 정정한다.**
-> 삭제는 있다. **다만 같은 트랜잭션 안의 재생성이므로 게이트 사유가 되지 않는다** `[추정]`.
-> **ACL 복구가 진짜 위험이고, 그것은 migration 본문과 T4 검증으로 막는다.**
+> **`PACKET-CONTRACT-GAPS.md` §5.5.2의 "함수 삭제는 없다"는 전제를 이 발견이 정정한다**
+> (그 문서 §5.5.2 표에 반영됨). 삭제는 있다.
+> **다만 같은 트랜잭션 안의 재생성이므로 게이트 사유가 되지 않는다** `[추정]`.
+> **ACL이 진짜 위험이고, 그것은 §7.9의 절차와 T4 검증 3번으로 막는다.**
 
 ### 7.3 적용 순서 — **강제되는 것 2건**
 
@@ -499,11 +522,11 @@ if found then
 
 | 단계 | 내용 | 8월 대응 | 근거 |
 |---|---|---|---|
-| **T-1** | **창 밖 준비 (전날).** migration 파일 작성 완료 · **로컬 스택에서 전량 적용 + T4 검증 쿼리 리허설** · `npm run supabase:preflight` 통과 · `backup/` 디렉터리 실재 확인 · 프로젝트 Active 확인 | W-1 | CUTOVER-PLAN §0.2·§7 |
+| **T-1** | **창 밖 준비 (전날).** migration 파일 작성 완료 · **로컬 스택에서 전량 적용 + T4 검증 쿼리 리허설** · **`ensure_today_daily_challenge` ACL 스냅샷 (§7.9의 쿼리 2개. `drop` 전의 사실이므로 이때만 뜰 수 있다)** · `npm run supabase:preflight` 통과 · `backup/` 디렉터리 실재 확인 · 프로젝트 Active 확인 | W-1 | CUTOVER-PLAN §0.2·§7, **§7.9** |
 | **T0** | **건별 승인 확인 + 재고 4쿼리** (§7.7). 실패한 항목은 **그 항목만 뺀다** | (신설) | `AGENTS.md` §1 |
 | **T1** | **백업 덤프 4종** — 스키마 / 데이터 전체 / **데이터 `public` 전용** / 롤 | **W2 그대로** | CUTOVER-PLAN §4.3. **`public` 전용을 빠뜨리지 않는다** — 8월에 빠졌다 |
 | **T2** | **`db push --dry-run --linked`** → pending이 **정확히 예상 개수**이고 순서가 §7.3과 일치 | W5 | CUTOVER-PLAN §3.2 |
-| **T3** | **`db push --linked`** ← **되돌릴 수 없는 지점** | W6 | CUTOVER-PLAN §2.1 |
+| **T3** | **`db push --linked`** ← **되돌릴 수 없는 지점.** ①의 migration은 **`drop function` → `create function` → `grant execute` 세 부분을 같은 트랜잭션에 담는다** (§7.9) | W6 | CUTOVER-PLAN §2.1 |
 | **T4** | **검증** (§7.8) | W7 | — |
 | **T5** | **스모크 — 실사용자 경로.** 오늘 코스 표시 · **닉네임 저장 1회** · **프로필 사진 변경 1회** · 랭킹 진입 · 게스트로 오늘 코스 조회 | W9 | §7.5 조건 3 |
 | **T6** | **기록.** `docs/ops/CUTOVER-LOG-YYYY-MM-DD.md` 작성 → `CURRENT.md`·`PROD-SNAPSHOT` 갱신 판단 | W11 | CUTOVER-LOG-TEMPLATE |
@@ -547,7 +570,7 @@ if found then
 |---|---|---|
 | 1 | `daily_challenges`의 UNIQUE 제약 | `(challenge_date, course_slot)` 1개. **`challenge_date` 단독 제약 부재** |
 | 2 | `course_slot` CHECK | `1..3` |
-| 3 | **`ensure_today_daily_challenge`의 ACL** | **`anon`·`authenticated`·`service_role`에 EXECUTE.** §7.2의 진짜 위험 |
+| 3 | **`ensure_today_daily_challenge`의 ACL** | **`anon`·`authenticated`·`service_role`에 EXECUTE** — §7.9의 쿼리 ②로 확인하고 **T-1 스냅샷과 대조한다.** `anon`이 빠지면 게스트의 오늘 코스가 끊긴다 |
 | 4 | 같은 함수 3회 연속 호출 | **행 3개 유지.** 중복 생성 0 — `on conflict` 가드 확인 |
 | 5 | `game_records_result_status_check` | 존재하고 `convalidated = true` |
 | 6 | `profiles`의 UPDATE 권한 | **컬럼 단위 3개만.** 테이블 단위 UPDATE **부재**, `total_xp` **미포함** |
@@ -558,33 +581,120 @@ if found then
 > **3번과 6번이 이 창에만 있는 검증이다.** 나머지는 8월 W7의 형태를 그대로 가져왔다.
 > **권한을 바꾸는 창은 권한을 검증해야 한다** — 8월 창에는 그 항목이 없었다
 > (`GRANT` 대조는 W2의 덤프 비교로 했다).
+
+---
+
+### 7.9 `ensure_today_daily_challenge` ACL 절차 — **창 절차 보강 (2026-09-02)** `[사용자 확정]`
+
+**`drop function`이 ACL을 지우므로 세 지점에 절차를 박는다.** 위험의 방향을 먼저 정확히 적는다.
+
+| 시나리오 | 재생성 후 `proacl` | `anon` 실행 | 판정 |
+|---|---|:-:|---|
+| 지금 (drop 전) | 명시적 — `anon`·`authenticated`·`service_role`에 `GRANT ALL` (`baseline:1362-1364`) `[코드]` | **가능** | 기준선 |
+| drop + create만 하고 **아무 grant도 하지 않는다** | **`null` = 기본 권한.** 함수의 기본값은 **`PUBLIC`에 EXECUTE**다 | **가능** (PUBLIC 경유) | **깨지지는 않는다. 그러나 기록된 ACL과 어긋나고 의도보다 넓다** |
+| drop + create + **contracts README의 신규 RPC 패턴을 그대로 적용** — `revoke all ... from public, anon` + `grant execute ... to authenticated` | 명시적, **`anon` 없음** | **불가** | **⚠ 여기서 게스트의 오늘 코스가 끊긴다** |
+
+> **⚠ 진짜 함정은 세 번째다.** `contracts/README.md`의 RPC 규칙이 **모든 신규 RPC에
+> `revoke all ... from public, anon`을 요구한다.** 이 함수는 **신규가 아니라 재생성**이고
+> **게스트가 쓰는 함수**다. **그 패턴을 여기 적용하면 안 된다** — 이 함수는 예외다.
+>
+> **왜 게스트가 이 함수를 쓰는가:** `MainPage`가 사용자 조건 없이 진입 시 1회 호출하고
+> (`:155-167`), 게스트 세션은 로그인 세션이 없어 **PostgREST에서 `anon` 역할로 실행된다**
+> (`dailyChallengeService.js:78`) `[코드]`.
+
+**T-1 (창 전) — ACL 스냅샷을 뜬다.** `drop` 전의 사실을 기록해야 복구 대상이 확정된다.
+
+```sql
+-- ① 원본 ACL 문자열. proacl이 null이면 "기본 권한"이라는 뜻이므로 그대로 기록한다.
+select p.oid::regprocedure::text as func,
+       pg_get_userbyid(p.proowner) as owner,
+       coalesce(p.proacl::text, '<null = default privileges>') as acl
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public'
+   and p.proname = 'ensure_today_daily_challenge';
+
+-- ② 사람이 읽을 형태로 펼친다. proacl이 null이면 0행이 나온다 — 그 사실도 결과다.
+select a.grantee::regrole::text as grantee, a.privilege_type
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+ cross join lateral aclexplode(p.proacl) a
+ where n.nspname = 'public'
+   and p.proname = 'ensure_today_daily_challenge'
+ order by 1, 2;
+```
+
+**T3 (적용) — 같은 트랜잭션 안에서 재부여한다.** migration 파일이 이 순서를 담는다.
+
+```sql
+drop function if exists public.ensure_today_daily_challenge();
+
+create function public.ensure_today_daily_challenge()
+returns table (challenge_date date, course_slot smallint,
+               start_title text, target_title text, hint text)
+language plpgsql
+security definer
+set search_path = ''
+as $fn$ ... $fn$;   -- 본문은 baseline:62-114를 3코스로 고친 것. on conflict 가드 포함 (§7.2)
+
+-- ⚠ 이 세 줄을 빠뜨리지 않는다. drop이 지운 것을 되돌리는 유일한 지점이다.
+grant execute on function public.ensure_today_daily_challenge() to anon;
+grant execute on function public.ensure_today_daily_challenge() to authenticated;
+grant execute on function public.ensure_today_daily_challenge() to service_role;
+```
+
+- **`revoke all ... from public, anon`을 쓰지 않는다** — 위 표의 세 번째 시나리오다.
+- `GRANT ALL`(baseline) 대신 `grant execute`로 좁히는 것은 **동등하다** — 함수에 존재하는
+  권한은 EXECUTE뿐이다. **T-1 스냅샷과 대조할 때 이 차이를 기록한다** `[추정]`.
+- **T-1 스냅샷이 `proacl = null`(기본 권한)로 나오면** 위 세 줄이 **새 명시 ACL을 만든다.**
+  그 경우도 `anon` 실행은 유지되므로 안전하지만, **스냅샷과 결과가 달라졌다는 사실을 T6에 적는다.**
+
+**T4 (검증) — 검증 항목 3번이 이것이다** (§7.8). 위 스냅샷 쿼리 ②를 다시 돌려
+**`anon`·`authenticated`·`service_role`에 EXECUTE가 있는지** 확인한다.
+
+**T5 (스모크) — "게스트로 오늘 코스 조회"가 이 항목의 사용자 경로 확인이다** (§7.6).
+로그아웃 상태 또는 시크릿 창에서 로비에 진입해 오늘 코스가 표시되는지 본다.
+**실패하면 ACL이다** — 다른 원인으로 오진하지 않는다.
+
 ---
 
 ## 8. 트랙별 티켓
 
-### 8-A. C5 프로필 카드 공통 컴포넌트
+### 8-A. C5 프로필 카드 공통 컴포넌트 — **착수** `[사용자 확정, 2026-09-02]`
 
 | | |
 |---|---|
-| **목표** | **네 지점이 서로 다르게 그리던 프로필 표시를 컴포넌트 2개로 단일화한다.** 이름 fallback 1종·`alt` 규칙 1종·이미지 우선순위 4단계를 C5 §3대로 구현한다 |
-| **범위 밖** | ① **결과 화면**(C5 5번째 지점) — §3.2 ② **`GroupGamePage.jsx:1330`**(동결) ③ **`RoomPage.jsx:477·596` · `MultiplayerGamePage.jsx:1398` · `VsIntroOverlay.jsx`**(C 소유, §5.2) ④ **레벨·칭호·배지 실데이터** — C1/C3 DDL 미적용. **슬롯만 만들고 `null`로 둔다** ⑤ `profiles` update payload 변경(§4.3) ⑥ 장착 편집 UI(17b) ⑦ 스냅샷 컬럼 확장(C5-②, DDL 판단) |
-| **읽을 파일** | `docs/contracts/C5-PROFILE-CARD.md`(전문) · `C1` §3·§4 · `C3` §1 · `21-SCREEN-MATRIX.md` §9·§10·§11 · `17-EXPLORATION-PROFILE-GUEST.md` §5·§5.1 · `docs/design/MOBILE-VALIDATION-CORRECTIONS.md` · `rankingService.js:195-229` · `services/profileStatsService.js:132-146` |
-| **건드릴 파일** | **신규** `components/ProfileCard.jsx` · `components/ProfileAvatar.jsx` · `css/profileCard.css` · `tests/profileCard.test.js` — **기존** `pages/ProfilePage.jsx` · `pages/RankingPage.jsx` · `components/UserProfileModal.jsx` · `pages/GroupRoomPage.jsx` · `appStyles.js` |
-| **수용조건** | ① 네 지점이 전부 신규 컴포넌트를 import한다 — `grep -l ProfileAvatar` **4/4** ② 그 4파일에서 `"Unknown"`·`"U"`·`"-"` 이름 fallback **0건** ③ 아바타 `alt` 빈 문자열 **0건**, 전부 `{이름}의 프로필 이미지` 형태 ④ 아바타 인라인 `style` **0건** (`GroupRoomPage.jsx:493·500` 해소) ⑤ `onError`가 이니셜로 내려가고 장착 상태 데이터를 건드리지 않는다 ⑥ `UserProfileModal` prop 3키 불변 — 호출 3곳 유지 ⑦ `npm test` 전량 통과 + 신규 테스트 수를 **기준 커밋과 날짜와 함께** 기록 ⑧ `npm run build` exit 0 ⑨ **§5.2의 남은 4곳을 완료 보고에 명시한다** |
-| **의존** | **없다.** A는 아무 트랙도 기다리지 않는다. **단 A는 15b·16·17b·트랙 E의 선행이다** |
+| **목표** | **다섯 지점이 서로 다르게 그리던 프로필 표시를 컴포넌트 2개로 단일화한다.** 이름 fallback 1종 · `alt` 규칙 1종 · 이미지 우선순위 4단계를 C5 §3대로 구현한다. **레벨·칭호·배지는 슬롯만 만든다** (데이터는 C1/C3 DDL 이후) |
+| **범위 밖** | ① **결과 화면**(C5 5번째 지점) — §3.2 ② **`GroupGamePage.jsx:1330`**(동결) ③ **`RoomPage.jsx:477·596` · `MultiplayerGamePage.jsx:1398` · `VsIntroOverlay.jsx`** — C 소유, §5.2 ④ **레벨·칭호·배지 실데이터** — 슬롯은 만들고 `null`로 둔다 ⑤ **`profiles` update payload 변경** — 창의 grant 목록이 여기에 걸린다 (§4.3) ⑥ 장착 편집 UI(17b) ⑦ 스냅샷 컬럼 확장(C5-②) ⑧ **`css/app.css`의 기존 아바타 클래스 삭제** — 동결이고, 신규 스타일은 `css/profileCard.css`로 간다 ⑨ **`rankingService.js`·`profileStatsService.js`의 반환 형태 변경** — B 소유. 필요하면 트랙을 멈춘다 |
+| **읽을 파일 — 계약** | **`docs/agent/TRACKS.md` §2.0·§2.1·§2.2·§2.3(A 항목)·§3.2·§4·§5.2** · **`docs/contracts/C5-PROFILE-CARD.md` 전문** · `C1-REWARD-TABLES.md` §3(`slot_index`)·§4(`get_profile_card_v1`) · `C3-LEVEL-STORAGE.md` §1 · `contracts/README.md`(공통 규칙) |
+| **읽을 파일 — 스펙·시안** | `01-CONFIRMED-SPEC.md` §10 · `21-SCREEN-MATRIX.md` §9·§10(`profile asset error`·`legacy profile`)·§11(접근성 완료 기준) · `17-EXPLORATION-PROFILE-GUEST.md` §5·§5.1·§8 · `docs/design/MOBILE-VALIDATION-CORRECTIONS.md` |
+| **읽을 파일 — 코드 (현재 상태)** | `pages/ProfilePage.jsx:35-60·185-215` · `pages/RankingPage.jsx:125-160` · `components/UserProfileModal.jsx:60-100` · `pages/GroupRoomPage.jsx:488-512` · **읽기 전용:** `rankingService.js:195-229`(행 형태) · `services/profileStatsService.js:132-146`(`fetchPublicProfile`) · `css/app.css`의 `.profile-avatar-*`(`:1961-1990`)·`.ranking-avatar-*`(`:1529-1556`) |
+| **건드릴 파일 (배타)** | **신규** `components/ProfileCard.jsx` · `components/ProfileAvatar.jsx` · `css/profileCard.css` · `tests/profileCard.test.js` — **기존** `pages/ProfilePage.jsx` · `pages/RankingPage.jsx` · `components/UserProfileModal.jsx` · `pages/GroupRoomPage.jsx` · `appStyles.js` |
+| **§2.3 공유 자원 — A가 걸리는 것** | **⑤ `mp-*` 이름공간:** `GroupRoomPage.jsx`가 `mp-*`를 쓴다. **A는 `css/multiplayer.css`(C 소유)를 고치지 않고, `mp-` 접두 클래스를 새로 정의하지도 않는다.** **⑥ retire 리터럴:** `GroupRoomPage.jsx`에 `"left"`가 있다 — **바꾸지 않는다.** **⑦ `useAuth()`:** A의 4파일이 모두 import한다 — **`authContext.jsx`(B 소유)를 고치지 않는다.** 추가로 **`UserProfileModal`의 prop 3키**(`userId`·`isOpen`·`onClose`)는 **C의 `RoomPage.jsx`가 호출하므로 불변**이다 (§2.2) |
+| **수용조건 — `npm test` 신규 항목** | `tests/profileCard.test.js`에 **최소 7건**: ① 이미지 우선순위 4단계가 순서대로 적용된다(`icon.assetRef` → `legacyImageUrl` → 이니셜 → 시스템 기본) ② 이름 fallback — 참가자 행은 **`"참가자"`**, 그 외는 **`"탐험가"`** ③ `alt`가 **`{이름}의 프로필 이미지`** 형식이다 ④ `onError`가 이니셜 단계로 내려가고 **장착 상태 데이터를 바꾸지 않는다** ⑤ 배지 0개면 영역을 렌더하지 않고, 1~3개는 `slot_index` 순이다 ⑥ **네 지점의 소스가 신규 컴포넌트를 import한다**(기존 계약 테스트 관행 — `appRouting.test.js`가 같은 방식이다) ⑦ **금지 문자열이 0건이다**(아래 불변식) |
+| **수용조건 — grep 불변식** | ① `grep -l ProfileAvatar pages/ProfilePage.jsx pages/RankingPage.jsx components/UserProfileModal.jsx pages/GroupRoomPage.jsx` → **4/4** ② 그 4파일에서 `"Unknown"`·`"U"`·이름 fallback `"-"` → **0건** ③ `alt=""` → **0건** (저장소 전체) ④ 아바타 인라인 `style` → **0건** (`GroupRoomPage.jsx:493·500` 해소) ⑤ `grep -c 'isOpen=' pages/RankingPage.jsx pages/GroupRoomPage.jsx pages/RoomPage.jsx` → **각 1** (prop 계약 유지) ⑥ `grep -c '"/main"'` → **0** (전역 규칙, §2.2) ⑦ `appStyles.js`의 css import → **8개**(기존 7 + `profileCard.css`), **컴포넌트에서 css를 import하지 않는다**(R7) |
+| **수용조건 — 전체** | `npm test` **전량 통과**, 수치를 **기준 커밋·날짜와 함께** 기록 (베이스라인 144) · `npm run build` **exit 0** · **§5.2의 남은 4곳을 완료 보고에 명시한다**(닫는 곳 5, 남는 곳 4) |
+| **의존** | **없다.** **단 A는 15b·16·17b·트랙 E의 선행이다** (§5.1) |
+| **첫 수** | **네 지점의 현재 렌더 코드를 나란히 읽고 `ProfileCard`/`ProfileAvatar`의 prop 표를 먼저 확정한다.** C5 §2의 카드 형태가 그 표의 입력이고, `size`·`density`만 다르다는 것이 §5의 규칙이다. **컴포넌트 API를 고정하기 전에 지점을 고치지 않는다** |
 
-### 8-B. 17a-2 기록·게스트
+### 8-B. 17a-2 기록·게스트 — **착수** `[사용자 확정, 2026-09-02]`
 
 | | |
 |---|---|
-| **목표** | **기록·경로를 서버 권위 결과에서 읽게 하고, 게스트가 영구 데이터를 만들지 못하는 경계를 확정한다** (17 §4·§6). 싱글 결과 화면의 순위 표시를 클라이언트 추측에서 서버 값으로 바꾼다 |
-| **범위 밖** | ① **오늘 3코스 전부** — `services/dailyChallengeService.js`(동결) · `MainPage.jsx`의 코스 블록 · `course_slot` ② **프로필 화면**(A 소유) ③ **랭킹 화면 UI**(A 소유) — `rankingService.js`의 **데이터**는 B 소유 ④ **XP·레벨**(D/15b) ⑤ **1:1·그룹 결과**(C/동결) ⑥ **싱글 아이템 감사**(17 §7) — `data/items.js` 계열은 C 소유 ⑦ `MainPage.jsx`의 랭킹 탭 블록 |
-| **읽을 파일** | `17-EXPLORATION-PROFILE-GUEST.md` §1·§2·§4·§6·§8 · `docs/contracts/C4-RESULT-REASON.md` §3.3(싱글 3경우) · `supabase/migrations/20260814091000_server_authority_rpc_v2.sql:15-45`(`single_game_runs` — 경로·게스트 해시가 이미 있다) · `tests/guestSingleSession.test.js` · `tests/appRouting.test.js` |
-| **건드릴 파일** | `pages/GamePage.jsx` · `components/SuccessOverlay.jsx` · `css/SuccessOverlay.css` · `pages/MainPage.jsx`(게스트 영역만) · `pages/IntroPage.jsx` · `pages/LoginPage.jsx` · `services/singleGameService.js` · `utils/singleGameSession.js` · `utils/localAuthSession.js` · `authContext.jsx` · `App.jsx` · `rankingService.js` · `services/profileStatsService.js` · `services/analyticsService.js` · `tests/appRouting.test.js` · `tests/guestSingleSession.test.js` · **신규** `utils/resultReasonLabels.js` · `tests/explorationRecords.test.js` |
-| **수용조건** | ① **`SuccessOverlay.jsx:32-35`의 클라이언트 순위 추측이 제거된다** — `findIndex`로 `elapsedSeconds`·`clickCount`를 맞춰 순위를 만드는 코드 **0건** ② 결과 화면과 프로필 history가 같은 서버 결과에서 읽는다 (동일 조회 경로를 테스트가 고정) ③ 게스트가 만드는 영구 행 **0** — 기존 게스트 계약 테스트 전량 통과 ④ `tests/appRouting.test.js`의 기존 계약 문자열 2개(`onReturnToLobby={handleGiveUp}` · `onClick={onReturnToLobby}`) 유지, 또는 **같은 커밋에서 테스트를 갱신하고 이유를 적는다** ⑤ **같은 파일의 1:1·그룹 assert(`:167-175`)는 건드리지 않는다** ⑥ 게이트 관련 assert(`maintenanceGate.test.js:309`) 유지 ⑦ **`useAuth()` 반환 키 불변** — `user`·`loading`·`logout`·`user.isGuest`·`user.id`·`user.displayName` (§2.3-⑦. **13개 파일이 import한다**) ⑧ **`"wiki-single-items"` 정리 경로 유지** — `grep -rc` 합계 4 (§2.3-④) ⑨ `utils/resultReasonLabels.js`가 **C4 §3.1~§3.3 세 표를 전부** 담는다 — C가 호출만으로 1:1 표시를 만들 수 있어야 한다 ⑩ `npm test` 전량 통과 + 수치·기준 커밋 기록 ⑪ `npm run build` exit 0 |
-| **의존** | **없다.** C5 컴포넌트를 쓰지 않는다 — 싱글 결과에 아바타가 없다 `[코드]`. **단 C가 B의 `resultReasonLabels.js`를 읽는다** — B가 먼저 그 파일을 만들어 두면 C의 1:1 결과 표시가 막히지 않는다 |
+| **목표** | **① 기록·경로를 서버 권위 결과에서 읽게 한다** (17 §4) — 싱글 결과 화면의 순위가 클라이언트 추측이다. **② 게스트가 영구 데이터를 만들지 못하는 경계를 확정한다** (17 §6). **③ C4의 표시 매핑 모듈을 만든다** — `utils/resultReasonLabels.js` (C4-③ 확정) |
+| **범위 밖** | ① **오늘 3코스 전부** — `services/dailyChallengeService.js`(동결) · `MainPage.jsx`의 코스 블록(`:155-167`) · `course_slot` ② **프로필 화면**(A 소유) ③ **랭킹 화면 UI**(A 소유) — `rankingService.js`의 **데이터**는 B 소유 ④ **XP·레벨**(D/15b) ⑤ **1:1·그룹 결과 화면**(C/동결) ⑥ **싱글 아이템 감사**(17 §7) — 아이템 파일 전부 C 소유 ⑦ `MainPage.jsx`의 랭킹 탭 블록 ⑧ **`utils/groupResultFormatter.js` 정정** — 등재는 됐지만 **B가 하지 않는다** (§2.1, C4 §3.1.1) ⑨ **DB 변경 전부** — 이 트랙은 migration을 만들지 않는다 |
+| **읽을 파일 — 계약** | **`docs/agent/TRACKS.md` §2.0·§2.1·§2.2·§2.3(B 항목)·§3.2** · **`docs/contracts/C4-RESULT-REASON.md` 전문 — 특히 §3.1(부제 확정)·§3.1.1·§3.2·§3.3·§3.4** · `contracts/README.md`(공통 규칙) |
+| **읽을 파일 — 스펙** | `17-EXPLORATION-PROFILE-GUEST.md` §1·§2·§4·§6·§8 · `01-CONFIRMED-SPEC.md` §4.2·§6.2 |
+| **읽을 파일 — 코드 (현재 상태)** | `components/SuccessOverlay.jsx:24-45`(**클라이언트 순위 추측**) · `pages/GamePage.jsx:120-180·660-680`(게스트 세션·`wiki-single-items` 정리) · `utils/singleGameSession.js` 전문 · `services/singleGameService.js` 전문 · `pages/MainPage.jsx:195-215·430-480`(게스트 게이팅) · `rankingService.js:150-229` · **읽기 전용:** `supabase/migrations/20260814091000_server_authority_rpc_v2.sql:15-45`(`single_game_runs` — 경로·게스트 해시가 **이미 있다**) · `utils/groupResultFormatter.js`(정정 대상. **읽고 베끼지 않는다** — 정답은 C4 §3.1) · `tests/appRouting.test.js:90-135` · `tests/guestSingleSession.test.js` |
+| **건드릴 파일 (배타)** | `pages/GamePage.jsx` · `components/SuccessOverlay.jsx` · `css/SuccessOverlay.css` · `pages/MainPage.jsx`(게스트 영역만) · `pages/IntroPage.jsx` · `pages/LoginPage.jsx` · `services/singleGameService.js` · `utils/singleGameSession.js` · `utils/localAuthSession.js` · `authContext.jsx` · `App.jsx` · `rankingService.js` · `services/profileStatsService.js` · `services/analyticsService.js` · `tests/appRouting.test.js` · `tests/guestSingleSession.test.js` · **신규** `utils/resultReasonLabels.js` · `tests/resultReasonLabels.test.js` · `tests/explorationRecords.test.js` |
+| **§2.3 공유 자원 — B가 걸리는 것** | **④ `"wiki-single-items"`:** B가 3곳(`singleGameSession.js:6` · `GamePage.jsx:176·672` · `guestSingleSession.test.js:197`), C가 1곳(`useItemSystem.js:26`)을 갖는다. **문자열을 바꾸지 않는다** — 바꾸면 게스트 아이템 상태가 정리되지 않는다. **⑦ `useAuth()`:** B가 소유자이고 **13개 파일이 import한다** — 반환 키 유지가 B의 책임이다. **⑥ retire 리터럴:** `resultReasonLabels.js`가 이 리터럴을 **키로** 쓴다 — C4가 5값을 유지하기로 했으므로 **키를 바꾸지 않는다.** **③ `useItemSystem` 반환:** B의 `GamePage.jsx`가 소비자다 — 훅은 C 소유이므로 **B가 고칠 수 없다.** 필요하면 트랙을 멈춘다 |
+| **수용조건 — `npm test` 신규 항목** | **`tests/resultReasonLabels.test.js` 최소 12건** — C4 §3.1 그룹 4용어(완주·기권·리타이어·**몰수**) · **부제 3개 확정 문자열**(`제한 시간 초과` · `유예 시간 초과` · `재접속 유예 종료`) · §3.2 1:1 5경우 · §3.3 싱글 3경우. **`"연결 끊김"`은 이 모듈에 없다.** **`tests/explorationRecords.test.js`** — ① 싱글 결과 순위가 **서버 값**에서 온다(클라이언트 매칭 부재) ② 결과 화면과 프로필 history가 **같은 조회 경로**를 쓴다 ③ 게스트 완주·포기 후 **영구 행 0** ④ 게스트 세션 정리가 `wiki-single-items`까지 지운다 |
+| **수용조건 — grep 불변식** | ① `grep -c findIndex components/SuccessOverlay.jsx` → **0** ② `grep -rc '"wiki-single-items"' hooks utils pages tests` 합계 → **4 유지** ③ `grep -c 'onReturnToLobby={handleGiveUp}' pages/GamePage.jsx` → **1**, `grep -c 'onClick={onReturnToLobby}' components/SuccessOverlay.jsx` → **1** (또는 같은 커밋에서 `appRouting.test.js`를 갱신하고 이유를 적는다) ④ `grep -c 'navigate("/multiplayer"' tests/appRouting.test.js` → **변경 0** (C의 assert를 건드리지 않는다) ⑤ `grep -c '"연결 끊김"' utils/resultReasonLabels.js` → **0** ⑥ `grep -rc 'groupResultFormatter' <B의 건드릴 파일>` → **0** (동결 모듈을 import하지 않는다) ⑦ `grep -c 'isGuest' authContext.jsx` → **유지**(§2.3-⑦) ⑧ `grep -c '"/main"'` → **0** |
+| **수용조건 — 전체** | `npm test` **전량 통과**, 수치를 **기준 커밋·날짜와 함께** 기록 (베이스라인 144) · `npm run build` **exit 0** · **게이트 관련 assert 유지**(`maintenanceGate.test.js:262·275·287·309`) · **DB migration 산출물 0개** |
+| **의존** | **없다.** C5 컴포넌트를 쓰지 않는다 — 싱글 결과에 아바타가 없다 `[코드]`. **역방향 의존이 하나 있다: C가 B의 `resultReasonLabels.js`를 읽는다** — B가 그 파일을 먼저 만들어 두면 C의 1:1 결과 표시가 막히지 않는다 |
+| **첫 수** | **`utils/resultReasonLabels.js`를 먼저 만든다.** C4가 완전히 확정된 표 3개라 **설계가 아니라 전사(轉寫)이고, C의 선행이기도 하다.** 그다음 `SuccessOverlay.jsx:32-35`의 순위 추측을 서버 값으로 바꾼다 — **`single_game_runs`에 경로·기록이 이미 있으므로**(`20260814091000:15-45`) 새 DB 객체가 필요한지부터 확인한다 |
 
-### 8-C. 14 아이템 서버 권위
+### 8-C. 14 아이템 서버 권위 — **대기 (G7 차단)**
 
 | | |
 |---|---|
@@ -595,7 +705,7 @@ if found then
 | **수용조건** | ① **G7 확정 문서가 먼저 존재한다.** 아이템 ID 표 + event_type 명명 + payload 키. **없으면 착수하지 않는다** ② 아이템 사용이 RPC로만 발생한다 — `pages/`에서 `from("room_events").insert` **0건**. **이 0건이 G2-② 창의 선행 조건이다** (§7.4-③) ③ **`git diff data/itemPools.js`에 `SINGLE_ITEM_IDS` 블록 변경이 없다.** `grep -c 'highlight_links' data/itemPools.js` = **2 유지** ④ `GamePage.jsx`를 수정하지 않고 싱글 아이템이 회귀 없이 동작한다 — `ItemBar.jsx` prop·`useItemSystem` 반환 키 불변 ⑤ `grep -rc '"wiki-single-items"'` 합계 **4 유지** (§2.3-④) ⑥ `css/multiplayer.css`의 기존 `mp-*` 선택자 **삭제·개명 0건** — 추가만 (§2.3-⑤) ⑦ 새 RPC가 계약 형태를 따른다 — `security definer` · 빈 `search_path` · `jsonb` 반환 (contracts README) ⑧ pgTAP 신규 파일 통과 수치·기준 커밋 기록 ⑨ `npm test` 전량 통과 ⑩ `npm run build` exit 0 ⑪ **운영 미적용** (R6) ⑫ `navigate("/multiplayer", { replace: true })` 문자열 유지 (§2.2) |
 | **의존** | **G7 — 차단.** 그리고 **G2-②는 C의 산출이 아니라 C 이후의 창 항목이다** |
 
-### 8-D. 15a XP ledger·지급·감쇠
+### 8-D. 15a XP ledger·지급·감쇠 — **순차 (로컬 DB 스택 자원)**
 
 | | |
 |---|---|
@@ -608,14 +718,15 @@ if found then
 
 ---
 
-## 9. 문서 불일치 — **4건. 1건은 계약을 고쳤다**
+## 9. 문서 불일치 — **5건. 3건을 고쳤다**
 
 | # | 불일치 | 실측 | 상태 |
 |---|---|---|---|
 | **①** | **C5 §1 "네 곳" · §4 "5곳"** | **8곳 + `VsIntroOverlay` 2지점.** 이름 fallback은 4종이 아니라 **6종**(`나`·`상대`가 빠졌다) `[코드]` | **계약 문구는 고치지 않았다** (정정 승인 없음). **A의 완료 정의는 §5.2가 확정한다** — 닫는 곳 5, 남는 곳 4 |
 | **②** | **C4 §5·contracts README·GAPS가 "CHECK 2건"** | **추가는 1건이다.** C4 §4.2가 `match_end_reason`에 **CHECK를 붙이지 않기로 결정**했다 `[문서]`. **"판정 2건, 추가 1건"이 정확한 표현** | **계약 문구는 고치지 않았다.** **창 범위는 §7.1이 1건으로 확정한다** `[사용자 확정]` |
 | **③** | **C3 §5-①이 `grant update`를 2컬럼으로 적었다** | **`updated_at`이 빠졌다.** 배포된 프론트의 두 update가 **모두 그것을 함께 보낸다** — `ProfilePage.jsx:86`·`:149` `[코드]` | **✅ 정정 완료 (2026-09-02).** **3컬럼으로 확정**하고 `C3-LEVEL-STORAGE.md` **§0에 정정 이력**, **§5.1에 확정 DDL**을 남겼다. contracts README에도 정정 이력 표를 신설했다 `[사용자 결정]` |
-| **④** | **C4 §3.1이 `grace_timeout`·`time_limit`의 부제를 "시안에 문구 없음 → 발명하지 않는다"로 남겼다** | **문구가 코드에 이미 있다** — `utils/groupResultFormatter.js:2-3`이 `time_limit → "제한 시간 초과"`, `grace_timeout → "유예 시간 초과"`를 **운영에서 쓰고 있다** `[코드]`. `disconnected_timeout`은 **"연결 끊김"**으로 C4의 "몰수 — 재접속 유예 종료"와 다르다 | **미결. 이 세션에서 결정하지 않았다** — C4-①은 여전히 열려 있다. **다만 "발명하지 않는다"의 근거가 바뀌었다: 발명이 아니라 기존 문자열 채택이라는 선택지가 있다** |
+| **④** | **C4 §3.1이 `grace_timeout`·`time_limit`의 부제를 "시안에 문구 없음 → 발명하지 않는다"로 남겼다** | **문구가 코드에 이미 있다** — `utils/groupResultFormatter.js:2-3` `[코드]`. `disconnected_timeout`은 **"연결 끊김"**으로 C4의 "몰수"와 다르다 | **✅ 확정 (2026-09-02).** 부제 2개는 **코드 문자열 채택**, `disconnected_timeout`은 **시안이 상위**라 `몰수`/`재접속 유예 종료`가 정답이고 코드가 **정정 대상**이다. 규칙은 **시안 > 코드 > 발명**. **같은 상태임을 코드로 확인했다** — C4 §0.-1·§3.1·§3.1.1 |
+| **⑤** | **이 문서 §7.2가 "ACL 재부여를 빠뜨리면 게스트의 오늘 코스가 사라진다"고 적었다** | **기제가 그렇지 않다.** 함수는 grant를 하지 않으면 **`PUBLIC`에 EXECUTE가 붙는 것이 기본값**이라 `anon`도 실행된다. **진짜 함정은 반대쪽** — `contracts/README.md`의 신규 RPC 패턴(`revoke all ... from public, anon`)을 이 함수에 적용하면 **게스트 경로가 끊긴다** | **✅ 자체 정정 (2026-09-02).** §7.2 표와 **§7.9 신설**로 고쳤다. **README 패턴을 이 함수에 적용하지 않는다는 예외를 명시했다** |
 
 > **④는 새로 찾은 것이다.** C4 §5-①이 "근거가 없으면 만들지 않는다"고 적었는데
 > **근거가 코드에 있었다.** 반대로 `disconnected_timeout`은 **코드와 계약이 어긋난다** —
@@ -629,13 +740,17 @@ if found then
 
 ---
 
-## 9.1 확정된 결정 3건 — 2026-09-02 `[사용자 확정]`
+## 9.1 확정된 결정 — 2026-09-02 `[사용자 확정]`
 
 | # | 결정 | 어디에 반영됐나 |
 |---|---|---|
 | **1** | **C3-① grant 컬럼 = 3개** (`nickname` · `profile_image_url` · `updated_at`) | `C3-LEVEL-STORAGE.md` §0·§5.1·§7 · `contracts/README.md` 정정 이력 · 이 문서 §7.1-③·§7.5 |
 | **2** | **G2-②를 3코스 창에서 제외.** 14 → 프론트 배포 → 경로 부재 확인 → **별도 창**에서 회수 | 이 문서 §7.1·§7.4·§8-C · `PACKET-CONTRACT-GAPS.md` §3.3·§5.5.1·§6.2·§6.4 |
 | **3** | **`highlight_links` 이중 등록:** C는 **`MULTI_ITEM_IDS`만** 수정. `SINGLE_ITEM_IDS`는 동결 | 이 문서 §2.2·§2.3-①·§8-C(범위 밖 ②·수용조건 ③) |
+| **4** | **C4-① 부제 문구 = 코드 문자열 채택** (`제한 시간 초과`·`유예 시간 초과`). **`disconnected_timeout`은 시안이 상위** → `몰수`/`재접속 유예 종료`가 정답이고 코드의 `"연결 끊김"`은 **정정 대상**. 규칙 **시안 > 코드 > 발명** | `C4-RESULT-REASON.md` §0.-1·§3.1·**§3.1.1**·§5 · `contracts/README.md` 정정 이력 · 이 문서 §2.1(정정 등재)·§2.2 |
+| **5** | **`utils/resultReasonLabels.js` = 신규 모듈, 트랙 B 소유** (C4-③ 확정) | C4 §5 · 이 문서 §2.0·§2.2·§8-B |
+| **6** | **창 절차에 ACL 3지점 보강** — T-1 스냅샷 · T3 같은 트랜잭션 재부여 · T5 게스트 스모크 | 이 문서 **§7.9** · §7.6(T-1·T3) · §7.8(검증 3) |
+| **7** | **이 웨이브는 A·B로 시작한다.** C는 G7 대기, D는 로컬 DB를 쓰므로 순차 | 이 문서 §1 · §8-A·§8-B |
 ## 10. 참조
 
 | 문서 | 역할 |
