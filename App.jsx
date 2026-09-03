@@ -90,12 +90,16 @@ function GameRoute({ isGuestRecovery = false }) {
   const isGuestGame = Boolean(user?.isGuest || isGuestRecovery);
 
   const handleSaveRecord = async (result) => {
-    if (result?.serverFinalized) {
-      setSaveStatus("서버에서 결과와 랭킹 기록을 확정했습니다.");
+    // 게스트 판정이 가장 먼저다 (패킷 17 §6).
+    // 게스트 싱글 런은 서버에서도 `single_game_runs`에 게스트 토큰 해시로만 살고
+    // `game_records`에 행을 남기지 않는다. 그런데 `serverFinalized`를 먼저 보면
+    // 완주한 게스트에게 "랭킹 기록을 확정했습니다"라고 잘못 알리게 된다.
+    if (isGuestGame) {
+      setSaveStatus("게스트 기록은 저장되지 않습니다. 로그인하면 기록이 남습니다.");
       return;
     }
-    if (isGuestGame) {
-      alert("랭킹저장은 로그인 후 가능합니다.");
+    if (result?.serverFinalized) {
+      setSaveStatus("서버에서 결과와 랭킹 기록을 확정했습니다.");
       return;
     }
     try {

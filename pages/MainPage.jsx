@@ -227,14 +227,25 @@ export default function MainPage() {
             <span className="qs-title">혼자서 플레이</span>
             <span className="qs-desc">내가 원하는 목표 문서를 직접 찾아가기</span>
           </button>
+          {/* 온라인 경로는 로그인 전용이다 (패킷 17 §6).
+              게이팅이 없으면 게스트가 눌러도 ProtectedRoute가 /login으로 되돌려 보낸다. */}
           <button
             type="button"
             className="quickstart-card quickstart-pvp"
-            onClick={() => navigate("/multiplayer")}
+            disabled={user.isGuest}
+            aria-disabled={user.isGuest}
+            onClick={() => {
+              if (user.isGuest) return;
+              navigate("/multiplayer");
+            }}
           >
             <span className="qs-icon">⚔️</span>
             <span className="qs-title">온라인 플레이</span>
-            <span className="qs-desc">친구들과 실시간 위키 레이스 대결</span>
+            <span className="qs-desc">
+              {user.isGuest
+                ? "로그인하면 친구들과 실시간 대결을 할 수 있어요"
+                : "친구들과 실시간 위키 레이스 대결"}
+            </span>
           </button>
         </section>
 

@@ -1,4 +1,5 @@
-import { supabase, isSupabaseConfigured } from "../supabaseClient";
+import { supabase, isSupabaseConfigured } from "../supabaseClient.js";
+import { fetchSingleGameRecords } from "../rankingService.js";
 
 /**
  * 프로필 전적 조회 서비스
@@ -6,39 +7,34 @@ import { supabase, isSupabaseConfigured } from "../supabaseClient";
  * - 게스트 유저는 전적 대상에서 제외됩니다.
  */
 
+const EMPTY_SINGLE_STATS = { totalWins: 0, bestTime: null, bestClicks: null };
+
 /**
  * 1. 싱글 플레이 전적 조회
+ *
+ * 조회는 `rankingService.fetchSingleGameRecords`를 지납니다 — **결과 화면과 같은 경로**입니다.
+ * 두 화면이 각자 쿼리를 쓰면 같은 런에 서로 다른 값이 표시될 수 있습니다 (패킷 17 §4·§8).
+ *
  * @param {string} userId
+ * @param {{client?: Object}} [options] 조회에 쓸 Supabase 클라이언트 (미지정 시 전역 설정)
  */
-export async function fetchSinglePlayerStats(userId) {
-  if (!isSupabaseConfigured || !userId || userId.startsWith("guest-")) {
-    return { totalWins: 0, bestTime: null, bestClicks: null };
-  }
+export async function fetchSinglePlayerStats(userId, { client } = {}) {
+  if (!userId || userId.startsWith("guest-")) return { ...EMPTY_SINGLE_STATS };
+  if (!client && !isSupabaseConfigured) return { ...EMPTY_SINGLE_STATS };
 
-  // game_records 테이블 활용
-  const { data, error } = await supabase
-    .from("game_records")
-    .select("elapsed_seconds, click_count")
-    .eq("user_id", userId);
+  try {
+    const records = await fetchSingleGameRecords({ userId, client });
+    if (records.length === 0) return { ...EMPTY_SINGLE_STATS };
 
-  if (error) {
+    return {
+      totalWins: records.length,
+      bestTime: Math.min(...records.map((record) => record.elapsedSeconds)),
+      bestClicks: Math.min(...records.map((record) => record.clickCount)),
+    };
+  } catch (error) {
     console.error("싱글 플레이 전적 조회 오류:", error);
-    return { totalWins: 0, bestTime: null, bestClicks: null };
+    return { ...EMPTY_SINGLE_STATS };
   }
-
-  const records = data || [];
-  if (records.length === 0) {
-    return { totalWins: 0, bestTime: null, bestClicks: null };
-  }
-
-  const bestTime = Math.min(...records.map((r) => r.elapsed_seconds));
-  const bestClicks = Math.min(...records.map((r) => r.click_count));
-
-  return {
-    totalWins: records.length,
-    bestTime,
-    bestClicks,
-  };
 }
 
 /**

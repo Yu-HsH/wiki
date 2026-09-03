@@ -855,6 +855,7 @@ export default function GamePage({
       {/* 결과 화면 */}
       {phase === PHASE.SUCCESS && (
         <SuccessOverlay
+          runId={serverRun?.id ?? null}
           targetTitle={target.title}
           elapsedSeconds={elapsedSeconds}
           clickCount={clickCount}
