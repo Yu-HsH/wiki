@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../authContext";
-import { fetchRankings } from "../rankingService";
+import { fetchRankings, fetchSingleRunResult } from "../rankingService";
 import { formatDuration } from "../services/wikiService";
 
 /**
  * 게임 성공 시 표시되는 오버레이 컴포넌트
- * - 최종 기록(시간, 클릭 수) 표시
+ * - 최종 기록(시간, 클릭 수) 표시 — 서버가 확정한 값이 있으면 그것을 표시합니다
  * - 플레이어가 이동한 전체 경로 표시
  * - 랭킹 정보 요약
+ *
+ * **순위는 서버가 셉니다.** 이 화면이 랭킹 목록을 훑어 자기 기록을 찾아내지 않습니다 —
+ * 시간·이동 횟수·목표 문서가 우연히 같은 남의 기록을 자기 것으로 오인할 수 있었고,
+ * 상위 10건 밖이면 순위 자체가 없었습니다. 결과 화면과 프로필 history는 이제 같은
+ * 조회 경로(`rankingService.fetchSingleGameRecords`)를 지납니다 (패킷 17 §4).
  */
 export default function SuccessOverlay({
+  runId = null,
   targetTitle,
   elapsedSeconds,
   clickCount,
@@ -18,30 +24,55 @@ export default function SuccessOverlay({
 }) {
   const { user } = useAuth();
   const [rankings, setRankings] = useState([]);
-  const [myRankIndex, setMyRankIndex] = useState(-1);
+  const [serverResult, setServerResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkRankings = async () => {
-      try {
-        setIsLoading(true);
-        const data = await fetchRankings({ limit: 10 });
-        setRankings(data);
+    let cancelled = false;
 
-        // 내 순위 찾기
-        const myIndex = data.findIndex(
-          (r) => r.elapsedSeconds === elapsedSeconds && r.clickCount === clickCount && r.targetTitle === targetTitle
-        );
-        setMyRankIndex(myIndex !== -1 ? myIndex + 1 : -1);
-      } catch (error) {
-        console.error("랭킹을 불러오지 못했습니다.", error);
-      } finally {
-        setIsLoading(false);
+    const loadResult = async () => {
+      setIsLoading(true);
+
+      // 상단 미니 랭킹(표시용)과 내 순위(서버 확정값)는 서로 다른 조회다.
+      const [rankingList, runResult] = await Promise.allSettled([
+        fetchRankings({ limit: 10 }),
+        fetchSingleRunResult({ runId }),
+      ]);
+
+      if (cancelled) return;
+
+      if (rankingList.status === "fulfilled") {
+        setRankings(rankingList.value);
+      } else {
+        console.error("랭킹을 불러오지 못했습니다.", rankingList.reason);
       }
+
+      if (runResult.status === "fulfilled") {
+        setServerResult(runResult.value);
+      } else {
+        console.error("서버 확정 결과를 불러오지 못했습니다.", runResult.reason);
+      }
+
+      setIsLoading(false);
     };
 
-    checkRankings();
-  }, [elapsedSeconds, clickCount, targetTitle]);
+    loadResult();
+    return () => {
+      cancelled = true;
+    };
+  }, [runId]);
+
+  // 서버에 확정된 기록이 있으면 그 값이 우선이다. 게스트 런은 영구 행을 만들지 않으므로
+  // 서버 기록이 없고, 그때는 화면에 들고 있던 진행 값을 그대로 보여준다.
+  const serverRecord = serverResult?.record ?? null;
+  const displayTargetTitle = serverRecord?.targetTitle ?? targetTitle;
+  const displayElapsedSeconds = serverRecord?.elapsedSeconds ?? elapsedSeconds;
+  const displayClickCount = serverRecord?.clickCount ?? clickCount;
+  const displayPathTitles = serverRecord?.pathTitles?.length
+    ? serverRecord.pathTitles
+    : pathTitles;
+  const serverRank = serverResult?.rank ?? null;
+  const serverTotalCount = serverResult?.totalCount ?? null;
 
   return (
     <div style={overlayStyle}>
@@ -58,12 +89,12 @@ export default function SuccessOverlay({
           <div style={statBoxStyle}>
             <span style={statLabelStyle}>걸린 시간</span>
             <span style={{ ...statValueStyle, color: "var(--brand)" }}>
-              {formatDuration(elapsedSeconds)}
+              {formatDuration(displayElapsedSeconds)}
             </span>
           </div>
           <div style={statBoxStyle}>
             <span style={statLabelStyle}>이동 횟수</span>
-            <span style={statValueStyle}>{clickCount} 회</span>
+            <span style={statValueStyle}>{displayClickCount} 회</span>
           </div>
         </div>
 
@@ -71,20 +102,20 @@ export default function SuccessOverlay({
           {/* 목표 문서 강조 */}
           <div style={targetDisplayStyle}>
             <span style={targetLabelStyle}>도착지</span>
-            <span style={targetTitleStyle}>{targetTitle}</span>
+            <span style={targetTitleStyle}>{displayTargetTitle}</span>
           </div>
 
           {/* 이동 경로 (타임라인 스타일) */}
           <div style={pathSectionStyle}>
             <h3 style={sectionTitleStyle}>이동 경로</h3>
             <div style={timelineStyle}>
-              {pathTitles.map((title, index) => (
+              {displayPathTitles.map((title, index) => (
                 <div key={`${title}-${index}`} style={timelineItemStyle}>
                   <div style={dotStyle}>
                     <div style={dotInnerStyle} />
                   </div>
                   <div style={timelineTextStyle}>{title}</div>
-                  {index < pathTitles.length - 1 && <div style={lineStyle} />}
+                  {index < displayPathTitles.length - 1 && <div style={lineStyle} />}
                 </div>
               ))}
             </div>
@@ -100,9 +131,11 @@ export default function SuccessOverlay({
                 <p style={myRankTextStyle}>
                   {user?.isGuest
                     ? "게스트는 랭킹에 등록되지 않습니다."
-                    : myRankIndex > 0
-                      ? `🎉 현재 전체 ${myRankIndex}위를 기록 중입니다!`
-                      : "아쉽게도 순위권에 들지 못했습니다."}
+                    : serverRank
+                      ? serverTotalCount
+                        ? `🎉 서버 확정 기록 ${serverTotalCount}건 중 ${serverRank}위입니다!`
+                        : `🎉 서버 확정 순위 ${serverRank}위입니다!`
+                      : "서버에서 확정된 순위를 아직 불러오지 못했습니다."}
                 </p>
                 <div style={miniRankingListStyle}>
                   {rankings.slice(0, 3).map((r, idx) => (
