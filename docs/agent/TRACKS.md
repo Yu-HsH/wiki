@@ -1,9 +1,20 @@
 # 병렬 트랙 파일 소유권 — 단일 기준
 
-갱신 날짜: 2026-09-02 (3차)
-기준 커밋: `b281e01` (`docs: confirm three decisions and freeze the three-course window at four items`)
-이전 기준: `e1b5546` · `f40e071`
+갱신 날짜: 2026-09-03 (4차)
+기준 커밋: `527f896` (`merge: integrate track B (records/guest)`) — **A·B 통합 완료**
+트랙 커밋: `e70c541`(A) · `7a7197e`(B) · 분기점 `ad569f2`
+이전 기준: `b281e01` · `e1b5546` · `f40e071`
 브랜치: `feat/group-final-gaps`
+
+> **4차 갱신 (2026-09-03) — A·B가 끝났고 `feat/group-final-gaps`에 통합됐다.**
+> **화이트리스트는 실제로 배타적이었다** — 두 트랙이 건드린 파일 10개와 9개의 **교집합이 0**이고
+> `--no-ff` merge 둘 다 **충돌 0**이었다 (§8-A·§8-B 완료 행). 통합 상태 실측:
+> **`npm test` 203/203** (144 + A 17 + B 42, **단순 합과 일치**) · **`npm run build` exit 0** ·
+> **grep 불변식 A 7 + B 8 전건 통과** (측정 단서 3건은 §8-A·§8-B에 그대로 적었다).
+> **이 갱신이 문서 수치 4건을 정정한다** — §2.3-③(12지점 → **13줄**) · §2.3-④(합계 4 → **4파일 6줄**) ·
+> §2.3-⑥(A의 `"left"`는 **retire 어휘가 아니라 `textAlign` 값**) · §5.2(적용 지점 5 → **6**,
+> 이름 fallback 6종 → **8종**). **전부 A·B가 실제로 코드를 만지면서 드러난 것이다.**
+> **남는 지점 4곳(전부 C 소유)과 부채 2건은 §5.2에 등재했다.**
 
 > **3차 갱신 (2026-09-02):** **C4-①이 확정됐다** — 부제 문구는 **코드 문자열 채택**,
 > `disconnected_timeout`은 **시안이 상위**이고 코드의 `"연결 끊김"`은 **정정 대상**이다
@@ -66,8 +77,8 @@
 
 | 트랙 | 지금 | 근거 |
 |---|---|---|
-| **A** C5 프로필 카드 | **착수** | 선행 0 · **DB를 건드리지 않는다** · 티켓 §8-A |
-| **B** 17a-2 기록·게스트 | **착수** | 선행 0 · **DB를 건드리지 않는다** · 티켓 §8-B |
+| **A** C5 프로필 카드 | **✅ 완료 (2026-09-03)** | `e70c541` → `b3da192`로 통합. 신규 테스트 17건 · 닫은 지점 6곳 (§8-A 완료 행) |
+| **B** 17a-2 기록·게스트 | **✅ 완료 (2026-09-03)** | `7a7197e` → `527f896`으로 통합. 신규 테스트 42건 · migration 산출물 0 (§8-B 완료 행) |
 | **C** 14 아이템 서버 권위 | **대기** | **G7이 차단이다.** 아이템 ID가 event_type·payload·파일명을 전부 결정한다 |
 | **D** 15a XP 원장 | **순차** | **로컬 Supabase 스택을 쓴다** — pgTAP·migration 검증이 그 스택에 묶여 있고, A·B와 자원이 겹친다 |
 
@@ -87,6 +98,7 @@
 | **components/ProfileCard.jsx** | 신규 | **A** | C5 §5 |
 | **components/ProfileAvatar.jsx** | 신규 | **A** | C5 §5 |
 | **css/profileCard.css** | 신규 | **A** | R7 |
+| **utils/profileCard.js** | 신규 | **A** | **C5 §3의 순수 규칙**(이미지 우선순위·이름 fallback·`alt`·배지 정렬). 컴포넌트 2개가 이것을 쓰고 4파일이 `buildProfileCard`를 호출한다. **3차까지 이 표에 없었다 — A가 만들면서 등재됐다** `[코드, 2026-09-03]` |
 | **tests/profileCard.test.js** | 신규 | **A** | 수용조건 |
 | pages/ProfilePage.jsx | 334 | **A** | C5 §4 지점 1. 아바타 `:191-201` · 이름 fallback `-` `:64` `[코드]` |
 | pages/RankingPage.jsx | 195 | **A** | C5 §4 지점 3. `:145-150` · `Unknown` `:132` · 빈 `alt` `[코드]` |
@@ -178,10 +190,10 @@
 |---|---|---|---|
 | **①** | **`data/itemPools.js`의 두 배열** — `SINGLE_ITEM_IDS`(4종) · `MULTI_ITEM_IDS`(10종). `highlight_links`가 양쪽에 있다 | 파일은 **C 소유**인데 `SINGLE_ITEM_IDS`의 소비자는 **B의 `GamePage.jsx`**다 (`useItemSystem` 경유) | **C는 `MULTI_ITEM_IDS`만 수정한다.** `git diff`에서 `SINGLE_ITEM_IDS` 블록이 변경되면 위반이다. **`grep -c 'highlight_links' data/itemPools.js` = 2 유지** |
 | **②** | **`utils/onlineGameSession.js`의 두 검증 함수** — `validateDuelGameSession`(`:191`) · `validateGroupGameSession`(`:130`) | 한 파일에 **C 영역과 동결 영역**이 같이 있다 | **동결.** C가 1:1 세션 복구를 고쳐야 하면 **트랙을 멈추고 이 문서를 고친다.** 그룹 함수와 공유하는 헬퍼(`normalizeOnlineGameError`·`retryRecoverable`)까지 흔들린다 |
-| **③** | **`useItemSystem()`의 반환 형태** — `inventory`·`canUseItem`·`useItem`·`activeEffects`·`immunityUntil`·`highlightRequestId`·`searchAvailable`·`consumeSearchAvailable`·`status`·`pushHistory`·`clearPageScopedEffects`·`initializeItems` | 훅은 **C 소유**, 소비자는 **B의 `GamePage.jsx` 12지점** (`:423·426·473·491·821-845`) | **C는 반환 키를 제거·개명하지 않는다.** 추가만 허용. 위반하면 B의 파일이 런타임에 깨진다 |
-| **④** | **`"wiki-single-items"` localStorage 키** — **import되지 않고 문자열이 4곳에 복제돼 있다** | `hooks/useItemSystem.js:26`(**C**) 가 쓰고, `utils/singleGameSession.js:6`(**B**)·`pages/GamePage.jsx:176·672`(**B**)·`tests/guestSingleSession.test.js:197`(**B**)이 지운다 | **양쪽 다 이 문자열을 바꾸지 않는다.** 한쪽만 바꾸면 게스트 아이템 상태가 정리되지 않고 다음 게임으로 새어 나간다 (17 §6 위반). **`grep -rc '"wiki-single-items"'` 합계 4 유지** |
+| **③** | **`useItemSystem()`의 반환 형태** — `inventory`·`canUseItem`·`useItem`·`activeEffects`·`immunityUntil`·`highlightRequestId`·`searchAvailable`·`consumeSearchAvailable`·`status`·`pushHistory`·`clearPageScopedEffects`·`initializeItems`·**`floatingMessage`** | 훅은 **C 소유**, 소비자는 **B의 `GamePage.jsx`** — **`itemSystem.` 멤버 접근이 13줄**이다 (`:423·426·491·821-824·835-837·841·844-845`). 별도로 선언 `:473`·가드 `:829`가 있어 `itemSystem`을 언급하는 줄은 15줄이다 `[코드, 2026-09-03 실측]` | **C는 반환 키를 제거·개명하지 않는다.** 추가만 허용. 위반하면 B의 파일이 런타임에 깨진다 |
+| **④** | **`"wiki-single-items"` localStorage 키** — **import되지 않고 문자열이 4파일 6줄에 복제돼 있다** | `hooks/useItemSystem.js:26`(**C**) 가 쓰고, `utils/singleGameSession.js:6`(**B**)·`pages/GamePage.jsx:176·672`(**B**)·`tests/guestSingleSession.test.js:197·205`(**B**)이 지운다 | **양쪽 다 이 문자열을 바꾸지 않는다.** 한쪽만 바꾸면 게스트 아이템 상태가 정리되지 않고 다음 게임으로 새어 나간다 (17 §6 위반). **`grep -rc '"wiki-single-items"' hooks utils pages tests` 합계 = 6 유지** — **세는 단위는 줄이다. "4곳"은 파일 수(4)를 줄 수로 잘못 적은 것이었다** `[코드, 2026-09-03 실측]` — 분기점 `ad569f2`에서도 6이었다. **A·B가 늘린 것이 아니다** |
 | **⑤** | **`mp-*` CSS 클래스 이름공간** — `css/multiplayer.css`에 최상위 규칙 131개 | 파일은 **C 소유**인데 **A의 `GroupRoomPage.jsx`**, **동결된 `GroupGamePage.jsx`**, 동결된 `OnlineGameRecoveryPanel.jsx`가 `mp-page`·`mp-card`·`mp-title`·`mp-action-btn` 등을 쓴다 `[코드]` | **C는 기존 `mp-*` 규칙을 개명·삭제하지 않는다.** 1:1 전용 스타일은 새 클래스로 추가한다. 위반하면 **CSS만 고쳤는데 그룹 화면이 바뀐다** |
-| **⑥** | **retire/result 어휘 문자열** — `"finished"`·`"retired"`·`"forfeited"`·`"left"` | **A**(`GroupRoomPage`) · **C**(`MultiplayerGamePage`) · 동결(`GroupGamePage`·`groupGameFlow`·`onlineGameSession`·`groupMultiplayerService`)에 **리터럴로 흩어져 있다** | **어느 트랙도 이 문자열을 바꾸지 않는다.** C4가 **5값 어휘를 유지하기로 결정**했으므로 지금은 안전하다 — 그 결정이 이 불변식의 근거다 |
+| **⑥** | **retire/result 어휘 문자열** — `"finished"`·`"retired"`·`"forfeited"`·`"left"` | **C**(`MultiplayerGamePage`) · 동결(`GroupGamePage`·`groupGameFlow`·`onlineGameSession`·`groupMultiplayerService`)에 **리터럴로 흩어져 있다**. ~~**A**(`GroupRoomPage`)~~ → **A는 이 어휘를 하나도 갖지 않았다** — 정정 근거는 §8-A 완료 행 | **어느 트랙도 이 문자열을 바꾸지 않는다.** C4가 **5값 어휘를 유지하기로 결정**했으므로 지금은 안전하다 — 그 결정이 이 불변식의 근거다 |
 | **⑦** | **`useAuth()`의 반환 형태** (`authContext.jsx`) | 파일은 **B 소유**인데 **13개 파일이 import한다** — A 4개·C 4개·동결 포함 `[코드]` | **B는 `user`·`loading`·`logout`과 `user.isGuest`·`user.id`·`user.displayName` 키를 유지한다.** 게스트 경계 작업이 정확히 이 형태를 만지는 작업이므로 **가장 조심할 항목이다** |
 
 > **④가 이 감사에서 가장 나쁜 형태다.** 공유 심볼이 아니라 **복제된 리터럴**이라
@@ -317,33 +329,51 @@
 > **"C5가 선행"은 사실이지만, 지금 A를 기다리는 트랙은 없다.**
 > 넷을 동시에 열기 위해 **A의 소비자를 이 웨이브 밖으로 몰아냈다.** 그 대가는 §5.2다.
 
-### 5.2 대가 — **C5의 적용 지점이 4곳도 5곳도 아니라 8곳이다** `[코드, 2026-09-02 실측]`
+### 5.2 대가 — **C5의 적용 지점이 4곳도 5곳도 아니라 9곳이다** `[코드, 2026-09-03 재실측]`
 
-C5 §1이 4곳을, §4가 결과 화면을 더해 5곳을 셌다. **저장소를 전수 검색하면 8곳이다:**
+C5 §1이 4곳을, §4가 결과 화면을 더해 5곳을 셌다. 3차 갱신은 **8곳**으로 세었다.
+**A가 실제로 코드를 고치면서 하나가 더 나왔다 — `GroupRoomPage.jsx`는 한 지점이 아니라 두 지점이다.**
 
 | # | 위치 | 이름 fallback | C5 §1에 있나 | **이 웨이브** |
 |---:|---|---|:-:|---|
-| 1 | `ProfilePage.jsx:191-201` | `"-"` (`:64`) | 있다 | **A** |
-| 2 | `RankingPage.jsx:145-150` | `"Unknown"` (`:132`) | 있다 | **A** |
-| 3 | `GroupRoomPage.jsx:496-505` | `"U"` (`:503`) | 있다 | **A** |
+| 1 | `ProfilePage.jsx:191-201` | `"-"` (`:64`) | 있다 | **✅ A가 닫았다** |
+| 2 | `RankingPage.jsx:145-150` | `"Unknown"` (`:132`) | 있다 | **✅ A가 닫았다** |
+| 3 | `GroupRoomPage.jsx:492-518` (참가자 행) | `"U"` (`:503`) · 이름 `"참가자"` (`:513`) | 있다 | **✅ A가 닫았다** |
+| **3′** | **`GroupRoomPage.jsx:369-382` (내 카드)** | **`"U"` (`:381`) · 이름 `"나"` (`:386`)** | **없다** | **✅ A가 닫았다 — 3차 갱신이 놓친 지점** |
 | 4 | `GroupGamePage.jsx:1330` | `"참가자"` | 있다 | **동결** (§2.1) |
-| 5 | `UserProfileModal.jsx:74-79` | 없음 (`alt="profile"`) | **없다** | **A** |
+| 5 | `UserProfileModal.jsx:74-79` | **`"?"` (`:78`) · 이름 `"이름 없음"` (`:82`)** | **없다** | **✅ A가 닫았다** |
 | 6 | `RoomPage.jsx:477-483` | **`"나"`** | **없다** | **C — 범위 밖** |
 | 7 | `RoomPage.jsx:596-604` | **`"상대"`** | **없다** | **C — 범위 밖** |
 | 8 | `MultiplayerGamePage.jsx:1398-1402` | **`"상대"`** | **없다** | **C — 범위 밖** |
 | (+) | `VsIntroOverlay.jsx:22·35` | 이니셜 prop만 | **없다** | **C — 범위 밖** |
 
-**이름 fallback은 4종이 아니라 6종이다** — `-` · `Unknown` · `U` · `참가자` · **`나`** · **`상대`**.
-**A는 5곳(1·2·3·5 + 신규 컴포넌트)을 닫고, 4곳은 남는다.**
+**이름 fallback은 4종도 6종도 아니라 8종이었다** — `-` · `Unknown` · `U` · `참가자` · `나` · `상대` ·
+**`?`**(`UserProfileModal:78`) · **`이름 없음`**(`UserProfileModal:82`).
+3차 갱신의 6종은 **`UserProfileModal`을 "fallback 없음"으로 읽어서** 둘을 빠뜨렸다 —
+그 파일은 이니셜 fallback(`"?"`)과 이름 fallback(`"이름 없음"`)을 **따로** 갖고 있었다.
 
-| 남는 곳 | 왜 남기나 |
+> **A가 8종을 2종으로 줄였다** — `utils/profileCard.js`의 `NAME_FALLBACK`이 참가자 행은 **`참가자`**,
+> 그 외는 **`탐험가`** 하나로 모은다 (C5 §3.3). **`탐험가`의 근거 문제는 그대로 열려 있다** —
+> `PACKET-CONTRACT-GAPS.md` §3.2.1의 `C5-①`.
+
+**A는 6곳(1·2·3·3′·5 + 신규 공통 컴포넌트)을 닫았고, 4곳이 남는다 — 남는 4곳은 전부 C 소유다.**
+3차 갱신의 "닫는 곳 5, 남는 곳 4"에서 **닫는 쪽만 6으로 바뀌었다.**
+
+| 남는 지점 (4곳 — 전부 **C 소유**) | 왜 남기나 |
 |---|---|
-| #4 `GroupGamePage.jsx` | 파일이 동결이다 (§2.1). **그룹 트랙이 열릴 때 닫는다** |
-| #6·#7·#8·(+) | **C의 파일이다.** C가 A의 컴포넌트를 쓰면 C가 A에 종속되고 **병렬이 깨진다** |
+| #6 `RoomPage.jsx:477` · #7 `RoomPage.jsx:596` | **C의 파일이다.** C가 A의 컴포넌트를 쓰면 C가 A에 종속되고 **병렬이 깨진다** |
+| #8 `MultiplayerGamePage.jsx:1398` | 같은 이유 |
+| (+) `VsIntroOverlay.jsx:22·35` | 같은 이유. 이니셜 prop만 받으므로 C가 `ProfileAvatar`로 바꾸면 prop 계약이 함께 바뀐다 |
 
-> **이것을 숨기지 않는 이유.** "C5 구현 완료"라고 적으면 다음 세션은 8곳이 닫혔다고 읽는다.
-> **닫히는 것은 5곳이고, 남은 4곳은 트랙 C·그룹 트랙의 후속이다.** A의 수용조건(§8-A)에
-> 그 4곳을 **명시적으로 범위 밖으로 적었다.**
+**부채 2건 — 이 웨이브가 남긴 것. 소유 트랙이 열릴 때 닫는다.**
+
+| # | 부채 | 왜 남았나 | 닫을 트랙 |
+|---|---|---|---|
+| **부채-1** | **#4 `GroupGamePage.jsx:1330`** — C5의 마지막 미적용 지점 (`"참가자"`) | **파일이 동결이다** (§2.1, 1603줄). 이 웨이브에 소유자가 없다 | **그룹 결과 화면 트랙** — C4 헤드라인 4용어 정정과 같은 트랙이다 (§9-④) |
+| **부채-2** | **`MainPage.jsx:413`(분기점 기준 `:402`) "전체 보기 →"가 게스트에게 열려 있다** — `/ranking`이 `ProtectedRoute`인데(`App.jsx:202-207`) 게이팅이 없어 누르면 `/login`으로 튕긴다 `[코드, 2026-09-03]` | **랭킹 탭 블록이라 §8-B 범위 밖 ⑦**이다. B는 같은 결함을 **온라인 플레이 카드**에서만 닫았다 | **랭킹 화면 소유 트랙.** B가 `:235-249`에 쓴 `disabled`+`aria-disabled` 형태를 그대로 쓰면 된다 |
+
+> **이것을 숨기지 않는 이유.** "C5 구현 완료"라고 적으면 다음 세션은 9곳이 닫혔다고 읽는다.
+> **닫힌 것은 6곳이고, 남은 4곳은 트랙 C의 후속, 부채 2건은 각각 그룹·랭킹 트랙의 것이다.**
 
 ---
 
@@ -660,7 +690,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 
 ## 8. 트랙별 티켓
 
-### 8-A. C5 프로필 카드 공통 컴포넌트 — **착수** `[사용자 확정, 2026-09-02]`
+### 8-A. C5 프로필 카드 공통 컴포넌트 — **✅ 완료 (2026-09-03)**
 
 | | |
 |---|---|
@@ -672,12 +702,46 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | **건드릴 파일 (배타)** | **신규** `components/ProfileCard.jsx` · `components/ProfileAvatar.jsx` · `css/profileCard.css` · `tests/profileCard.test.js` — **기존** `pages/ProfilePage.jsx` · `pages/RankingPage.jsx` · `components/UserProfileModal.jsx` · `pages/GroupRoomPage.jsx` · `appStyles.js` |
 | **§2.3 공유 자원 — A가 걸리는 것** | **⑤ `mp-*` 이름공간:** `GroupRoomPage.jsx`가 `mp-*`를 쓴다. **A는 `css/multiplayer.css`(C 소유)를 고치지 않고, `mp-` 접두 클래스를 새로 정의하지도 않는다.** **⑥ retire 리터럴:** `GroupRoomPage.jsx`에 `"left"`가 있다 — **바꾸지 않는다.** **⑦ `useAuth()`:** A의 4파일이 모두 import한다 — **`authContext.jsx`(B 소유)를 고치지 않는다.** 추가로 **`UserProfileModal`의 prop 3키**(`userId`·`isOpen`·`onClose`)는 **C의 `RoomPage.jsx`가 호출하므로 불변**이다 (§2.2) |
 | **수용조건 — `npm test` 신규 항목** | `tests/profileCard.test.js`에 **최소 7건**: ① 이미지 우선순위 4단계가 순서대로 적용된다(`icon.assetRef` → `legacyImageUrl` → 이니셜 → 시스템 기본) ② 이름 fallback — 참가자 행은 **`"참가자"`**, 그 외는 **`"탐험가"`** ③ `alt`가 **`{이름}의 프로필 이미지`** 형식이다 ④ `onError`가 이니셜 단계로 내려가고 **장착 상태 데이터를 바꾸지 않는다** ⑤ 배지 0개면 영역을 렌더하지 않고, 1~3개는 `slot_index` 순이다 ⑥ **네 지점의 소스가 신규 컴포넌트를 import한다**(기존 계약 테스트 관행 — `appRouting.test.js`가 같은 방식이다) ⑦ **금지 문자열이 0건이다**(아래 불변식) |
-| **수용조건 — grep 불변식** | ① `grep -l ProfileAvatar pages/ProfilePage.jsx pages/RankingPage.jsx components/UserProfileModal.jsx pages/GroupRoomPage.jsx` → **4/4** ② 그 4파일에서 `"Unknown"`·`"U"`·이름 fallback `"-"` → **0건** ③ `alt=""` → **0건** (저장소 전체) ④ 아바타 인라인 `style` → **0건** (`GroupRoomPage.jsx:493·500` 해소) ⑤ `grep -c 'isOpen=' pages/RankingPage.jsx pages/GroupRoomPage.jsx pages/RoomPage.jsx` → **각 1** (prop 계약 유지) ⑥ `grep -c '"/main"'` → **0** (전역 규칙, §2.2) ⑦ `appStyles.js`의 css import → **8개**(기존 7 + `profileCard.css`), **컴포넌트에서 css를 import하지 않는다**(R7) |
+| **수용조건 — grep 불변식** | ① ~~`grep -l ProfileAvatar …`~~ → **`grep -l ProfileCard pages/ProfilePage.jsx pages/RankingPage.jsx components/UserProfileModal.jsx pages/GroupRoomPage.jsx` → 4/4** (**2026-09-03 정정** — 네 지점은 `ProfileCard`를 import하고 `ProfileAvatar`는 그 안에 있다) ② 그 4파일에서 `"Unknown"`·`"U"`·이름 fallback `"-"` → **0건** ③ `alt=""` → **0건** (저장소 전체) ④ 아바타 인라인 `style` → **0건** (`GroupRoomPage.jsx:493·500` 해소) ⑤ `grep -c 'isOpen=' pages/RankingPage.jsx pages/GroupRoomPage.jsx pages/RoomPage.jsx` → **각 1** (prop 계약 유지) ⑥ `grep -c '"/main"'` → **0** (전역 규칙, §2.2) ⑦ `appStyles.js`의 css import → **8개**(기존 7 + `profileCard.css`), **컴포넌트에서 css를 import하지 않는다**(R7) |
 | **수용조건 — 전체** | `npm test` **전량 통과**, 수치를 **기준 커밋·날짜와 함께** 기록 (베이스라인 144) · `npm run build` **exit 0** · **§5.2의 남은 4곳을 완료 보고에 명시한다**(닫는 곳 5, 남는 곳 4) |
 | **의존** | **없다.** **단 A는 15b·16·17b·트랙 E의 선행이다** (§5.1) |
 | **첫 수** | **네 지점의 현재 렌더 코드를 나란히 읽고 `ProfileCard`/`ProfileAvatar`의 prop 표를 먼저 확정한다.** C5 §2의 카드 형태가 그 표의 입력이고, `size`·`density`만 다르다는 것이 §5의 규칙이다. **컴포넌트 API를 고정하기 전에 지점을 고치지 않는다** |
 
-### 8-B. 17a-2 기록·게스트 — **착수** `[사용자 확정, 2026-09-02]`
+#### 8-A 완료 — 실측 `[코드·산출물, 2026-09-03]`
+
+**커밋** `e70c541` → merge `b3da192`. 분기점 `ad569f2`. **충돌 0.**
+
+| 항목 | 결과 |
+|---|---|
+| **`npm test`** | **통합 후 203/203 pass, fail 0** (트랙 단독 161/161 = 베이스라인 144 + 신규 17) |
+| **`npm run build`** | **exit 0** |
+| **닫은 지점** | **6곳** — `ProfilePage` · `RankingPage` · `UserProfileModal` · `GroupRoomPage` **2곳**(참가자 행 + 내 카드) + 신규 공통 컴포넌트. §5.2 |
+| **남긴 것** | **4곳(전부 C 소유) + 부채-1**(`GroupGamePage:1330`, 동결). §5.2 |
+| **DB** | **미접근 · migration 산출물 0** |
+
+**grep 불변식 7건 — 통합 상태 재측정 (전건 통과, 단서 3건은 아래에 그대로 적는다)**
+
+| # | 불변식 | 실측 | 판정 |
+|---|---|---|:-:|
+| ① | 네 파일이 신규 컴포넌트를 import한다 | **4/4** — 다만 **`grep -l ProfileAvatar`로 재면 0/4다.** 네 지점은 `ProfileCard`를 import하고 **`ProfileAvatar`는 `ProfileCard.jsx:2`가 감싼다.** 티켓이 적은 명령은 구현 형태와 어긋난다 — **정확한 명령은 `grep -l 'ProfileCard' <4파일>` → 4/4**이고, `buildProfileCard` 호출은 **5곳**이다(`GroupRoomPage`가 2곳) | **✅** |
+| ② | 폐기 fallback 0건 | **이름 fallback으로는 0건.** `"Unknown"`·`"U"`·`"?"`·`"이름 없음"`·`"나"` 전멸. **남은 `"-"` 5줄은 전부 이름이 아니다** — `ProfilePage:65`는 **아이디(username) 필드**(`:233` 렌더), `:81`·`:295`·`RankingPage:20`·`UserProfileModal:56`은 **시간·횟수·날짜 자리표시자**다 | **✅** |
+| ③ | `alt=""` 0건 | **소스 0건.** 저장소 전체로는 **2건**이지만 둘 다 `tests/profileCard.test.js:146·280`의 **`assert.doesNotMatch(source, /alt=""/)` 정규식 자신**이다 — 불변식을 검사하는 코드가 불변식에 걸린다 | **✅** |
+| ④ | 아바타 인라인 `style` 0건 | **0건.** `GroupRoomPage:493·500`(현재 `:484-500`)이 해소됐다. 같은 파일에 남은 `style={{...}}` 10줄은 **레이아웃·버튼용이며 A 이전부터 있던 것**이다 | **✅** |
+| ⑤ | `isOpen=` 각 1 | `RankingPage` **1** · `GroupRoomPage` **1** · `RoomPage` **1**. `UserProfileModal`의 prop 3키 불변 | **✅** |
+| ⑥ | `"/main"` 0건 | **0건** (저장소 전체) | **✅** |
+| ⑦ | `appStyles.js` css import 8 | **8** (기존 7 + `css/profileCard.css`). **컴포넌트의 css static import 0** — `ProfileAvatar.jsx:15`는 주석이다 (R7 준수) | **✅** |
+
+**§2.3 공유 자원 — A가 걸린 것의 결과**
+
+- **⑤ `mp-*`:** `css/multiplayer.css` 무변경. `css/profileCard.css`는 `pcard-*` 이름공간이고 `mp-` 정의 0.
+- **⑥ retire 리터럴 — 티켓 서술을 정정한다.** §2.3-⑥이 "`GroupRoomPage.jsx`에 `"left"`가 있다"고
+  적었지만 **그 `"left"`는 retire 어휘가 아니다** — `:389`·`:396`의 **`style={{ textAlign: "left" }}`**,
+  즉 **CSS 값**이다 `[코드, 2026-09-03]`. `GroupRoomPage`에는 `"finished"`·`"retired"`·`"forfeited"`가
+  **0건**이므로 **A는 애초에 이 공유 자원에 걸리지 않았다.** 두 줄은 A 전후로 그대로다(분기점 `:397`·`:404`).
+  **불변식 자체는 유효하다** — 걸리는 트랙이 C와 동결 파일뿐이었다는 것이 정정 내용이다.
+- **⑦ `useAuth()`:** `authContext.jsx` 무편집. 반환 키를 소비만 했다.
+
+### 8-B. 17a-2 기록·게스트 — **✅ 완료 (2026-09-03)**
 
 | | |
 |---|---|
@@ -689,10 +753,45 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | **건드릴 파일 (배타)** | `pages/GamePage.jsx` · `components/SuccessOverlay.jsx` · `css/SuccessOverlay.css` · `pages/MainPage.jsx`(게스트 영역만) · `pages/IntroPage.jsx` · `pages/LoginPage.jsx` · `services/singleGameService.js` · `utils/singleGameSession.js` · `utils/localAuthSession.js` · `authContext.jsx` · `App.jsx` · `rankingService.js` · `services/profileStatsService.js` · `services/analyticsService.js` · `tests/appRouting.test.js` · `tests/guestSingleSession.test.js` · **신규** `utils/resultReasonLabels.js` · `tests/resultReasonLabels.test.js` · `tests/explorationRecords.test.js` |
 | **§2.3 공유 자원 — B가 걸리는 것** | **④ `"wiki-single-items"`:** B가 3곳(`singleGameSession.js:6` · `GamePage.jsx:176·672` · `guestSingleSession.test.js:197`), C가 1곳(`useItemSystem.js:26`)을 갖는다. **문자열을 바꾸지 않는다** — 바꾸면 게스트 아이템 상태가 정리되지 않는다. **⑦ `useAuth()`:** B가 소유자이고 **13개 파일이 import한다** — 반환 키 유지가 B의 책임이다. **⑥ retire 리터럴:** `resultReasonLabels.js`가 이 리터럴을 **키로** 쓴다 — C4가 5값을 유지하기로 했으므로 **키를 바꾸지 않는다.** **③ `useItemSystem` 반환:** B의 `GamePage.jsx`가 소비자다 — 훅은 C 소유이므로 **B가 고칠 수 없다.** 필요하면 트랙을 멈춘다 |
 | **수용조건 — `npm test` 신규 항목** | **`tests/resultReasonLabels.test.js` 최소 12건** — C4 §3.1 그룹 4용어(완주·기권·리타이어·**몰수**) · **부제 3개 확정 문자열**(`제한 시간 초과` · `유예 시간 초과` · `재접속 유예 종료`) · §3.2 1:1 5경우 · §3.3 싱글 3경우. **`"연결 끊김"`은 이 모듈에 없다.** **`tests/explorationRecords.test.js`** — ① 싱글 결과 순위가 **서버 값**에서 온다(클라이언트 매칭 부재) ② 결과 화면과 프로필 history가 **같은 조회 경로**를 쓴다 ③ 게스트 완주·포기 후 **영구 행 0** ④ 게스트 세션 정리가 `wiki-single-items`까지 지운다 |
-| **수용조건 — grep 불변식** | ① `grep -c findIndex components/SuccessOverlay.jsx` → **0** ② `grep -rc '"wiki-single-items"' hooks utils pages tests` 합계 → **4 유지** ③ `grep -c 'onReturnToLobby={handleGiveUp}' pages/GamePage.jsx` → **1**, `grep -c 'onClick={onReturnToLobby}' components/SuccessOverlay.jsx` → **1** (또는 같은 커밋에서 `appRouting.test.js`를 갱신하고 이유를 적는다) ④ `grep -c 'navigate("/multiplayer"' tests/appRouting.test.js` → **변경 0** (C의 assert를 건드리지 않는다) ⑤ `grep -c '"연결 끊김"' utils/resultReasonLabels.js` → **0** ⑥ `grep -rc 'groupResultFormatter' <B의 건드릴 파일>` → **0** (동결 모듈을 import하지 않는다) ⑦ `grep -c 'isGuest' authContext.jsx` → **유지**(§2.3-⑦) ⑧ `grep -c '"/main"'` → **0** |
+| **수용조건 — grep 불변식** | ① `grep -c findIndex components/SuccessOverlay.jsx` → **0** ② `grep -rc '"wiki-single-items"' hooks utils pages tests` 합계 → ~~4~~ **6 유지** (**2026-09-03 정정** — 4는 파일 수다. §2.3-④) ③ `grep -c 'onReturnToLobby={handleGiveUp}' pages/GamePage.jsx` → **1**, `grep -c 'onClick={onReturnToLobby}' components/SuccessOverlay.jsx` → **1** (또는 같은 커밋에서 `appRouting.test.js`를 갱신하고 이유를 적는다) ④ `grep -c 'navigate("/multiplayer"' tests/appRouting.test.js` → **변경 0** (C의 assert를 건드리지 않는다) ⑤ `grep -c '"연결 끊김"' utils/resultReasonLabels.js` → **0** ⑥ `grep -rc 'groupResultFormatter' <B의 건드릴 파일>` → **0** (동결 모듈을 import하지 않는다) ⑦ `grep -c 'isGuest' authContext.jsx` → **유지**(§2.3-⑦) ⑧ `grep -c '"/main"'` → **0** |
 | **수용조건 — 전체** | `npm test` **전량 통과**, 수치를 **기준 커밋·날짜와 함께** 기록 (베이스라인 144) · `npm run build` **exit 0** · **게이트 관련 assert 유지**(`maintenanceGate.test.js:262·275·287·309`) · **DB migration 산출물 0개** |
 | **의존** | **없다.** C5 컴포넌트를 쓰지 않는다 — 싱글 결과에 아바타가 없다 `[코드]`. **역방향 의존이 하나 있다: C가 B의 `resultReasonLabels.js`를 읽는다** — B가 그 파일을 먼저 만들어 두면 C의 1:1 결과 표시가 막히지 않는다 |
 | **첫 수** | **`utils/resultReasonLabels.js`를 먼저 만든다.** C4가 완전히 확정된 표 3개라 **설계가 아니라 전사(轉寫)이고, C의 선행이기도 하다.** 그다음 `SuccessOverlay.jsx:32-35`의 순위 추측을 서버 값으로 바꾼다 — **`single_game_runs`에 경로·기록이 이미 있으므로**(`20260814091000:15-45`) 새 DB 객체가 필요한지부터 확인한다 |
+
+#### 8-B 완료 — 실측 `[코드·산출물, 2026-09-03]`
+
+**커밋** `7a7197e` → merge `527f896`. 분기점 `ad569f2`. **충돌 0.**
+
+| 항목 | 결과 |
+|---|---|
+| **`npm test`** | **통합 후 203/203 pass, fail 0** (트랙 단독 186/186 = 베이스라인 144 + 신규 42) |
+| **`npm run build`** | **exit 0** |
+| **DB migration 산출물** | **0개** (티켓 범위 밖 ⑨ 준수) |
+| **신규 모듈** | `utils/resultReasonLabels.js` — **C의 1:1 결과 표시가 이것을 읽는다** (역방향 의존 해소) |
+| **남긴 것** | **부채-2** `MainPage.jsx:413`(분기점 `:402`) 랭킹 "전체 보기 →" 게스트 미게이팅. §5.2 |
+
+**grep 불변식 8건 — 통합 상태 재측정 (전건 통과, 단서 2건은 아래에 그대로 적는다)**
+
+| # | 불변식 | 실측 | 판정 |
+|---|---|---|:-:|
+| ① | `findIndex` in `SuccessOverlay.jsx` → 0 | **0.** 클라이언트 순위 추측이 서버 `count(exact, head)` 2건으로 대체됐다 | **✅** |
+| ② | `"wiki-single-items"` 합계 유지 | **6 (4파일).** 분기점 `ad569f2`도 **6**이었다 — **무변동.** 티켓의 "합계 4"는 **파일 수를 줄 수로 적은 것**이라 §2.3-④에서 세는 단위를 명시했다 | **✅** |
+| ③ | `onReturnToLobby={handleGiveUp}` 1 · `onClick={onReturnToLobby}` 1 | **각 1.** `appRouting.test.js` 갱신 불필요 | **✅** |
+| ④ | `navigate("/multiplayer"` in `appRouting.test.js` 변경 0 | **변경 0.** 절대값은 분기점·통합 모두 **0**이다 — 그 파일은 그 호출을 **문자열이 아니라 정규식**(`:174`·`:178`의 `/navigate\("\/multiplayer", \{ replace: true \}\)/`)으로 assert하므로 리터럴 grep에 잡히지 않는다. **C 소유 assert `:165-180` 무편집** | **✅** |
+| ⑤ | `"연결 끊김"` in `resultReasonLabels.js` → 0 | **0.** C4 §3.1.1 준수 | **✅** |
+| ⑥ | B의 파일이 `groupResultFormatter`를 import → 0 | **0.** 동결 모듈 무참조 | **✅** |
+| ⑦ | `isGuest` in `authContext.jsx` 유지 | **1 — 분기점과 동일.** `authContext.jsx` 무편집이므로 `useAuth()` 반환 형태 무변동 (§2.3-⑦) | **✅** |
+| ⑧ | `"/main"` 0건 | **0건** (저장소 전체) | **✅** |
+
+**§2.3 공유 자원 — B가 걸린 것의 결과**
+
+- **③ `useItemSystem` 반환:** 무편집. `GamePage.jsx` 변경은 **추가 1줄뿐**(`:858 runId={serverRun?.id ?? null}`).
+  **다만 이 검증에서 §2.3-③의 수치를 정정했다** — 소비는 "12지점"이 아니라 **`itemSystem.` 멤버 접근 13줄**이고,
+  **13번째 키 `floatingMessage`(`:844`)가 ③의 보호 목록에서 빠져 있었다** `[코드, 2026-09-03]`.
+  C가 그 키를 지우면 B의 파일이 깨진다 — **목록에 추가했다.**
+- **④ `"wiki-single-items"`:** 무변동. 테스트가 리터럴을 복제하지 않고 `hooks/useItemSystem.js`의 값을 읽어 대조한다.
+- **⑥ retire 리터럴:** 키로만 쓰고 바꾸지 않았다.
+- **⑦ `useAuth()`:** `authContext.jsx` 무편집.
 
 ### 8-C. 14 아이템 서버 권위 — **대기 (G7 차단)**
 
@@ -702,7 +801,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | **범위 밖** | ① **`room_events` INSERT 권한 회수(G2-②)** — **3코스 창에서 제외됐다.** C가 서버 INSERT로 전환하고 프론트를 배포한 **뒤에, 별도 창에서** 회수한다 (§7.4) `[사용자 확정]`. **C는 RPC 경로를 만들 뿐 권한을 회수하지 않는다** ② **`SINGLE_ITEM_IDS` 변경·삭제 — 동결** `[사용자 확정]`. `data/itemPools.js`는 C 소유지만 **`MULTI_ITEM_IDS` 배열만 수정한다** (§2.3-①) ③ `ItemBar.jsx` prop 계약·`useItemSystem` 반환 형태 변경 (§2.3-③) ④ **`"wiki-single-items"` 문자열 변경** (§2.3-④) ⑤ **기존 `mp-*` CSS 규칙 개명·삭제** (§2.3-⑤) ⑥ `mini_game_*` 3종 삭제 (`AGENTS.md` §4) — **event_type 유지 여부만 문서로 결정** ⑦ 아이템 XP 연결 — 없다 (`14 ↮ 15`, `PACKET-CONTRACT-GAPS.md` §2.1) ⑧ 1:1 아바타 4곳(§5.2) ⑨ `utils/onlineGameSession.js`의 1:1 세션 복구 — 동결 (§2.3-②) ⑩ 그룹 경로 전부 |
 | **읽을 파일** | **`G7 확정 문서`(선행)** · `14-DUEL-ITEMS.md` 전문 · `01-CONFIRMED-SPEC.md` §5 · `PACKET-CONTRACT-GAPS.md` §1.1·§1.2·§3.3 · `docs/contracts/C4-RESULT-REASON.md` §3.2 · `supabase/migrations/20260814090000_server_authority_v2.sql:55-96`(event_type CHECK 5종 · `item_event_id` · `game_mutation_requests`) · `20260814094000_duel_item_authority_v2.sql`(`SWAP_DISABLED` 스텁과 그 주석의 선행 조건 4개) · `20260814123000:136-145`(**따라야 할 선례** — SECURITY DEFINER가 이벤트를 INSERT한다) |
 | **건드릴 파일** | **신규** `data/duelItems.js` · `components/DuelItemBar.jsx` · `services/duelItemService.js` · `supabase/migrations/20260903100000_duel_item_authority_v3.sql` · `supabase/tests/duel_item_authority_v3.sql` — **기존** `pages/MultiplayerGamePage.jsx` · `pages/MultiplayerPage.jsx` · `pages/RoomPage.jsx` · `components/VsIntroOverlay.jsx` · `services/multiplayerService.js` · `css/multiplayer.css` · `data/items.js` · `data/itemPools.js` · `utils/itemSystem.js` · `hooks/useItemSystem.js` · `components/ItemBar.jsx` · `tests/duelSwapDisabled.test.js` · `tests/serverAuthorityMigration.test.js` |
-| **수용조건** | ① **G7 확정 문서가 먼저 존재한다.** 아이템 ID 표 + event_type 명명 + payload 키. **없으면 착수하지 않는다** ② 아이템 사용이 RPC로만 발생한다 — `pages/`에서 `from("room_events").insert` **0건**. **이 0건이 G2-② 창의 선행 조건이다** (§7.4-③) ③ **`git diff data/itemPools.js`에 `SINGLE_ITEM_IDS` 블록 변경이 없다.** `grep -c 'highlight_links' data/itemPools.js` = **2 유지** ④ `GamePage.jsx`를 수정하지 않고 싱글 아이템이 회귀 없이 동작한다 — `ItemBar.jsx` prop·`useItemSystem` 반환 키 불변 ⑤ `grep -rc '"wiki-single-items"'` 합계 **4 유지** (§2.3-④) ⑥ `css/multiplayer.css`의 기존 `mp-*` 선택자 **삭제·개명 0건** — 추가만 (§2.3-⑤) ⑦ 새 RPC가 계약 형태를 따른다 — `security definer` · 빈 `search_path` · `jsonb` 반환 (contracts README) ⑧ pgTAP 신규 파일 통과 수치·기준 커밋 기록 ⑨ `npm test` 전량 통과 ⑩ `npm run build` exit 0 ⑪ **운영 미적용** (R6) ⑫ `navigate("/multiplayer", { replace: true })` 문자열 유지 (§2.2) |
+| **수용조건** | ① **G7 확정 문서가 먼저 존재한다.** 아이템 ID 표 + event_type 명명 + payload 키. **없으면 착수하지 않는다** ② 아이템 사용이 RPC로만 발생한다 — `pages/`에서 `from("room_events").insert` **0건**. **이 0건이 G2-② 창의 선행 조건이다** (§7.4-③) ③ **`git diff data/itemPools.js`에 `SINGLE_ITEM_IDS` 블록 변경이 없다.** `grep -c 'highlight_links' data/itemPools.js` = **2 유지** ④ `GamePage.jsx`를 수정하지 않고 싱글 아이템이 회귀 없이 동작한다 — `ItemBar.jsx` prop·`useItemSystem` 반환 키 불변. **`floatingMessage`를 포함한 13키다** (2026-09-03 §2.3-③ 정정) ⑤ `grep -rc '"wiki-single-items"'` 합계 ~~4~~ **6 유지** (§2.3-④. **2026-09-03 정정** — 4는 파일 수, 6이 줄 수다)  ⑥ `css/multiplayer.css`의 기존 `mp-*` 선택자 **삭제·개명 0건** — 추가만 (§2.3-⑤) ⑦ 새 RPC가 계약 형태를 따른다 — `security definer` · 빈 `search_path` · `jsonb` 반환 (contracts README) ⑧ pgTAP 신규 파일 통과 수치·기준 커밋 기록 ⑨ `npm test` 전량 통과 ⑩ `npm run build` exit 0 ⑪ **운영 미적용** (R6) ⑫ `navigate("/multiplayer", { replace: true })` 문자열 유지 (§2.2) |
 | **의존** | **G7 — 차단.** 그리고 **G2-②는 C의 산출이 아니라 C 이후의 창 항목이다** |
 
 ### 8-D. 15a XP ledger·지급·감쇠 — **순차 (로컬 DB 스택 자원)**
@@ -718,11 +817,11 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 
 ---
 
-## 9. 문서 불일치 — **5건. 3건을 고쳤다**
+## 9. 문서 불일치 — **5건. 3건을 고쳤다** (①은 2026-09-03에 다시 정정됐다)
 
 | # | 불일치 | 실측 | 상태 |
 |---|---|---|---|
-| **①** | **C5 §1 "네 곳" · §4 "5곳"** | **8곳 + `VsIntroOverlay` 2지점.** 이름 fallback은 4종이 아니라 **6종**(`나`·`상대`가 빠졌다) `[코드]` | **계약 문구는 고치지 않았다** (정정 승인 없음). **A의 완료 정의는 §5.2가 확정한다** — 닫는 곳 5, 남는 곳 4 |
+| **①** | **C5 §1 "네 곳" · §4 "5곳"** | ~~8곳~~ → **9곳 + `VsIntroOverlay` 2지점.** 이름 fallback은 ~~6종~~ → **8종**(`나`·`상대`에 더해 `?`·`이름 없음`이 빠져 있었다) `[코드, 2026-09-03 A 실측으로 재정정]` | **계약 문구는 고치지 않았다** (정정 승인 없음). **A의 완료 정의는 §5.2가 확정한다** — ~~닫는 곳 5~~ → **닫은 곳 6, 남는 곳 4(C 소유) + 부채 2건.** **A는 8종을 2종(`참가자`/`탐험가`)으로 모았다** |
 | **②** | **C4 §5·contracts README·GAPS가 "CHECK 2건"** | **추가는 1건이다.** C4 §4.2가 `match_end_reason`에 **CHECK를 붙이지 않기로 결정**했다 `[문서]`. **"판정 2건, 추가 1건"이 정확한 표현** | **계약 문구는 고치지 않았다.** **창 범위는 §7.1이 1건으로 확정한다** `[사용자 확정]` |
 | **③** | **C3 §5-①이 `grant update`를 2컬럼으로 적었다** | **`updated_at`이 빠졌다.** 배포된 프론트의 두 update가 **모두 그것을 함께 보낸다** — `ProfilePage.jsx:86`·`:149` `[코드]` | **✅ 정정 완료 (2026-09-02).** **3컬럼으로 확정**하고 `C3-LEVEL-STORAGE.md` **§0에 정정 이력**, **§5.1에 확정 DDL**을 남겼다. contracts README에도 정정 이력 표를 신설했다 `[사용자 결정]` |
 | **④** | **C4 §3.1이 `grace_timeout`·`time_limit`의 부제를 "시안에 문구 없음 → 발명하지 않는다"로 남겼다** | **문구가 코드에 이미 있다** — `utils/groupResultFormatter.js:2-3` `[코드]`. `disconnected_timeout`은 **"연결 끊김"**으로 C4의 "몰수"와 다르다 | **✅ 확정 (2026-09-02).** 부제 2개는 **코드 문자열 채택**, `disconnected_timeout`은 **시안이 상위**라 `몰수`/`재접속 유예 종료`가 정답이고 코드가 **정정 대상**이다. 규칙은 **시안 > 코드 > 발명**. **같은 상태임을 코드로 확인했다** — C4 §0.-1·§3.1·§3.1.1 |
