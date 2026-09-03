@@ -4,6 +4,8 @@ import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
 import { supabase } from "../supabaseClient";
 import { fetchAllProfileStats } from "../services/profileStatsService";
+import ProfileCard from "../components/ProfileCard";
+import { DENSITY, NAME_FALLBACK, buildProfileCard, resolveDisplayName } from "../utils/profileCard.js";
 
 /**
  * 프로필 관리 페이지 컴포넌트
@@ -61,8 +63,18 @@ export default function ProfilePage() {
   }, [user]);
 
   const displayUsername = profile?.username || user?.username || "-";
-  const displayNickname = profile?.nickname || user?.nickname || user?.displayName || "-";
-  const avatarUrl = profile?.profile_image_url;
+
+  // 편집 대상인 원본 닉네임. 표시용 이름은 C5 §3.3이 ProfileCard 안에서 결정한다.
+  const storedNickname = profile?.nickname || user?.nickname || user?.displayName || "";
+
+  // C5 §2의 카드 형태. 레벨·칭호·배지·프레임·배경은 슬롯이며 C1/C3 DDL 이후에 채운다.
+  const profileCard = buildProfileCard({
+    userId: user?.id,
+    nickname: storedNickname,
+    legacyImageUrl: profile?.profile_image_url,
+    source: "live",
+  });
+  const displayName = resolveDisplayName(profileCard, NAME_FALLBACK.EXPLORER);
 
   // 시간 포맷팅 헬퍼 (초 -> M:SS)
   const formatTime = (seconds) => {
@@ -187,20 +199,17 @@ export default function ProfilePage() {
 
         {/* Avatar Section */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "1rem 0" }}>
-          <div style={{ position: "relative", marginBottom: "0.5rem" }}>
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="프로필 이미지"
-                className="profile-avatar-img"
-              />
-            ) : (
-              <div className="profile-avatar-placeholder">
-                {displayNickname.charAt(0).toUpperCase()}
-              </div>
-            )}
+          <div className="pcard-upload-slot">
+            {/* C5 §4 "프로필 — 전부". 장착 편집 진입점은 17b가 붙인다 */}
+            <ProfileCard
+              card={profileCard}
+              size="xl"
+              density={DENSITY.FULL}
+              nameFallback={NAME_FALLBACK.EXPLORER}
+              className="pcard--stacked"
+            />
             {uploading && (
-              <div className="profile-avatar-overlay">업로드...</div>
+              <div className="pcard-avatar-overlay">업로드...</div>
             )}
           </div>
 
@@ -245,12 +254,12 @@ export default function ProfilePage() {
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               <p className="profile-readonly-field" style={{ flex: 1, margin: 0 }}>
-                {displayNickname}
+                {displayName}
               </p>
               <button
                 type="button"
                 className="app-btn app-btn-ghost"
-                onClick={() => { setNicknameInput(displayNickname === "-" ? "" : displayNickname); setEditMode(true); }}
+                onClick={() => { setNicknameInput(storedNickname); setEditMode(true); }}
               >
                 수정
               </button>

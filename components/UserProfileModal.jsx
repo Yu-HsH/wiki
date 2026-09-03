@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { fetchPublicProfile, fetchAllProfileStats } from "../services/profileStatsService";
+import ProfileCard from "./ProfileCard";
+import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
 
+/**
+ * 공개 프로필 — C5 §4의 두 번째 렌더 지점.
+ *
+ * **prop 계약 `{userId, isOpen, onClose}`는 불변이다** (TRACKS.md §2.2).
+ * 호출자가 셋이고 그중 `pages/RoomPage.jsx`는 트랙 C 소유다.
+ */
 export default function UserProfileModal({ userId, isOpen, onClose }) {
     const [profile, setProfile] = useState(null);
     const [stats, setStats] = useState(null);
@@ -71,17 +79,20 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                 ) : (
                     <div className="user-profile-modal-content">
                         <div className="user-profile-modal-header">
-                            {profile?.profile_image_url ? (
-                                <img className="user-profile-modal-avatar" src={profile.profile_image_url} alt="profile" />
-                            ) : (
-                                <div className="user-profile-modal-avatar-placeholder">
-                                    {(profile?.nickname || profile?.username || "?").charAt(0).toUpperCase()}
-                                </div>
-                            )}
-                            <div className="user-profile-modal-info">
-                                <h3>{profile?.nickname || "이름 없음"}</h3>
-                                <p>@{profile?.username || "알수없음"}</p>
-                            </div>
+                            {/* C5 §4 "공개 프로필 — 전부. 편집 없음". 레벨·칭호·배지는 슬롯이다 */}
+                            <ProfileCard
+                                card={buildProfileCard({
+                                    userId,
+                                    nickname: profile?.nickname,
+                                    legacyImageUrl: profile?.profile_image_url,
+                                    source: "live",
+                                })}
+                                size="lg"
+                                density={DENSITY.FULL}
+                                nameFallback={NAME_FALLBACK.EXPLORER}
+                            >
+                                <span>@{profile?.username || "알수없음"}</span>
+                            </ProfileCard>
                         </div>
 
                         <div className="user-profile-modal-stats">

@@ -4,6 +4,8 @@ import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
 import { fetchRankings } from "../rankingService";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
+import ProfileCard from "../components/ProfileCard";
+import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
 
 function formatDuration(totalSeconds) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -128,28 +130,28 @@ export default function RankingPage() {
                   const isExpanded = expandedId === record.id;
                   const rowKey = record.id || `${record.userId}-${record.createdAt}-${index}`;
 
-                  // 이름 결정 로직 (프로필 닉네임 우선)
-                  const displayName = record.nickname || record.playerName || "Unknown";
-                  const initial = displayName.charAt(0).toUpperCase();
+                  // C5 §2의 카드 형태. 레벨·칭호·배지는 슬롯이며 C1/C3 DDL 이후에 채운다.
+                  const profileCard = buildProfileCard({
+                    userId: record.userId,
+                    nickname: record.nickname || record.playerName,
+                    legacyImageUrl: record.profileImageUrl,
+                    source: "live",
+                  });
 
                   return (
                     <React.Fragment key={rowKey}>
                       <tr className={isMine ? "mine" : ""}>
                         <td>{index + 1}</td>
                         {/* 3. 플레이어 영역 클릭 가능하게 수정 */}
-                        <td
-                          className="ranking-player-cell"
-                          onClick={() => handleUserClick(record.userId)}
-                          style={{ cursor: "pointer" }}
-                        >
-                          <div className="ranking-avatar">
-                            {record.profileImageUrl ? (
-                              <img src={record.profileImageUrl} alt="" className="ranking-avatar-img" />
-                            ) : (
-                              <div className="ranking-avatar-fallback">{initial}</div>
-                            )}
-                          </div>
-                          <span className="ranking-player-name" style={{ textDecoration: "underline" }}>{displayName}</span>
+                        <td className="ranking-player-cell">
+                          <ProfileCard
+                            card={profileCard}
+                            size="sm"
+                            density={DENSITY.COMPACT}
+                            nameFallback={NAME_FALLBACK.EXPLORER}
+                            interactive
+                            onClick={() => handleUserClick(record.userId)}
+                          />
                         </td>
                         <td>{record.targetTitle}</td>
                         <td>{formatDuration(record.elapsedSeconds)}</td>
