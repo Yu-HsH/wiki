@@ -455,6 +455,31 @@ test("(3) 온라인 경로는 게스트에게 열리지 않는다", async () => 
   );
 });
 
+test("(3) 랭킹 전체 보기 진입점은 게스트에게 노출되지 않는다", async () => {
+  const mainPageSource = await readProjectFile("pages/MainPage.jsx");
+
+  const entryPoints = [...mainPageSource.matchAll(/navigate\("\/ranking"\)/g)];
+  assert.equal(
+    entryPoints.length,
+    2,
+    "/ranking 진입점 수가 바뀌면 이 계약을 다시 본다 (랭킹 카드 · 최근 기록 카드)"
+  );
+
+  for (const entryPoint of entryPoints) {
+    const before = mainPageSource.slice(0, entryPoint.index);
+    const guardIndex = before.lastIndexOf("{!user.isGuest && (");
+    const sectionIndex = before.lastIndexOf("<section");
+
+    assert.ok(
+      guardIndex > sectionIndex,
+      "/ranking 진입점은 자기 카드 안에서 !user.isGuest 가드 뒤에 있어야 한다"
+    );
+  }
+
+  // 진입점을 숨긴 자리에는 이유를 남긴다 — B가 온라인 카드에서 쓴 안내 문구와 같은 역할이다.
+  assert.match(mainPageSource, /로그인하면 전체 랭킹을 볼 수 있어요/);
+});
+
 test("(3) 로그인 창은 단일 modal 상태로만 열린다", async () => {
   const introSource = await readProjectFile("pages/IntroPage.jsx");
 

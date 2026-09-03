@@ -410,9 +410,14 @@ export default function MainPage() {
               </div>
             </div>
 
-            <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
-              전체 보기 →
-            </button>
+            {/* /ranking은 ProtectedRoute다 (App.jsx). 게이팅이 없으면 게스트가 눌러도
+                /login으로 되돌려 보낸다 — 패킷 17 §6. 같은 목적지의 "전체 랭킹 →"과
+                동일하게 조건부 렌더로 숨긴다 */}
+            {!user.isGuest && (
+              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
+                전체 보기 →
+              </button>
+            )}
           </div>
 
           {rankingTabs[rankingView].length === 0 ? (
@@ -434,6 +439,12 @@ export default function MainPage() {
                 </li>
               ))}
             </ol>
+          )}
+
+          {user.isGuest && (
+            <p className="dashboard-muted">
+              로그인하면 전체 랭킹을 볼 수 있어요.
+            </p>
           )}
         </section>
 
