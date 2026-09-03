@@ -1,0 +1,220 @@
+/*
+ * 프로필 카드 공통 스타일 — C5 계약 (docs/contracts/C5-PROFILE-CARD.md §3·§5).
+ *
+ * `components/ProfileCard.jsx` · `components/ProfileAvatar.jsx` 전용이다.
+ * 이 파일만이 아바타 크기·모양을 정한다 — 지점별 인라인 스타일을 없애기 위한 것이다 (§5).
+ *
+ * 이름공간 규칙:
+ *  - 접두사는 `pcard-`다. `mp-` 접두 클래스를 정의하지 않는다 (TRACKS.md §2.3-⑤).
+ *  - `css/app.css`의 기존 `.profile-avatar-*` · `.ranking-avatar-*`를 건드리지 않는다 (§2.1 동결).
+ *  - `css/multiplayer.css`의 `.room-player-avatar`(트랙 C 소유)를 건드리지 않는다.
+ *
+ * 등록은 `appStyles.js`에서만 한다 — 컴포넌트에서 static import하면 점검 화면 경로에
+ * CSS 요청이 생기고 `tests/maintenanceGate.test.js`가 막는다 (TRACKS.md R7).
+ */
+
+/* ── 아바타 ─────────────────────────────────────────────── */
+
+.pcard-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--app-line, rgba(255, 255, 255, 0.12));
+  line-height: 1;
+}
+
+/*
+ * 크기 토큰은 각 지점의 현재 픽셀 값을 그대로 옮긴 것이다 — 시각 회귀 0이 목적이다.
+ * `21-SCREEN-MATRIX.md` §11의 터치 대상 44×44 기준은 xs·sm이 아직 만족하지 않는다.
+ */
+.pcard-avatar--xs { width: 32px; height: 32px; font-size: 14px; }
+.pcard-avatar--sm { width: 34px; height: 34px; font-size: 14px; }
+.pcard-avatar--md { width: 44px; height: 44px; font-size: 18px; }
+.pcard-avatar--lg { width: 60px; height: 60px; font-size: 1.5rem; }
+.pcard-avatar--xl { width: 80px; height: 80px; font-size: 2rem; }
+
+.pcard-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* 3단계 — 이니셜 placeholder */
+.pcard-avatar-initial {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--app-brand, #6366f1), var(--app-brand-deep, #4338ca));
+  color: #fff;
+  font-weight: 700;
+  font-size: inherit;
+}
+
+/*
+ * 4단계 — 시스템 기본 이미지. 실물 에셋은 C5 §6-④가 `확인 필요`로 남긴 항목이라
+ * 임의의 일러스트를 만들지 않고 중립 도형으로 둔다. 근거가 생기면 이 규칙만 바꾼다.
+ */
+.pcard-avatar-default {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.75), rgba(100, 116, 139, 0.85));
+}
+
+/* ── 카드 ───────────────────────────────────────────────── */
+
+.pcard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/*
+ * 배치 modifier — 밀도(어떤 요소를 보이나)와 별개다.
+ * 기본은 가로이고, 프로필 화면처럼 아바타를 가운데 쌓는 지점만 stacked를 쓴다.
+ */
+.pcard--stacked {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.pcard-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pcard--stacked .pcard-body {
+  align-items: center;
+}
+
+.pcard-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+/*
+ * 이름 굵기·색은 지점의 현재 값을 옮긴 것이다.
+ * 랭킹 행이 600, 프로필·공개 프로필 헤더와 그룹 참가자 행이 700이었다.
+ * 색은 고정하지 않고 상속한다 — 밝은 표(랭킹)와 어두운 카드(그룹 방)를 함께 쓰기 때문이다.
+ */
+.pcard-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pcard--full .pcard-name,
+.pcard--minimal .pcard-name {
+  font-weight: 700;
+}
+
+/* 이름 크기는 size 토큰을 따른다 — 각 지점의 현재 값을 그대로 옮겼다 */
+.pcard--size-xs .pcard-name { font-size: 15px; }
+.pcard--size-md .pcard-name { font-size: 18px; }
+.pcard--size-lg .pcard-name { font-size: 1.2rem; }
+.pcard--size-xl .pcard-name { font-size: 1.15rem; }
+
+.pcard-level {
+  font-size: 0.8em;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.pcard-title {
+  font-size: 0.8em;
+  opacity: 0.75;
+}
+
+/* 배지 — 0개일 때 이 목록 자체가 렌더되지 않는다 (C5 §3.5) */
+.pcard-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pcard-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pcard-badge-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.pcard-badge-text {
+  font-size: 0.75em;
+  opacity: 0.8;
+}
+
+.pcard-extra {
+  font-size: 0.8em;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * 업로드 진행 오버레이 — 프로필 화면 전용.
+ *
+ * `css/app.css`의 `.profile-avatar-overlay`는 `inset: 0`이라 이제 카드 전체를 덮는다.
+ * 그 규칙은 동결이므로 고치지 않고(TRACKS.md §2.1·§8-A 범위 밖 ⑧),
+ * 아바타 원 위에만 덮이는 규칙을 여기에 새로 둔다.
+ */
+.pcard-upload-slot {
+  position: relative;
+  display: inline-flex;
+  margin-bottom: 0.5rem;
+}
+
+.pcard-avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;  /* xl 토큰 — .pcard-avatar--xl과 같은 값 */
+  height: 80px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+/* 클릭 가능한 카드 — 색상만으로 상태를 구분하지 않는다 (C5 §3.4) */
+.pcard--interactive {
+  cursor: pointer;
+}
+
+.pcard--interactive .pcard-name {
+  text-decoration: underline;
+}
+
+.pcard--interactive:focus-visible {
+  outline: 2px solid var(--app-brand, #6366f1);
+  outline-offset: 2px;
+  border-radius: 6px;
+}

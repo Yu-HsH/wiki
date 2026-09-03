@@ -12,3 +12,4 @@ import "./css/SuccessOverlay.css";
 import "./css/group.css";
 import "./css/groupSpectator.css";
 import "./css/recovery.css";
+import "./css/profileCard.css";

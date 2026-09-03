@@ -15,6 +15,8 @@ import { fetchPageSummary, searchWikiTitleCandidates } from "../services/wikiSer
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { createGroupEntryMarker } from "../utils/groupGameFlow";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
+import ProfileCard from "../components/ProfileCard";
+import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
 
 export default function GroupRoomPage() {
     const { roomId } = useParams();
@@ -366,32 +368,22 @@ export default function GroupRoomPage() {
                     {/* 왼쪽: 내 설정 카드 */}
                     <section className="mp-card group-my-card">
                         <div className="group-my-profile">
-                            <div
-                                className="room-player-avatar"
-                                style={{ width: 44, height: 44, cursor: "pointer" }}
+                            {/* C5 §4 그룹 참가자 행 — 내 행. 출처는 스냅샷이 아니라 로그인 세션이다 */}
+                            <ProfileCard
+                                card={buildProfileCard({
+                                    userId: myPlayer?.user_id ?? user?.id,
+                                    nickname: user?.displayName,
+                                    legacyImageUrl: user?.photoURL,
+                                    source: "snapshot",
+                                })}
+                                size="md"
+                                density={DENSITY.MINIMAL}
+                                nameFallback={NAME_FALLBACK.PARTICIPANT}
+                                interactive
                                 onClick={() => handlePlayerClick(myPlayer?.user_id)}
                             >
-                                {user?.photoURL ? (
-                                    <img
-                                        src={user.photoURL}
-                                        alt="me"
-                                        style={{ width: "100%", height: "100%", borderRadius: "999px" }}
-                                    />
-                                ) : (
-                                    (user?.displayName || "U").charAt(0).toUpperCase()
-                                )}
-                            </div>
-                            <div>
-                                <h2
-                                    style={{ margin: 0, fontSize: "18px", cursor: "pointer", textDecoration: "underline" }}
-                                    onClick={() => handlePlayerClick(myPlayer?.user_id)}
-                                >
-                                    {user?.displayName || "나"}
-                                </h2>
-                                <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
-                                    내 목표 문서 제출
-                                </p>
-                            </div>
+                                내 목표 문서 제출
+                            </ProfileCard>
                         </div>
 
                         <p className="mp-card-desc" style={{ textAlign: "left", fontSize: "12px" }}>
@@ -487,36 +479,25 @@ export default function GroupRoomPage() {
                             {players.map((player) => (
                                 <div key={player.id} className="group-player-row">
                                     <div className="group-player-info">
-                                        {/* 3. 플레이어 아바타 클릭 연동 */}
-                                        <div
-                                            className="room-player-avatar"
-                                            style={{ width: 32, height: 32, fontSize: "14px", cursor: "pointer" }}
+                                        {/* 3. 플레이어 아바타·이름 클릭 연동. C5 §4 그룹 참가자 행 — 출처는 스냅샷 */}
+                                        <ProfileCard
+                                            card={buildProfileCard({
+                                                userId: player.user_id,
+                                                nickname: player.nickname_snapshot,
+                                                legacyImageUrl: player.profile_image_snapshot,
+                                                source: "snapshot",
+                                            })}
+                                            size="xs"
+                                            density={DENSITY.MINIMAL}
+                                            nameFallback={NAME_FALLBACK.PARTICIPANT}
+                                            interactive
                                             onClick={() => handlePlayerClick(player.user_id)}
+                                            nameSuffix={player.role === "host" ? <span className="host-badge">HOST</span> : null}
                                         >
-                                            {player.profile_image_snapshot ? (
-                                                <img
-                                                    src={player.profile_image_snapshot}
-                                                    alt="avatar"
-                                                    style={{ width: "100%", height: "100%", borderRadius: "50%" }}
-                                                />
-                                            ) : (
-                                                (player.nickname_snapshot || "U").charAt(0).toUpperCase()
-                                            )}
-                                        </div>
-                                        <div className="group-player-name-block">
-                                            {/* 3. 플레이어 이름 클릭 연동 */}
-                                            <div
-                                                className="group-player-name"
-                                                onClick={() => handlePlayerClick(player.user_id)}
-                                                style={{ cursor: "pointer", textDecoration: "underline" }}
-                                            >
-                                                {player.nickname_snapshot || "참가자"}
-                                                {player.role === "host" && <span className="host-badge">HOST</span>}
-                                            </div>
-                                            <div className="group-player-doc">
+                                            <span className="group-player-doc">
                                                 {player.submitted_target_title || "문서 미선택"}
-                                            </div>
-                                        </div>
+                                            </span>
+                                        </ProfileCard>
                                     </div>
 
                                     <div className={`group-player-status ${player.is_ready ? "ready" : ""}`}>
