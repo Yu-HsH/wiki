@@ -106,58 +106,105 @@ test('기존 negative 케이스 전건 유지 — 면제가 크래시 탐지를 
   }
 });
 
-/**
- * ⚠ 선행 결함 — 이 커밋이 만든 것이 아니고 고치지도 않았다.
+/* ────────────────────────────────────────────────────────────
+ * P1·P2 — 크래시 탐지 범위. 2026-09-04 해소
  *
- * `DANGEROUS_RUNTIME_MARKERS`(preflight `postgres-log`·child process·TAP 경로)에는
- * **`panic`·`terminated`·`reinitializ*`·`starting up`이 없다.** 그 넷은
- * `PACKET13_CURRENT_FATAL_MARKERS`(log-window 경로)에만 있다. 두 목록의 커버리지가
- * 다르다는 뜻이다.
- *
- * **이 테스트는 그 차이를 고정해 두기 위한 것이다** — 수정이 아니라 등재다. 패턴을
- * 넓히는 변경은 `classifyChildProcessResult`·`parseTapTranscript`가 임의의 자식 프로세스
- * 출력에 돌기 때문에 새 오탐을 만들 수 있고, 그 판단은 별건이다 (CURRENT.md §2).
- * **넓히기로 결정하면 이 테스트가 먼저 실패해서 알려준다.**
- */
-test('선행 결함 등재 — 두 마커 목록의 커버리지가 다르고, 둘 다 놓치는 줄이 하나 있다', () => {
-  const runId = 'packet13-00000000-0000-0000-0000-000000000000';
-  const baseline = {
-    containerId: 'container-158',
-    postmasterStartTime: '2026-08-18 01:31:36.816875+00',
-    restartCount: 0,
-  };
-  const windowMarkers = (text) =>
-    evaluatePacket13LogWindow({
-      status: 0,
-      runId,
-      baseline,
-      after: { ...baseline },
-      text: [`LOG: PACKET13_GATE_START|${runId}`, text, `LOG: PACKET13_GATE_END|${runId}`].join('\n'),
-    }).currentFatalMarkers.map((item) => item.marker);
+ * 이전 상태: `DANGEROUS_RUNTIME_MARKERS`에 panic·terminated·reinitializing이
+ * 없었고(P1), `server-terminated` 정규식이 실제 PostgreSQL 형식과 맞지 않아
+ * **signal 11 외의 모든 시그널 크래시를 두 목록이 모두 놓쳤다**(P2).
+ * signal 11이 잡히던 것은 정규식이 아니라 `signal 11` 리터럴 덕분이었다.
+ * ──────────────────────────────────────────────────────────── */
 
-  // 결함 A — DANGEROUS_RUNTIME_MARKERS에는 없고 log-window에는 있다.
-  const onlyWindowCatches = [
-    'PANIC:  could not write to file',
-    'LOG:  all server processes terminated; reinitializing',
-    'FATAL:  the database system is starting up',
+const CRASH_BASELINE = {
+  containerId: 'container-158',
+  postmasterStartTime: '2026-08-18 01:31:36.816875+00',
+  restartCount: 0,
+};
+const CRASH_RUN_ID = 'packet13-00000000-0000-0000-0000-000000000000';
+
+function windowMarkersFor(text) {
+  return evaluatePacket13LogWindow({
+    status: 0,
+    runId: CRASH_RUN_ID,
+    baseline: CRASH_BASELINE,
+    after: { ...CRASH_BASELINE },
+    text: [
+      `LOG: PACKET13_GATE_START|${CRASH_RUN_ID}`,
+      text,
+      `LOG: PACKET13_GATE_END|${CRASH_RUN_ID}`,
+    ].join('\n'),
+  }).currentFatalMarkers.map((item) => item.marker);
+}
+
+test('P2 해소 — 시그널 번호와 무관하게 프로세스 종료를 잡는다 (두 목록 모두)', () => {
+  // 실제 PostgreSQL 형식. `server process`와 `terminated` 사이에 `(PID N) was`가 있다.
+  const crashes = [
+    'LOG:  server process (PID 9) was terminated by signal 6: Aborted',
+    'LOG:  server process (PID 123) was terminated by signal 9: Killed',
+    'LOG:  server process (PID 123) was terminated by signal 11: Segmentation fault',
+    'LOG:  server process (PID 4321) was terminated by signal 15: Terminated',
   ];
-  for (const text of onlyWindowCatches) {
-    assert.equal(evaluateLogText({ status: 0, text }).dangerous, false, `커버리지가 바뀌었다: ${text}`);
-    assert.notEqual(windowMarkers(text).length, 0, `log-window는 잡아야 한다: ${text}`);
+  for (const text of crashes) {
+    assert.equal(evaluateLogText({ status: 0, text }).pass, false, `잡아야 한다: ${text}`);
+    assert.equal(
+      classifyChildProcessResult({ status: 0, stdout: text, stderr: '' }).pass,
+      false,
+      `잡아야 한다: ${text}`
+    );
+    assert.ok(windowMarkersFor(text).includes('terminated-by-signal'), `log-window: ${text}`);
+    assert.ok(windowMarkersFor(text).includes('server-terminated'), `log-window: ${text}`);
   }
 
-  // 결함 B — **둘 다 놓친다.** `server-terminated` 정규식이 `server process`와
-  // `terminated`가 붙어 있기를 요구하는데, 실제 PostgreSQL 형식은 그 사이에
-  // `(PID N) was`가 들어간다. signal 11만 별도 패턴으로 우연히 걸리고,
-  // **signal 6·9 같은 다른 크래시는 어느 경로에서도 잡히지 않는다.**
-  const caughtByNeither = 'LOG:  server process (PID 9) was terminated by signal 6: Aborted';
-  assert.equal(evaluateLogText({ status: 0, text: caughtByNeither }).dangerous, false);
-  assert.deepEqual(windowMarkers(caughtByNeither), []);
+  // signal 11이 잡히는 이유가 더 이상 리터럴 하나에만 있지 않다.
+  const signal11 = crashes[2];
+  assert.deepEqual(
+    windowMarkersFor(signal11).sort(),
+    ['segmentation-fault', 'server-terminated', 'signal-11', 'terminated-by-signal']
+  );
+});
 
-  // signal 11은 잡힌다 — 형식이 같은데도 결과가 갈리는 것이 결함 B의 증거다.
-  const signal11 = 'LOG:  server process (PID 9) was terminated by signal 11: Segmentation fault';
-  assert.equal(evaluateLogText({ status: 0, text: signal11 }).dangerous, true);
-  assert.deepEqual(windowMarkers(signal11).sort(), ['segmentation-fault', 'signal-11']);
+test('P1 해소 — PANIC·terminated·reinitializing이 DANGEROUS_RUNTIME_MARKERS에 들어왔다', () => {
+  const nowDangerous = [
+    'PANIC:  could not write to file',
+    'panic: runtime error: invalid memory address',
+    'LOG:  all server processes terminated; reinitializing',
+    'LOG:  server terminated by administrator command',
+  ];
+  for (const text of nowDangerous) {
+    assert.equal(evaluateLogText({ status: 0, text }).pass, false, `잡아야 한다: ${text}`);
+    assert.equal(
+      classifyChildProcessResult({ status: 0, stdout: text, stderr: '' }).pass,
+      false,
+      `잡아야 한다: ${text}`
+    );
+  }
+
+  // severity 필드를 요구하므로 산문의 "panic"은 잡지 않는다.
+  assert.equal(evaluateLogText({ status: 0, text: 'do not panic, this is fine' }).pass, true);
+});
+
+/**
+ * `starting up`·`automatic recovery`는 **의도적으로 넣지 않았다.**
+ *
+ * 전체 로그 31,040줄 실측에서 `the database system is starting up`이 **134회**,
+ * `automatic recovery in progress`가 **6회** 나오는데 **전부 정상 부팅이다** —
+ * 4번의 컨테이너 기동에 몰려 있고, 이 스택은 매 기동이 crash recovery로 시작한다.
+ * `starting up`은 severity가 `FATAL:`이라 **severity 게이트로도 걸러지지 않는다.**
+ *
+ * 둘은 `PACKET13_CURRENT_FATAL_MARKERS`에는 남는다 — 그쪽은 START/END로 잘라낸
+ * **창 안**만 보므로 "실행 중에 재기동됐다"는 뜻이 되어 판정이 성립한다.
+ */
+test('부팅 로그는 위험이 아니다 — 창 없는 경로에서 starting up·automatic recovery를 뺀 이유', () => {
+  const bootLines = [
+    '2026-08-23 14:01:32.897 UTC [70] authenticator@postgres FATAL:  the database system is starting up',
+    '2026-08-18 01:31:40.738 UTC [37] LOG:  database system was not properly shut down; automatic recovery in progress',
+  ];
+  for (const text of bootLines) {
+    // 창이 없는 경로 — 정상 부팅과 구분할 수 없으므로 통과시킨다.
+    assert.equal(evaluateLogText({ status: 0, text }).pass, true, `오탐이면 안 된다: ${text}`);
+    // 창이 있는 경로 — 창 안에 있으면 재기동이므로 잡는다.
+    assert.ok(windowMarkersFor(text).includes('recovery'), `log-window는 잡아야 한다: ${text}`);
+  }
 });
 
 test('log-window 경로에도 같은 면제가 걸린다 — standby EOF는 current fatal이 아니다', () => {

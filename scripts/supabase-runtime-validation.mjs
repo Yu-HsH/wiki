@@ -1,4 +1,44 @@
-const DANGEROUS_RUNTIME_MARKERS = /\bsignal(?:\s+|[_-])11\b|segmentation fault|57P02|connection reset|connection to server was lost|unexpected eof|database system is in recovery mode/i;
+// PostgreSQL이 백엔드 크래시를 알리는 실제 형식은 이렇다:
+//   LOG:  server process (PID 123) was terminated by signal 6: Aborted
+//   LOG:  server process (PID 123) was terminated by signal 9: Killed
+//   LOG:  server process (PID 123) was terminated by signal 11: Segmentation fault
+// `server process`와 `terminated` 사이에 **`(PID N) was`가 들어간다.** 이 부분을
+// 허용하지 않으면 시그널 번호와 무관하게 전부 놓친다 (P2, 2026-09-04).
+const SERVER_PROCESS_TERMINATED = /\bserver process(?:es)?\s+(?:\(PID\s+\d+\)\s+)?(?:was\s+|were\s+)?terminated\b|\ball server processes terminated\b|\bserver terminated\b/i;
+
+// 시그널 번호에 의존하지 않는다. 예전에는 `signal 11` 리터럴만 있어서
+// **signal 6·9 크래시가 조용히 통과했다** (P2).
+const TERMINATED_BY_SIGNAL = /\bterminated by signal\s+\d+\b/i;
+
+const DANGEROUS_RUNTIME_MARKERS = new RegExp([
+  /\bsignal(?:\s+|[_-])11\b/,
+  /segmentation fault/,
+  /57P02/,
+  /connection reset/,
+  /connection to server was lost/,
+  /unexpected eof/,
+  /database system is in recovery mode/,
+  // ── 2026-09-04 추가 (P1). 넷 중 셋만 들어온다 — 제외 근거는 아래 주석. ──
+  // severity 필드를 요구한다. 산문의 "panic"과 구분하려는 것이며, 자식 프로세스
+  // 출력의 `panic: runtime error`(Go·Rust)도 콜론이 있어 그대로 잡힌다.
+  /\bPANIC:/,
+  TERMINATED_BY_SIGNAL,
+  SERVER_PROCESS_TERMINATED,
+  /\breinitializ(?:ing|ed|ation)\b/,
+].map((part) => part.source).join('|'), 'i');
+
+// **`database system is starting up`은 넣지 않았다** `[2026-09-04 실측]`.
+// 전체 로그 31,040줄에서 **134회** 나오는데 전부 정상 부팅이다 — postgres가 아직
+// 뜨는 중일 때 접속한 클라이언트(authenticator·supabase_admin·supabase_auth_admin)가
+// 받는 응답이고, 4번의 컨테이너 기동에 몰려 있다. **severity가 `FATAL:`이라
+// severity 게이트로도 걸러지지 않는다.**
+//
+// 같은 이유로 `automatic recovery in progress`(6회, 부팅마다 1회)도 넣지 않았다 —
+// 이 스택은 매 기동이 crash recovery로 시작한다.
+//
+// 둘은 `PACKET13_CURRENT_FATAL_MARKERS`에는 남는다. 그쪽은 **START/END로 잘라낸
+// 창 안**만 보므로 "실행 중에 재기동됐다"는 뜻이 되어 판정이 성립한다.
+// `DANGEROUS_RUNTIME_MARKERS`는 창이 없어 같은 문자열이 정상 부팅과 구분되지 않는다.
 
 // 정상 로그인데 위 패턴에 걸리는 줄. **줄 단위로만** 면제하고, 면제 조건에
 // severity를 포함시킨다 — `LOG:`가 붙은 형태만 빼므로 `FATAL:`·`PANIC:` 변형은
@@ -33,7 +73,11 @@ function hasDangerousRuntimeMarker(text) {
 const PACKET13_CURRENT_FATAL_MARKERS = [
   ['signal-11', /\bsignal(?:\s+|[_-])11\b/i],
   ['segmentation-fault', /\b(?:segmentation fault|segfault)\b/i],
-  ['server-terminated', /\b(?:server process(?:es)?\s+(?:was\s+|were\s+)?terminated|server terminated|all server processes terminated)\b/i],
+  // P2 수정 (2026-09-04) — `(PID N) was`를 허용한다. 이전 형태는
+  // `server process`와 `terminated`가 붙어 있기를 요구해 실제 형식을 놓쳤다.
+  ['server-terminated', SERVER_PROCESS_TERMINATED],
+  // 시그널 번호 무관. `signal-11` 리터럴이 우연히 잡아주던 것을 규칙으로 만든다.
+  ['terminated-by-signal', TERMINATED_BY_SIGNAL],
   ['reinitializing', /\breinitializ(?:ing|ed|ation)\b/i],
   ['recovery', /\b(?:automatic recovery|database system (?:is|was) in recovery|recovery in progress|database system is starting up)\b/i],
   ['interrupted', /\binterrupted\b/i],
