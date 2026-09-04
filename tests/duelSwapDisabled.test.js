@@ -64,14 +64,26 @@ test("위조 room_events는 swap_current로 이 클라이언트를 움직이지 
   assert.doesNotMatch(usePath, /case "/);
   assert.match(usePath, /useDuelItem\(/);
 
-  // ③ 남아 있는 swap 분기가 있다면 이동 함수를 부르지 않는다. 0개여도 통과한다 —
-  //    그것이 이 검사가 지키려는 상태의 상한이다.
-  for (const branch of multiplayerPage.match(/case "swap_current"[\s\S]*?break;/g) || []) {
-    assert.doesNotMatch(branch, /handleMove\(/);
-    assert.doesNotMatch(branch, /forceMoveByItem\(/);
+  // ③ 수신 경로도 아이템 ID로 갈라지지 않는다. `duel_item_event` 하나를 받아 서버가
+  //    판정한 `result`로 가르므로, **위조 payload가 아이템 ID를 골라도 갈 곳이 없다.**
+  //    이것이 옛 "분기는 있되 handleMove를 안 부른다"보다 강한 보장이다.
+  for (const id of [...MULTI_ITEM_IDS, "swap_current", "mini_game"]) {
+    assert.doesNotMatch(
+      multiplayerPage,
+      new RegExp(`case "${id}"`),
+      `${id}로 갈라지는 분기가 남아 있다`
+    );
+  }
+  assert.match(multiplayerPage, /normalizeDuelItemEvent\(/);
+
+  // ④ 그러면서 `mini_game_*` 수신 3분기는 살아 있다 — 구버전 번들이 보낸 이벤트가
+  //    `default`로 조용히 사라지지 않게 하는 것이 Q5 조건이다. 이들은 event_type이지
+  //    아이템 ID가 아니다.
+  for (const eventType of ["mini_game_start", "mini_game_choice", "mini_game_reward"]) {
+    assert.match(multiplayerPage, new RegExp(`case "${eventType}"`));
   }
 
-  // ④ 비활성 판정은 카탈로그와 지급 풀 양쪽에 그대로 있다.
+  // ⑤ 비활성 판정은 카탈로그와 지급 풀 양쪽에 그대로 있다.
   assert.equal(MULTI_ITEM_IDS.includes("swap_current"), false);
   assert.equal(isDisabledDuelItem({ id: "swap_current" }), true);
 });

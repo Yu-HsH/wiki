@@ -30,10 +30,15 @@ import DuelItemBar from "../components/DuelItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import { ITEM_DEFS } from "../data/items";
 import { isDisabledDuelItem } from "../data/itemPools";
-import { DUEL_ITEM_RESULT } from "../data/duelItems";
+import {
+  DUEL_ITEM_EVENT_TYPE,
+  DUEL_ITEM_RESULT,
+  getDuelItem,
+} from "../data/duelItems";
 import {
   ensureDuelItemGrant,
   fetchDuelItemState,
+  normalizeDuelItemEvent,
   useDuelItem,
 } from "../services/duelItemService";
 
@@ -122,17 +127,15 @@ export default function MultiplayerGamePage() {
     [players, user?.id]
   );
 
+  /**
+   * 화면 연출 상태만 남는다. **`immuneUntil`이 사라졌다** — 면역은 클라이언트가
+   * 판정하던 것이고, 지금은 서버가 방어를 소진시켜 `result`로 답한다. `statusRef`도
+   * 함께 사라진다: 그것을 읽던 곳이 면역 판정 둘뿐이었다.
+   */
   const [status, setStatus] = useState({
     blind: false,
-    immuneUntil: 0,
     translateCurrent: false,
   });
-
-  const statusRef = useRef(status);
-
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
 
   const [inventory, setInventory] = useState([]);
   const [highlightRequestId, setHighlightRequestId] = useState(0);
@@ -206,7 +209,15 @@ export default function MultiplayerGamePage() {
   const [itemFailure, setItemFailure] = useState(null);
   const [linkPreview, setLinkPreview] = useState(null);
 
+  /**
+   * 마지막 RPC에서 잰 서버-클라이언트 시계 편차. `normalizeDuelItemEvent`가 알림의
+   * 만료 시각을 내 시계로 옮길 때 쓴다. **없으면 보정하지 않는다** — 추정해서 틀리는
+   * 것보다 낫고, 서비스의 `toClientTime`이 그렇게 굴러간다.
+   */
+  const clockSkewRef = useRef(null);
+
   const applyDuelItemState = useCallback((itemState) => {
+    clockSkewRef.current = itemState.clockSkewMs;
     setUseItems(itemState.useItems);
     setInventory(itemState.inventory);
     setItemCooldownUntil(itemState.cooldownUntil ?? 0);
@@ -248,8 +259,6 @@ export default function MultiplayerGamePage() {
     setTimeout(() => setFloatingMessage(""), 1800);
   };
 
-  const isImmune = () => Date.now() < statusRef.current.immuneUntil;
-
   /*
    * `emitRoomEvent`가 있던 자리다. 저장소에서 클라이언트가 `room_events`에 쓰는
    * **유일한 지점**이었고, 그 0건이 수용조건 ②이며 G2-② 창의 선행 조건이다
@@ -259,35 +268,29 @@ export default function MultiplayerGamePage() {
    * **읽기만 한다** — 그래서 위조 행을 만들 자리가 없다.
    */
 
-  const applyCleanse = () => {
-    setStatus((prev) => ({
-      ...prev,
-      blind: false,
-      translateCurrent: false,
-      immuneUntil: Date.now() + 7000,
-    }));
-
-    showMessage("방어 활성화! 7초 동안 방해 효과 면역");
-  };
-
-  const applyBlind = () => {
-    if (Date.now() < statusRef.current.immuneUntil) {
-      showMessage("방어 성공! 시야방해를 막았습니다");
-      console.log("면역 상태라 blind 무시");
-      return;
-    }
-
+  /**
+   * 시야 방해를 건다. **막을지 말지를 여기서 정하지 않는다** — 서버가 방어를 보고
+   * `blocked`·`reflected`로 답하며, 이 함수는 `applied`가 온 뒤에만 불린다.
+   *
+   * 창을 서버가 준 만료 시각으로 연다. 카탈로그의 4초와 같은 값이지만, 둘이 갈라지면
+   * **원장에 남은 쪽이 맞다.**
+   */
+  const applyBlind = (expiresAt = null) => {
     setStatus((prev) => ({
       ...prev,
       blind: true,
     }));
+
+    const holdMs = expiresAt != null
+      ? Math.max(0, expiresAt - Date.now())
+      : getDuelItem("blind")?.duration ?? 4000;
 
     setTimeout(() => {
       setStatus((prev) => ({
         ...prev,
         blind: false,
       }));
-    }, 4000);
+    }, holdMs);
   };
 
   useEffect(() => {
@@ -591,6 +594,7 @@ export default function MultiplayerGamePage() {
       try {
         const granted = await ensureDuelItemGrant(roomId);
         if (cancelled) return;
+        clockSkewRef.current = granted.clockSkewMs;
         setUseItems(granted.useItems);
         setInventory(granted.inventory);
         setItemCooldownUntil(granted.cooldownUntil ?? 0);
@@ -713,11 +717,6 @@ export default function MultiplayerGamePage() {
     }
   };
 
-  const forceMoveByItem = async (nextTitle, eventType = "FORCED_LINK") => {
-    const moved = await handleMove(nextTitle, { eventType });
-    if (moved) showMessage(`${nextTitle || "서버가 선택한 문서"}로 이동했습니다.`);
-  };
-
   /**
    * 아이템이 성공한 뒤의 동기화. **`applyDuelMoveV2`를 부르지 않는다** —
    * `use_duel_item_v3`가 `private.apply_duel_move_internal_v3`로 이동을 이미 끝냈고
@@ -727,20 +726,7 @@ export default function MultiplayerGamePage() {
    * 그래서 이 함수는 서버가 준 권위 행을 화면에 반영하기만 한다. 아이템 ID로 갈라지지
    * 않는다 — 이동이 있었는지는 `player.current_title`이 말해 준다.
    */
-  const syncAfterItemUse = async (outcome) => {
-    if (outcome.room) setRoom(outcome.room);
-
-    const authoritative = [outcome.player, outcome.opponent].filter(
-      (row) => row?.user_id
-    );
-    if (authoritative.length > 0) {
-      setPlayers((prev) => prev.map((player) => {
-        const fresh = authoritative.find((row) => row.user_id === player.user_id);
-        return fresh || player;
-      }));
-    }
-
-    const me = outcome.player;
+  const applyMyAuthoritativeRow = async (me) => {
     if (!me?.user_id || me.user_id !== user?.id) return;
 
     const authoritativeTitle = me.current_title || "";
@@ -781,6 +767,42 @@ export default function MultiplayerGamePage() {
         clickCount: Number(me.move_count) || 0,
         enteredPlaying: true,
       });
+    }
+  };
+
+  const syncAfterItemUse = async (outcome) => {
+    if (outcome.room) setRoom(outcome.room);
+
+    const authoritative = [outcome.player, outcome.opponent].filter(
+      (row) => row?.user_id
+    );
+    if (authoritative.length > 0) {
+      setPlayers((prev) => prev.map((player) => {
+        const fresh = authoritative.find((row) => row.user_id === player.user_id);
+        return fresh || player;
+      }));
+    }
+
+    await applyMyAuthoritativeRow(outcome.player);
+  };
+
+  /**
+   * **맞은 쪽의 동기화.** 알림 행에는 내 진행이 실려 오지 않으므로 서버에서 다시 읽는다.
+   *
+   * 예전에는 맞은 쪽 클라이언트가 스스로 `applyDuelMoveV2`를 불러 이동했다 — 즉
+   * 강제 이동의 실행자가 피해자 본인이었다. 지금은 `use_duel_item_v3`가 공격자의
+   * 트랜잭션 안에서 이미 옮겼고, 여기서는 그 결과를 읽기만 한다.
+   */
+  const resyncFromServerMove = async () => {
+    if (!roomId || !user?.id) return;
+    try {
+      const latestPlayers = await fetchRoomPlayers(roomId);
+      setPlayers(latestPlayers);
+      await applyMyAuthoritativeRow(
+        latestPlayers.find((player) => player.user_id === user.id)
+      );
+    } catch (error) {
+      console.error("duel item move resync failed:", error);
     }
   };
 
@@ -844,6 +866,7 @@ export default function MultiplayerGamePage() {
 
     try {
       const outcome = await useDuelItem({ roomId, grantId });
+      clockSkewRef.current = outcome.clockSkewMs;
 
       if (!outcome.ok) {
         setItemFailure(outcome.failure);
@@ -859,6 +882,12 @@ export default function MultiplayerGamePage() {
 
       if (outcome.result === DUEL_ITEM_RESULT.APPLIED) {
         applyLocalItemEffect(item, outcome);
+      } else if (outcome.result === DUEL_ITEM_RESULT.REFLECTED) {
+        // 반사는 시전자에게 되돌아온다 — **내가 맞는다.** 서버는 이미 그렇게 기록했고
+        // (`activeEffects`에 내 이름으로 남는다), 화면 연출만 여기서 맞춘다.
+        if ((outcome.itemId || item.id) === "blind") {
+          applyBlind(outcome.effectExpiresAt);
+        }
       }
 
       await syncAfterItemUse(outcome);
@@ -890,74 +919,94 @@ export default function MultiplayerGamePage() {
 
   const handleClosePreview = () => setLinkPreview(null);
 
-  const handleIncomingEvent = async (event) => {
-    console.log("받은 room_event:", event);
+  /**
+   * 아이템 알림 하나. **아이템 ID로 갈라지지 않는다** — 서버가 대상 선정·차단·반사·
+   * 이동을 이미 판정했고, 이 함수는 `result` 4값을 읽는다. 예전에는 여기서
+   * `isImmune()`으로 클라이언트가 스스로 막았는데, 그러면 **두 화면이 서로 다른 판정을
+   * 갖는다** — 서버는 적용, 내 화면은 방어. 지금은 판정이 하나다.
+   */
+  const handleDuelItemEvent = async (payload) => {
+    const incoming = normalizeDuelItemEvent(payload, {
+      skewMs: clockSkewRef.current,
+    });
+    if (!incoming) return;
 
+    // 모르는 판정값은 서비스가 `null`로 준다 — `void`로 뭉개지 않는다. 새 판정값이
+    // 생겼을 때 화면이 "아무 일도 없었다"로 조용히 구는 것을 막기 위해서다.
+    // 그러면 연출은 건너뛰되 서버 상태는 다시 읽는다.
+    if (incoming.result == null) {
+      console.warn("알 수 없는 duel_item result:", payload?.result);
+      await refreshDuelItemState();
+      return;
+    }
+
+    const itemName = getDuelItem(incoming.itemId)?.name
+      || incoming.itemId
+      || "아이템";
+    const iAmTarget = !!incoming.targetUserId && incoming.targetUserId === user?.id;
+
+    switch (incoming.result) {
+      case DUEL_ITEM_RESULT.APPLIED:
+        if (iAmTarget) {
+          if (incoming.itemId === "blind") applyBlind(incoming.effectExpiresAt);
+          showMessage(`상대가 ${itemName}을(를) 사용했습니다!`);
+        }
+        break;
+
+      case DUEL_ITEM_RESULT.BLOCKED:
+        showMessage(
+          iAmTarget
+            ? `방어 성공! ${itemName}을(를) 막았습니다`
+            : `상대가 ${itemName}을(를) 막았습니다`
+        );
+        break;
+
+      case DUEL_ITEM_RESULT.REFLECTED:
+        showMessage(
+          iAmTarget
+            ? `반사 성공! ${itemName}이(가) 되돌아갔습니다`
+            : `${itemName}이(가) 반사됐습니다`
+        );
+        break;
+
+      case DUEL_ITEM_RESULT.VOID:
+        break;
+
+      default:
+        break;
+    }
+
+    // 이동은 서버가 이미 했다. 내 행이 움직였을 때만 화면을 맞춘다.
+    if (incoming.moveEventId && iAmTarget) {
+      await resyncFromServerMove();
+    }
+
+    // 지속효과·보호 대기·슬롯은 전부 서버 행에서 온다 — 봉인된 링크 목록도 여기 있다.
+    await refreshDuelItemState();
+  };
+
+  const handleIncomingEvent = async (event) => {
     const eventType = event.event_type;
     const payload = event.payload || {};
 
+    if (eventType === DUEL_ITEM_EVENT_TYPE) {
+      await handleDuelItemEvent(payload);
+      return;
+    }
+
+    /*
+     * 아래 셋만 남는다. **미니게임은 이 버전에서 보내지 않지만 받기는 한다** —
+     * 구버전 번들이 아직 그 이벤트를 쏠 수 있고, 받는 쪽이 없으면 상대 화면에서
+     * 벌어진 일이 여기서는 `default` 로그로 조용히 사라진다 (Q5 조건, 판정 (c)).
+     *
+     * 표시 전용이다. 선택 버튼도 승패 판정도 없다 — 둘 다 발신 경로였다.
+     */
     switch (eventType) {
-      case "blind":
-        if (isImmune()) {
-          showMessage("방어 성공! 시야방해를 막았습니다");
-          console.log("blind 방어됨");
-          return;
-        }
-
-        applyBlind();
-        break;
-
-      case "double_blind":
-        if (isImmune()) {
-          showMessage("방어 성공! 시야방해를 막았습니다");
-          return;
-        }
-
-        applyBlind();
-        break;
-
-      case "translate_current":
-        if (isImmune()) {
-          showMessage("방어 성공! 언어 변경을 막았습니다");
-          console.log("translate_current 방어됨");
-          return;
-        }
-
-        setStatus((prev) => ({
-          ...prev,
-          translateCurrent: true,
-        }));
-
-        showMessage("상대가 언어 변경을 사용했습니다!");
-        break;
-
-      case "swap_current":
-        // A forged room_events row must not move or mutate this client.
-        console.warn("무시한 비활성화 SWAP 이벤트:", payload);
-        break;
-
-      case "random_link_move": {
-        console.log("random_link_move 수신");
-
-        if (isImmune()) {
-          showMessage("방어 성공! 랜덤 이동을 막았습니다");
-          return;
-        }
-
-        const currentTitle = pageDataRef.current?.title;
-        await forceMoveByItem(currentTitle, "FORCED_LINK");
-
-        showMessage("🌀 상대 아이템! 서버가 유효한 링크를 선택했습니다.");
-        break;
-      }
-
       case "mini_game_start": {
         setMiniGame({
           gameId: payload.gameId,
           hostUserId: payload.hostUserId,
-          myChoice: null,
-          opponentChoice: null,
-          status: "choosing",
+          status: "received",
           resultMessage: "",
         });
 
@@ -966,21 +1015,17 @@ export default function MultiplayerGamePage() {
       }
 
       case "mini_game_choice": {
-        setMiniGame((prev) => {
-          if (!prev || prev.gameId !== payload.gameId) return prev;
-
-          return {
-            ...prev,
-            opponentChoice: payload.choice,
-          };
-        });
+        setMiniGame((prev) => (
+          prev && prev.gameId === payload.gameId
+            ? { ...prev, opponentChoice: payload.choice }
+            : prev
+        ));
 
         showMessage("상대가 선택을 완료했습니다!");
         break;
       }
-      case "mini_game_reward": {
-        console.log("mini_game_reward 수신:", payload);
 
+      case "mini_game_reward": {
         if (isDisabledDuelItem({ id: payload.rewardId })) {
           console.warn("무시한 비활성화 SWAP 보상:", payload);
           return;
@@ -992,19 +1037,17 @@ export default function MultiplayerGamePage() {
           payload.rewardId ||
           "알 수 없는 아이템";
 
-        setMiniGame((prev) => {
-          if (!prev || prev.gameId !== payload.gameId) return prev;
-
-          return {
-            ...prev,
-            status: "result",
-            resultMessage: `패배! 상대의 [${rewardName}] 아이템이 발동됐습니다.`,
-          };
-        });
+        setMiniGame((prev) => (
+          prev && prev.gameId === payload.gameId
+            ? {
+              ...prev,
+              status: "result",
+              resultMessage: `상대의 [${rewardName}] 아이템이 발동됐습니다.`,
+            }
+            : prev
+        ));
 
         showMessage(`상대 미니게임 보상: ${rewardName}`);
-
-        setTimeout(() => setMiniGame(null), 2200);
         break;
       }
 
@@ -1320,7 +1363,7 @@ export default function MultiplayerGamePage() {
             <EffectOverlay
               blindActive={status.blind}
               floatingMessage={floatingMessage}
-              immune={Date.now() < status.immuneUntil}
+              immune={pendingDefenses.length > 0}
             />
             {itemEffect && (
               <div className="item-effect-pop">
