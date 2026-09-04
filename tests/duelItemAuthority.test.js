@@ -10,7 +10,9 @@ import {
   canUseDuelItem,
   DUEL_ITEM_COOLDOWN_MS,
   DUEL_ITEM_RESULT,
+  DUEL_ITEM_ROLE,
   getDuelItem,
+  getDuelItemsByRole,
 } from "../data/duelItems.js";
 import {
   DUEL_ITEM_FAILURE_CODES,
@@ -815,4 +817,46 @@ test("P5 — ⚠ maxPreviews에 서버 권위가 없다는 것이 사실이다 (
 
   // 그래서 3회는 카탈로그(클라이언트)에만 있는 값이다.
   assert.equal(getDuelItem("link_preview").maxPreviews, 3);
+});
+
+/* ────────────────────────────────────────────────────────────
+ * 8. P7 — 안내 문구
+ * ──────────────────────────────────────────────────────────── */
+
+test("P7 — 아이템 안내를 카탈로그에서 만든다 (베끼지 않는다)", () => {
+  const pageSource = read("pages/MultiplayerPage.jsx");
+
+  // ① 카탈로그를 읽는다. `getDuelItemsByRole`이 비활성 아이템을 이미 걸러 주므로
+  //    안내가 `swap_current`를 그릴 방법이 없다.
+  const imported = [...pageSource.matchAll(/from\s*"([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(
+    imported.includes("../data/duelItems"),
+    "안내가 카탈로그를 import하지 않는다"
+  );
+  assert.match(pageSource, /getDuelItemsByRole\(/);
+  assert.equal(
+    getDuelItemsByRole(DUEL_ITEM_ROLE.JOKER).some((item) => item.id === "swap_current"),
+    false
+  );
+
+  // ② 손으로 적은 아이템 항목이 없다.
+  //    옛 목록이 어긋난 이유가 정확히 이것이었다 — 10줄이 리터럴로 적혀 있어서
+  //    지워진 셋(`translate_current`·`highlight_links`·`swap_current`)과 비활성된
+  //    `mini_game`이 남고, 새로 들어온 넷은 빠졌다. **설명이 카탈로그를 베끼면
+  //    카탈로그가 바뀔 때 같이 바뀌지 않는다.**
+  assert.doesNotMatch(
+    pageSource,
+    /<li><strong>[^<{]/,
+    "아이템 항목이 리터럴로 적혀 있다 — 카탈로그에서 만들어야 한다"
+  );
+
+  // ③ 지급되는 10종이 곧 안내에 나오는 10종이다. 역할 넷으로 나눠 그리므로
+  //    합계가 지급 풀과 같아야 한다.
+  const shown = [
+    DUEL_ITEM_ROLE.ATTACK,
+    DUEL_ITEM_ROLE.SEARCH,
+    DUEL_ITEM_ROLE.DEFENSE,
+    DUEL_ITEM_ROLE.JOKER,
+  ].flatMap((role) => getDuelItemsByRole(role).map((item) => item.id));
+  assert.deepEqual([...shown].sort(), [...MULTI_ITEM_IDS].sort());
 });
