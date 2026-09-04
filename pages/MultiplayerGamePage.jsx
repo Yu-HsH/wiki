@@ -26,11 +26,14 @@ import ScrollToTopButton from "../components/ScrollToTopButton";
 import WikiViewer from "../components/WikiViewer";
 import VsIntroOverlay from "../components/VsIntroOverlay";
 
-import ItemBar from "../components/ItemBar";
+import DuelItemBar from "../components/DuelItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import { ITEM_DEFS } from "../data/items";
-import { isDisabledDuelItem, MULTI_ITEM_IDS } from "../data/itemPools";
-import { fetchDuelItemState } from "../services/duelItemService";
+import { isDisabledDuelItem } from "../data/itemPools";
+import {
+  ensureDuelItemGrant,
+  fetchDuelItemState,
+} from "../services/duelItemService";
 
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
@@ -165,6 +168,38 @@ export default function MultiplayerGamePage() {
 
   const [itemCooldownUntil, setItemCooldownUntil] = useState(0);
   const [itemEffect, setItemEffect] = useState(null);
+
+  /**
+   * 서버가 준 아이템 상태. **어느 것도 localStorage에서 오지 않는다.**
+   *
+   * `useItems`의 초기값은 `true`다 — 아직 모른다는 뜻이고, 지급·복구 응답이 실제 값을
+   * 덮는다. `false`로 시작하면 조회가 실패한 방을 "아이템을 쓰지 않는 경기"로
+   * **거짓 표시**한다. 슬롯이 빈 것은 사실이지만 규칙이 다르다고 말하는 것은 거짓이다.
+   */
+  const [useItems, setUseItems] = useState(true);
+  const [activeEffects, setActiveEffects] = useState([]);
+  const [pendingDefenses, setPendingDefenses] = useState([]);
+
+  const applyDuelItemState = useCallback((itemState) => {
+    setUseItems(itemState.useItems);
+    setInventory(itemState.inventory);
+    setItemCooldownUntil(itemState.cooldownUntil ?? 0);
+    setActiveEffects(itemState.activeEffects);
+    setPendingDefenses(itemState.pendingDefenses);
+  }, []);
+
+  /**
+   * HUD가 `failure.refetchState`를 받았을 때 서버와 슬롯 관점을 맞추는 경로다.
+   * **같은 실패 봉투로 두 번 불리지 않는다** — `DuelItemBar`가 봉투의 정체성으로 막는다.
+   */
+  const refreshDuelItemState = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      applyDuelItemState(await fetchDuelItemState(roomId));
+    } catch (refreshError) {
+      console.error("duel item state refresh failed:", refreshError);
+    }
+  }, [roomId, applyDuelItemState]);
 
   const showItemEffect = (text) => {
     setItemEffect(text);
@@ -428,8 +463,7 @@ export default function MultiplayerGamePage() {
       try {
         const itemState = await fetchDuelItemState(roomId);
         if (recoveryGenerationRef.current !== generation) return;
-        setInventory(itemState.inventory);
-        setItemCooldownUntil(itemState.cooldownUntil ?? 0);
+        applyDuelItemState(itemState);
       } catch (itemError) {
         console.error("duel item state recovery failed:", itemError);
       }
@@ -469,6 +503,7 @@ export default function MultiplayerGamePage() {
     clearLocalGameState,
     loadLocalGameState,
     saveLocalGameState,
+    applyDuelItemState,
   ]);
 
   recoverGameRef.current = recoverGame;
@@ -518,63 +553,38 @@ export default function MultiplayerGamePage() {
     }
   }, [room, myPlayer, opponentPlayer, roomId, phase, loadLocalGameState]);
 
+  /**
+   * 5슬롯 지급. **`ensure_duel_item_grant_v3`는 멱등이다** — 행이 이미 있으면 그대로
+   * 읽어 온다. 그래서 카운트다운마다 불러도 되고, **F5로 새 아이템을 뽑을 수 없다.**
+   * 클라이언트가 풀에서 직접 뽑던 경로(joker 1 · rare 1 · normal 3)는 여기서 끝난다.
+   *
+   * `use_items = false` 방은 **성공(`ok:true`)에 `ITEMS_DISABLED`** 로 온다 — 지급할
+   * 것이 없는 정상 상태다. 그 값을 HUD에 내려 "아이템을 쓰지 않는 경기"를 그리게 한다.
+   */
   useEffect(() => {
     if (phase !== PHASE.COUNTDOWN) return;
-    const saved = loadLocalGameState();
-    if (saved?.inventory?.length > 0) {
-      const restoredInventory = saved.inventory.filter(
-        (item) => !isDisabledDuelItem(item)
-      );
-      setInventory(restoredInventory);
-      if (restoredInventory.length !== saved.inventory.length) {
-        saveLocalGameState({ inventory: restoredInventory });
+    if (!roomId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const granted = await ensureDuelItemGrant(roomId);
+        if (cancelled) return;
+        setUseItems(granted.useItems);
+        setInventory(granted.inventory);
+        setItemCooldownUntil(granted.cooldownUntil ?? 0);
+      } catch (grantError) {
+        // 복구 경로와 같은 이유로 비치명이다 — 지급을 못 받은 것으로 카운트다운을
+        // 막으면 경기가 시작되지 않는다. 복구·새로고침이 같은 행을 다시 읽는다.
+        console.error("duel item grant failed:", grantError);
       }
-      return;
-    }
+    })();
 
-    const pool = ITEM_DEFS.filter((item) =>
-      MULTI_ITEM_IDS.includes(item.id)
-    );
-
-    const joker = pool.filter((item) => item.category === "joker");
-    const rareOnly = pool.filter(
-      (item) => item.rarity === "rare" && item.category !== "joker"
-    );
-    const normalOnly = pool.filter(
-      (item) => item.rarity !== "rare" && item.category !== "joker"
-    );
-
-    const pick = (arr, count) => {
-      const copy = [...arr];
-      const result = [];
-
-      while (copy.length && result.length < count) {
-        const idx = Math.floor(Math.random() * copy.length);
-        result.push(copy.splice(idx, 1)[0]);
-      }
-
-      return result;
+    return () => {
+      cancelled = true;
     };
-
-    const selected = [
-      ...pick(joker, 1),
-      ...pick(rareOnly, 1),
-      ...pick(normalOnly, 3),
-    ].map((item, index) => ({
-      ...item,
-      instanceId: `${item.id}-${Date.now()}-${index}`,
-      used: false,
-    }));
-
-    console.log("선택된 아이템:", selected.map((i) => i.id));
-
-
-    setInventory(selected);
-
-    saveLocalGameState({
-      inventory: selected,
-    });
-  }, [phase]);
+  }, [phase, roomId]);
 
   const markUsed = (instanceId) => {
     setInventory((prev) => {
@@ -1332,10 +1342,17 @@ export default function MultiplayerGamePage() {
 
         {phase === PHASE.PLAYING && (
           <>
-            <ItemBar
+            <DuelItemBar
               inventory={inventory}
-              canUseItem={canUseItem}
+              useItems={useItems}
+              phaseReady={room?.status === "playing" && !myPlayer?.has_finished}
+              cooldownUntil={itemCooldownUntil || null}
+              linkCount={pageData?.links?.length || 0}
+              historyLength={historyStack.length}
+              activeEffects={activeEffects}
+              pendingDefenses={pendingDefenses}
               onUseItem={handleUseItem}
+              onRequestStateRefresh={refreshDuelItemState}
             />
 
             <EffectOverlay
