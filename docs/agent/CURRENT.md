@@ -1,13 +1,15 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: 2026-09-04 (2차)
-기준 커밋: `8a3c77f` (`fix(preflight): stop flagging benign standby EOF as a runtime crash`)
-마지막 **코드** 커밋: `8a3c77f` — **그리고 이것은 `origin/main`이 아니다.**
+갱신 날짜: 2026-09-04 (3차)
+기준 커밋: `5d40e32` (`fix(preflight): widen crash detection to all signals and PANIC`)
+마지막 **코드** 커밋: `5d40e32` — **그리고 이것은 `origin/main`이 아니다.**
 `origin/main` = **`a784d2e`** 그대로다. 트랙 A(`e70c541`)·B(`7a7197e`)·N2(`a784d2e`)는
 `b3da192`·`527f896`·`eeb7a16` 병합을 거쳐 **2026-09-03에 배포됐고**,
 **D(15a, `020daaa` → `1af9f93`)는 통합만 됐다 — 배포되지 않았다** (아래 ⚑ 상자·§3).
-그 뒤 **`8a3c77f`가 `supabase:preflight`의 standby EOF 오탐을 고쳤다 — 트랙 C 착수 전 선행 작업이다.**
-이전 기준: `1af9f93` · `a784d2e` · `eeb7a16`
+그 뒤 **트랙 C 착수 전 선행 작업 2건이 `supabase:preflight`의 크래시 탐지기를 고쳤다** —
+`8a3c77f`(standby EOF 오탐 제거)와 **`5d40e32`(P1·P2 — 탐지 범위를 전 시그널 + PANIC으로 확장)**.
+**후자는 CODE GO 판정의 근거를 바꾼다 — §1의 ⚑ 상자.**
+이전 기준: `8a3c77f` · `1af9f93` · `a784d2e`
 브랜치: `feat/group-final-gaps`
 
 > # ⚑ 2026-09-04 — **트랙 D(15a)가 통합됐다. 배포는 하지 않는다 — migration이 있다.**
@@ -97,6 +99,37 @@
 
 - `.104` 이미지 또는 미승인 digest가 기본 경로로 선택되면 그 시점에 `CODE NO-GO`
 - 운영 런타임은 이 고정 범위 **밖**이다. 이 판정은 운영 적용 근거가 아니다
+
+> # ⚑ 2026-09-04 — **CODE GO의 크래시 탐지 범위가 넓어졌다. 이전 GO 판정은 좁은 탐지기 위에 있었다**
+>
+> **근거 커밋 `5d40e32`** (`fix(preflight): widen crash detection to all signals and PANIC`).
+>
+> **`supabase:preflight` 통과는 CODE GO 유효 조건의 하나다** (위 목록 3번째). 그 통과를
+> 만들어내는 `postgres-log` 케이스의 크래시 탐지기에 **결함 2건이 있었다.** 즉
+> **`5d40e32` 이전에 기록된 모든 `11/11 PASS`** — §2의 2026-08-23 `032caba` 행부터
+> 2026-09-04 `8a3c77f` 행까지 — **는 아래 범위를 못 보는 탐지기 위에서 나온 값이다.**
+>
+> | | ~~이전 (2026-09-04 `5d40e32` 전)~~ | **지금** |
+> |---|---|---|
+> | 시그널 크래시 | ~~**`signal 11` 하나뿐.** 그것도 `server-terminated` 정규식이 아니라 **`signal 11` 리터럴이 우연히 잡은 것**이다~~ | **전 시그널.** `terminated by signal \d+` — signal 6(Abort)·9(Kill)·15 포함 |
+> | `server process (PID N) was terminated` | ~~**둘 다 놓쳤다.** 정규식이 `server process`와 `terminated`가 붙어 있기를 요구했는데 실제 형식은 사이에 **`(PID N) was`가 들어간다**~~ | **잡는다.** 두 목록 모두 |
+> | `PANIC:` | ~~**preflight가 통과시켰다.** log-window 목록에만 있었다~~ | **잡는다** |
+> | `terminated` · `reinitializ*` | ~~preflight에 없었다~~ | **잡는다** |
+>
+> **⚠ 이 사실이 남아야 하는 이유.** 이전 판정들이 틀렸다는 뜻은 아니다 — **`postmaster-stability`
+> (재시작 0/0)와 `container-health`가 독립적으로 돌고 있었고, 실제로 재시작은 0이었다.**
+> 그러나 **"로그에 크래시 흔적이 없다"는 근거는 그만큼 약했다.** 특히 **SIGABRT·SIGKILL로
+> 죽는 백엔드는 어느 경로에서도 보이지 않았다.**
+>
+> **탐지력을 넓히면서 오탐 0을 실측으로 확인했다** — 전체 로그 **31,040줄**에 새 패턴을
+> 돌려 매치 **8줄**, 전부 standby EOF 면제분, **오탐 0건**.
+>
+> **`starting up`은 일부러 넣지 않았다** (요청 4개 중 1개 제외). 같은 로그에서 **134회**
+> 나오는데 **전부 정상 부팅**이다 — 4번의 컨테이너 기동에 몰려 있고 **severity가 `FATAL:`이라
+> severity 게이트로도 걸러지지 않는다.** 같은 이유로 `automatic recovery`(6회, 기동마다 1회)도
+> 제외했다. **둘 다 `PACKET13_CURRENT_FATAL_MARKERS`에는 남는다** — 그쪽은 START/END로 잘라낸
+> **창 안**만 보므로 "실행 중에 재기동됐다"가 되어 판정이 성립한다. 창이 없는 경로에서는
+> 정상 부팅과 구분할 방법이 없다. **§2의 P1·P2 블록에 상세가 있다.**
 
 > **⚑ 2026-09-04 재확인 — 13번째 migration이 붙은 뒤에도 유효 조건 4개가 전부 유지된다** `[산출물]`.
 > **`npm run supabase:preflight` 11/11 PASS** — 승인 이미지 digest `sha256:99b1729a…` 동일 ·
@@ -260,6 +293,11 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 | **`postgres-log` 전체 로그 판정** | **구 로직 `dangerous=true`(FAIL) → 신 로직 `false`(PASS)**, 면제 **8줄** | **2026-09-04** | **`8a3c77f`** 실측 `[산출물]`. `docker logs --timestamps` **전량 31,040줄**에 대해 두 로직을 직접 대조했다. **면제 8줄을 빼면 위험 마커가 0건** — 오탐 외에 가려진 것이 없다는 뜻이다 |
 | log window self-test | **14/14 PASS** | **2026-09-04** | **`8a3c77f`** 실측 `[산출물]`. `negative-current-signal-11`·`negative-current-panic` 포함 전건 통과. **2026-08-23의 12/12에서 케이스가 2건 늘었다** — 그 사이 추가된 것이며 이번 변경이 만든 차이가 아니다 |
 | build (`npm run build`) | **PASS** (exit 0) | **2026-09-04** | **`8a3c77f`** 실측 `[산출물]`. 스크립트·테스트만 바뀌어 번들에 영향이 없다 |
+| `npm test` | **260/260** (fail 0, skipped 0, todo 0) | **2026-09-04** | **`5d40e32`** 실측 `[산출물]`. **+2** — 선행 결함 등재 1건을 **해소 방향 3건**(P2 전 시그널 · P1 PANIC 등 · 부팅 로그 비위험)으로 뒤집은 차이다. 측정은 커밋 직전 작업 트리 |
+| `npm run supabase:preflight` | **11/11 PASS** | **2026-09-04** | **`5d40e32`** 실측 `[산출물]`. **탐지 범위를 넓힌 뒤에도 유지된다** — `postgres-log dangerous_marker=false benign_suppressed=0` |
+| **크래시 탐지 오탐 검사 (넓힌 패턴)** | **매치 8줄 = 면제 8줄, 오탐 0건** | **2026-09-04** | **`5d40e32`** 실측 `[산출물]`. `docker logs` **전량 31,040줄**. **`starting up` 134회·`automatic recovery` 6회는 정상 부팅이라 패턴에 넣지 않았다** — 넣었으면 전부 오탐이 됐다 |
+| log window self-test | **14/14 PASS** | **2026-09-04** | **`5d40e32`** 실측 `[산출물]`. `server-terminated` 정규식과 신규 `terminated-by-signal` 추가 후 전건 통과 |
+| build (`npm run build`) | **PASS** (exit 0) | **2026-09-04** | **`5d40e32`** 실측 `[산출물]`. 검증 스크립트·테스트만 바뀌었다 |
 | pgTAP Packet 13 | 33/33 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP spectator emoji atomicity | 22/22 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP Server Authority V2 | 97/97 | 2026-08-18 | `339fb77` 이전 |
@@ -338,28 +376,39 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 > 없다** — 즉 면제가 다른 무엇을 가리고 있지 않다. `postgres-log`는 `benign_suppressed=0`으로
 > PASS한다(창 안에 해당 줄이 없다). 같은 오탐이 있던 **log-window 경로에도 같은 조건으로 적용**했다.
 >
-> **⚠ 그 과정에서 선행 결함 2건이 드러났다. 고치지 않고 등재만 했다** — §2 끝의 별도 블록.
+> **⚠ 그 과정에서 선행 결함 2건이 드러났다.** ~~고치지 않고 등재만 했다~~
+> → **바로 다음 커밋 `5d40e32`에서 함께 닫았다** — §2 끝의 P1·P2 블록.
 
-> ### ⚠ 선행 결함 2건 — **`8a3c77f`가 만든 것이 아니고 고치지도 않았다** `[2026-09-04 실측]`
+> ### ~~⚠ 선행 결함 2건~~ → **✅ P1·P2 해소 (2026-09-04, `5d40e32`)** `[실측]`
 >
-> standby EOF 오탐을 고치면서 **마커 목록 자체의 커버리지 구멍**이 드러났다. **탐지력을 넓히는
-> 방향이라 이번 변경(좁히기)과 성격이 반대이고, 새 오탐을 만들 수 있어 별건으로 둔다.**
-> **둘 다 테스트로 고정해 두었다** (`tests/supabaseRuntimeValidation.test.js`의 `선행 결함 등재`) —
-> **커버리지를 바꾸면 그 테스트가 먼저 실패해서 알려준다.**
+> standby EOF 오탐(`8a3c77f`)을 고치면서 **마커 목록 자체의 커버리지 구멍**이 드러났고,
+> **트랙 C 착수 전에 함께 닫았다.** 판정 영향은 §1의 ⚑ 상자에 있다.
 >
-> | # | 결함 | 실측 |
+> | # | 결함 (해소 전) | 수정 |
 > |:-:|---|---|
-> | **P1** | **두 마커 목록의 커버리지가 다르다** | `DANGEROUS_RUNTIME_MARKERS`(preflight `postgres-log` · 자식 프로세스 · TAP)에 **`panic`·`terminated`·`reinitializ*`·`starting up`이 없다.** 넷 다 `PACKET13_CURRENT_FATAL_MARKERS`(log-window)에만 있다. **즉 `PANIC: could not write to file` 한 줄만 있는 로그는 preflight가 통과시킨다** `[산출물]` |
-> | **P2** | **둘 다 놓치는 줄이 하나 있다** | **`LOG:  server process (PID 9) was terminated by signal 6: Aborted`가 어느 경로에서도 잡히지 않는다.** `server-terminated` 정규식이 `server process`와 `terminated`가 **붙어 있기를** 요구하는데 실제 PostgreSQL 형식은 그 사이에 **`(PID N) was`가 들어간다.** signal 11만 별도 패턴으로 **우연히** 걸리고, **signal 6·9 같은 다른 크래시는 조용히 통과한다** `[산출물]` |
+> | **P1** | **두 마커 목록의 커버리지가 달랐다** — `DANGEROUS_RUNTIME_MARKERS`(preflight `postgres-log` · 자식 프로세스 · TAP)에 `panic`·`terminated`·`reinitializ*`·`starting up`이 없었다. **`PANIC: could not write to file` 한 줄만 있는 로그를 preflight가 통과시켰다** | **넷 중 셋을 넣었다.** `PANIC:`(severity 콜론 요구) · `terminated` 2종 · `reinitializ*`. **`starting up`은 제외** — 아래 |
+> | **P2** | **둘 다 놓치는 형식이 있었다** — `LOG:  server process (PID 9) was terminated by signal 6: Aborted`. `server-terminated` 정규식이 `server process`와 `terminated`가 **붙어 있기를** 요구했는데 실제 형식은 사이에 **`(PID N) was`가 들어간다.** signal 11만 리터럴로 **우연히** 걸렸다 | **`(PID N) was`를 허용**하고, **`terminated by signal \d+`를 신설**해 시그널 번호 의존을 없앴다. **두 목록 모두** |
 >
-> **P2가 더 무겁다.** P1은 "다른 경로가 잡는다"로 완충되지만, P2는 **실제 크래시 형식이 두 목록의
-> 어느 정규식과도 맞지 않는 것**이다. `signal 11`이 잡히는 이유는 `server-terminated`가 아니라
-> **`signal 11` 리터럴 패턴**이며, 같은 형식의 `signal 6`은 그 리터럴이 없어 빠져나간다.
+> **P2가 더 무거웠다.** P1은 "다른 경로가 잡는다"로 완충됐지만, P2는 **실제 크래시 형식이
+> 두 목록의 어느 정규식과도 맞지 않는 것**이었다. **SIGABRT·SIGKILL로 죽는 백엔드가
+> 어디에서도 보이지 않았다.**
 >
-> **판단이 필요한 이유.** 고치려면 `\bsignal(?:\s+|[_-])\d+\b`처럼 넓히거나 `server process .*
-> terminated`로 느슨하게 해야 하는데, **같은 정규식이 자식 프로세스 stdout과 TAP 출력에도 돌기
-> 때문에** 정상 텍스트에 걸릴 위험이 있다. **이번 커밋의 원칙(가장 좁은 변경)과 반대 방향이라
-> 근거를 따로 세워 결정한다.**
+> **`starting up`을 넣지 않은 근거 — 요청 4개 중 1개를 제외했다** `[실측]`.
+>
+> | 후보 | 전량 31,040줄에서의 출현 | 판정 |
+> |---|---:|---|
+> | `the database system is starting up` | **134회** — 전부 정상 부팅. postgres가 뜨는 중에 접속한 클라이언트(`authenticator`·`supabase_admin`·`supabase_auth_admin`)가 받는 응답이고 **4번의 기동에 몰려 있다** | **제외.** **severity가 `FATAL:`이라 severity 게이트로도 걸러지지 않는다** |
+> | `automatic recovery in progress` | **6회** — 기동마다 1회. **이 스택은 매 기동이 crash recovery로 시작한다** | **제외.** 같은 이유 |
+> | `PANIC:` · `terminated by signal` · `reinitializ*` | **0회** | **추가.** 정상 로그에 존재하지 않는다 |
+>
+> **둘은 `PACKET13_CURRENT_FATAL_MARKERS`에는 그대로 남는다.** 그쪽은 START/END로 잘라낸
+> **창 안**만 보므로 "실행 중에 재기동됐다"는 뜻이 되어 판정이 성립한다.
+> **`DANGEROUS_RUNTIME_MARKERS`는 창이 없어 같은 문자열이 정상 부팅과 구분되지 않는다** —
+> 이 비대칭이 두 목록을 끝내 같게 만들 수 없는 이유다. `tests/…`의
+> `부팅 로그는 위험이 아니다` 테스트가 양쪽 동작을 함께 고정한다.
+>
+> **오탐 0 실측.** 넓힌 패턴을 **전량 31,040줄**에 돌려 매치 **8줄** — **전부 standby EOF
+> 면제분이고 오탐 0건**이다 `[산출물]`.
 
 수치 출처: `wiki-race-2.0-handoff/code/10-CODE-MASTER-TODO.md` §9.8,
 `test-results/packet13-b1/b1.3-2026-08-19T01-19-11-669Z-7c95d293/summary.json` (gitignore 대상 로컬 산출물),
@@ -371,11 +420,11 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 
 측정 시점: **2026-09-04 — 두 값이 다시 갈렸다.**
 **`origin/main` = `a784d2e`** (2026-09-03 배포 이후 **변화 없음**) ·
-**`origin/feat/group-final-gaps` = `8a3c77f` + 이 문서 커밋** (`git ls-remote origin` 실측 `[산출물]`).
-**차이는 트랙 D(15a)와 preflight 수정이다.** D가 `main`에 없는 것은 의도된 상태다 — migration을
+**`origin/feat/group-final-gaps` = `5d40e32` + 이 문서 커밋** (`git ls-remote origin` 실측 `[산출물]`).
+**차이는 트랙 D(15a)와 preflight 수정 2건이다.** D가 `main`에 없는 것은 의도된 상태다 — migration을
 담고 있어 **3코스 창 전에는 올리지 않는다** (`AGENTS.md` §1·§1.1, `TRACKS.md` §7).
-**`8a3c77f`는 검증 스크립트라 운영 번들과 무관하며, 같은 이유로 단독 배포할 것도 아니다.**
-이전 측정: 2026-09-04 `039ab3d`(feat) / 2026-09-03 `a784d2e`(둘 다) / 2026-09-02 `48e3f2d`(feat) / `9eba7e9`(main, W1-b 직후) /
+**`8a3c77f`·`5d40e32`는 검증 스크립트라 운영 번들과 무관하며, 같은 이유로 단독 배포할 것도 아니다.**
+이전 측정: 2026-09-04 `1d8eb77`·`039ab3d`(feat) / 2026-09-03 `a784d2e`(둘 다) / 2026-09-02 `48e3f2d`(feat) / `9eba7e9`(main, W1-b 직후) /
 2026-08-29 `e272b44` / 2026-08-28 23:21 `4a78a0d`.
 
 > ### ⚑ **2026-09-03 — `main` 배포가 실행됐다. 게이트 없이 실사용자에게 닿은 첫 배포다**
@@ -838,10 +887,16 @@ W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[�
 > 세션이 집을 것은 트랙이 아니라 **§5.0-B의 이월 항목**(B2 모바일 · B3 불변식 모니터링 ·
 > B4·B5·B6)이거나 **3코스 창을 여는 결정 자체**다.
 >
-> **C의 선행 작업 하나는 미리 치웠다 (2026-09-04, `8a3c77f`).** C는 착수 시
-> `supabase:preflight`를 먼저 통과시켜야 하는데(§1.1-b의 CODE GO 유효 조건),
-> **`postgres-log`가 정상 로그에 오탐해 그 관문이 막힐 상태였다.** 창 밖 91줄 차이였다 —
-> 로그가 조금만 더 쌓이면 **G7이 풀려도 C가 시작하지 못했다.** 진단·수정·판정 근거는 §2.
+> **C의 선행 작업 2건을 미리 치웠다 (2026-09-04).** C는 착수 시 `supabase:preflight`를
+> 먼저 통과시켜야 하는데(§1.1-b의 CODE GO 유효 조건), 그 관문에 결함이 둘 있었다.
+>
+> | 커밋 | 무엇 | C에 왜 걸림돌이었나 |
+> |---|---|---|
+> | **`8a3c77f`** | standby EOF **오탐 제거** | **관문이 막힐 상태였다.** 창 밖 **91줄** 차이 — 로그가 조금만 더 쌓이면 **G7이 풀려도 C가 시작하지 못했다** |
+> | **`5d40e32`** | P1·P2 — 크래시 탐지 **범위 확장** | **반대 방향의 문제다. 관문이 헐거웠다.** C는 **아이템 서버 권위 RPC + migration**을 만드는 트랙이라 pgTAP·동시성 검증을 많이 돌린다. **그 과정의 백엔드 크래시가 SIGABRT·SIGKILL이면 이전 탐지기는 보지 못했다** |
+>
+> **둘을 합쳐야 관문이 제 역할을 한다** — 하나는 정상을 실패로 만들었고, 하나는 실패를
+> 정상으로 통과시켰다. 진단·수정·판정 근거는 §2, **CODE GO 판정에 미치는 영향은 §1**이다.
 > **G7은 여전히 유일한 차단이다** — 이 작업이 그것을 대신 풀어주지는 않는다.
 >
 > **15b·15c는 3코스 창 이후다.** 지금 착수할 수 없는 것이지 미정인 것이 아니다.
