@@ -30,9 +30,11 @@ import DuelItemBar from "../components/DuelItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import { ITEM_DEFS } from "../data/items";
 import { isDisabledDuelItem } from "../data/itemPools";
+import { DUEL_ITEM_RESULT } from "../data/duelItems";
 import {
   ensureDuelItemGrant,
   fetchDuelItemState,
+  useDuelItem,
 } from "../services/duelItemService";
 
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
@@ -48,6 +50,17 @@ import {
   SERVER_HEARTBEAT_INTERVAL_MS,
 } from "../utils/serverAuthority";
 import { useExitGuard } from "../components/ExitGuard";
+
+/**
+ * 서버가 확정한 `result` 4값을 그대로 문구로 옮긴다. **클라이언트가 판정하지 않는다** —
+ * 차단·반사는 상대의 방어를 서버가 소진시킨 결과이고, 이 화면은 그 결과를 읽는다.
+ */
+const DUEL_ITEM_RESULT_MESSAGE = Object.freeze({
+  [DUEL_ITEM_RESULT.APPLIED]: "아이템이 적용됐습니다!",
+  [DUEL_ITEM_RESULT.BLOCKED]: "상대가 막았습니다.",
+  [DUEL_ITEM_RESULT.REFLECTED]: "반사됐습니다! 내가 대신 맞았습니다.",
+  [DUEL_ITEM_RESULT.VOID]: "효과가 없었습니다.",
+});
 
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
@@ -180,6 +193,19 @@ export default function MultiplayerGamePage() {
   const [activeEffects, setActiveEffects] = useState([]);
   const [pendingDefenses, setPendingDefenses] = useState([]);
 
+  /**
+   * 응답을 기다리는 슬롯. 대기 중 HUD 전체가 잠긴다 — 낙관적으로 `used`를 칠하지
+   * 않으므로, 두 번 누르는 것을 막는 것은 이 값뿐이다.
+   */
+  const [pendingGrantId, setPendingGrantId] = useState(null);
+
+  /**
+   * 실패 봉투를 **객체 그대로** 담는다. `DuelItemBar`가 봉투의 정체성으로 중복
+   * `onRequestStateRefresh`를 막으므로, 매 렌더 새로 만들면 그 방어가 무력해진다.
+   */
+  const [itemFailure, setItemFailure] = useState(null);
+  const [linkPreview, setLinkPreview] = useState(null);
+
   const applyDuelItemState = useCallback((itemState) => {
     setUseItems(itemState.useItems);
     setInventory(itemState.inventory);
@@ -224,20 +250,14 @@ export default function MultiplayerGamePage() {
 
   const isImmune = () => Date.now() < statusRef.current.immuneUntil;
 
-  const emitRoomEvent = async (eventType, payload = {}) => {
-    if (!roomId || !user?.id) return;
-
-    const { error } = await supabase.from("room_events").insert({
-      room_id: roomId,
-      user_id: user.id,
-      event_type: eventType,
-      payload,
-    });
-
-    if (error) {
-      console.error("room_events insert 실패:", error);
-    }
-  };
+  /*
+   * `emitRoomEvent`가 있던 자리다. 저장소에서 클라이언트가 `room_events`에 쓰는
+   * **유일한 지점**이었고, 그 0건이 수용조건 ②이며 G2-② 창의 선행 조건이다
+   * (`TRACKS.md` §7.4-③·§8-C).
+   *
+   * 지금은 `use_duel_item_v3`가 `security definer`로 알림 행을 넣는다. 브라우저는
+   * **읽기만 한다** — 그래서 위조 행을 만들 자리가 없다.
+   */
 
   const applyCleanse = () => {
     setStatus((prev) => ({
@@ -586,35 +606,22 @@ export default function MultiplayerGamePage() {
     };
   }, [phase, roomId]);
 
-  const markUsed = (instanceId) => {
-    setInventory((prev) => {
-      const next = prev.map((item) =>
-        item.instanceId === instanceId ? { ...item, used: true } : item
-      );
+  /**
+   * 완주 확정. **이동 경로와 아이템 경로가 같은 것을 쓴다** — 아이템이 강제한 이동도
+   * 목표에 닿을 수 있고(`random_link_move`·`random_teleport`), 그때 화면이 성공으로
+   * 가지 않으면 복구가 그것을 "이미 종료된 게임"으로 잡는다.
+   *
+   * 이 함수가 **로비 복귀 이동을 한 곳에 모은다** — 두 경로가 각자 부르면
+   * §2.3의 3곳 불변식이 4곳이 된다. (그 불변식은 주석까지 세므로 여기에 그 호출을
+   * 그대로 인용할 수도 없다. 인용 한 줄이 게이트를 깨는 것이 §1이 말하는 결함이다.)
+   */
+  const enterSolvedState = () => {
+    clearLocalGameState();
+    setPhase(PHASE.SUCCESS);
 
-      saveLocalGameState({
-        inventory: next,
-      });
-
-      return next;
-    });
-  };
-  const canUseItem = (item) => {
-    if (!item || item.used || isDisabledDuelItem(item)) return false;
-
-    if (Date.now() < itemCooldownUntil) {
-      return false;
-    }
-
-    if (item.useCondition === "has_links") {
-      return pageData?.links?.length > 0;
-    }
-
-    if (item.useCondition === "has_history") {
-      return historyStack.length > 0;
-    }
-
-    return true;
+    resultNavigationTimerRef.current = setTimeout(() => {
+      navigate("/multiplayer", { replace: true });
+    }, 2200);
   };
 
   const handleMove = async (nextTitle, { eventType = "NORMAL_LINK" } = {}) => {
@@ -675,12 +682,7 @@ export default function MultiplayerGamePage() {
       ));
 
       if (solved) {
-        clearLocalGameState();
-        setPhase(PHASE.SUCCESS);
-
-        resultNavigationTimerRef.current = setTimeout(() => {
-          navigate("/multiplayer", { replace: true });
-        }, 2200);
+        enterSolvedState();
       } else {
         saveLocalGameState({
           currentTitle: renderedPage.title,
@@ -716,191 +718,177 @@ export default function MultiplayerGamePage() {
     if (moved) showMessage(`${nextTitle || "서버가 선택한 문서"}로 이동했습니다.`);
   };
 
-  const decideRpsWinner = (myChoice, opponentChoice) => {
-    if (myChoice === opponentChoice) return "draw";
+  /**
+   * 아이템이 성공한 뒤의 동기화. **`applyDuelMoveV2`를 부르지 않는다** —
+   * `use_duel_item_v3`가 `private.apply_duel_move_internal_v3`로 이동을 이미 끝냈고
+   * (`current_page_id`·`current_title`·`move_count` 갱신과 `game_move_events` 행까지),
+   * 여기서 다시 부르면 **한 번의 사용이 두 번 이동한다.**
+   *
+   * 그래서 이 함수는 서버가 준 권위 행을 화면에 반영하기만 한다. 아이템 ID로 갈라지지
+   * 않는다 — 이동이 있었는지는 `player.current_title`이 말해 준다.
+   */
+  const syncAfterItemUse = async (outcome) => {
+    if (outcome.room) setRoom(outcome.room);
 
-    const winMap = {
-      rock: "scissors",
-      scissors: "paper",
-      paper: "rock",
-    };
-
-    return winMap[myChoice] === opponentChoice ? "me" : "opponent";
-  };
-
-  const handleMiniGameChoice = async (choice) => {
-    if (!miniGame) return;
-    if (miniGame.myChoice) return;
-
-    setMiniGame((prev) => ({
-      ...prev,
-      myChoice: choice,
-    }));
-
-    await emitRoomEvent("mini_game_choice", {
-      gameId: miniGame.gameId,
-      choice,
-    });
-  };
-
-  const triggerRandomMiniGameReward = async () => {
-    const rewardIds = [
-      "blind",
-      "random_link_move",
-      "translate_current",
-      "highlight_links",
-      "search_once",
-      "random_teleport",
-      "cleanse_shield",
-    ];
-
-    const randomId = rewardIds[Math.floor(Math.random() * rewardIds.length)];
-    const rewardItem = ITEM_DEFS.find((item) => item.id === randomId);
-    const rewardName = rewardItem?.name || randomId;
-
-    showMessage(`🎲 미니게임 보상: ${rewardName}`);
-
-    switch (randomId) {
-      case "blind":
-        await emitRoomEvent("blind");
-        break;
-
-      case "random_link_move":
-        await emitRoomEvent("random_link_move");
-        break;
-
-      case "translate_current":
-        await emitRoomEvent("translate_current");
-        break;
-
-      case "swap_current":
-        // Kept as a compatibility branch for old local inventories. The
-        // server RPC remains present but always returns SWAP_DISABLED.
-        showMessage("현재 문서 교환은 일시적으로 비활성화되었습니다.");
-        break;
-
-      case "highlight_links":
-        setHighlightRequestId((prev) => prev + 1);
-        break;
-
-      case "search_once":
-        setSearchAvailable(true);
-        break;
-
-      case "random_teleport": {
-        await forceMoveByItem(pageDataRef.current?.title, "RANDOM_TELEPORT");
-        break;
-      }
-
-      case "cleanse_shield":
-        applyCleanse();
-        break;
-
-      default:
-        break;
+    const authoritative = [outcome.player, outcome.opponent].filter(
+      (row) => row?.user_id
+    );
+    if (authoritative.length > 0) {
+      setPlayers((prev) => prev.map((player) => {
+        const fresh = authoritative.find((row) => row.user_id === player.user_id);
+        return fresh || player;
+      }));
     }
-    await emitRoomEvent("mini_game_reward", {
-      gameId: miniGame?.gameId,
-      rewardId: randomId,
-      rewardName,
-    });
-    return rewardName;
-  };
 
-  const handleUseItem = async (instanceId) => {
-    const item = inventory.find((i) => i.instanceId === instanceId);
-    if (!canUseItem(item)) return;
+    const me = outcome.player;
+    if (!me?.user_id || me.user_id !== user?.id) return;
 
-    setItemCooldownUntil(Date.now() + 2500);
-    markUsed(instanceId);
-    showItemEffect(item.name);
+    const authoritativeTitle = me.current_title || "";
+    const movedAway =
+      !!authoritativeTitle &&
+      normalizeTitle(authoritativeTitle) !==
+        normalizeTitle(pageDataRef.current?.title || "");
 
-    switch (item.id) {
-      case "blind":
-        await emitRoomEvent("blind");
-        showMessage("상대에게 시야 방해!");
-        break;
-
-      case "double_blind":
-        applyBlind();
-        await emitRoomEvent("double_blind");
-        showMessage("서로 화면 가리기!");
-        break;
-
-      case "cleanse_shield":
-        applyCleanse();
-        showMessage("상태 해제 + 10초 면역");
-        break;
-
-      case "random_link_move":
-        await emitRoomEvent("random_link_move");
-        showMessage("상대 랜덤 이동!");
-        break;
-
-      case "highlight_links":
-        setHighlightRequestId((prev) => prev + 1);
-        showMessage("유망 링크 표시!");
-        break;
-
-      case "search_once":
-        setSearchAvailable(true);
-        showMessage("검색 1회 사용 가능");
-        break;
-
-      case "go_back": {
-        const prevTitle = historyStack[historyStack.length - 1];
-        if (!prevTitle) return;
-
-        setHistoryStack((prev) => prev.slice(0, -1));
-        await handleMove(prevTitle, { eventType: "UNDO" });
-        showMessage("뒤로가기 사용");
-        break;
+    if (movedAway) {
+      setIsPageLoading(true);
+      setIsLoading(true);
+      try {
+        const renderedPage = await fetchPageData(authoritativeTitle);
+        await ensureWikiSnapshot(renderedPage);
+        setPageData(renderedPage);
+        setStatus((prev) => ({ ...prev, translateCurrent: false }));
+      } finally {
+        setIsPageLoading(false);
+        setIsLoading(false);
       }
+    }
 
-      case "random_teleport": {
-        await forceMoveByItem(pageDataRef.current?.title, "RANDOM_TELEPORT");
-        showMessage("랜덤 텔레포트!");
-        break;
-      }
+    const nextPath = Array.isArray(me.path_titles)
+      ? me.path_titles.filter(Boolean)
+      : [];
+    if (nextPath.length > 0) setHistoryStack(nextPath.slice(0, -1));
 
-      case "translate_current":
-        await emitRoomEvent("translate_current");
-        showMessage("상대 현재 문서 언어 방해!");
-        break;
+    if (me.player_status === "finished" || me.has_finished === true) {
+      enterSolvedState();
+      return;
+    }
 
-      case "swap_current":
-        // Keep the old item ID readable, but never emit or move while SWAP is disabled.
-        showMessage("현재 문서 교환은 일시적으로 비활성화되었습니다.");
-        break;
-
-      case "mini_game": {
-        const gameId =
-          typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random()}`;
-
-        setMiniGame({
-          gameId,
-          hostUserId: user.id,
-          myChoice: null,
-          opponentChoice: null,
-          status: "choosing",
-          resultMessage: "",
-        });
-
-        await emitRoomEvent("mini_game_start", {
-          gameId,
-          hostUserId: user.id,
-        });
-
-        showMessage("미니게임 시작!");
-        break;
-      }
-
-      default:
-        showMessage(`${item.name} 사용`);
+    if (movedAway) {
+      saveLocalGameState({
+        currentTitle: authoritativeTitle,
+        pathTitles: nextPath,
+        historyStack: nextPath.slice(0, -1),
+        clickCount: Number(me.move_count) || 0,
+        enteredPlaying: true,
+      });
     }
   };
+
+  /**
+   * 서버가 성공을 확정한 뒤에만 도는 **내 화면 쪽 연출**이다. 상대에게 걸리는 방해와
+   * 방어 소진은 여기서 하지 않는다 — 전자는 상대 클라이언트가 수신 경로에서 받고,
+   * 후자는 `pendingDefenses`로 서버에서 온다.
+   */
+  const applyLocalItemEffect = (item, outcome) => {
+    if (item.id === "search_once") {
+      setSearchAvailable(true);
+      return;
+    }
+
+    if (item.id === "link_preview") {
+      const censored = new Set(
+        activeEffects
+          .filter((effect) => effect.itemId === "link_censorship")
+          .flatMap((effect) => effect.metadata?.censoredTitles || [])
+          .map((title) => normalizeTitle(title))
+      );
+
+      setLinkPreview({
+        active: true,
+        expiresAt: outcome.effectExpiresAt,
+        // `pageData.links`는 제목 문자열 배열이다 (`wikiService`의 `dedupeTitles`).
+        candidates: (pageDataRef.current?.links || [])
+          .filter(Boolean)
+          .map((title) => ({
+            title,
+            censored: censored.has(normalizeTitle(title)),
+          })),
+        entries: {},
+        selectedTitle: null,
+        usedPreviews: 0,
+        // 서버 권위가 없는 값이다 — 부채 ②. 카탈로그 정의에서 읽는다.
+        maxPreviews: item.maxPreviews ?? 3,
+      });
+    }
+  };
+
+  /**
+   * 아이템 한 번. **저장소에서 아이템을 쓰는 유일한 경로다.**
+   *
+   * 아이템 ID로 갈라지던 12분기가 사라졌다 — `use_duel_item_v3`가 대상 선정·차단·반사·
+   * 이동을 전부 판정하고 `result` 4값으로 답한다. 클라이언트는 그 값을 읽는다.
+   *
+   * `DuelItemBar`가 넘기는 것은 **`grantId`** 다 (`instanceId`가 아니다 — `ItemBar`와
+   * 다른 계약이다). 실패 12+3종은 throw가 아니라 봉투로 오므로 쿨타임 거부에
+   * `try/catch`를 쓰지 않는다. **봉투는 state에 그대로 담는다** — 매 렌더 새 객체로
+   * 만들면 `DuelItemBar`의 중복 조회 방어가 무력해져 거부 하나가 조회 폭풍이 된다.
+   */
+  const handleUseItem = async (grantId) => {
+    if (!roomId || !grantId || pendingGrantId) return;
+
+    const item = inventory.find((entry) => entry.grantId === grantId);
+    if (!item) return;
+
+    setPendingGrantId(grantId);
+    setItemFailure(null);
+
+    try {
+      const outcome = await useDuelItem({ roomId, grantId });
+
+      if (!outcome.ok) {
+        setItemFailure(outcome.failure);
+        return;
+      }
+
+      setItemCooldownUntil(outcome.cooldownUntil ?? 0);
+      showItemEffect(item.name);
+      showMessage(
+        DUEL_ITEM_RESULT_MESSAGE[outcome.result] ||
+        `${item.name} 사용`
+      );
+
+      if (outcome.result === DUEL_ITEM_RESULT.APPLIED) {
+        applyLocalItemEffect(item, outcome);
+      }
+
+      await syncAfterItemUse(outcome);
+      // 슬롯의 `used`와 지속효과·보호 대기는 서버 행에서만 온다. HUD는 낙관적으로
+      // 칠하지 않으므로 응답 뒤에 새 상태를 내려 준다.
+      await refreshDuelItemState();
+    } catch (error) {
+      // 여기까지 오는 것은 세션·호출 오류 6종과 전송 오류뿐이다 (경기 중 판정은 봉투다).
+      console.error("duel item use failed:", error);
+      showMessage(error?.message || "아이템을 사용하지 못했습니다.");
+    } finally {
+      setPendingGrantId(null);
+    }
+  };
+
+  /**
+   * ⚠ **부채 ① 미해결.** 확정 스펙 §5.5의 "연결 문서 첫 문장"은
+   * `services/wikiService.js`의 `fetchPageSummary(title)`가 주는 `extract`이고 새 RPC가
+   * 필요하지 않다. 여기서는 **선택만 기록하고 `entries`를 채우지 않는다** — 패널이
+   * "요약 연결은 준비 중"을 그리는, 문서에 등재된 상태다 (`DuelItemBar.jsx` 머리말).
+   *
+   * **선택이 남은 횟수를 소진시키지 않는다.** `entries[title]`이 비어 있으면 HUD가
+   * `seen`을 false로 보므로, 여기서 `usedPreviews`를 올리면 아무것도 못 보여 준 클릭이
+   * 3회 제한을 깎는다. 요약을 실제로 가져오는 커밋이 그 카운트도 함께 가져간다.
+   */
+  const handlePreviewLink = (title) => {
+    setLinkPreview((prev) => (prev ? { ...prev, selectedTitle: title } : prev));
+  };
+
+  const handleClosePreview = () => setLinkPreview(null);
 
   const handleIncomingEvent = async (event) => {
     console.log("받은 room_event:", event);
@@ -1149,51 +1137,19 @@ export default function MultiplayerGamePage() {
     return () => clearInterval(interval);
   }, [phase, roomId, user?.id]);
 
+  /**
+   * 미니게임은 이 창에서 **비활성이고 표시 전용이다** `[사용자 확정 (c), 2026-09-04]`.
+   *
+   * 예전에는 여기서 가위바위보 승패를 판정하고 이긴 쪽이 보상 아이템을 발동했다.
+   * **그 둘이 전부 발신 경로였다** — 판정 결과를 `mini_game_reward`로 쏘고 보상을
+   * `emitRoomEvent`로 쏘았다. 발신이 사라졌으므로 판정도 사라진다.
+   *
+   * 남은 일은 구버전 번들이 보낸 진행을 잠깐 보여 주고 스스로 닫는 것이다.
+   */
   useEffect(() => {
-    const resolveMiniGame = async () => {
-      if (!miniGame) return;
-      if (miniGame.status !== "choosing") return;
-      if (!miniGame.myChoice || !miniGame.opponentChoice) return;
-
-      const result = decideRpsWinner(
-        miniGame.myChoice,
-        miniGame.opponentChoice
-      );
-
-      if (result === "draw") {
-        setMiniGame((prev) => ({
-          ...prev,
-          status: "result",
-          resultMessage: "무승부! 아무 일도 일어나지 않았습니다.",
-        }));
-
-        setTimeout(() => setMiniGame(null), 1800);
-        return;
-      }
-
-      if (result === "me") {
-        const rewardName = await triggerRandomMiniGameReward();
-
-        setMiniGame((prev) => ({
-          ...prev,
-          status: "result",
-          resultMessage: `승리! [${rewardName}] 아이템이 발동됐습니다.`,
-        }));
-
-        setTimeout(() => setMiniGame(null), 2200);
-        return;
-      }
-
-      // 패배한 쪽은 여기서 결과창을 확정하지 않음
-      // 승자 쪽에서 보내는 mini_game_reward 이벤트를 기다림
-      setMiniGame((prev) => ({
-        ...prev,
-        status: "waiting_reward",
-        resultMessage: "패배... 상대 보상 아이템 확인 중입니다.",
-      }));
-    };
-
-    resolveMiniGame();
+    if (!miniGame) return;
+    const timer = setTimeout(() => setMiniGame(null), 4000);
+    return () => clearTimeout(timer);
   }, [miniGame]);
 
   useEffect(() => {
@@ -1351,8 +1307,14 @@ export default function MultiplayerGamePage() {
               historyLength={historyStack.length}
               activeEffects={activeEffects}
               pendingDefenses={pendingDefenses}
+              pendingGrantId={pendingGrantId}
+              failure={itemFailure}
+              linkPreview={linkPreview}
               onUseItem={handleUseItem}
+              onDismissFailure={() => setItemFailure(null)}
               onRequestStateRefresh={refreshDuelItemState}
+              onPreviewLink={handlePreviewLink}
+              onClosePreview={handleClosePreview}
             />
 
             <EffectOverlay
@@ -1369,49 +1331,11 @@ export default function MultiplayerGamePage() {
               <div className="mini-game-overlay">
                 <div className="mini-game-card">
                   <h2>🎲 미니게임</h2>
-                  <p>가위바위보에서 이긴 사람이 랜덤 아이템을 발동합니다.</p>
-
-                  {miniGame.status === "choosing" && (
-                    <>
-                      <div className="mini-game-buttons">
-                        <button
-                          type="button"
-                          disabled={!!miniGame.myChoice}
-                          onClick={() => handleMiniGameChoice("rock")}
-                        >
-                          ✊ 바위
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={!!miniGame.myChoice}
-                          onClick={() => handleMiniGameChoice("scissors")}
-                        >
-                          ✌️ 가위
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={!!miniGame.myChoice}
-                          onClick={() => handleMiniGameChoice("paper")}
-                        >
-                          ✋ 보
-                        </button>
-                      </div>
-
-                      <div className="mini-game-status-text">
-                        <p>내 선택: {miniGame.myChoice ? "완료" : "대기 중"}</p>
-                        <p>
-                          상대 선택:{" "}
-                          {miniGame.opponentChoice ? "완료" : "대기 중"}
-                        </p>
-                      </div>
-                    </>
-                  )}
-
-                  {(miniGame.status === "result" || miniGame.status === "waiting_reward") && (
-                    <h3>{miniGame.resultMessage}</h3>
-                  )}
+                  <p>
+                    미니게임은 이 버전에서 비활성입니다. 구버전 상대가 보낸
+                    진행만 표시합니다.
+                  </p>
+                  {miniGame.resultMessage && <h3>{miniGame.resultMessage}</h3>}
                 </div>
               </div>
             )}
