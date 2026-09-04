@@ -13,8 +13,10 @@ import {
 
 import {
   fetchPageData,
+  fetchPageSummary,
   normalizeTitle,
 } from "../services/wikiService";
+import { isAbortError } from "../utils/latestRequest";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
 import { supabase } from "../supabaseClient";
@@ -215,6 +217,9 @@ export default function MultiplayerGamePage() {
    * 것보다 낫고, 서비스의 `toClientTime`이 그렇게 굴러간다.
    */
   const clockSkewRef = useRef(null);
+
+  /** 미리보기 창 하나에 붙는 취소 핸들. 창을 닫으면 진행 중인 요약이 전부 끊긴다. */
+  const previewAbortRef = useRef(null);
 
   const applyDuelItemState = useCallback((itemState) => {
     clockSkewRef.current = itemState.clockSkewMs;
@@ -825,6 +830,9 @@ export default function MultiplayerGamePage() {
           .map((title) => normalizeTitle(title))
       );
 
+      previewAbortRef.current?.abort();
+      previewAbortRef.current = new AbortController();
+
       setLinkPreview({
         active: true,
         expiresAt: outcome.effectExpiresAt,
@@ -904,20 +912,112 @@ export default function MultiplayerGamePage() {
   };
 
   /**
-   * ⚠ **부채 ① 미해결.** 확정 스펙 §5.5의 "연결 문서 첫 문장"은
-   * `services/wikiService.js`의 `fetchPageSummary(title)`가 주는 `extract`이고 새 RPC가
-   * 필요하지 않다. 여기서는 **선택만 기록하고 `entries`를 채우지 않는다** — 패널이
-   * "요약 연결은 준비 중"을 그리는, 문서에 등재된 상태다 (`DuelItemBar.jsx` 머리말).
-   *
-   * **선택이 남은 횟수를 소진시키지 않는다.** `entries[title]`이 비어 있으면 HUD가
-   * `seen`을 false로 보므로, 여기서 `usedPreviews`를 올리면 아무것도 못 보여 준 클릭이
-   * 3회 제한을 깎는다. 요약을 실제로 가져오는 커밋이 그 카운트도 함께 가져간다.
+   * 소진된 미리보기 수. **`entries`에서 매번 다시 센다** — 따로 든 카운터는 실패
+   * 처리와 어긋나기 시작한다. `loading`은 예약이고 `ready`는 확정이며,
+   * `unavailable`은 세지 않는다.
    */
-  const handlePreviewLink = (title) => {
-    setLinkPreview((prev) => (prev ? { ...prev, selectedTitle: title } : prev));
+  const countSpentPreviews = (entries) =>
+    Object.values(entries || {}).filter(
+      (entry) => entry?.status === "loading" || entry?.status === "ready"
+    ).length;
+
+  const closeLinkPreview = useCallback(() => {
+    previewAbortRef.current?.abort();
+    previewAbortRef.current = null;
+    setLinkPreview(null);
+  }, []);
+
+  /**
+   * 부채 ① — 연결 문서 첫 문장 `[P7에서 닫음, 2026-09-04]`
+   *
+   * 확정 스펙 §5.5의 "첫 문장"은 `fetchPageSummary`의 `extract`다. **위키백과 REST를
+   * 부르며 우리 Supabase가 아니다** — 새 RPC는 없다. P5가 컴포넌트에서 부르지 않은
+   * 이유가 abort·중복요청을 컴포넌트가 갖게 되기 때문이었고, 그래서 그 셋을 이미
+   * 들고 있는 이 화면으로 왔다.
+   *
+   * **횟수는 보여 준 것만 센다.** 6c가 `usedPreviews`를 올리지 않은 이유가 그것이었고
+   * 여기서도 같다 — 요약을 못 가져오면 `unavailable`로 두고, 세는 대상에서 빠지므로
+   * 횟수가 저절로 돌아온다. 이미 본 링크를 다시 눌러도 늘지 않는다.
+   *
+   * ⚠ 이 한도는 여전히 **클라이언트만 센다** — 부채 ②는 열려 있고 v4 범위다.
+   */
+  const handlePreviewLink = async (title) => {
+    if (!title) return;
+
+    // 진행 여부를 updater 안에서 정한다. 현재 상태를 안전하게 읽는 방법이 이것뿐이고,
+    // updater 자체는 순수하다 (플래그는 한 방향으로만 켜진다).
+    let shouldFetch = false;
+
+    setLinkPreview((prev) => {
+      if (!prev?.active) return prev;
+
+      const existing = prev.entries[title];
+      const alreadyHave =
+        existing?.status === "ready" || existing?.status === "loading";
+      const exhausted = countSpentPreviews(prev.entries) >= prev.maxPreviews;
+
+      // 이미 가진 것과 한도 초과는 선택만 옮긴다. HUD도 막지만, 막는 쪽이 하나뿐이면
+      // 그것이 틀렸을 때 한도가 사라진다.
+      if (alreadyHave || exhausted) return { ...prev, selectedTitle: title };
+
+      shouldFetch = true;
+      const entries = { ...prev.entries, [title]: { status: "loading" } };
+      return {
+        ...prev,
+        selectedTitle: title,
+        entries,
+        usedPreviews: countSpentPreviews(entries),
+      };
+    });
+
+    if (!shouldFetch) return;
+
+    const controller = previewAbortRef.current;
+
+    const settle = (entry) => setLinkPreview((prev) => {
+      // 창이 닫혔거나 다시 열렸으면 늦게 온 응답을 버린다.
+      if (!prev?.active || prev.entries[title]?.status !== "loading") return prev;
+      const entries = { ...prev.entries, [title]: entry };
+      return { ...prev, entries, usedPreviews: countSpentPreviews(entries) };
+    });
+
+    try {
+      const summary = await fetchPageSummary(title, { signal: controller?.signal });
+      if (controller?.signal?.aborted) return;
+      settle({
+        status: "ready",
+        extract: summary.extract || "",
+        description: summary.description || "",
+        thumbnailUrl: summary.thumbnailUrl || null,
+      });
+    } catch (error) {
+      if (isAbortError(error)) return;
+      console.error("link preview summary failed:", error);
+      settle({ status: "unavailable" });
+    }
   };
 
-  const handleClosePreview = () => setLinkPreview(null);
+  const handleClosePreview = () => closeLinkPreview();
+
+  /**
+   * 15초 창이 끝나면 패널을 닫는다. HUD는 남은 시간을 그리기만 하므로, 0이 된 뒤에도
+   * 부모가 닫지 않으면 만료된 패널이 화면에 남는다.
+   */
+  useEffect(() => {
+    const expiresAt = linkPreview?.expiresAt;
+    if (!expiresAt) return;
+
+    const remaining = expiresAt - Date.now();
+    if (remaining <= 0) {
+      closeLinkPreview();
+      return;
+    }
+
+    const timer = setTimeout(closeLinkPreview, remaining);
+    return () => clearTimeout(timer);
+  }, [linkPreview?.expiresAt, closeLinkPreview]);
+
+  useEffect(() => () => previewAbortRef.current?.abort(), []);
 
   /**
    * 아이템 알림 하나. **아이템 ID로 갈라지지 않는다** — 서버가 대상 선정·차단·반사·

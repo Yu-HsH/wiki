@@ -66,8 +66,11 @@ import {
  * 그리고 **지금 봉인된 링크 표시**(`link_censorship`의 `metadata.censoredTitles`).
  * 마지막 것은 요약 없이도 15초 창에서 바로 쓸모가 있다 — 눌러 봐야 막힌 링크를 미리 안다.
  *
- * **부채 ①** `linkPreview.entries` 채우기 — 제목 → `{extract, description, thumbnailUrl}`.
- *   `fetchPageSummary`를 그대로 쓰면 되고 새 서버 경로는 없다. 소유자: P6/P7.
+ * **부채 ① 닫힘** `[P7, 2026-09-04]` — `linkPreview.entries`를 부모가 채운다.
+ *   `pages/MultiplayerGamePage.jsx`의 `handlePreviewLink`가 `fetchPageSummary`를 부르고
+ *   `{status, extract, description, thumbnailUrl}`을 내려 준다. **이 컴포넌트는 그대로다**
+ *   — 여전히 fetch를 갖지 않고 받은 것을 그린다. 위 1·2가 그 이유였고 바뀌지 않았다.
+ *   횟수는 `ready`·`loading`만 세므로 요약을 못 가져온 클릭은 한도를 깎지 않는다.
  *
  * **부채 ② ⚠ `maxPreviews: 3`에 서버 권위가 없다.** `data/duelItems.js`에만 있는 값이고
  *   migration에는 미리보기 카운터가 아예 없다 — 카탈로그 행(`:79`)이

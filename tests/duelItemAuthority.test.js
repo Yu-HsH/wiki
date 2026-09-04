@@ -789,10 +789,11 @@ test("P5 — 요약이 없는 상태에도 빈 칸이 아니라 안내가 나온
   assert.match(barSource, /요약 연결은 준비 중입니다/);
 });
 
-test("P5 — 부채 2건이 파일에 등재돼 있다", () => {
+test("P5 — 부채 2건이 파일에 등재돼 있고 ①은 닫힌 것으로 기록돼 있다", () => {
   // 부채가 조용히 사라지지 않게 고정한다. `random_teleport` 부채의 선례와 같은 방식이다.
-  assert.match(barSource, /부채 ①/, "요약 본문 연결 (P6/P7)");
-  assert.match(barSource, /부채 ②/, "maxPreviews 서버 권위 부재");
+  // **닫힌 부채도 지우지 않는다** — 왜 그렇게 돼 있는지가 기록으로 남아야 한다.
+  assert.match(barSource, /부채 ① 닫힘/, "요약 본문 연결 — P7이 닫았다");
+  assert.match(barSource, /부채 ②/, "maxPreviews 서버 권위 부재 — v4 범위로 열려 있다");
   assert.match(barSource, /maxPreviews/);
 });
 
@@ -860,3 +861,33 @@ test("P7 — 아이템 안내를 카탈로그에서 만든다 (베끼지 않는�
   ].flatMap((role) => getDuelItemsByRole(role).map((item) => item.id));
   assert.deepEqual([...shown].sort(), [...MULTI_ITEM_IDS].sort());
 });
+
+test("P7 — 부모가 요약을 가져와 entries를 채운다 (부채 ①)", () => {
+  const pageSource = read("pages/MultiplayerGamePage.jsx");
+
+  // ① 요약은 위키백과 REST에서 온다. **새 RPC가 없다** — 부채 ①의 전제였다.
+  assert.match(pageSource, /fetchPageSummary\(/);
+  const rpcCalls = [...pageSource.matchAll(/supabase\.rpc\(\s*"([a-z_0-9]+)"/g)];
+  assert.deepEqual(rpcCalls, [], "미리보기 때문에 새 RPC가 생기면 안 된다");
+
+  // ② abort를 부모가 든다. HUD로 내려가지 않게 하는 것이 P5의 배정 이유였다.
+  assert.match(pageSource, /AbortController\(/);
+  assert.match(pageSource, /isAbortError\(/);
+
+  // ③ 세는 대상은 `loading`과 `ready`뿐이다. 요약을 못 가져온 클릭(`unavailable`)은
+  //    한도를 깎지 않는다 — 6c가 `usedPreviews`를 올리지 않은 이유와 같은 규칙이다.
+  const [counter] = pageSource.match(/const countSpentPreviews[\s\S]*?\.length;/) || [];
+  assert.ok(counter, "countSpentPreviews를 찾지 못했다");
+  assert.match(counter, /"loading"/);
+  assert.match(counter, /"ready"/);
+  assert.doesNotMatch(counter, /"unavailable"/);
+});
+
+test("P7 — 부채 ②는 여전히 열려 있다 (maxPreviews는 카탈로그 값이다)", () => {
+  // 부채 ①을 닫았다고 ②가 닫힌 것이 아니다. 한도는 아직 클라이언트만 세고,
+  // 그 사실을 고정하는 것이 위의 migration 검사다.
+  assert.equal(getDuelItem("link_preview").maxPreviews, 3);
+  const pageSource = read("pages/MultiplayerGamePage.jsx");
+  assert.match(pageSource, /item\.maxPreviews/, "한도는 카탈로그에서 읽는다 — 서버가 아니다");
+});
+
