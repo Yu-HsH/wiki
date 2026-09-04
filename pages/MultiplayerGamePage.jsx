@@ -624,6 +624,14 @@ export default function MultiplayerGamePage() {
    * §2.3의 3곳 불변식이 4곳이 된다. (그 불변식은 주석까지 세므로 여기에 그 호출을
    * 그대로 인용할 수도 없다. 인용 한 줄이 게이트를 깨는 것이 §1이 말하는 결함이다.)
    */
+  /**
+   * 완주했는가. **어휘를 한 곳에만 둔다** — 아래 완주 상태값은 §2.3-⑥이 지키는 5값
+   * 중 하나이고, 이동 경로와 아이템 경로가 각자 리터럴로 적으면 한쪽만 고쳐질 자리가
+   * 생긴다. (그 불변식은 주석의 인용까지 세므로 여기에 값을 다시 적지도 않는다 — §1.)
+   */
+  const hasSolved = (row) =>
+    row?.player_status === "finished" || row?.has_finished === true;
+
   const enterSolvedState = () => {
     clearLocalGameState();
     setPhase(PHASE.SUCCESS);
@@ -681,7 +689,7 @@ export default function MultiplayerGamePage() {
       const nextPath = Array.isArray(updatedPlayer?.path_titles)
         ? updatedPlayer.path_titles
         : [...historyStack, pageData?.title, nextPage.title].filter(Boolean);
-      const solved = updatedPlayer?.player_status === "finished" || updatedPlayer?.has_finished === true;
+      const solved = hasSolved(updatedPlayer);
       if (moveResponse.room) setRoom(moveResponse.room);
 
       setPageData(renderedPage);
@@ -759,7 +767,7 @@ export default function MultiplayerGamePage() {
       : [];
     if (nextPath.length > 0) setHistoryStack(nextPath.slice(0, -1));
 
-    if (me.player_status === "finished" || me.has_finished === true) {
+    if (hasSolved(me)) {
       enterSolvedState();
       return;
     }
