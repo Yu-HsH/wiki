@@ -30,6 +30,7 @@ import ItemBar from "../components/ItemBar";
 import EffectOverlay from "../components/EffectOverlay";
 import { ITEM_DEFS } from "../data/items";
 import { isDisabledDuelItem, MULTI_ITEM_IDS } from "../data/itemPools";
+import { fetchDuelItemState } from "../services/duelItemService";
 
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
@@ -416,14 +417,21 @@ export default function MultiplayerGamePage() {
         : Date.now() - session.elapsedSeconds * 1000;
       playStartTrackedRef.current = saved?.enteredPlaying === true;
 
-      if (saved?.inventory?.length > 0) {
-        const restoredInventory = saved.inventory.filter(
-          (item) => !isDisabledDuelItem(item)
-        );
-        setInventory(restoredInventory);
-        if (restoredInventory.length !== saved.inventory.length) {
-          saveLocalGameState({ inventory: restoredInventory });
-        }
+      /**
+       * 아이템 상태는 **서버가 권위다** — 쿨타임까지 서버 시각으로 온다.
+       * localStorage에서 인벤토리를 되살리는 경로는 여기서 끝난다. 남은 키의
+       * 이동 상태(`currentTitle`·`pathTitles`·`historyStack`·`clickCount`)는 그대로 쓴다.
+       *
+       * **실패해도 게임 복구를 실패시키지 않는다.** 세션은 이미 복구됐고, 아이템을
+       * 못 읽은 것으로 화면을 되돌리면 못 읽은 쪽이 더 큰 것을 잃는다.
+       */
+      try {
+        const itemState = await fetchDuelItemState(roomId);
+        if (recoveryGenerationRef.current !== generation) return;
+        setInventory(itemState.inventory);
+        setItemCooldownUntil(itemState.cooldownUntil ?? 0);
+      } catch (itemError) {
+        console.error("duel item state recovery failed:", itemError);
       }
 
       saveLocalGameState({
