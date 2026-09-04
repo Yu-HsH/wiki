@@ -272,8 +272,13 @@ export function buildDuelInventory(grantRows = []) {
             return {
                 ...(definition || {}),
                 id: row?.item_id ?? definition?.id ?? "",
-                grantId: row?.grant_id ?? null,
-                instanceId: row?.grant_id ?? `${row?.item_id}-${row?.slot_index}`,
+                // 서버 지급 행의 PK 열 이름은 `id`다 — `to_jsonb(grant_row)`가 열 이름을
+                // 그대로 내보낸다 (migration `:593`·`:643`). `grant_id`는 `duel_item_events`
+                // 쪽 열 이름이라 원장 행이 들어오는 경로도 있어 둘 다 받는다.
+                // `id`만 보고 `item_id`로 착각하지 않도록 위의 `id`와는 다른 값임에 주의.
+                grantId: row?.grant_id ?? row?.id ?? null,
+                instanceId:
+                    row?.grant_id ?? row?.id ?? `${row?.item_id}-${row?.slot_index}`,
                 slotIndex: row?.slot_index ?? 0,
                 slotRole: row?.slot_role ?? definition?.role ?? null,
                 isWildcard: row?.is_wildcard === true,
