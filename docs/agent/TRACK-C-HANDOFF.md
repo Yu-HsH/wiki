@@ -122,6 +122,118 @@ select now() = now(), now() = clock_timestamp();   →   t | f
 
 ---
 
+## 3.3 P4 이어받기 — 세션 인계 `[2026-09-04]`
+
+**P1~P3(서버)이 끝났고 P4부터 프론트다.** 성격이 바뀌었고 이 세션이 migration 1040줄 +
+pgTAP 1005줄을 담고 있어, **P4~P8은 새 세션에서 이어간다** `[사용자 결정]`.
+
+### 완료된 커밋과 산출물
+
+| 단계 | 커밋 | 산출물 |
+|:-:|---|---|
+| **P1** | `ec64787` | `data/duelItems.js` **신규 307줄** · `data/itemPools.js` `MULTI_ITEM_IDS`만 교체 |
+| **P1-보강** | `1f6f25b` | `tests/duelItemAuthority.test.js` **신규 92줄(5건)** · 이 문서 §1 · `itemPools.js` 주석 복원 |
+| **P2** | `dbebe8f` | `supabase/migrations/20260904090000_duel_item_authority_v3.sql` **신규 1040줄** |
+| **P3** | `c8cdf67` | `supabase/tests/duel_item_authority_v3.sql` **신규 1005줄(143건)** · `duel_item_concurrency_v3.ps1` **신규 233줄** · migration 89줄 수정(판정 2건 반영) · 이 문서 §3.1·§3.2 |
+| **P3-보강** | `5b1aead` | 하네스가 실패한 시나리오에도 `PASS`를 찍던 결함 수정 |
+
+**기준선 (`5b1aead`, 2026-09-04):** `npm test` **265/265** · pgTAP **143/143 `not ok` 0** ·
+`supabase:preflight` **11/11** · 동시성 하네스 **3시나리오 x 5회 exit 0, 데드락 0** ·
+저장소 migration **14개**, **운영은 12개 그대로** (R6).
+
+### 남은 단계와 검증 게이트
+
+| 단계 | 내용 | **게이트** |
+|:-:|---|---|
+| **P4** | `services/duelItemService.js` **신규** — RPC 3개 래퍼 + 응답 정규화 | `tests/duelItemAuthority.test.js` 확장 · `npm test` 통과 |
+| **P5** | `components/DuelItemBar.jsx` **신규** (5슬롯 HUD, `link_preview` UI 포함 — Q4) + `css/multiplayer.css` **추가만** | **`grep -c '^\.mp-' css/multiplayer.css` = 131 유지** (개명·삭제 0건) · `ItemBar.jsx` **무수정** |
+| **P6** | **`pages/MultiplayerGamePage.jsx` 이전** — 아래 별도 항목 | **`grep -rn 'from("room_events").insert' pages components services` = 0건** · `navigate("/multiplayer", { replace: true })` **3곳 유지** |
+| **P7** | `pages/MultiplayerPage.jsx` 아이템 설명 10개를 새 카탈로그로 | `tests/appRouting.test.js` 통과 · 신규 파일에 `"/main"` 리터럴 0 |
+| **P8** | 전량 검증 | `npm test` 전량 · `npm run build` exit 0 · preflight 11/11 · pgTAP 재실행 · **§2.3 불변식 7개 전수 재측정** · 2세션 수동 스모크 |
+
+### ⚠ P6이 가장 크고 위험하다
+
+**`pages/MultiplayerGamePage.jsx` 1458줄에 세 가지가 한꺼번에 들어간다.**
+
+| # | 무엇을 | 지금 어디에 |
+|:-:|---|---|
+| **1** | **localStorage 인벤토리 제거** | 지급 `:508-565` · 소비 `markUsed :568-582` · 복구 `:418-426`·`:514-524`. **키 `wiki-mp-game:{roomId}:{userId}`의 이동 상태(`currentTitle`·`pathTitles`·`historyStack`·`clickCount`)는 그대로 둔다** — 인벤토리 필드만 걷어낸다 |
+| **2** | **수신 switch 재작성** | `handleIncomingEvent :886-1006`. 아이템 ID별 8분기를 **`duel_item_event` 1값 + `payload.result` 기반**으로 바꾼다. **`mini_game_*` 3분기는 보존** (Q5 조건). 클라이언트가 스스로 차단·반사를 판정하던 `isImmune()` 경로(`:216-222`·`:901`·`:913`·`:934`)가 전부 사라진다 — **서버가 준 `result`를 읽는다** |
+| **3** | **복구 경로 교체** | `recoverGame :396-462`이 읽던 인벤토리를 `get_duel_item_state_v3`로. 쿨타임·지속효과·보호 대기가 전부 서버에서 온다 |
+
+그리고 **`emitRoomEvent :191-204`를 지운다** — 저장소에서 `from("room_events").insert`를
+하는 **유일한 지점**이고, 그 0건이 **G2-② 창의 선행 조건**이다 (`TRACKS.md` §7.4-③).
+
+**권고: P6을 한 커밋으로 만들지 않는다.** 위 1·2·3 + `emitRoomEvent` 제거를 나눠
+각 단계마다 `npm test`와 불변식 grep을 돌린다. 되돌림 단위를 작게 유지하는 것이
+이 파일에서 특히 중요하다 — **1:1 결과 화면(`:1437-1454`)도 같은 파일에 있다.**
+
+### RPC 3개 — 시그니처와 반환
+
+**전부 `security definer` · `search_path=""` · `jsonb` 반환.**
+ACL 실측: 공개 3개 `{postgres, authenticated, service_role}` — **`anon` 없음, `PUBLIC` 아님.**
+
+```
+public.ensure_duel_item_grant_v3(p_room_id uuid)
+  → {ok, code: GRANTED|ITEMS_DISABLED, use_items, grants[], server_now}
+
+public.get_duel_item_state_v3(p_room_id uuid)
+  → {ok, code: STATE, use_items, room_status, grants[],
+     cooldown_until, active_effects[], pending_defenses[], server_now}
+
+public.use_duel_item_v3(p_room_id uuid, p_grant_id uuid,
+                        p_request_id uuid, p_correlation_id uuid default null)
+  → {ok, code: ITEM_USED, result, item_id, target_user_id, item_event_id,
+     room_event_id, effect_expires_at, cooldown_until, metadata,
+     room, player, opponent, server_now}
+```
+
+`grants[]` 행은 `{id, room_id, user_id, slot_index, slot_role, is_wildcard, item_id,
+consumed_at, consumed_event_id, created_at}` — `data/duelItems.js`의 `buildDuelInventory()`가
+이 형태를 받도록 이미 작성돼 있다.
+
+`result`는 **`applied` · `blocked` · `reflected` · `void`** 4값 (`DUEL_ITEM_RESULT`).
+`metadata`는 `link_censorship`이면 `{censoredTitles: [...]}`, `history_rewind`면
+`{rewoundUserIds: [...]}`.
+
+### 실패 코드 — pgTAP가 고정한 것
+
+**`{ok: false, code}`로 반환** (12종). 클라이언트가 분기해야 하는 것들이다:
+
+| 코드 | 언제 |
+|---|---|
+| `ITEMS_DISABLED` | `use_items = false` 방 |
+| `GAME_NOT_ACTIVE` | 방이나 플레이어가 `playing`이 아니다 — **완주 확정 뒤 도착한 이벤트 포함** |
+| `ITEM_NOT_OWNED` | 남의 슬롯이거나 다른 방의 슬롯 |
+| `ITEM_ALREADY_USED` | 이미 쓴 슬롯. **쿨타임보다 먼저 검사한다** |
+| `ITEM_COOLDOWN` | 2.5초 공통 쿨타임. `cooldown_until` 동봉 |
+| `ITEM_NOT_IN_CATALOG` | 서버 카탈로그에 없는 `item_id` |
+| `OPPONENT_NOT_FOUND` | 공격인데 상대 행이 없다 |
+| `NO_ELIGIBLE_LINK` | 강제 이동·텔레포트할 링크가 없다 — **아이템을 소비하지 않는다** |
+| `UNDO_UNAVAILABLE` | 되돌릴 이동이 없다 (시작 문서) — **미소비** |
+| `REWIND_UNAVAILABLE` | 양쪽 다 직전 문서가 없다 — **미소비** |
+| `LINK_SNAPSHOT_MISSING` | 목적지 revision을 해석하지 못했다 |
+| `ITEM_MOVE_REJECTED` | 헬퍼가 위 사유 없이 거부했다 (방어적) |
+
+**`raise exception`으로 던지는 것 6종** — `try/catch`가 필요하다:
+`AUTH_REQUIRED` · `REQUEST_ID_REQUIRED` · `DUEL_ROOM_NOT_FOUND` · `NOT_A_PARTICIPANT` ·
+`DUEL_PARTICIPANTS_REQUIRED` · `DUEL_ITEM_POOL_EXHAUSTED`.
+
+> **미소비 3종(`NO_ELIGIBLE_LINK`·`UNDO_UNAVAILABLE`·`REWIND_UNAVAILABLE`)은 HUD가
+> 슬롯을 되살려야 한다.** 나머지는 슬롯 상태가 그대로다.
+
+### P4가 재사용할 것
+
+| 대상 | 위치 | 비고 |
+|---|---|---|
+| `createRequestId()` · `createCorrelationId()` | **`utils/serverAuthority.js`** | **동결 파일.** 읽기 전용 import만 한다 (§2.1). `services/multiplayerService.js:3`이 이미 그렇게 쓴다 |
+| `normalizeRpcRow(data)` 형태 | `services/multiplayerService.js:12-14` | `Array.isArray(data) ? data[0] \|\| null : data \|\| null`. **C 소유 파일이지만 복사해 쓰는 편이 낫다** — 그 파일의 export 목록을 넓히면 소비자가 늘어난다 |
+| `requireSupabase()` 형태 | 같은 파일 `:6-10` | 동일 |
+| `buildDuelInventory()` · `canUseDuelItem()` | **`data/duelItems.js`** (P1 산출) | 서버 행 → HUD 형태. **이미 서버 반환 형태에 맞춰 작성돼 있다** |
+| `getDuelResultLabel()` | `utils/resultReasonLabels.js` | **B 소유. 읽기 전용 호출만** (§2.2) |
+
+---
+
 ## 4. 미해결로 남기는 것
 
 - **G2-② `room_events` INSERT 권한 회수** — C의 산출이 아니다. C가 클라이언트 INSERT를
