@@ -89,7 +89,7 @@
 > **A는 아무것도 기다리지 않지만, A를 기다리는 것은 많다** (§5).
 > **이 웨이브에서는 아무 트랙도 A를 기다리지 않게 범위를 잘랐다** — 그래서 넷이 동시에 열린다.
 
-### 1.1 착수 순서 — **A·B 완료·배포. 다음은 C 또는 15a** `[2026-09-03 재확인]`
+### 1.1 착수 순서 — **A·B 배포 · D(15a) 통합 완료. 남은 것은 C 하나** `[2026-09-04 재확인]`
 
 | 트랙 | 지금 | 근거 |
 |---|---|---|
@@ -97,7 +97,7 @@
 | **B** 17a-2 기록·게스트 | **✅ 완료 → 배포됨 (2026-09-03)** | `7a7197e` → `527f896` → **`main`**. 신규 테스트 42건 · migration 산출물 0 (§8-B 완료 행) |
 | **N2** 게스트 랭킹 진입점 | **✅ 완료 → 배포됨 (2026-09-03)** | `a784d2e`. §5.2-부채-2 |
 | **C** 14 아이템 서버 권위 | **대기 — G7 하나만 남았다** | **§1.1-a** |
-| **D** 15a XP 원장 | **착수 가능 — 순차 사유가 사라졌다** | **§1.1-b** |
+| **D** 15a XP 원장 | **✅ 완료 → 통합됨 (2026-09-04). 배포되지 않았다** | `020daaa` → `1af9f93`. 신규 5파일 · `npm test` **+48건** · **pgTAP 128건** · **migration 1개** (§8-D 완료 행). **`main`에 올리지 않는다 — migration이 있어 3코스 창(§7)의 일부다** |
 
 **보존 — A·B를 먼저 연 이유.** 둘은 프론트만 만지고 파일이 갈려 있어 동시에 돌려도 서로를
 기다리지 않았다. **D가 코드 충돌 0인데도 순차였던 이유는 파일이 아니라 로컬 DB 스택 경합**이다.
@@ -116,7 +116,7 @@
 > ⑥의 A `"left"`는 **retire 어휘가 아니라 `textAlign` 값**이었다.
 > **불변식의 기대값이 달라졌으므로 티켓(§8-C)의 grep 수치를 그 값으로 읽는다.**
 
-#### 1.1-b 15a는 즉시 가능하다 — **로컬 Supabase를 쓰지만 경합이 없다** `[2026-09-03 실측]`
+#### 1.1-b ~~15a는 즉시 가능하다~~ → **15a는 끝났다** — 착수 판정의 기록 `[2026-09-03 실측 · 2026-09-04 결과 반영]`
 
 | 축 | 상태 |
 |---|---|
@@ -124,9 +124,9 @@
 | **순차였던 이유** | **로컬 스택 경합.** A·B가 그 자원을 쓸 수 있었다 |
 | **지금** | **A·B가 끝났고 둘 다 DB를 쓰지 않았다** — migration 산출물 0, 운영 미접근 `[산출물]`. **경합 대상이 없다** |
 | **로컬 Supabase 사용 여부** | **쓴다.** migration 적용 검증과 pgTAP(`supabase/tests/xp_ledger_v1.sql`)이 스택 위에서 돈다. **§1의 CODE GO 유효 조건이 그대로 적용된다** — 승인 이미지 digest·CLI `2.114.0` exact pin·project 격리 `wiki-packet13-r2-clean158`. **착수 시 `npm run supabase:preflight`를 먼저 통과시킨다** |
-| **migration 자리** | **비어 있다.** 저장소 migration은 **여전히 12개**이고 마지막이 `20260814123000`이다 `[산출물]`. 예약 접두 `20260903090000`(§2.4)은 그 뒤이며 충돌이 없다 |
+| **migration 자리** | ~~**비어 있다.** 저장소 migration은 **여전히 12개**~~ → **채워졌다 (2026-09-04).** 저장소 migration은 **13개**이고 마지막이 `20260903090000_xp_ledger_v1.sql`이다 `[산출물]`. **운영은 여전히 12개다** — 13번째는 적용되지 않았다 (R6) |
 | **운영 적용** | **범위 밖.** 산출물은 migration **파일**까지다 (R6, `AGENTS.md` §1) |
-| **15b·15c** | **여전히 분리돼 있다.** 15b는 창(§7), 15c는 결과 경로 연결(§6.3) |
+| **15b·15c** | **여전히 분리돼 있다. 둘 다 3코스 창 이후다** — 15b는 창 항목 ③④ 자체이고(§7.1), 15c는 **창 + 트랙 C**를 기다린다: 운영에 `grant_xp_v1`이 없고, duel 결과 경로는 **C 소유**다 (§6.3) |
 
 > **둘을 동시에 열 수도 있다.** C는 프론트+RPC 파일, 15a는 전부 신규 파일이라 **교집합이 0**이다
 > (§2.0). **다만 C는 G7 답이 있어야 시작하므로, 답이 없는 동안은 15a가 유일한 열린 트랙이다.**
@@ -181,7 +181,7 @@
 | tests/duelSwapDisabled.test.js · tests/serverAuthorityMigration.test.js | — | **C** | 기존 아이템·V2 계약 테스트 |
 | **supabase/migrations/…_xp_ledger_v1.sql** | 신규 | **D** | §2.4 |
 | **supabase/tests/xp_ledger_v1.sql** | 신규 | **D** | pgTAP |
-| **services/xpService.js** | 신규 | **D** | 지급·요약 RPC 클라이언트 |
+| **services/xpService.js** | 신규 | **D** | ~~지급·요약 RPC 클라이언트~~ → **요약·본인 원장 조회** (`get_xp_summary_v1` + RLS 아래 `xp_ledger` select). **지급 래퍼는 없다** — C2 §7이 `grant_xp_v1`에 `authenticated execute`를 주지 않으므로 **클라이언트 지급 경로가 성립하지 않는다.** 정정 2026-09-04 |
 | **utils/xpRules.js** | 신규 | **D** | 감쇠·경계 규칙 (C2 §5) |
 | **tests/xpLedger.test.js** | 신규 | **D** | 수용조건 |
 
@@ -264,7 +264,17 @@
 
 **파일명은 제안이다. 순서 관계만 계약이다** — 창 블록의 4개는 **적은 순서대로 적용돼야 한다** (§7.2).
 `supabase:preflight`는 고정된 3개 버전만 조회하므로 새 migration이 늘어도 깨지지 않는다
-(`scripts/supabase-runtime-preflight.mjs:136-138`) `[코드]`.
+(`scripts/supabase-runtime-preflight.mjs:136-138`) `[코드]`. **통합 시점(2026-09-04)에 실측으로
+확인했다** — 13번째 migration이 붙은 뒤에도 `migration-history`는 `count=3`으로 PASS했다.
+
+> **⚠ D의 파일명 timestamp가 실제 작성일과 하루 어긋난다** `[2026-09-04 기록]`.
+> 예약 접두는 `20260903090000`인데 **파일은 2026-09-04에 작성·통합됐다** (`020daaa` → `1af9f93`).
+> **동작에는 무관하다** — Supabase는 이 숫자를 **정렬 키와 이력 버전**으로만 쓰고 달력 날짜로
+> 해석하지 않는다. 마지막 기존 migration `20260814123000`보다 크다는 성질이 유지되므로
+> **적용 순서도 그대로다** (로컬 적용 실측 확인). **고치지 않는다** — 이미 로컬 스택의
+> `schema_migrations`에 이 버전으로 기록됐고, 파일명을 바꾸면 **적용된 이력과 어긋나
+> 재적용이 시도된다.** 이 항목은 §2.4가 "제안 파일명"을 예약 시점에 정하는 방식의
+> 부수효과이며, 창 블록 `20260904 0*` 4개에도 같은 어긋남이 생길 수 있다.
 
 ---
 
@@ -871,7 +881,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | **수용조건** | ① **G7 확정 문서가 먼저 존재한다.** 아이템 ID 표 + event_type 명명 + payload 키. **없으면 착수하지 않는다** ② 아이템 사용이 RPC로만 발생한다 — `pages/`에서 `from("room_events").insert` **0건**. **이 0건이 G2-② 창의 선행 조건이다** (§7.4-③) ③ **`git diff data/itemPools.js`에 `SINGLE_ITEM_IDS` 블록 변경이 없다.** `grep -c 'highlight_links' data/itemPools.js` = **2 유지** ④ `GamePage.jsx`를 수정하지 않고 싱글 아이템이 회귀 없이 동작한다 — `ItemBar.jsx` prop·`useItemSystem` 반환 키 불변. **`floatingMessage`를 포함한 13키다** (2026-09-03 §2.3-③ 정정) ⑤ `grep -rc '"wiki-single-items"'` 합계 ~~4~~ **6 유지** (§2.3-④. **2026-09-03 정정** — 4는 파일 수, 6이 줄 수다)  ⑥ `css/multiplayer.css`의 기존 `mp-*` 선택자 **삭제·개명 0건** — 추가만 (§2.3-⑤) ⑦ 새 RPC가 계약 형태를 따른다 — `security definer` · 빈 `search_path` · `jsonb` 반환 (contracts README) ⑧ pgTAP 신규 파일 통과 수치·기준 커밋 기록 ⑨ `npm test` 전량 통과 ⑩ `npm run build` exit 0 ⑪ **운영 미적용** (R6) ⑫ `navigate("/multiplayer", { replace: true })` 문자열 유지 (§2.2) |
 | **의존** | **G7 — 차단.** 그리고 **G2-②는 C의 산출이 아니라 C 이후의 창 항목이다** |
 
-### 8-D. 15a XP ledger·지급·감쇠 — **순차 (로컬 DB 스택 자원)**
+### 8-D. 15a XP ledger·지급·감쇠 — **✅ 완료 (2026-09-04)**
 
 | | |
 |---|---|
@@ -881,6 +891,44 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | **건드릴 파일** | **전부 신규** — `supabase/migrations/20260903090000_xp_ledger_v1.sql` · `supabase/tests/xp_ledger_v1.sql` · `services/xpService.js` · `utils/xpRules.js` · `tests/xpLedger.test.js` |
 | **수용조건** | ① migration이 `create table if not exists` + **이름 붙은 제약** + 인덱스 2개로 작성된다 (C2 §1과 동일) ② **`update public.profiles` 0건** ③ 멱등: 같은 `(user_id, source_type, source_id)` 2회 호출 → **행 1개**, 두 번째는 `granted:false` ④ 감쇠 정합: `decay_reason`이 없으면 `amount = base_amount`, 있으면 `amount <= base_amount` — CHECK가 위반을 거부하는 것을 pgTAP가 확인 ⑤ **`floor` 판정** — base 25의 50%가 **12** ⑥ 0 XP 행이 남는다 (`duel_loss_forfeit`·`group_retire`) ⑦ `level_from_total_xp` 검산이 C3 §4 표와 일치 (특히 `3975 → 27`) ⑧ RLS: 본인 행만 select, `insert/update/delete` 거부 ⑨ `grant_xp_v1`에 `authenticated` execute **없음** ⑩ pgTAP·`npm test` 수치를 **기준 커밋과 날짜와 함께** 기록 ⑪ **운영 미적용** (R6) |
 | **의존** | **없다.** C2-①(`floor`)·②(KST)는 제안값으로 진행하고 **결정 사실을 커밋 메시지와 C2에 남긴다.** C2-③은 C2 §4가 이미 3열 유니크로 열어 두었다 — **좁히는 결정이 나면 forward-only 보정** |
+
+#### 8-D 완료 — 실측 `[코드·산출물, 2026-09-04]`
+
+**커밋** `020daaa` → merge `1af9f93`. 분기점 `51db397`. **충돌 0** — 신규 5파일뿐이라
+**기존 파일과의 교집합이 원리적으로 0이다** (§2.0의 D 행이 예측한 그대로다).
+
+| 항목 | 결과 |
+|---|---|
+| **`npm test`** | **통합 후 252/252 pass, fail 0, skipped 0, todo 0.** 베이스라인 204 + **신규 48** (`tests/xpLedger.test.js`) |
+| **`npm run build`** | **exit 0.** 214 모듈 · `App-*.js` 551.09 kB — **통합 전과 같다.** 15a는 어느 화면에도 연결되지 않았으므로(범위 밖 ④⑤) **번들이 늘지 않는 것이 정상이다** |
+| **pgTAP** | **128/128, `not ok` 0건.** `supabase/tests/xp_ledger_v1.sql`, 통합 환경에서 재실행 `[산출물]` |
+| **migration 적용** | **로컬 적용 확인.** `xp_ledger` 테이블 · RPC 3개(`grant_xp_v1`·`get_xp_summary_v1`·`level_from_total_xp`+`xp_to_next_level`) · **인덱스 4개**(pkey + 멱등 unique + `user_granted` + 주간 부분) · `relrowsecurity=true` · 정책 1개 `[산출물]` |
+| **`supabase:preflight`** | **11/11 PASS 유지** (적용 후 재실행). `migration-history count=3` 그대로 · `postmaster-stability` 재시작 **0/0**. **CODE GO 근거가 유지된다** |
+| **DB** | **로컬만. 운영 미접근** (R6) — 저장소 migration **13개**, **운영은 여전히 12개다** |
+
+**수용조건 11건 — 통합 상태 재측정**
+
+| # | 조건 | 실측 |
+|:-:|---|---|
+| ① | 재실행 안전 DDL · 이름 붙은 제약 · 인덱스 | **통과.** `npm test`의 계약 테스트가 assert |
+| ② | **`update public.profiles` 0건** | **통과.** 파일에 문자열은 1회 나오나 **`--` 주석 안이다** (`:6`, 15b로 미룬다는 설명). 주석 제거 후 실행문 **0건** `[산출물]` |
+| ③ | 멱등 — 2회 호출 → 1행, 두 번째 `granted:false` | **통과.** pgTAP |
+| ④ | 감쇠 정합 CHECK가 위반을 거부 | **통과.** pgTAP |
+| ⑤ | **`floor` — base 25의 50% = 12** | **통과.** pgTAP `:372` + `xpLedger.test.js:191`. **→ C2-①을 확정으로 올렸다** (`C2-XP-LEDGER.md` §0) |
+| ⑥ | 0 XP 행이 남는다 | **통과.** pgTAP |
+| ⑦ | **`level_from_total_xp(3975) = 27`** | **통과.** DB 직접 조회로도 확인 — `27` `[산출물]` |
+| ⑧ | RLS 본인 행만 select · write 거부 | **통과.** pgTAP 125~127 + `relrowsecurity=true`, 정책 1개 |
+| ⑨ | **`grant_xp_v1`에 `authenticated` execute 없음** | **통과.** `proacl = postgres=X/postgres,service_role=X/postgres` — **`authenticated`도 `anon`도 없고 `PUBLIC`도 아니다** `[산출물]`. pgTAP 128이 클라이언트 호출 거부까지 확인 |
+| ⑩ | 수치를 기준 커밋·날짜와 함께 기록 | **이 표와 `CURRENT.md` §2** |
+| ⑪ | **운영 미적용** | **지켜졌다.** 운영 migration 12개 그대로 |
+
+> **⚠ 배포하지 않는다.** A·B·N2와 성격이 다르다 — **15a는 migration을 만든다.**
+> `main` push는 곧 운영 배포이고(§7 · `AGENTS.md` §1.1) **DB 변경은 3코스 창에서만 적용된다.**
+> 따라서 이 트랙의 종착지는 `feat/group-final-gaps`이고, **운영 반영은 창의 일부**다.
+
+> **15a가 C2의 `확인 필요` 2건을 닫았다.** ①`floor`·②KST가 **제안에서 확정으로** 올라갔다 —
+> 근거는 문서가 아니라 **구현과 양쪽 테스트**다 (`C2-XP-LEDGER.md` §0 정정 이력).
+> **C2-③(XP 겹침)은 열린 채로 남는다** — 3열 유니크가 겹침을 허용하는 쪽이다.
 
 ---
 
