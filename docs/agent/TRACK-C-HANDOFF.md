@@ -50,6 +50,25 @@
 **요지: 개수 세기 불변식은 ⑤처럼 앵커가 있을 때만 쓴다.** 식별자·리터럴을 세는 ①③④는
 **해당 자료구조를 직접 assert하는 테스트로 옮기는 것이 맞다.**
 
+#### 세 번째 사례 — `tests/duelSwapDisabled.test.js:43` `[P6 실측, 2026-09-04]`
+
+**같은 결함이 §2.3 밖에서도 한 번 더 나왔다.** `swapCase.length >= 2`가
+`pages/MultiplayerGamePage.jsx`의 `case "swap_current"` **분기 개수**를 센다
+(`:758`·`:853`·`:928` 3곳).
+
+**앞의 두 사례와 방향이 반대다.** ①(`highlight_links`)과 ④(`"wiki-single-items"`)는
+**주석 한 줄이 개수를 늘려** 깨졌다. 이것은 **정당한 제거가 개수를 줄여** 깨진다 —
+6c가 앞의 둘을 없애 1이 되고 6d 후 0이 된다. **개수 세기는 양방향으로 취약하다:
+늘어나도 깨지고 줄어들어도 깨진다.**
+
+**게다가 테스트의 의도는 제거 후 더 강하게 충족된다.** 의도는 "위조 `room_events`의
+swap이 문서를 움직이지 못한다"이고, 6d 후에는 분기 자체가 없어 `default` 로그로
+떨어진다 — **분기가 있으면서 `handleMove`를 안 부르는 것보다, 분기가 없는 것이 더
+강한 보장이다.** 개수 불변식이 **더 안전해진 코드를 실패로 판정한다.**
+
+**P6이 의도 assert로 교체한다** (C 소유 파일, §2.0). 세 사례 전부 같은 처방이다 —
+**개수가 아니라 그 개수가 지키려던 사실을 assert한다.**
+
 ---
 
 ## 2. `TRACKS.md` §2.4 migration 파일명 — C 블록이 바뀌었다
@@ -434,26 +453,81 @@ normalizeDuelItemEvent(payload, { skewMs })
 > 남긴다 (수용조건 ② "0건"을 못 맞춘다), (c) 미니게임을 이 창에서 비활성한다.
 > **셋 다 대가가 있고 사용자 판정이 필요하다.**
 
-### 권고 — P6을 최소 3~4커밋으로 쪼갠다
+#### ✅ 판정 — **(c) 미니게임 비활성** `[사용자 확정, 2026-09-04]`
+
+**위 세 선택지 중 (c)로 간다. 별개 판정이 아니라 Q5의 연장이다** — Q5에서 이미
+발동 경로 120줄 제거를 승인했고, **지급에서 빠져 도달 불가능해진 코드**이므로
+`emitRoomEvent` 호출 3곳(`:722`·`:784`·`:873`)도 그 제거 범위 안에 있다.
+
+| | 왜 버렸는가 |
+|---|---|
+| **(a)** 미니게임용 좁은 RPC | migration을 다시 건드려 **P2·P3 재검증이 붙는다.** 기본 지급에서 빠진 기능에 RPC를 팔 값어치가 없다 |
+| **(b)** `emitRoomEvent` 잔존 | 수용조건 ② "0건"을 못 채워 **G2-② 창의 선행 조건이 미달이다.** 그러면 C의 목적 자체가 미달이다 |
+
+**보존하는 것 3건:**
+
+- `data/items.js`의 `mini_game` 정의
+- `room_events`의 `mini_game_*` event_type 3종 — **DDL 무변경**
+- 수신 switch의 `mini_game_*` 3분기(`:948`·`:962`·`:975`) — **구버전 번들이 아직 그
+  이벤트를 보낼 수 있다. 받는 쪽은 남긴다**
+
+**파생 — overlay는 표시 전용이 된다** `[승인, 2026-09-04]`. 발신이 전부 사라지므로
+`handleMiniGameChoice`(`:713-726`)가 없어져 가위바위보 버튼은 핸들러를 잃고,
+`resolveMiniGame` effect(`:1134-1178`)도 승패 판정 + 보상 발동, 즉 발신 경로라 사라진다.
+overlay(`:1341-1389`)는 "상대가 미니게임을 시작했습니다"와 보상 결과 문구만 그리고
+타이머로 닫는 형태로 축약한다. **수신 3분기가 있고 표시가 되면 "받는 쪽은 남긴다"의
+목적이 충족된다** — 구버전 이벤트가 `default`로 조용히 떨어지지 않는 것이 그 목적이다.
+
+### 권고 → **확정 — P6은 4커밋이다** `[사용자 확정, 2026-09-04]`
 
 **한 커밋으로 만들지 않는다.** 되돌림 단위를 작게 유지하는 것이 이 파일에서 특히
 중요하다 — **1:1 결과 화면(`:1437-1454`)이 같은 파일에 동거한다.** 아이템 이전이
 깨지면 결과 화면까지 함께 되돌려야 하는 상황을 만들지 않는다.
+**결과 화면은 이 웨이브 범위 밖이고 P6은 건드리지 않는다.**
 
-| 커밋 | 내용 | 끝에 돌릴 것 |
-|:-:|---|---|
-| **6a** | 서비스·HUD 배선만 — `ensureDuelItemGrant`·`fetchDuelItemState`로 인벤토리를 받고 `DuelItemBar`를 그린다. **기존 경로는 아직 살려 둔다** | `npm test` · `npm run build` |
-| **6b** | `useDuelItem` 배선 + **localStorage 인벤토리 제거** (표 #1) | `npm test` · 이동 상태 키가 남았는지 확인 |
-| **6c** | **수신 switch 재작성** (표 #2) — `isImmune()` 경로 제거 | `npm test` · 2세션 수동 스모크 |
-| **6d** | **`emitRoomEvent` 제거** (표 #4) — ⚠ 위 미해결 지점 결정 후 | **`grep -rn 'from("room_events").insert' pages components services` = 0건** |
+**아래가 확정 분할이며 이 절의 옛 권고표를 대체한다.** 자르는 축이 "무엇을
+배선하는가"에서 **"어느 경로를 옮기는가"** 로 바뀌었다 — 옛 표는 6a에 서비스·HUD
+배선을 몰아 두었으나, **경로별로 자르면 되돌림 단위가 실제 장애 단위와 맞는다.**
+
+| 커밋 | 경로 | 무엇을 | 끝에 돌릴 것 |
+|:-:|:-:|---|---|
+| **6a** | **복구** | `recoverGame`의 인벤토리 읽기(`:419-426`)를 `get_duel_item_state_v3`로. **localStorage 인벤토리 읽기만 제거** — 이동 상태(`currentTitle`·`pathTitles`·`historyStack`·`clickCount`)는 건드리지 않는다 | `npm test` · 이동 상태 키 잔존 확인 |
+| **6b** | **지급** | COUNTDOWN effect(`:513-569`)를 `ensure_duel_item_grant_v3`로. `use_items` 게이트. **`ItemBar` → `DuelItemBar` 교체가 여기다** | `npm test` |
+| **6c** | **사용** | `handleUseItem`(`:792-885`)을 `useDuelItem`으로. 미니게임 발동 경로 제거. **`emitRoomEvent` 제거 → 여기서 `room_events` insert가 0이 된다** | **`grep -rn 'from("room_events").insert' pages components services` = 0건** |
+| **6d** | **수신** | switch(`:887-1009`)를 `normalizeDuelItemEvent` 기반으로 재작성. `isImmune()` 클라이언트 판정 제거. **`mini_game_*` 3분기 보존** | `npm test` · 2세션 수동 스모크 |
+
+**범위 재배정 2건** `[P6 실측, 2026-09-04]`:
+
+1. **`:513-569`는 전부 6b다.** 표 #1이 "복구"로 분류한 localStorage 인벤토리 읽기가
+   두 곳(`:419-426`·`:516-522`)인데 **뒤쪽은 6b가 통째로 재작성할 COUNTDOWN effect의
+   머리다.** 6a가 그것을 고치면 6b가 덮어쓴다. **6a는 `:419-426`만 만진다.**
+2. **`DuelItemBar` mount는 6b다.** `use_items` 게이트가 `DuelItemBar`의 `useItems`
+   prop이므로 6b가 그것을 요구한다. 6b~6c 사이에는 `onUseItem`이 구 `handleUseItem`으로
+   남지만, `buildDuelInventory`가 `instanceId = grantId`로 채우므로 배선은 성립한다.
+
+**렌더 블록 `:1325-1390`에 6b·6c·6d가 셋 다 들어오지만 줄 구간이 겹치지 않는다**
+(6b `:1325-1330` · 6d `:1336` · 6c `:1341-1389`). **순서 조정은 필요 없다.**
+
+#### ⚠ 6a 단독 시점의 1커밋 창 — 새로고침 인벤토리가 빈다 `[수용, 2026-09-04]`
+
+6a 후 `recoverGame`은 `fetchDuelItemState`를 읽지만 **지급이 아직 6b에 있어 grant 행이
+0이다.** 경기 중 새로고침은 `enteredPlaying=true`로 COUNTDOWN을 건너뛰므로 인벤토리가
+빈 채 들어간다. **6a+6b가 함께 닫는 창이고, 순서를 6b→6a로 바꿔도 해소되지 않는다** —
+그 경우 `:419-426`이 읽을 localStorage 인벤토리가 더 이상 써지지 않아 결과가 같다.
+**브랜치 내부이며 배포되지 않으므로 수용한다.** 6a 커밋 메시지가 이 사실을 남긴다 —
+**6a만 체크아웃하는 사람이 알아야 한다.**
 
 각 커밋 끝에 **§2.3 불변식 grep을 전수**로 돌린다. 특히:
 
 ```
 grep -c '^\.mp-' css/multiplayer.css                                  # 131
-grep -rn 'from("room_events").insert' pages components services       # 6d에서 0
-grep -rn 'navigate("/multiplayer", { replace: true })' pages          # 3곳 유지
+grep -rn 'from("room_events").insert' pages components services       # 6c에서 0
+grep -rn 'navigate("/multiplayer", { replace: true })' pages          # 3곳 유지 (MultiplayerGamePage)
 ```
+
+> ⚠ **`room_events` 0건은 6c다 — 옛 표의 6d가 아니다.** `emitRoomEvent` 제거가 사용
+> 경로와 같은 커밋에 들어가기 때문이다. **호출 지점 10곳이 전부 사용 경로와 미니게임
+> 발동 경로 안에 있어서** 그 둘을 옮기면 남는 호출자가 없다.
 
 ### ⚠ CSS 게이트의 함정 — `mp-` 접두사를 쓸 수 없다
 
