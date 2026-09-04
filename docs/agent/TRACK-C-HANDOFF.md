@@ -136,37 +136,34 @@ pgTAP 1005줄을 담고 있어, **P4~P8은 새 세션에서 이어간다** `[사
 | **P2** | `dbebe8f` | `supabase/migrations/20260904090000_duel_item_authority_v3.sql` **신규 1040줄** |
 | **P3** | `c8cdf67` | `supabase/tests/duel_item_authority_v3.sql` **신규 1005줄(143건)** · `duel_item_concurrency_v3.ps1` **신규 233줄** · migration 89줄 수정(판정 2건 반영) · 이 문서 §3.1·§3.2 |
 | **P3-보강** | `5b1aead` | 하네스가 실패한 시나리오에도 `PASS`를 찍던 결함 수정 |
+| **P4** | `4d7e2a3` | `services/duelItemService.js` **신규 405줄** · `tests/duelItemAuthority.test.js` **+27건(5→32)** · `data/duelItems.js` `buildDuelInventory` 결함 수정 |
+| **P5** | `4217de0` | `components/DuelItemBar.jsx` **신규 424줄** · `css/multiplayer.css` **+464줄 추가만** · 서비스에 `refetchState` 추가 · 테스트 **+22건(32→54)** |
 
 **기준선 (`5b1aead`, 2026-09-04):** `npm test` **265/265** · pgTAP **143/143 `not ok` 0** ·
 `supabase:preflight` **11/11** · 동시성 하네스 **3시나리오 x 5회 exit 0, 데드락 0** ·
 저장소 migration **14개**, **운영은 12개 그대로** (R6).
 
+**기준선 (`4217de0`, 2026-09-04) — P5까지:** `npm test` **314/314** · `npm run build` exit 0 ·
+`grep -c '^\.mp-' css/multiplayer.css` **131**이고 선택자 목록이 `3263e67`과 **바이트 동일** ·
+`ItemBar.jsx`·`utils/serverAuthority.js`·`services/multiplayerService.js`·`docs/contracts/`·
+`CURRENT.md`·`TRACKS.md` **전부 무수정** · **migration·pgTAP 무수정** (P4·P5는 서버를 건드리지
+않으므로 preflight·pgTAP 수치는 `5b1aead`의 것이 그대로 유효하다). `feat/track-c`에 push 완료.
+
 ### 남은 단계와 검증 게이트
 
 | 단계 | 내용 | **게이트** |
 |:-:|---|---|
-| **P4** | `services/duelItemService.js` **신규** — RPC 3개 래퍼 + 응답 정규화 | `tests/duelItemAuthority.test.js` 확장 · `npm test` 통과 |
-| **P5** | `components/DuelItemBar.jsx` **신규** (5슬롯 HUD, `link_preview` UI 포함 — Q4) + `css/multiplayer.css` **추가만** | **`grep -c '^\.mp-' css/multiplayer.css` = 131 유지** (개명·삭제 0건) · `ItemBar.jsx` **무수정** |
-| **P6** | **`pages/MultiplayerGamePage.jsx` 이전** — 아래 별도 항목 | **`grep -rn 'from("room_events").insert' pages components services` = 0건** · `navigate("/multiplayer", { replace: true })` **3곳 유지** |
+| ~~**P4**~~ | ✅ `services/duelItemService.js` — RPC 3개 래퍼 + 응답 정규화 (`4d7e2a3`) | 통과 |
+| ~~**P5**~~ | ✅ `components/DuelItemBar.jsx` + `css/multiplayer.css` 추가만 (`4217de0`) | 통과 |
+| **P6** | **`pages/MultiplayerGamePage.jsx` 이전** — **§3.4에 이어받기 정보가 있다** | **`grep -rn 'from("room_events").insert' pages components services` = 0건** · `navigate("/multiplayer", { replace: true })` **3곳 유지** |
 | **P7** | `pages/MultiplayerPage.jsx` 아이템 설명 10개를 새 카탈로그로 | `tests/appRouting.test.js` 통과 · 신규 파일에 `"/main"` 리터럴 0 |
 | **P8** | 전량 검증 | `npm test` 전량 · `npm run build` exit 0 · preflight 11/11 · pgTAP 재실행 · **§2.3 불변식 7개 전수 재측정** · 2세션 수동 스모크 |
 
 ### ⚠ P6이 가장 크고 위험하다
 
-**`pages/MultiplayerGamePage.jsx` 1458줄에 세 가지가 한꺼번에 들어간다.**
-
-| # | 무엇을 | 지금 어디에 |
-|:-:|---|---|
-| **1** | **localStorage 인벤토리 제거** | 지급 `:508-565` · 소비 `markUsed :568-582` · 복구 `:418-426`·`:514-524`. **키 `wiki-mp-game:{roomId}:{userId}`의 이동 상태(`currentTitle`·`pathTitles`·`historyStack`·`clickCount`)는 그대로 둔다** — 인벤토리 필드만 걷어낸다 |
-| **2** | **수신 switch 재작성** | `handleIncomingEvent :886-1006`. 아이템 ID별 8분기를 **`duel_item_event` 1값 + `payload.result` 기반**으로 바꾼다. **`mini_game_*` 3분기는 보존** (Q5 조건). 클라이언트가 스스로 차단·반사를 판정하던 `isImmune()` 경로(`:216-222`·`:901`·`:913`·`:934`)가 전부 사라진다 — **서버가 준 `result`를 읽는다** |
-| **3** | **복구 경로 교체** | `recoverGame :396-462`이 읽던 인벤토리를 `get_duel_item_state_v3`로. 쿨타임·지속효과·보호 대기가 전부 서버에서 온다 |
-
-그리고 **`emitRoomEvent :191-204`를 지운다** — 저장소에서 `from("room_events").insert`를
-하는 **유일한 지점**이고, 그 0건이 **G2-② 창의 선행 조건**이다 (`TRACKS.md` §7.4-③).
-
-**권고: P6을 한 커밋으로 만들지 않는다.** 위 1·2·3 + `emitRoomEvent` 제거를 나눠
-각 단계마다 `npm test`와 불변식 grep을 돌린다. 되돌림 단위를 작게 유지하는 것이
-이 파일에서 특히 중요하다 — **1:1 결과 화면(`:1437-1454`)도 같은 파일에 있다.**
+**→ §3.4로 옮겼다.** 이 절이 갖고 있던 줄 번호 일부가 실제와 어긋나 있었고
+(`recoverGame`·`markUsed`·`isImmune`), P4·P5를 끝낸 시점에 **실측으로 다시 적었다.**
+§3.4를 보라 — 옛 번호를 쫓지 않도록 여기서는 표를 지웠다.
 
 ### RPC 3개 — 시그니처와 반환
 
@@ -215,12 +212,55 @@ consumed_at, consumed_event_id, created_at}` — `data/duelItems.js`의 `buildDu
 | `LINK_SNAPSHOT_MISSING` | 목적지 revision을 해석하지 못했다 |
 | `ITEM_MOVE_REJECTED` | 헬퍼가 위 사유 없이 거부했다 (방어적) |
 
+#### ⚠ 정정 — 위 표는 12종이 아니라 **15종**이다 `[P4 실측, 2026-09-04]`
+
+위 표는 **pgTAP가 주장한 것만** 옮겼다. 클라이언트에는 **3종이 더 도착한다:**
+
+| 코드 | 어디서 | 어떻게 새는가 |
+|---|---|---|
+| `PLAYER_NOT_FOUND` | migration `:312` | `private.apply_duel_move_internal_v3`가 반환하고, |
+| `PLAYER_NOT_PLAYING` | `:316` | `use_duel_item_v3`가 헬퍼 실패를 |
+| `UNSUPPORTED_EVENT_TYPE` | `:399` | `coalesce(v_move->>'code', 'ITEM_MOVE_REJECTED')`(`:938`)로 흘려보낸다 |
+
+**`ITEM_MOVE_REJECTED`로 뭉개지지 않고 원래 코드 그대로 올라온다.** 이름을 붙여 두지
+않으면 HUD가 "모르는 코드"로 받는다. `services/duelItemService.js`가
+`DUEL_ITEM_HELPER_FAILURE_CODES`로 등재했고, **테스트가 migration에서 코드를 뽑아
+대조하므로 서버가 코드를 늘리면 `npm test`가 먼저 깨진다.**
+
 **`raise exception`으로 던지는 것 6종** — `try/catch`가 필요하다:
 `AUTH_REQUIRED` · `REQUEST_ID_REQUIRED` · `DUEL_ROOM_NOT_FOUND` · `NOT_A_PARTICIPANT` ·
 `DUEL_PARTICIPANTS_REQUIRED` · `DUEL_ITEM_POOL_EXHAUSTED`.
+(이 6종은 실측으로 표와 정확히 일치했다. `error.code`가 아니라 **`error.message`** 로
+온다 — SQLSTATE는 전부 `P0001`이다.)
 
-> **미소비 3종(`NO_ELIGIBLE_LINK`·`UNDO_UNAVAILABLE`·`REWIND_UNAVAILABLE`)은 HUD가
-> 슬롯을 되살려야 한다.** 나머지는 슬롯 상태가 그대로다.
+#### ⚠ 정정 — 슬롯 소비 판정 `[P5 실측, 2026-09-04]`
+
+이 절은 원래 **"미소비 3종은 HUD가 슬롯을 되살려야 한다. 나머지는 슬롯 상태가 그대로다"**
+라고 적고 있었다. 그 문장이 오해를 만든다.
+
+**실패 코드 15종 어느 것도 슬롯을 소비하지 않는다.** migration에서 `consumed_at`을 쓰는
+곳은 **`:984` 하나**이고, 그것은 원장 INSERT(`:970`) **뒤**, 즉 성공 경로에만 있다.
+모든 실패 반환은 그보다 앞에 있다. 쿨타임도 같다 — 원장에 행이 없으니 올라가지 않는다.
+
+즉 **"미소비 3종"은 게임 규칙(`14-DUEL-ITEMS.md` §4)의 진술이지 클라이언트 상태의
+진술이 아니다.** 그래서 P4·P5는 두 층으로 나눠 답했다:
+
+1. **구조로 없앤다** — HUD는 슬롯을 **낙관적으로 소비 표시하지 않는다.** `item.used`는
+   서버 지급 행의 `consumed_at`에서만 오고, 누른 동안에는 `pendingGrantId`로 대기 표시만
+   한다. **잃을 슬롯이 애초에 없다.**
+2. **그 위에서 두 신호를 나눈다:**
+
+| 값 | 뜻 | HUD |
+|---|---|---|
+| `failure.slotRestored` | **로컬에서 증명 가능한** 미소비 (계약 3종) | 서버에 다시 묻지 않고 즉시 되살린다 |
+| `failure.refetchState` | 내 슬롯 관점이 서버와 갈렸을 수 있다 (`rejected` 갈래) | `fetchDuelItemState`로 맞춘다 |
+
+> **`slotRestored === false`를 "소비됐다"로 읽으면 안 된다.** **헬퍼 3종이 정확히 그
+> 함정이다** — 소비되지 않았는데 계약 3종에는 없다. 그 셋은 `refetchState`가 잡고,
+> **모르는 코드도 `refetchState`로 떨어진다** (묻는 것이 잃는 것보다 낫다).
+>
+> 두 신호는 **동시에 참이 되지 않는다**(테스트가 고정). 둘 다 거짓인 코드는
+> 슬롯 관점을 건드릴 필요가 없는 셋뿐이다 — `ITEM_COOLDOWN`·`ITEMS_DISABLED`·`GAME_NOT_ACTIVE`.
 
 ### P4가 재사용할 것
 
@@ -229,8 +269,247 @@ consumed_at, consumed_event_id, created_at}` — `data/duelItems.js`의 `buildDu
 | `createRequestId()` · `createCorrelationId()` | **`utils/serverAuthority.js`** | **동결 파일.** 읽기 전용 import만 한다 (§2.1). `services/multiplayerService.js:3`이 이미 그렇게 쓴다 |
 | `normalizeRpcRow(data)` 형태 | `services/multiplayerService.js:12-14` | `Array.isArray(data) ? data[0] \|\| null : data \|\| null`. **C 소유 파일이지만 복사해 쓰는 편이 낫다** — 그 파일의 export 목록을 넓히면 소비자가 늘어난다 |
 | `requireSupabase()` 형태 | 같은 파일 `:6-10` | 동일 |
-| `buildDuelInventory()` · `canUseDuelItem()` | **`data/duelItems.js`** (P1 산출) | 서버 행 → HUD 형태. **이미 서버 반환 형태에 맞춰 작성돼 있다** |
-| `getDuelResultLabel()` | `utils/resultReasonLabels.js` | **B 소유. 읽기 전용 호출만** (§2.2) |
+| `buildDuelInventory()` · `canUseDuelItem()` | **`data/duelItems.js`** (P1 산출) | 서버 행 → HUD 형태. ~~이미 서버 반환 형태에 맞춰 작성돼 있다~~ **→ 아니었다. 아래 정정** |
+| `getDuelResultLabel()` | `utils/resultReasonLabels.js` | **B 소유. 읽기 전용 호출만** (§2.2). P4·P5는 **부르지 않았다** — 경기 결과 어휘와 아이템 거부 문구는 축이 다르다. 테스트가 "부른다면 이 하나만"을 강제한다 |
+
+#### ⚠ 정정 — `buildDuelInventory`의 P1 결함 `[P4 발견, 2026-09-04]`
+
+`buildDuelInventory`는 지급 행의 **`grant_id`** 를 읽고 있었다. 그런데 `ensure`·`get`은
+`to_jsonb(grant_row)`(migration `:593`·`:643`)로 내보내므로 **열 이름이 그대로 나오고,
+`duel_item_grants`의 PK 열 이름은 `id`다** (`:105`) — `grant_id`가 아니다.
+
+**고치지 않았으면 `grantId`가 전부 `null`이라 `use_duel_item_v3`에 넘길 `p_grant_id`가
+없고, 아이템을 한 번도 쓰지 못했을 것이다.** `instanceId`도 fallback으로 떨어져 슬롯 key가
+`{item_id}-{slot_index}`가 된다.
+
+`row?.grant_id ?? row?.id`로 **둘 다 받도록** 고쳤다 (`grant_id`는 `duel_item_events` 쪽
+열 이름이라 원장 행이 들어오는 경로도 있다). 회귀 테스트를 붙였다 —
+`P4 — 지급 행의 PK 열은 'id'이고 그것이 grantId가 된다`.
+
+**교훈:** §3.3이 "이미 맞춰져 있다"고 적은 것을 P4가 검증 없이 믿었다면 런타임에서야
+발견됐다. **인계 문서의 "이미 돼 있다"는 진술도 실측 대상이다.**
+
+---
+
+## 3.4 P6 이어받기 — 세션 인계 `[2026-09-04]`
+
+**P4·P5(프론트 신규 파일)가 끝났고 P6부터 기존 파일 이전이다.** 성격이 또 바뀐다 —
+지금까지는 새 파일만 만들어 되돌림이 쌌지만, **P6은 1458줄 파일을 뜯는다.**
+`P6은 새 세션에서 이어간다` `[사용자 결정]`.
+
+### P4·P5가 만든 것 — 소비자 관점 요약
+
+| 파일 | 상태 | P6이 알아야 할 것 |
+|---|---|---|
+| `services/duelItemService.js` | **신규 405줄** (`4d7e2a3`) | RPC 3개 래퍼. **실패 12+3종을 정규화해서 준다** |
+| `components/DuelItemBar.jsx` | **신규 424줄** (`4217de0`) | 5슬롯 HUD + `link_preview` 패널. **완전 presentational** — RPC를 부르지 않는다 |
+| `css/multiplayer.css` | **+464줄 추가만** | 새 어휘는 전부 `.duel-item-*`. **`mp-` 접두사를 쓸 수 없다** — 이유는 아래 |
+| `data/duelItems.js` | `buildDuelInventory` 1곳 수정 | §3.3의 정정 참고 |
+| `tests/duelItemAuthority.test.js` | **5 → 54건** | P6이 깨면 여기서 걸린다 |
+
+### 서비스 시그니처 — `services/duelItemService.js`
+
+```js
+ensureDuelItemGrant(roomId)
+  // → { ok, code: "GRANTED"|"ITEMS_DISABLED", useItems,
+  //     grants[], inventory[], cooldownUntil, serverNow, clockSkewMs, snapshot }
+
+fetchDuelItemState(roomId)
+  // → 위 + { roomStatus, activeEffects[], pendingDefenses[] }
+
+useDuelItem({ roomId, grantId, requestId?, correlationId? })
+  // 성공 → { ok:true, code:"ITEM_USED", failure:null, result, itemId, targetUserId,
+  //          itemEventId, roomEventId, effectExpiresAt, cooldownUntil, metadata,
+  //          room, player, opponent, requestId, serverNow, clockSkewMs, snapshot }
+  // 실패 → { ok:false, code, failure:{...}, requestId, serverNow, clockSkewMs, snapshot }
+```
+
+**순수 export** (RPC를 부르지 않는다 — P6이 자유롭게 쓴다):
+
+| export | 무엇 |
+|---|---|
+| `normalizeDuelItemEvent(payload, { skewMs })` | **P6의 수신 switch 입구.** 아래 별도 항목 |
+| `normalizeDuelItemFailure(response, { skewMs })` | 실패 봉투 만들기 (`useDuelItem`이 내부에서 쓴다) |
+| `toClientTime(serverEpochMs, skewMs)` | 서버 시각 → 클라이언트 시계 |
+| `isUnconsumedFailure(code)` · `getDuelItemFailureMessage(code)` | 코드 분류·문구 |
+| `FAILURE_KIND` | `unconsumed`·`cooldown`·`unavailable`·`rejected`·`fault` |
+| `DUEL_ITEM_FAILURE_CODES` (12) · `DUEL_ITEM_HELPER_FAILURE_CODES` (3) · `DUEL_ITEM_THROWN_CODES` (6) | 코드 목록 |
+
+**실패 봉투 `failure`:**
+
+```js
+{ code, kind, slotRestored, refetchState, retryable,
+  cooldownUntil, retryAfterMs, message, room, player, snapshot }
+```
+
+#### ⚠ 실패 12종을 throw하지 않고 **반환**한다
+
+`services/multiplayerService.js`의 `applyDuelMoveV2`는 `ok:false`를 throw로 바꾼다.
+**이 서비스는 그러지 않는다** — 서버 자신이 실패를 두 갈래로 나눠 놓았기 때문이다
+(`return {ok:false}` = 경기 중 판정 / `raise exception` = 세션·호출 오류).
+쿨타임에 `try/catch`를 강요하면 HUD가 정상 흐름을 예외로 다룬다.
+**12+3종은 봉투로 반환하고, 6종과 전송 오류만 throw한다.**
+
+#### 시각은 **클라이언트 시계**로 나온다
+
+`cooldownUntil`·`effectExpiresAt`은 `server_now`로 편차를 재서 보정한 **epoch ms**다.
+그대로 `Date.now()`와 비교하면 되고 `canUseDuelItem`이 그렇게 쓴다.
+**P6이 다시 보정하면 두 번 빼진다.** 원본은 `serverNow`·`clockSkewMs`로 남아 있으니
+진단에만 쓴다.
+
+### HUD prop 계약 — `components/DuelItemBar.jsx`
+
+```jsx
+<DuelItemBar
+  inventory={[]}            // buildDuelInventory() 결과. used는 여기서만 온다
+  useItems={true}           // false면 "아이템을 쓰지 않는 경기입니다"만 그린다
+  phaseReady={false}        // 방·플레이어가 playing인가
+  cooldownUntil={null}      // 클라 시계 epoch ms (서비스가 보정해서 준다)
+  linkCount={0}             // 사전 검증용 — random_link_move·random_teleport
+  historyLength={0}         // 사전 검증용 — go_back
+  activeEffects={[]}        // fetchDuelItemState().activeEffects
+  pendingDefenses={[]}      // 대기 중인 편집 보호·역링크
+  pendingGrantId={null}     // 응답 대기 중인 슬롯. 대기 중 전체 잠금
+  failure={null}            // useDuelItem()의 failure 봉투
+  linkPreview={null}        // { active, expiresAt, candidates[], entries{},
+                            //   selectedTitle, usedPreviews, maxPreviews }
+  onUseItem={(grantId) => {}}
+  onDismissFailure={() => {}}
+  onRequestStateRefresh={() => {}}   // failure.refetchState일 때 호출
+  onPreviewLink={(title) => {}}      // 부모가 요약을 가져와 entries에 넣는다 — 부채 ①
+  onClosePreview={() => {}}
+/>
+```
+
+**주의 3건:**
+
+1. `onUseItem`은 **`grantId`** 를 넘긴다 — `instanceId`가 아니다. `use_duel_item_v3`의
+   `p_grant_id`가 그것이다. (`ItemBar.jsx`는 `instanceId`를 넘긴다 — **다른 계약이다.**)
+2. **같은 실패 객체로 `onRequestStateRefresh`를 두 번 부르지 않는다.** 컴포넌트가
+   `useRef`로 봉투 정체성을 검사한다. 부모가 매 렌더 **새 객체**로 `failure`를 만들면
+   그 방어가 무력해진다 — 거부 하나가 조회 폭풍이 된다. **`failure`는 안정적인 참조로
+   내려야 한다.**
+3. HUD는 **낙관적 갱신을 하지 않는다.** 누른 슬롯을 `used`로 칠하지 말고
+   `pendingGrantId`만 넘긴다. 응답이 오면 새 `inventory`를 내려 준다.
+
+**`linkPreview.entries`가 비어 있어도 화면은 정상이다** — 패널이 "요약 연결은 준비 중"
+안내를 그린다. 부채 ①이 닫히기 전까지 실제로 보이는 상태다.
+
+### `normalizeDuelItemEvent` — P6의 수신 switch 입구가 이미 있다
+
+```js
+normalizeDuelItemEvent(payload, { skewMs })
+// → { itemEventId, itemId, slotRole, actorUserId, targetUserId,
+//     result, effectExpiresAt, moveEventId, metadata, serverTimestamp }
+```
+
+서버가 `room_events.payload`에 이미 camelCase로 넣어 두므로 하는 일은 **시각 보정과
+`result` 검증**이다. **모르는 `result`는 `null`로 둔다** — `void`로 뭉개지 않는다.
+그러면 새 판정값이 생겼을 때 화면이 "아무 일도 없었다"로 조용히 굴기 때문이다.
+`metadata`는 `null`이면 `{}`로 준다 (HUD가 `metadata.censoredTitles`를 바로 읽는다).
+
+**P6은 이 함수를 부르고 `result` 4값으로 분기하면 된다.** 아이템 ID별 분기를 다시
+만들지 않는다.
+
+### ⚠ P6이 이 트랙에서 가장 크고 위험하다
+
+**`pages/MultiplayerGamePage.jsx` 1458줄에 네 가지가 한꺼번에 들어간다.**
+아래 줄 번호는 **`4217de0` 시점 실측**이다 (§3.3의 옛 번호 일부가 어긋나 있었다).
+
+| # | 무엇을 | 지금 어디에 |
+|:-:|---|---|
+| **1** | **localStorage 인벤토리 제거** | 상태 `inventory :120` · 저장 키 `:128` · 저장/읽기/삭제 `:136-162` · 지급 `:567` · 소비 `markUsed :571-582`(호출 `:797`) · 복구 `:419-426`·`:516-522` · 렌더 `:1328`. **키 `wiki-mp-game:{roomId}:{userId}`의 이동 상태(`currentTitle`·`pathTitles`·`historyStack`·`clickCount`)는 그대로 둔다** — 인벤토리 필드만 걷어낸다 |
+| **2** | **수신 switch 재작성** | `handleIncomingEvent :887-1006`. 아이템 ID별 분기를 **`duel_item_event` 1값 + `payload.result`** 로 바꾼다 (`normalizeDuelItemEvent` 사용). **`mini_game_*` 3분기(`:948`·`:962`·`:975`)는 보존** (Q5 조건). 클라이언트가 스스로 차단·반사를 판정하던 `isImmune()` 경로(**선언 `:189` · `immuneUntil` 세팅 `:211`·`:218` · 사용 `:895`·`:905`·`:914`·`:936` · 렌더 `:1336`**)가 전부 사라진다 — **서버가 준 `result`를 읽는다** |
+| **3** | **복구 경로 교체** | `recoverGame :333-465`(ref `:92`·`:466`, 호출 `:266`·`:270`·`:304`·`:308`·`:469`·`:476`·`:478`)이 읽던 인벤토리를 `get_duel_item_state_v3`로. **쿨타임·지속효과·보호 대기가 전부 서버에서 온다** |
+| **4** | **`emitRoomEvent` 제거** | **선언 `:191`, INSERT `:194`.** 호출 지점 10곳 — `:722`·`:747`·`:751`·`:755`·`:784`·`:802`·`:808`·`:818`·`:849`·`:873`. **이 중 `mini_game_*` 3곳(`:722`·`:784`·`:873`)은 Q5 조건상 보존 대상이므로 대체 경로가 필요하다** — 아이템 이벤트만 RPC로 옮기고 미니게임 이벤트를 어떻게 보낼지가 **P6의 미해결 지점이다** |
+
+**`:194`가 저장소에서 `from("room_events").insert`를 하는 유일한 지점이고, 그 0건이
+수용조건 ②이며 G2-② 창의 선행 조건이다** (`TRACKS.md` §7.4-③·§8-C 수용조건 ②).
+
+> ⚠ **위 #4가 §3.3이 놓친 지점이다.** §3.3은 "`emitRoomEvent`를 지운다"고만 적었지만
+> **`mini_game_*` 보존(Q5)과 정면으로 부딪친다.** 미니게임 3종은 아이템 RPC를 타지
+> 않으므로, `emitRoomEvent`를 지우면 그 3종의 전송 경로가 함께 사라진다.
+> **P6 착수 전에 이것을 먼저 결정해야 한다** — 선택지는 (a) 미니게임용 좁은 RPC를
+> 추가한다 (migration 변경 → P2·P3 재검증), (b) `emitRoomEvent`를 미니게임 전용으로
+> 남긴다 (수용조건 ② "0건"을 못 맞춘다), (c) 미니게임을 이 창에서 비활성한다.
+> **셋 다 대가가 있고 사용자 판정이 필요하다.**
+
+### 권고 — P6을 최소 3~4커밋으로 쪼갠다
+
+**한 커밋으로 만들지 않는다.** 되돌림 단위를 작게 유지하는 것이 이 파일에서 특히
+중요하다 — **1:1 결과 화면(`:1437-1454`)이 같은 파일에 동거한다.** 아이템 이전이
+깨지면 결과 화면까지 함께 되돌려야 하는 상황을 만들지 않는다.
+
+| 커밋 | 내용 | 끝에 돌릴 것 |
+|:-:|---|---|
+| **6a** | 서비스·HUD 배선만 — `ensureDuelItemGrant`·`fetchDuelItemState`로 인벤토리를 받고 `DuelItemBar`를 그린다. **기존 경로는 아직 살려 둔다** | `npm test` · `npm run build` |
+| **6b** | `useDuelItem` 배선 + **localStorage 인벤토리 제거** (표 #1) | `npm test` · 이동 상태 키가 남았는지 확인 |
+| **6c** | **수신 switch 재작성** (표 #2) — `isImmune()` 경로 제거 | `npm test` · 2세션 수동 스모크 |
+| **6d** | **`emitRoomEvent` 제거** (표 #4) — ⚠ 위 미해결 지점 결정 후 | **`grep -rn 'from("room_events").insert' pages components services` = 0건** |
+
+각 커밋 끝에 **§2.3 불변식 grep을 전수**로 돌린다. 특히:
+
+```
+grep -c '^\.mp-' css/multiplayer.css                                  # 131
+grep -rn 'from("room_events").insert' pages components services       # 6d에서 0
+grep -rn 'navigate("/multiplayer", { replace: true })' pages          # 3곳 유지
+```
+
+### ⚠ CSS 게이트의 함정 — `mp-` 접두사를 쓸 수 없다
+
+§2.3-⑤의 불변식은 `grep -c '^\.mp-' css/multiplayer.css` = **131**이다.
+**개명·삭제만 막는 것이 아니라 개수 자체를 고정한다.** 그래서:
+
+- 새 규칙에 `mp-`를 붙이면 132가 되어 게이트가 깨진다.
+- **하위 선택자조차 못 쓴다** — `.mp-game-main .duel-item-bar`는 줄 맨 앞이 `.mp-`라 세어진다.
+
+P5는 그래서 전부 `.duel-item-*`으로 갔다 (`.item-panel`·`.item-effect-pop` 선례).
+**P6이 CSS를 더 붙일 때도 같은 규칙을 따라야 한다.**
+
+부수 실측: 기존 파일에 **중복 `.mp-` 선택자 2건**이 있다 — `.mp-game-page`와
+`.mp-opponent-panel`이 각각 두 번 선언된다. **P5가 만든 것이 아니고, 개명·삭제 0건
+제약상 고치지 않았다.** 테스트가 중복 수를 2로 고정해 늘지 않게만 막는다.
+
+### 등재된 부채 2건 — `link_preview`
+
+**부채 ① `linkPreview.entries` 채우기 — 소유자 P6/P7**
+
+확정 스펙 §5.5의 "연결 문서 **첫 문장**"은 `services/wikiService.js`의
+**`fetchPageSummary(title)`** 가 주는 `extract`다. **위키백과 REST를 부르며 우리
+Supabase가 아니다 — 새 RPC가 필요하지 않다.**
+
+P5에서 부르지 않은 이유: 컴포넌트가 fetch를 가지면 **abort·캐시·중복요청**을 함께
+갖게 되고, 그 셋은 이미 `MultiplayerGamePage`가 `pageData.links`와 함께 들고 있다.
+있는 자리에 붙이는 것이 맞다. `onPreviewLink(title)` → 부모가 가져와 `entries[title]`에
+`{ status: "loading"|"ready"|"unavailable", extract, description, thumbnailUrl }`을 넣는다.
+
+**부채 ② ⚠ `maxPreviews: 3`에 서버 권위가 없다 — v4**
+
+`data/duelItems.js`에만 있는 값이고 **migration에는 미리보기 카운터가 아예 없다.**
+실측: `"preview"`가 migration에 나오는 곳은 **2곳뿐이고 둘 다 아이템 ID다** —
+카탈로그 행(`:79`, `duration_ms 15000` · `charges 0`)과
+`duel_item_grants_item_id_check`(`:135`).
+
+즉 **3회 제한은 클라이언트만 세고 서버는 모른다. 우회가 가능하다.**
+확정 스펙 §5.1이 아이템 권위를 서버에 두기로 한 것과 어긋나는 **유일한 잔여 지점**이다.
+닫으려면 원장에 미리보기 행을 남기는 RPC가 필요하고 **v4 범위**다.
+
+`tests/duelItemAuthority.test.js`의
+`P5 — ⚠ maxPreviews에 서버 권위가 없다는 것이 사실이다 (실측)`가 이 사실을 고정한다 —
+**서버가 미리보기를 세기 시작하면 그 테스트가 깨져 부채를 닫을 때를 알려 준다.**
+
+(같은 성격의 선례: `random_teleport` 부채 — `data/duelItems.js` 머리말.)
+
+### P6이 손대지 말아야 할 것
+
+| 대상 | 왜 |
+|---|---|
+| `components/ItemBar.jsx` | **무수정.** 싱글 아이템의 소비자가 `GamePage.jsx`이고 prop 계약이 동결(§2.3-③). 3키 `{inventory, onUseItem, canUseItem}` — 테스트가 고정한다 |
+| `utils/serverAuthority.js` | **동결.** 읽기 전용 import만 (§2.1) |
+| `services/multiplayerService.js` | `requireSupabase`·`normalizeRpcRow`는 **복사해 쓴다.** export 목록을 넓히면 소비자가 늘어난다 |
+| `utils/resultReasonLabels.js` | **B 소유.** `getDuelResultLabel` 읽기 전용 호출만 (§2.2) |
+| `data/itemPools.js`의 `SINGLE_ITEM_IDS` | **동결** (§8-C 범위 밖 ②) |
+| migration · pgTAP | P4·P5가 안 건드렸다. **P6도 건드리지 않는 것이 기본**이고, 위 "미해결 지점 (a)"를 고르면 그때만 열린다 — 그러면 **P2·P3 재검증이 붙는다** |
 
 ---
 
