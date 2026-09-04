@@ -110,6 +110,15 @@ try {
   Invoke-LocalPsql $baseSetup | Out-Null
   $failures = @()
 
+  # Report PASS only when the scenario added nothing to $failures. Without this a
+  # failing scenario still printed its PASS line and the summary contradicted it.
+  function Write-ScenarioResult {
+    param([Parameter(Mandatory)][int]$Before, [Parameter(Mandatory)][string]$Message)
+    if ($failures.Count -eq $Before) { Write-Output "PASS $Message" }
+    else { Write-Output "FAIL $Message" }
+  }
+
+  $beforeS1 = $failures.Count
   # ── Scenario 1 ──────────────────────────────────────────────────────────────
   # Two sessions spend the SAME slot with DIFFERENT request ids. spec §5.1
   # "모든 아이템은 1회용이다" must survive the race: one ITEM_USED, one refusal,
@@ -138,8 +147,9 @@ try {
       $failures += "S1 iteration ${i}: used=$used events=$events consumed=$consumed codes=$($codes -join ',')"
     }
   }
-  Write-Output "PASS S1 same-slot race x$Iterations — exactly one ITEM_USED and one ledger row every time"
+  Write-ScenarioResult -Before $beforeS1 -Message "S1 same-slot race x$Iterations - exactly one ITEM_USED and one ledger row every time"
 
+  $beforeS2 = $failures.Count
   # ── Scenario 2 ──────────────────────────────────────────────────────────────
   # Both players attack each other at the same instant. This is the case that
   # motivated the lock order: A wants (room, self, opponent) and B wants
@@ -169,8 +179,9 @@ try {
       $failures += "S2 iteration ${i}: used=$used events=$events codes=$($codes -join ',')"
     }
   }
-  Write-Output "PASS S2 mutual simultaneous attack x$Iterations — both applied, no deadlock"
+  Write-ScenarioResult -Before $beforeS2 -Message "S2 mutual simultaneous attack x$Iterations - both applied, no deadlock"
 
+  $beforeS3 = $failures.Count
   # ── Scenario 3 ──────────────────────────────────────────────────────────────
   # The new RPC against the DEPLOYED one, same room, same moment. If v3 ordered
   # its locks differently from apply_duel_move_v2, this is where it would show.
@@ -213,7 +224,7 @@ where rp.room_id = '$room'
       $failures += "S3 iteration ${i}: codes=$($codes -join ',') version/log mismatch rows=$mismatch"
     }
   }
-  Write-Output "PASS S3 v3-item vs deployed v2-move x$Iterations — no deadlock, projection matches the move log"
+  Write-ScenarioResult -Before $beforeS3 -Message "S3 v3-item vs deployed v2-move x$Iterations - no deadlock, projection matches the move log"
 
   if ($failures.Count -gt 0) {
     throw "concurrency invariants failed:`n" + ($failures -join "`n")
