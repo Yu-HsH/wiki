@@ -716,13 +716,14 @@ $$;
 -- ordering is belt-and-braces, since nothing can be between 1 and 2 in another
 -- session. This is the same order every existing duel RPC uses.
 --
--- ## 확인 필요 — defense precedence when both are live
+-- ## Defense precedence when both are live — 편집 보호 우선 `[사용자 확정 2026-09-04]`
 -- spec §5.4 defines 편집 보호 (block the first attack) and 역링크 (reflect the first
--- attack) separately and never says which wins if both are pending. This function
--- gives 역링크 precedence, because reflecting is the strictly more specific outcome
--- and letting the shield eat the attack would waste the reflect. That tie-break is
--- an implementation choice, not a spec value — flip it here if the call goes the
--- other way, and it is one branch.
+-- attack) separately and never says which wins when both are pending. The call:
+--   1. 보호는 "맞지 않는 것"이고 반사는 "맞고 되돌려주는 것"이다. 보호가 먼저 먹으면
+--      공격이 성립하지 않으므로 반사할 대상 자체가 없다. 순서가 아니라 인과다.
+--   2. 그리고 보호 소진이 반사 소진보다 손해가 작다 — 보호는 한 대를 막아 준 것으로
+--      제 값을 했지만, 반사가 헛돌면 되돌려줄 공격이 없는 채로 사라진다.
+-- The shield branch is therefore checked first. Flipping this back is one branch.
 create or replace function public.use_duel_item_v3(
   p_room_id uuid,
   p_grant_id uuid,
@@ -753,6 +754,9 @@ declare
   v_move_event_id uuid;
   v_metadata jsonb := '{}'::jsonb;
   v_censored text[];
+  v_rewound uuid[];
+  v_opponent_move jsonb;
+  v_actor_move_event_id uuid;
   v_last_use timestamptz;
   -- clock_timestamp(), not now(): the 2.5s cooldown and every effect window
   -- measure elapsed wall time. now() is frozen for the whole transaction and
@@ -836,35 +840,36 @@ begin
     end if;
     v_target_user_id := v_opponent.user_id;
 
-    -- 역링크 first (see the 확인 필요 note above), then 편집 보호.
+    -- 편집 보호 first, 역링크 second. See the precedence note in the header: a
+    -- shield that absorbs the hit means there is no hit left to reflect.
     select * into v_defense from public.duel_item_events ledger
     where ledger.room_id = p_room_id
       and ledger.target_user_id = v_opponent.user_id
-      and ledger.item_id = 'backlink_reflect'
+      and ledger.item_id = 'cleanse_shield'
       and ledger.result = 'applied'
       and ledger.effect_expires_at > v_now
       and not exists (select 1 from public.duel_item_events spent
                       where spent.consumed_defense_event_id = ledger.id)
     order by ledger.effect_expires_at asc limit 1;
 
-    if found and v_catalog.reflectable then
-      v_result := 'reflected';
-      v_target_user_id := v_user_id;
+    if found and v_catalog.blockable then
+      -- spec §5.4: "편집 보호로 차단된 공격은 소비된다" — the attacker still loses
+      -- the item; the effect simply never lands.
+      v_result := 'blocked';
     else
       select * into v_defense from public.duel_item_events ledger
       where ledger.room_id = p_room_id
         and ledger.target_user_id = v_opponent.user_id
-        and ledger.item_id = 'cleanse_shield'
+        and ledger.item_id = 'backlink_reflect'
         and ledger.result = 'applied'
         and ledger.effect_expires_at > v_now
         and not exists (select 1 from public.duel_item_events spent
                         where spent.consumed_defense_event_id = ledger.id)
       order by ledger.effect_expires_at asc limit 1;
 
-      if found and v_catalog.blockable then
-        -- spec §5.4: "편집 보호로 차단된 공격은 소비된다" — the attacker still loses
-        -- the item; the effect simply never lands.
-        v_result := 'blocked';
+      if found and v_catalog.reflectable then
+        v_result := 'reflected';
+        v_target_user_id := v_user_id;
       else
         v_defense := null;
       end if;
@@ -885,22 +890,46 @@ begin
       v_move := private.apply_duel_move_internal_v3(
         p_room_id, v_target_user_id, v_catalog.move_event_type, p_request_id, p_correlation_id, null);
     elsif v_catalog.move_event_type = 'REWIND' then
-      -- Both players move to their own previous document. spec §5.5 describes it as
-      -- one simultaneous effect, so if either side has no previous document the
-      -- item is not consumed at all rather than half-applied.
-      -- 확인 필요: the spec does not say what happens when only one side can rewind.
-      if coalesce(array_length(v_actor.path_page_ids, 1), 0) < 2
-         or coalesce(array_length(v_opponent.path_page_ids, 1), 0) < 2 then
+      -- 역사 되감기 — 가능한 쪽만 이동한다 `[사용자 확정 2026-09-04]`
+      --
+      -- spec §5.5's "두 플레이어를 각각 자신의 직전 문서로 동시에 이동시킨다" describes
+      -- the normal case, where both sides have history. It is not an instruction to
+      -- refuse the item when one side does not: refusing would burn a whole joker
+      -- for nothing, which is a far larger loss than a one-sided rewind.
+      --
+      -- Because the outcome can be one-sided, the payload names who actually moved.
+      -- Without `rewoundUserIds` a player who sees only themselves move reads it as
+      -- a bug rather than as the rule.
+      v_rewound := '{}'::uuid[];
+
+      if coalesce(array_length(v_actor.path_page_ids, 1), 0) >= 2 then
+        v_move := private.apply_duel_move_internal_v3(
+          p_room_id, v_user_id, 'REWIND', p_request_id, p_correlation_id, null);
+        if (v_move->>'ok')::boolean then
+          v_rewound := array_append(v_rewound, v_user_id);
+          v_actor_move_event_id := nullif(v_move->>'move_event_id', '')::uuid;
+        end if;
+      end if;
+
+      if v_opponent.user_id is not null
+         and coalesce(array_length(v_opponent.path_page_ids, 1), 0) >= 2 then
+        v_opponent_move := private.apply_duel_move_internal_v3(
+          p_room_id, v_opponent.user_id, 'REWIND',
+          extensions.gen_random_uuid(), p_correlation_id, null);
+        if (v_opponent_move->>'ok')::boolean then
+          v_rewound := array_append(v_rewound, v_opponent.user_id);
+        end if;
+      end if;
+
+      -- Nobody could move: nothing happened, so nothing is consumed either.
+      if cardinality(v_rewound) = 0 then
         return jsonb_build_object('ok', false, 'code', 'REWIND_UNAVAILABLE');
       end if;
-      v_move := private.apply_duel_move_internal_v3(
-        p_room_id, v_user_id, 'REWIND', p_request_id, p_correlation_id, null);
-      if (v_move->>'ok')::boolean is not true then
-        return jsonb_build_object('ok', false, 'code', coalesce(v_move->>'code', 'REWIND_FAILED'));
-      end if;
-      v_move := private.apply_duel_move_internal_v3(
-        p_room_id, v_opponent.user_id, 'REWIND',
-        extensions.gen_random_uuid(), p_correlation_id, null);
+
+      v_metadata := jsonb_build_object('rewoundUserIds', to_jsonb(v_rewound));
+      -- Re-shape as a success for the shared check below; the actor may not have
+      -- moved at all, in which case move_event_id is legitimately null.
+      v_move := jsonb_build_object('ok', true, 'move_event_id', v_actor_move_event_id);
     end if;
 
     if v_move is not null and (v_move->>'ok')::boolean is not true then
