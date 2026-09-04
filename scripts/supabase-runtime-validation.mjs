@@ -1,5 +1,35 @@
 const DANGEROUS_RUNTIME_MARKERS = /\bsignal(?:\s+|[_-])11\b|segmentation fault|57P02|connection reset|connection to server was lost|unexpected eof|database system is in recovery mode/i;
 
+// 정상 로그인데 위 패턴에 걸리는 줄. **줄 단위로만** 면제하고, 면제 조건에
+// severity를 포함시킨다 — `LOG:`가 붙은 형태만 빼므로 `FATAL:`·`PANIC:` 변형은
+// 그대로 위험으로 남는다.
+//
+// standby-eof: walsender가 복제 클라이언트(Supabase Realtime의 논리 슬롯)의
+//   연결이 terminate 없이 끊길 때 남기는 줄이다. **크래시일 수 없다** — 이 줄을
+//   쓰는 백엔드 자신이 살아서 로그를 쓰고 있다. 실제 크래시는 이 줄에 의존하지
+//   않고 signal 11 · segfault · terminated · reinitializ* · recovery · PANIC ·
+//   57P02가 각각 독립적으로 잡는다. 즉 면제해도 크래시가 조용해지지 않는다.
+const BENIGN_RUNTIME_LOG_MARKERS = [
+  ['standby-eof', /\bLOG:\s+unexpected EOF on standby connection\s*$/i],
+];
+
+function isBenignRuntimeLogLine(line) {
+  return BENIGN_RUNTIME_LOG_MARKERS.some(([, pattern]) => pattern.test(line));
+}
+
+/**
+ * 위험 마커 판정. **면제 줄을 걷어낸 뒤** 나머지 전체를 검사한다.
+ * 줄 단위로 걷어내므로 같은 텍스트의 다른 줄에 있는 위험 마커는 그대로 걸린다.
+ */
+function hasDangerousRuntimeMarker(text) {
+  const lines = String(text ?? '').split(/\r?\n/);
+  const kept = lines.filter((line) => !isBenignRuntimeLogLine(line));
+  return {
+    dangerous: DANGEROUS_RUNTIME_MARKERS.test(kept.join('\n')),
+    benignSuppressed: lines.length - kept.length,
+  };
+}
+
 const PACKET13_CURRENT_FATAL_MARKERS = [
   ['signal-11', /\bsignal(?:\s+|[_-])11\b/i],
   ['segmentation-fault', /\b(?:segmentation fault|segfault)\b/i],
@@ -48,6 +78,9 @@ function logLineContext(line, lineNumber, containerId, postmasterStartTime) {
 function findPacket13FatalMarkers(lines, containerId, postmasterStartTime) {
   const findings = [];
   lines.forEach((line, index) => {
+    // 같은 오탐이 여기에도 있다 — `unexpected-eof` 마커가 standby EOF를 잡는다.
+    // 면제 조건은 위와 동일하다 (severity가 `LOG:`인 형태만).
+    if (isBenignRuntimeLogLine(line)) return;
     for (const [marker, pattern] of PACKET13_CURRENT_FATAL_MARKERS) {
       if (pattern.test(line)) {
         findings.push({
@@ -205,21 +238,23 @@ export function evaluatePostmasterStability({ before, after, restartBefore, rest
 }
 
 export function evaluateLogText({ status, text }) {
-  const dangerous = DANGEROUS_RUNTIME_MARKERS.test(text || '');
+  const { dangerous, benignSuppressed } = hasDangerousRuntimeMarker(text || '');
   return {
     pass: status === 0 && !dangerous,
     dangerous,
-    detail: `dangerous_marker=${dangerous}`,
+    benignSuppressed,
+    detail: `dangerous_marker=${dangerous} benign_suppressed=${benignSuppressed}`,
   };
 }
 
 export function classifyChildProcessResult({ status, signal = null, stdout = '', stderr = '' }, expectedStatus = 0) {
   const text = `${stdout}\n${stderr}`;
-  const dangerous = DANGEROUS_RUNTIME_MARKERS.test(text);
+  const { dangerous, benignSuppressed } = hasDangerousRuntimeMarker(text);
   return {
     pass: status === expectedStatus && !signal && !dangerous,
     dangerous,
-    detail: `expected_exit_code=${expectedStatus} exit_code=${status} signal=${signal || '<none>'} dangerous=${dangerous}`,
+    benignSuppressed,
+    detail: `expected_exit_code=${expectedStatus} exit_code=${status} signal=${signal || '<none>'} dangerous=${dangerous} benign_suppressed=${benignSuppressed}`,
   };
 }
 
@@ -230,7 +265,7 @@ export function parseTapTranscript(text, expectedCount) {
   const plans = Array.from(source.matchAll(/^\s*1\.\.(\d+)\s*$/gim), (match) => Number(match[1]));
   const hasBailOut = /^\s*Bail out!/im.test(source);
   const hasSkipTodo = /^\s*(?:ok|not ok)\b.*#\s*(?:skip|todo)\b/im.test(source);
-  const dangerous = DANGEROUS_RUNTIME_MARKERS.test(source);
+  const { dangerous } = hasDangerousRuntimeMarker(source);
   const pass = okCount === expectedCount
     && notOkCount === 0
     && plans.length === 1
@@ -251,3 +286,5 @@ export function parseTapTranscript(text, expectedCount) {
 }
 
 export const dangerousRuntimeMarkers = DANGEROUS_RUNTIME_MARKERS;
+export const benignRuntimeLogMarkers = BENIGN_RUNTIME_LOG_MARKERS;
+export { isBenignRuntimeLogLine };
