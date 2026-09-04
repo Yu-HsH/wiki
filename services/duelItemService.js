@@ -284,14 +284,27 @@ function normalizeEffectRow(row, skewMs) {
 }
 
 /**
- * 실패 봉투. **`failure.slotRestored`가 이 파일의 핵심 출력이다** —
- * HUD는 이 한 값으로 슬롯을 되살릴지 정한다.
+ * 실패 봉투.
  *
- * `slotRestored`는 계약이 이름 붙인 **미소비 3종에만** 참이다 (`TRACK-C-HANDOFF.md` §3.3).
- * 다만 코드를 읽어 보면 **어떤 실패도 `consumed_at`을 쓰지 않는다** — 모든 실패 반환이
- * `insert into duel_item_events`(migration `:970`)보다 앞에 있다. 즉 실패 뒤에
- * `fetchDuelItemState`를 다시 읽는 HUD는 어느 코드에서도 슬롯을 잃지 않는다.
- * `slotRestored`는 **다시 읽지 않고도 즉시 되살려야 하는 경우**를 가리키는 값이다.
+ * ## `slotRestored`는 "소비됐는가"가 아니다 `[P5 판정, 2026-09-04]`
+ *
+ * **어떤 실패 코드도 슬롯을 소비하지 않는다.** `consumed_at`을 쓰는 곳은 migration에
+ * 단 하나(`:984`)이고 그것은 원장 INSERT(`:970`) **뒤**, 즉 성공 경로에만 있다.
+ * 모든 실패 반환은 그보다 앞에 있다. 쿨타임도 같다 — 원장에 행이 없으니 올라가지 않는다.
+ *
+ * 그래서 이 두 값은 **서로 다른 것**을 뜻하고, HUD는 둘을 따로 읽어야 한다:
+ *
+ * | 값 | 뜻 | HUD |
+ * |---|---|---|
+ * | `slotRestored` | **로컬에서 증명 가능하게** 슬롯이 살아 있다 (미소비 3종) | 서버에 다시 묻지 않고 즉시 되살린다 |
+ * | `refetchState` | 내 슬롯 관점이 서버와 어긋났을 수 있다 (`rejected` 갈래) | `fetchDuelItemState`로 맞춘다 |
+ *
+ * **`slotRestored === false`를 "소비됐다"로 읽으면 안 된다.** 헬퍼 3종
+ * (`PLAYER_NOT_FOUND`·`PLAYER_NOT_PLAYING`·`UNSUPPORTED_EVENT_TYPE`)이 정확히 그
+ * 함정이다 — 소비되지 않았는데 미소비 3종에는 없다. 그 셋은 `refetchState`로 잡힌다.
+ *
+ * 애초에 슬롯 상태를 **낙관적으로 갱신하지 않는 HUD**에서는 잃을 슬롯이 없다.
+ * `components/DuelItemBar.jsx`가 그 계약을 따른다 — `item.used`는 서버 행에서만 온다.
  */
 export function normalizeDuelItemFailure(response, { skewMs = null } = {}) {
     const code = response?.code || "ITEM_MOVE_REJECTED";
@@ -301,7 +314,10 @@ export function normalizeDuelItemFailure(response, { skewMs = null } = {}) {
     return {
         code,
         kind,
+        // 로컬에서 증명되는 미소비 3종. 다시 묻지 않고 슬롯을 되살려도 된다.
         slotRestored: kind === FAILURE_KIND.UNCONSUMED,
+        // 슬롯 관점이 서버와 갈렸을 수 있는 갈래. 헬퍼 3종이 여기로 들어온다.
+        refetchState: kind === FAILURE_KIND.REJECTED,
         // 아이템이 없는 방이거나 경기가 끝난 뒤다 — 다시 눌러도 같은 답이 온다.
         retryable: kind !== FAILURE_KIND.UNAVAILABLE,
         cooldownUntil,

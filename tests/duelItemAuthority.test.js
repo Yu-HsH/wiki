@@ -32,6 +32,11 @@ const MIGRATION_PATH = "supabase/migrations/20260904090000_duel_item_authority_v
 const migrationSource = read(MIGRATION_PATH);
 const serviceSource = read("services/duelItemService.js");
 
+// P5. JSX는 `node --test`가 import하지 못하므로(변환기가 없다) 소스를 읽어 계약을
+// 검사한다 — `tests/profileCard.test.js`가 이미 쓰는 방식이다.
+const barSource = read("components/DuelItemBar.jsx");
+const cssSource = read("css/multiplayer.css");
+
 /**
  * 트랙 C(패킷 14) 계약 테스트.
  *
@@ -498,4 +503,316 @@ test("P4 — 서비스가 스스로 차단·반사를 판정하지 않는다", (
 
 test("P4 — 신규 파일에 \"/main\" 리터럴이 없다 (§2.2)", () => {
   assert.equal(serviceSource.includes('"/main"'), false);
+});
+
+/* ────────────────────────────────────────────────────────────
+ * 10. P5 — 실패 봉투의 두 값이 서로 다른 것을 뜻한다
+ *
+ * `slotRestored`는 "로컬에서 증명되는 미소비", `refetchState`는 "서버와 갈렸을 수 있음"이다.
+ * **`slotRestored === false`가 "소비됐다"가 아니라는 것**이 이 절의 요지다 —
+ * 헬퍼 3종이 정확히 그 반례다.
+ * ──────────────────────────────────────────────────────────── */
+
+test("P5 — 어떤 실패 코드도 슬롯을 소비하지 않는다 (migration 실측)", () => {
+  // consumed_at을 쓰는 곳이 하나뿐이고, 그것이 원장 INSERT보다 뒤에 있다는 것이
+  // "실패는 슬롯을 먹지 않는다"의 증명이다. 둘 중 하나라도 어긋나면 HUD의
+  // 낙관적 갱신 금지 규칙이 근거를 잃는다.
+  const writes = [...migrationSource.matchAll(/set consumed_at = /g)];
+  assert.equal(writes.length, 1, "consumed_at을 쓰는 지점이 늘면 이 판정을 다시 해야 한다");
+
+  const consumeAt = migrationSource.indexOf("set consumed_at = ");
+  const ledgerInsertAt = migrationSource.indexOf("insert into public.duel_item_events(");
+  assert.ok(ledgerInsertAt > 0);
+  assert.ok(
+    consumeAt > ledgerInsertAt,
+    "소비가 원장 INSERT보다 앞서면 실패 경로에서도 슬롯이 사라질 수 있다"
+  );
+});
+
+test("P5 — 헬퍼 3종은 미소비인데 slotRestored가 거짓이다 — refetchState가 잡는다", () => {
+  for (const code of DUEL_ITEM_HELPER_FAILURE_CODES) {
+    const failure = normalizeDuelItemFailure({ ok: false, code });
+    assert.equal(failure.slotRestored, false, `${code}: 로컬에서 증명되지 않는다`);
+    assert.equal(
+      failure.refetchState,
+      true,
+      `${code}: 소비되지 않았는데 재조회 신호까지 없으면 HUD가 슬롯을 잃은 것처럼 보인다`
+    );
+  }
+});
+
+test("P5 — slotRestored와 refetchState는 동시에 참이 되지 않는다", () => {
+  // 겹치면 HUD가 즉시 되살리면서 동시에 재조회한다 — 되살린 슬롯이 깜빡인다.
+  const codes = [
+    ...DUEL_ITEM_FAILURE_CODES,
+    ...DUEL_ITEM_HELPER_FAILURE_CODES,
+    "SOMETHING_NEW_V4",
+  ];
+  for (const code of codes) {
+    const failure = normalizeDuelItemFailure({ ok: false, code });
+    assert.equal(
+      failure.slotRestored && failure.refetchState,
+      false,
+      `${code}에서 두 신호가 겹친다`
+    );
+  }
+});
+
+test("P5 — 모든 실패 코드가 두 신호 중 하나로는 처리된다", () => {
+  // 둘 다 거짓인 코드는 HUD가 "무엇을 해야 하는지" 모른다. 남는 것은 쿨타임과
+  // 아이템 없는 방·끝난 경기 — 셋 다 슬롯 관점을 건드릴 필요가 없는 갈래다.
+  const unhandled = [...DUEL_ITEM_FAILURE_CODES, ...DUEL_ITEM_HELPER_FAILURE_CODES].filter(
+    (code) => {
+      const failure = normalizeDuelItemFailure({ ok: false, code });
+      return !failure.slotRestored && !failure.refetchState;
+    }
+  );
+  assert.deepEqual(unhandled.sort(), [
+    "GAME_NOT_ACTIVE",
+    "ITEMS_DISABLED",
+    "ITEM_COOLDOWN",
+  ]);
+});
+
+test("P5 — 모르는 코드는 재조회로 떨어진다", () => {
+  // 서버가 코드를 늘렸을 때 안전한 쪽으로 기울인다 — 물어보는 것이 잃는 것보다 낫다.
+  const failure = normalizeDuelItemFailure({ ok: false, code: "SOMETHING_NEW_V4" });
+  assert.equal(failure.refetchState, true);
+});
+
+/* ────────────────────────────────────────────────────────────
+ * 11. P5 — HUD가 슬롯 상태를 스스로 만들지 않는다
+ * ──────────────────────────────────────────────────────────── */
+
+test("P5 — DuelItemBar는 used를 로컬에서 쓰지 않고 서버 값만 읽는다", () => {
+  // `item.used`를 읽는 것은 표시이고, 그 값에 대입하면 낙관적 갱신이 된다.
+  assert.match(barSource, /item\.used/, "서버가 준 소비 상태는 그려야 한다");
+  assert.equal(
+    /used\s*[:=][^=]/.test(barSource.replace(/item\.used/g, "")),
+    false,
+    "used에 값을 넣는 곳이 있으면 슬롯 상태의 출처가 둘이 된다"
+  );
+
+  // 대기 표시는 별도 prop이다 — 소비 표시와 섞지 않는다.
+  assert.match(barSource, /pendingGrantId/);
+});
+
+test("P5 — 두 신호를 실제로 나눠 읽는다", () => {
+  assert.match(barSource, /failure\.refetchState/);
+  assert.match(barSource, /failure\.slotRestored/);
+  assert.match(barSource, /onRequestStateRefresh/);
+});
+
+test("P5 — 같은 실패로 재조회를 두 번 부르지 않는다", () => {
+  // 부모가 리렌더될 때마다 RPC가 나가면 거부 하나가 조회 폭풍이 된다.
+  assert.match(barSource, /handledFailure/);
+  assert.match(barSource, /useRef/);
+});
+
+test("P5 — HUD가 RPC를 직접 부르지 않는다", () => {
+  // **주석이 서비스를 언급하는 것은 자유다** — 값의 출처를 적어 두는 것이 그 주석의
+  // 일이다. 검사 대상은 import 문과 실제 호출뿐이다.
+  const imported = [...barSource.matchAll(/from\s*"([^"]+)"/g)].map((match) => match[1]);
+  for (const forbidden of ["duelItemService", "supabaseClient"]) {
+    assert.equal(
+      imported.some((path) => path.includes(forbidden)),
+      false,
+      `${forbidden}을 import하면 HUD가 서버 호출을 갖게 된다 — 소유자는 부모다`
+    );
+  }
+  assert.equal(/\.rpc\(/.test(barSource), false, "RPC 호출문이 없다");
+  assert.equal(/await\s/.test(barSource), false, "HUD에 비동기 경로가 없다");
+});
+
+test("P5 — HUD도 차단·반사를 판정하지 않는다", () => {
+  assert.equal(barSource.includes("isImmune"), false);
+  // 서버가 이미 걸러 준 목록을 그리기만 한다.
+  assert.match(barSource, /activeEffects/);
+  assert.match(barSource, /pendingDefenses/);
+});
+
+test("P5 — ItemBar.jsx를 import하지 않고 그 prop 계약도 그대로다 (§2.3-③)", () => {
+  // 주석은 그 파일을 언급한다 ("ItemBar.jsx는 건드리지 않는다"). 검사는 import만 본다.
+  const imported = [...barSource.matchAll(/from\s*"([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(
+    imported.some((path) => /ItemBar/.test(path)),
+    false,
+    "1:1과 싱글의 prop 계약을 얽지 않는다"
+  );
+
+  // ItemBar.jsx는 이 트랙에서 무수정이다 — 소비자가 트랙 B의 GamePage.jsx다.
+  // 파일 전체를 붙여 놓는 대신 **동결된 것은 prop 계약**이므로 그것을 고정한다.
+  const itemBarSource = read("components/ItemBar.jsx");
+  const [, propBlock] = itemBarSource.match(
+    /export default function ItemBar\(\{([^}]*)\}/
+  );
+  assert.deepEqual(
+    propBlock
+      .split(",")
+      .map((name) => name.split("=")[0].trim())
+      .filter(Boolean),
+    ["inventory", "onUseItem", "canUseItem"]
+  );
+});
+
+test("P5 — HUD가 끌어오는 모듈은 react와 1:1 카탈로그뿐이다", () => {
+  const imported = [...barSource.matchAll(/from\s*"([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(imported.sort(), ["../data/duelItems.js", "react"]);
+});
+
+test("P5 — 신규 파일에 \"/main\" 리터럴과 room_events INSERT가 없다", () => {
+  assert.equal(barSource.includes('"/main"'), false);
+  assert.equal(barSource.includes('from("room_events")'), false);
+});
+
+/* ────────────────────────────────────────────────────────────
+ * 12. P5 — CSS는 추가만 한다 (§2.3-⑤ · 수용조건 ⑥)
+ *
+ * 불변식이 **개수를 고정**하므로 새 규칙에 `mp-` 접두사를 쓸 수 없다.
+ * 줄 맨 앞의 `.mp-`가 세어지기 때문에 하위 선택자로도 못 쓴다.
+ * ──────────────────────────────────────────────────────────── */
+
+test("P5 — ^.mp- 선택자가 131개이고 목록이 글자까지 같다", () => {
+  const selectors = cssSource.split("\n").filter((line) => line.startsWith(".mp-"));
+  assert.equal(selectors.length, 131, "§2.3-⑤은 개수를 고정한다 — 추가도 삭제도 0이다");
+  // 기존 파일에 중복 정의가 2건 있다 — `.mp-game-page`와 `.mp-opponent-panel`이
+  // 각각 두 번 선언된다. **P5가 만든 것이 아니고 고치는 것도 이 트랙 범위가 아니다**
+  // (개명·삭제 0건). 여기서는 그 수가 늘지 않는 것만 고정한다.
+  assert.equal(
+    selectors.length - new Set(selectors).size,
+    2,
+    "중복이 늘거나 줄면 기존 규칙을 건드린 것이다"
+  );
+
+  // 새 어휘가 기존 어휘로 새어 들어가지 않는다. `.mp-game-main .duel-item-bar` 같은
+  // 하위 선택자 한 줄만 있어도 개수가 132가 되므로, 이것이 개수 게이트의 실질적인
+  // 방어선이다.
+  for (const selector of selectors) {
+    assert.equal(selector.includes("duel-item"), false, selector);
+  }
+});
+
+test("P5 — 새 규칙은 파일 끝의 한 덩어리이고 전부 .duel-item- 접두사다", () => {
+  const blockStart = cssSource.indexOf("   DUEL ITEM BAR");
+  assert.ok(blockStart > 0, "추가 블록에 머리말이 있어야 다음 트랙이 경계를 안다");
+
+  // 새 어휘가 그 덩어리 밖에 흩어져 있지 않다 — 되돌림 단위를 한 덩어리로 유지한다.
+  assert.equal(
+    cssSource.slice(0, blockStart).includes("duel-item"),
+    false,
+    "추가는 파일 끝에만 붙는다"
+  );
+
+  const newSelectors = cssSource
+    .slice(blockStart)
+    .split("\n")
+    .filter((line) => /^\.[a-z]/.test(line))
+    .map((line) => line.trim());
+
+  assert.ok(newSelectors.length > 0, "P5는 CSS를 실제로 추가한다");
+  for (const selector of newSelectors) {
+    assert.ok(
+      selector.startsWith(".duel-item-"),
+      `${selector} — mp- 접두사는 개수 불변식을 깨고, 그 밖의 접두사는 어휘를 흩는다`
+    );
+  }
+});
+
+test("P5 — JSX가 쓰는 클래스와 CSS 규칙이 정확히 맞는다", () => {
+  const pattern = /duel-item-[a-z]+(?:__[a-z-]+)?(?:--[a-z]+)?/g;
+  const used = new Set([...barSource.matchAll(pattern)].map((match) => match[0]));
+  const defined = new Set(
+    [...cssSource.matchAll(new RegExp(`\\.(${pattern.source})`, "g"))].map(
+      (match) => match[1]
+    )
+  );
+
+  // 템플릿 리터럴로 만들어지는 이름은 정적으로 안 잡힌다 — 값의 출처가 정해져 있으니
+  // 그 목록으로 펼친다. 역할 4종과 실패 갈래 5종이다.
+  for (const role of ["attack", "search", "defense", "joker"]) {
+    used.add(`duel-item-slot--${role}`);
+  }
+  for (const kind of Object.values(FAILURE_KIND)) {
+    used.add(`duel-item-notice--${kind}`);
+  }
+
+  assert.deepEqual(
+    [...used].filter((name) => !defined.has(name)).sort(),
+    [],
+    "CSS 규칙이 없는 클래스 — 화면에서 조용히 스타일 없이 그려진다"
+  );
+  assert.deepEqual(
+    [...defined].filter((name) => !used.has(name)).sort(),
+    [],
+    "쓰이지 않는 규칙 — 남겨 두면 다음 트랙이 지워도 되는지 알 수 없다"
+  );
+});
+
+/* ────────────────────────────────────────────────────────────
+ * 13. P5 — link_preview: 범위 안에서 하는 것과 부채로 남기는 것
+ * ──────────────────────────────────────────────────────────── */
+
+test("P5 — 미리보기 UI가 DuelItemBar 안에 있다 (Q4 결정)", () => {
+  assert.match(barSource, /DuelLinkPreviewPanel/);
+  assert.match(barSource, /linkPreview/);
+  // 별도 컴포넌트 파일을 만들지 않기로 한 결정이므로 파일이 늘지 않아야 한다.
+  assert.equal(barSource.includes("LinkPreview.jsx"), false);
+});
+
+test("P5 — 미리보기 본문을 컴포넌트가 스스로 가져오지 않는다", () => {
+  // 부채 ①. fetch를 여기 두면 abort·캐시·중복요청이 HUD로 들어온다.
+  // 부채 주석이 `fetchPageSummary`를 **이름으로 지목한다** — 그것이 부채를 등재하는
+  // 방식이다. 검사는 import와 실제 호출만 본다.
+  const imported = [...barSource.matchAll(/from\s*"([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(
+    imported.some((path) => path.includes("wikiService")),
+    false,
+    "요약 조회를 HUD가 갖게 되면 abort·캐시·중복요청까지 따라온다"
+  );
+  for (const call of [/fetchPageSummary\(/, /fetchSummary\(/, /[^a-zA-Z]fetch\(/]) {
+    assert.equal(call.test(barSource.replace(/\/\*[\s\S]*?\*\//g, "")), false, String(call));
+  }
+  // 대신 부모가 내려 준 것을 그린다.
+  assert.match(barSource, /entries\[selectedTitle\]/);
+});
+
+test("P5 — 범위 안에서 실제로 보여 주는 것: 제목·남은 횟수·카운트다운·봉인", () => {
+  assert.match(barSource, /candidate\.censored/, "봉인된 링크 표시는 요약 없이도 쓸모가 있다");
+  assert.match(barSource, /remainingPreviews/);
+  assert.match(barSource, /formatSeconds/);
+});
+
+test("P5 — 요약이 없는 상태에도 빈 칸이 아니라 안내가 나온다", () => {
+  // 부채 ①이 닫히기 전까지 실제로 보이는 화면이다.
+  assert.match(barSource, /요약 연결은 준비 중입니다/);
+});
+
+test("P5 — 부채 2건이 파일에 등재돼 있다", () => {
+  // 부채가 조용히 사라지지 않게 고정한다. `random_teleport` 부채의 선례와 같은 방식이다.
+  assert.match(barSource, /부채 ①/, "요약 본문 연결 (P6/P7)");
+  assert.match(barSource, /부채 ②/, "maxPreviews 서버 권위 부재");
+  assert.match(barSource, /maxPreviews/);
+});
+
+test("P5 — ⚠ maxPreviews에 서버 권위가 없다는 것이 사실이다 (실측)", () => {
+  // 부채 ②의 근거. 서버가 미리보기를 세는 순간 이 테스트가 깨지고, 그때
+  // 클라이언트 제한을 서버 값으로 바꿔야 한다.
+  // "preview"가 migration에 나오는 곳은 카탈로그의 `link_preview` **아이템 ID 하나뿐**이다.
+  // 카운터 열도, 한도 상수도, 원장 행도 없다.
+  const previewMentions = [...migrationSource.matchAll(/preview[a-z_]*/gi)].map((m) => m[0]);
+  assert.deepEqual(
+    [...new Set(previewMentions)],
+    ["preview"],
+    "migration이 미리보기를 세기 시작했다 — 부채 ②를 닫을 때가 됐다"
+  );
+  // 두 곳이다 — 카탈로그 행(`:79`)과 지급 테이블의 item_id CHECK(`:135`).
+  // 둘 다 **아이템 ID를 적은 것**이고 미리보기를 세는 것이 아니다.
+  assert.equal(previewMentions.length, 2, "등장 지점이 늘면 서버가 미리보기를 다루기 시작한 것이다");
+  assert.match(migrationSource, /duel_item_grants_item_id_check[\s\S]*?'link_preview'/);
+
+  // 카탈로그 행은 지속 15초 · charges 0뿐이다.
+  assert.match(migrationSource, /\('link_preview',\s*'search',\s*15000,\s*0,/);
+
+  // 그래서 3회는 카탈로그(클라이언트)에만 있는 값이다.
+  assert.equal(getDuelItem("link_preview").maxPreviews, 3);
 });
