@@ -425,7 +425,19 @@ export default function MultiplayerGamePage() {
 
           if (!session.me.start_page_id || !session.me.current_page_id) {
             await initializeMyGameProgress(roomId, user.id, null, {});
-            playerData = await fetchRoomPlayers(roomId);
+
+            /**
+             * **방도 다시 읽는다.** `initialize_duel_player_v2`는 두 번째 참가자가
+             * 초기화되는 순간 방을 `starting → playing`으로 넘기면서
+             * (`20260814091000_server_authority_rpc_v2.sql`) **참가자 행만 돌려준다** —
+             * 방이 바뀐 사실은 호출자에게 오지 않는다. 초기화를 부른 쪽이 바로 그
+             * 전이를 일으킨 쪽이므로, 부르기 전에 읽은 `roomData`는 **하필 중요한
+             * 순간에** 낡는다. 그것으로 phase를 정하면 첫 입장이 `starting`에 갇힌다.
+             */
+            [roomData, playerData] = await Promise.all([
+              fetchRoom(roomId),
+              fetchRoomPlayers(roomId),
+            ]);
             session = validateDuelGameSession({
               room: roomData,
               players: playerData,
@@ -447,8 +459,43 @@ export default function MultiplayerGamePage() {
       if (recoveryGenerationRef.current !== generation) return;
 
       const { session, page } = restored;
-      setRoom(session.room);
-      setPlayers(session.players);
+
+      /**
+       * **복구는 자기가 읽은 스냅샷이 최신이라고 가정하지 않는다.**
+       *
+       * 이 함수는 방과 참가자를 읽고, 위키 문서를 받아오고 (관측 1.5초),
+       * **그다음에** 상태를 쓴다. 그 사이에 realtime이 더 새로운 방을 이미 실어
+       * 왔을 수 있다 — 그리고 경기 시작에서는 거의 항상 그렇다. 상대의 초기화가
+       * 방을 `playing`으로 넘기는 시점은 `starting`이 된 지 0.5초 뒤이고,
+       * 그것은 이 함수가 아직 문서를 받고 있는 중이다.
+       *
+       * 그때 자기 스냅샷을 그대로 쓰면 **더 새로운 것을 덮는다.** 덮은 결과가
+       * 조용하지 않다: `game_rooms`는 다시 바뀌지 않고, 하트비트와 타임아웃
+       * 확정은 PLAYING 게이트 안에만 있으므로 **아무도 방을 다시 읽지 않는다.**
+       * 화면은 LOADING에 멈추고 새로고침만이 탈출구다. 그리고 새로고침은 복구
+       * 경로여서 카운트다운을 건너뛰므로, 지급도 함께 사라진다.
+       *
+       * 그래서 realtime 핸들러가 이미 쓰고 있는 규칙을 여기에도 적용한다 —
+       * `classifyRealtimeVersion`이 뒤진다고 말하는 스냅샷은 쓰지 않는다.
+       * 아래의 phase 결정도 이렇게 고른 방을 본다. **읽은 방이 아니라 아는 방이다.**
+       */
+      const knownRoom = roomRef.current;
+      const authoritativeRoom = knownRoom
+        && classifyRealtimeVersion(knownRoom.state_version, session.room?.state_version) === "stale"
+        ? knownRoom
+        : session.room;
+
+      const knownPlayers = playersRef.current || [];
+      const authoritativePlayers = (session.players || []).map((row) => {
+        const known = knownPlayers.find((player) => player.user_id === row.user_id);
+        return known
+          && classifyRealtimeVersion(known.progress_version, row.progress_version) === "stale"
+          ? known
+          : row;
+      });
+
+      setRoom(authoritativeRoom);
+      setPlayers(authoritativePlayers);
 
       if (session.outcome === "finished") {
         clearLocalGameState();
@@ -475,8 +522,8 @@ export default function MultiplayerGamePage() {
       setPageData(page);
       setHistoryStack(normalizedPath.slice(0, -1));
       setElapsedSeconds(session.elapsedSeconds);
-      startedAtRef.current = session.room.started_at
-        ? Date.parse(session.room.started_at)
+      startedAtRef.current = authoritativeRoom.started_at
+        ? Date.parse(authoritativeRoom.started_at)
         : Date.now() - session.elapsedSeconds * 1000;
       playStartTrackedRef.current = saved?.enteredPlaying === true;
 
@@ -496,16 +543,40 @@ export default function MultiplayerGamePage() {
         console.error("duel item state recovery failed:", itemError);
       }
 
+      /**
+       * `enteredPlaying`은 **"이 사람이 이미 경기를 시작했다"** 는 뜻이다 —
+       * **"방이 playing이다"가 아니다.** 두 값을 같이 취급하면 아직 아무것도 하지
+       * 않은 첫 입장이 곧바로 "이미 시작했다"로 기록되고, VS 인트로와 카운트다운을
+       * 건너뛴다. 지급은 카운트다운 한 곳에서만 일어나므로
+       * (`ensure_duel_item_grant_v3`) 그 건너뛰기는 **5슬롯을 그 경기 내내 잃는
+       * 것**과 같다. 그리고 한 번 기록되면 되돌아오지 않는다.
+       *
+       * 그래서 서버가 증명하는 것만 본다: 이동이 한 번이라도 기록됐는가.
+       * 나머지 기록자는 카운트다운 완주 하나다 (`CountdownOverlay`의 `onComplete`) —
+       * 즉 **연출을 실제로 본 사람만** 본 것으로 기록된다.
+       */
+      const hasEnteredPlaying = saved?.enteredPlaying === true || session.moveCount > 0;
+
       saveLocalGameState({
         currentTitle: session.currentTitle,
         pathTitles: normalizedPath,
         historyStack: normalizedPath.slice(0, -1),
         clickCount: session.moveCount,
-        enteredPlaying: saved?.enteredPlaying === true || session.room.status === "playing",
+        enteredPlaying: hasEnteredPlaying,
       });
 
       setRecovery(null);
-      setPhase(session.room.status === "playing" ? PHASE.PLAYING : PHASE.LOADING);
+      /**
+       * **복구는 연출을 건너뛸 뿐, 연출을 결정하지 않는다.**
+       *
+       * 아직 시작하지 않은 입장은 LOADING으로 두고, 방 상태를 보는 게이트가
+       * VS_INTRO를 고르게 한다 — 그쪽은 이미 `enteredPlaying`을 그렇게 읽고 있다.
+       * 여기서 곧바로 PLAYING을 쓰면 첫 입장이 카운트다운을 건너뛴다.
+       * 경기 중 새로고침(`hasEnteredPlaying`)만 연출 없이 바로 들어간다.
+       */
+      setPhase(hasEnteredPlaying && authoritativeRoom.status === "playing"
+        ? PHASE.PLAYING
+        : PHASE.LOADING);
     } catch (error) {
       if (recoveryGenerationRef.current !== generation) return;
       const normalized = normalizeOnlineGameError(
@@ -670,9 +741,34 @@ export default function MultiplayerGamePage() {
         return false;
       }
 
+      /**
+       * **버전은 클릭 시점이 아니라 호출 시점에 읽는다.**
+       *
+       * `progress_version`은 이동의 낙관적 동시성 토큰인데 **이동만 올리는 것이
+       * 아니다** — `heartbeat_duel_v2`가 10초마다 살아 있다는 신호로 +1 한다
+       * (`20260814091000:928`). 실측: 이동 4번인 방의 버전이 **88**이었다.
+       *
+       * 그래서 렌더 클로저의 `myPlayer`를 쓰면 위의 `fetchPageData` ·
+       * `ensureWikiSnapshot`(1~1.5초) 동안 하트비트가 서버를 앞질러 가고, 서버는
+       * 정확히 일치하는 값만 받으므로 **평범한 링크 클릭이 거부된다**
+       * (`STATE_VERSION_CONFLICT`). 10초 중 1.5초가 지는 창이었다.
+       *
+       * `playersRef.current`는 하트비트·이동·아이템·realtime·복구가 쓴 결과를
+       * 전부 반영한 마지막 커밋이다. 여기서 읽으면 그 창이 닫힌다. **남는 것은
+       * 요청이 이미 날아가 있는 하트비트 하나뿐이고**, 그것까지 없애려면 토큰을
+       * liveness에서 떼어내야 한다 — 배포된 v2 계약이라 C 범위 밖이다
+       * (`docs/agent/TRACK-C-HANDOFF.md` §3.8 관찰).
+       */
+      const myLatestRow = (playersRef.current || []).find(
+        (player) => player.user_id === user.id
+      );
+      const expectedVersion = Number(
+        myLatestRow?.progress_version ?? myPlayer?.progress_version
+      ) || 0;
+
       const moveResponse = await applyDuelMoveV2({
         roomId,
-        expectedVersion: Number(myPlayer?.progress_version) || 0,
+        expectedVersion,
         nextPage,
         clickedRawTitle: nextTitle,
         eventType,

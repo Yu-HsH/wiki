@@ -891,3 +891,152 @@ test("P7 — 부채 ②는 여전히 열려 있다 (maxPreviews는 카탈로그 
   assert.match(pageSource, /item\.maxPreviews/, "한도는 카탈로그에서 읽는다 — 서버가 아니다");
 });
 
+/**
+ * 6b 이후 스모크 회귀 고정 `[2026-09-05 재현·진단]`.
+ *
+ * 진단은 게이트웨이 로그에서 나왔다: `ensure_duel_item_grant_v3` **호출 0건**.
+ * 지급 effect가 실패한 것이 아니고 예외를 삼킨 것도 아니다 — **아예 안 돌았다.**
+ * `phase`가 COUNTDOWN에 닿기 전에 LOADING에서 멈췄기 때문이고, 그 정지는
+ * 복구가 **자기가 읽은 낡은 방을 더 새로운 것 위에 덮으면서** 생겼다.
+ *
+ * 원인은 둘이었고, 아래 두 개가 그 둘을 각각 고정한다.
+ * **둘 다 효과가 조용하다** — 재발해도 예외도 없고 화면에 이유가 안 나온다.
+ * 그래서 소스 검사로 박는다 `[사용자 지시, 2026-09-05]`.
+ */
+test("6b 회귀 ① — phase 결정은 낡은 방 스냅샷을 쓰지 않는다", () => {
+  const pageSource = read("pages/MultiplayerGamePage.jsx");
+
+  // ① 초기화 RPC 뒤에 **방을 다시 읽는다.** 초기화는 두 번째 참가자에서 방을
+  //    넘기면서 참가자 행만 돌려주므로, 부르기 전 스냅샷은 부른 사람에게서
+  //    **하필 그 순간에** 낡는다.
+  const [initBlock] = pageSource.match(
+    /await initializeMyGameProgress\([\s\S]*?validateDuelGameSession\(/
+  ) || [];
+  assert.ok(initBlock, "초기화 분기를 찾지 못했다");
+  assert.match(initBlock, /fetchRoom\(/, "초기화가 방을 바꾼다 — 방도 다시 읽어야 한다");
+
+  // ② 그래도 **발행 시점에 더 새로운 방이 이미 와 있을 수 있다** — 문서를 받는
+  //    사이에 realtime이 실어 온다. realtime 핸들러가 이미 쓰는 버전 교새를
+  //    복구에도 적용해야 덮는 일이 생기지 않는다.
+  const [publish] = pageSource.match(
+    /const knownRoom = roomRef\.current;[\s\S]*?setPlayers\(authoritativePlayers\);/
+  ) || [];
+  assert.ok(publish, "버전 교새를 거치는 발행 지점을 찾지 못했다");
+  assert.match(publish, /classifyRealtimeVersion\(\s*knownRoom\.state_version/);
+  assert.match(publish, /progress_version/, "참가자도 같은 교새를 따른다");
+
+  // ③ phase 결정은 **그렇게 고른 방**을 본다. 스냅샷을 다시 보면 ①②를 해도
+  //    소용이 없다 — 그것이 이 버그의 모양이었다.
+  assert.doesNotMatch(
+    pageSource,
+    /session\.room\.status/,
+    "phase는 읽은 방이 아니라 아는 방을 본다"
+  );
+});
+
+test("6b 회귀 ② — enteredPlaying은 방 상황에서 유도되지 않는다", () => {
+  const pageSource = read("pages/MultiplayerGamePage.jsx");
+
+  // ① 기준은 **이 사람이 실제로 움직였는가**다. 방이 진행 중이라는 사실은 그
+  //    사람이 연출을 봤다는 증거가 아니다. 섞어 쓰면 첫 입장이 공짜로
+  //    "이미 시작함"이 되고, 그 기록은 되돌아오지 않는다.
+  const [derivation] = pageSource.match(/const hasEnteredPlaying =[^;]*;/) || [];
+  assert.ok(derivation, "hasEnteredPlaying 유도를 찾지 못했다");
+  assert.match(derivation, /session\.moveCount/, "서버가 증명하는 것만 본다");
+  assert.doesNotMatch(derivation, /status/, "방 상황에서 유도하면 첫 입장이 카운트다운을 잃는다");
+
+  // ② 복구는 **연출을 건너뛸 뿐, 연출을 결정하지 않는다.** 아직 시작하지 않은
+  //    입장은 LOADING으로 내려놓고, 방을 보는 게이트가 VS_INTRO를 고른다.
+  const [decision] = pageSource.match(/setPhase\(hasEnteredPlaying[\s\S]*?\);/) || [];
+  assert.ok(decision, "복구의 phase 결정을 찾지 못했다");
+  assert.match(decision, /PHASE\.LOADING/, "첫 입장은 게이트로 흘러가야 한다");
+
+  // ③ 나머지 기록자는 카운트다운 완주 하나다 — **연출을 실제로 본 사람만**
+  //    본 것으로 기록된다.
+  assert.match(
+    pageSource,
+    /onComplete=\{\(\)\s*=>\s*\{\s*saveLocalGameState\(\{ enteredPlaying: true \}\)/
+  );
+});
+
+test("6b 회귀 ③ — 지급 호출 지점은 카운트다운 하나다", () => {
+  // 방어선을 깔지 않기로 한 결정을 고정한다 `[사용자 판정, 2026-09-05]`.
+  // `useItems && inventory.length === 0`은 **"아직 안 받았다"와 "다 썼다"를
+  // 구분하지 못한다** — 재조회 실패가 재지급 시도로 이어지고, 서버가 멱등이라
+  // 사고는 없지만 **호출 이유를 설명할 수 없는 코드**가 된다. 더 나쁜 것은
+  // 방어선이 깔리면 **phase 정지가 재발해도 아이템은 나오므로 가려진다**는 점이다.
+  // 이번 정지가 보이게 된 유일한 이유가 지급이 한 곳에만 있었던 것이다.
+  const pageSource = read("pages/MultiplayerGamePage.jsx");
+  const calls = [...pageSource.matchAll(/ensureDuelItemGrant\(/g)];
+  assert.equal(calls.length, 1, "지급은 카운트다운 effect 한 곳에서만 일어난다");
+
+  const [effect] = pageSource.match(
+    /if \(phase !== PHASE\.COUNTDOWN\) return;[\s\S]*?\}, \[phase, roomId\]\);/
+  ) || [];
+  assert.ok(effect, "카운트다운 지급 effect를 찾지 못했다");
+  assert.match(effect, /ensureDuelItemGrant\(roomId\)/);
+});
+
+test("6b 회귀 ④ — 이동 버전은 호출 시점에 읽는다", () => {
+  // 두 번째 스모크에서 평범한 링크 클릭이 `STATE_VERSION_CONFLICT`로 거부됐다
+  // `[2026-09-06 진단]`. 원인은 아이템 응답이 아니다 — `use_duel_item_v3`는
+  // 행 둘을 돌려주고 `syncAfterItemUse`가 반영한다. 원인은 **`progress_version`이
+  // 이동의 동시성 토큰인데 `heartbeat_duel_v2`가 10초마다 +1 한다**는 것이다
+  // (`20260814091000:928`). 실측: 이동 4번인 방의 버전이 88이었다.
+  //
+  // 그래서 렌더 클로저의 값을 쓰면 문서를 받는 1~1.5초 동안 서버가 앞질러 가고
+  // 클릭이 거부된다 — 10초 중 1.5초. 호출 시점에 ref에서 읽으면 그 창이 닫힌다.
+  // **효과가 조용하다** — 재발하면 그냥 클릭이 안 먹는다. 그래서 박아 둔다.
+  const pageSource = read("pages/MultiplayerGamePage.jsx");
+
+  const [derivation] = pageSource.match(/const expectedVersion = Number\([\s\S]*?\|\| 0;/) || [];
+  assert.ok(derivation, "호출 시점 버전 계산을 찾지 못했다");
+  assert.match(derivation, /myLatestRow\?\.progress_version/, "ref에서 먼저 읽는다");
+
+  // ref를 채우는 쪽이 실제로 있어야 의미가 있다 — 하트비트·이동·아이템·realtime·
+  // 복구가 쓴 마지막 커밋이 여기 담긴다.
+  assert.match(pageSource, /playersRef\.current = players/);
+
+  // 그리고 호출은 그 값을 쓴다. 리터럴을 다시 계산하면 창이 되살아난다.
+  const [call] = pageSource.match(/await applyDuelMoveV2\(\{[\s\S]*?\}\);/) || [];
+  assert.ok(call, "applyDuelMoveV2 호출을 찾지 못했다");
+  assert.match(call, /expectedVersion,/, "계산한 값을 그대로 넘긴다");
+  assert.doesNotMatch(
+    call,
+    /myPlayer\?\.progress_version/,
+    "클릭 시점 클로저를 다시 읽으면 안 된다"
+  );
+});
+
+/**
+ * 강제 이동 목적지 해석 — `20260904100000` `[2026-09-06]`.
+ *
+ * `LINK_SNAPSHOT_MISSING`은 pre-track-C 결함이었고 (`apply_duel_move_v2`의
+ * FORCED_LINK 분기가 같은 모양이다) **아이템을 HUD에 올린 이 웨이브가 드러냈다.**
+ * 후보를 먼저 뽑고 나중에 해석하니, 목적지 스냅샷이 없는 링크를 골라 놓고 실패했다.
+ * 실측 로컬: 링크 1399개 중 해석 가능 1개인 문서가 있었고, 링크 3,166행 전부
+ * `target_revision_id`가 null이었다.
+ *
+ * **fixture가 이 결함을 새게 했다** — 목적지가 100% 스냅샷된 세계였다. 그 사실을
+ * pgTAP가 이제 스스로 검사하므로(`the fixture contains destinations this server
+ * cannot resolve`) 여기서는 migration 쪽 계약만 고정한다.
+ */
+test("A안 — 후보 풀이 해석 가능한 목적지로 제한된다", () => {
+  const fixSource = read("supabase/migrations/20260904100000_duel_item_link_resolvable_v3.sql");
+
+  // ① 필터는 해석기의 WHERE를 그대로 쓴다. 따로 적으면 둘이 어긋나기 시작한다.
+  assert.match(fixSource, /from public\.wiki_page_snapshots destination/);
+  assert.match(fixSource, /destination\.page_id = link\.target_page_id/);
+  assert.match(fixSource, /link\.target_revision_id is null/);
+
+  // ② 비었을 때의 코드는 미소비 3종의 하나여야 한다 — 도달 못 하는 문서가
+  //    아이템을 먹으면 안 된다.
+  assert.ok(UNCONSUMED_FAILURE_CODES.includes("NO_ELIGIBLE_LINK"));
+
+  // ③ 배포된 RPC는 건드리지 않는다. 옛 번들이 그것을 부른다.
+  assert.doesNotMatch(fixSource, /create or replace function public\.apply_duel_move_v2/);
+
+  // ④ 그리고 B안은 채택되지 않았다 — `coalesce`가 page_id와 revision_id를 어긋나게
+  //    만들어 이후 모든 클릭이 LINK_NOT_ALLOWED가 된다. 그 판정이 파일에 남아 있다.
+  assert.match(fixSource, /LINK_NOT_ALLOWED/, "왜 B안이 아닌지가 migration에 적혀 있어야 한다");
+});

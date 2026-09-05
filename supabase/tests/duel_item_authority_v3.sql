@@ -14,7 +14,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(143);
+select plan(148);
 
 set local role postgres;
 
@@ -51,6 +51,37 @@ from generate_series(1, 8) n;
 insert into public.wiki_snapshot_links (snapshot_id, target_page_id, target_revision_id, target_title_snapshot, ordinal)
 select '00000000-0000-0000-0014-0000000000a1', 'p' || n, 'r' || n, 'Page ' || n, n - 1
 from generate_series(1, 8) n;
+
+-- ⚠ Page A above is 100% RESOLVABLE — every target has a wiki_page_snapshots row
+-- and a matching target_revision_id. **That is exactly how LINK_SNAPSHOT_MISSING
+-- escaped into a smoke run** `[2026-09-06]`: the fixture's destination universe was
+-- fully snapshotted, real data's is not. Measured on a local stack, one snapshot had
+-- 1399 links and 1 resolvable destination, and every one of 3,166 link rows carried
+-- target_revision_id null (`supabase/functions/wiki-snapshot` stopped fetching them
+-- on 2026-08-29). So the fixture below reproduces the shape reality actually has.
+--
+-- Page U — links exist and NONE can be resolved. Two different ways to be
+-- unresolvable, one per branch of private.resolve_wiki_revision's WHERE clause:
+--   'gone1'/'gone2'  no wiki_page_snapshots row at all, target_revision_id null
+--   'p1' + 'rWRONG'  the page has a snapshot, but not at that revision
+-- Page M — mixed. Exactly one resolvable target ('p2') among four links, so a
+-- forced move there has precisely one legal answer and the pool can be asserted.
+insert into public.wiki_pages (page_id, canonical_title)
+values ('pU', 'Page U'), ('pM', 'Page M')
+on conflict (page_id) do nothing;
+insert into public.wiki_page_snapshots (id, page_id, revision_id, canonical_title_snapshot)
+values
+  ('00000000-0000-0000-0014-0000000000d1', 'pU', 'rU', 'Page U'),
+  ('00000000-0000-0000-0014-0000000000d2', 'pM', 'rM', 'Page M');
+insert into public.wiki_snapshot_links (snapshot_id, target_page_id, target_revision_id, target_title_snapshot, ordinal)
+values
+  ('00000000-0000-0000-0014-0000000000d1', 'gone1', null,     'Gone One', 0),
+  ('00000000-0000-0000-0014-0000000000d1', 'gone2', null,     'Gone Two', 1),
+  ('00000000-0000-0000-0014-0000000000d1', 'p1',    'rWRONG', 'Page 1',   2),
+  ('00000000-0000-0000-0014-0000000000d2', 'gone3', null,     'Gone Three', 0),
+  ('00000000-0000-0000-0014-0000000000d2', 'gone4', null,     'Gone Four',  1),
+  ('00000000-0000-0000-0014-0000000000d2', 'p1',    'rWRONG', 'Page 1',     2),
+  ('00000000-0000-0000-0014-0000000000d2', 'p2',    null,     'Page 2',     3);
 
 create or replace function pg_temp.mkroom(
   p_room uuid, p_code text, p_use_items boolean default true,
@@ -598,6 +629,61 @@ select is(
   public.use_duel_item_v3('00000000-0000-0000-0014-00000000f00b', :'nl_g',
     '00000000-0000-0000-0014-00000000e012', null)->>'code',
   'NO_ELIGIBLE_LINK', '유효 링크가 없으면 아이템을 소비하지 않는다 (14 §4)');
+
+-- The fixture must keep containing an unresolvable destination. If someone
+-- "tidies" these rows the way Page A is tidy, every assertion below still passes
+-- while the product breaks again — so assert the fixture's own shape first.
+set local role postgres;
+select ok(
+  exists (
+    select 1
+    from public.wiki_snapshot_links link
+    where not exists (
+      select 1 from public.wiki_page_snapshots destination
+      where destination.page_id = link.target_page_id
+        and (link.target_revision_id is null
+             or destination.revision_id = link.target_revision_id)
+    )
+  ),
+  'the fixture contains destinations this server cannot resolve (real data does)'
+);
+
+-- Links exist but none resolve: the pool is empty and the item must survive. Before
+-- 20260904100000 this returned LINK_SNAPSHOT_MISSING instead, which is the code the
+-- HUD treats as a rejection rather than a no-op.
+select pg_temp.mkroom('00000000-0000-0000-0014-00000000f01a', 'PGT01A', true,
+  array['Page U'], array['pU'], array['rU'], 'pZ');
+select pg_temp.give('00000000-0000-0000-0014-00000000f01a',
+  '00000000-0000-0000-0014-000000000002', 0, 'attack', 'random_link_move') as g \gset ur_
+select pg_temp.as_user('00000000-0000-0000-0014-000000000002');
+select is(
+  public.use_duel_item_v3('00000000-0000-0000-0014-00000000f01a', :'ur_g',
+    '00000000-0000-0000-0014-00000000e030', null)->>'code',
+  'NO_ELIGIBLE_LINK',
+  '해석 불가만 있는 문서에서도 NO_ELIGIBLE_LINK다 — LINK_SNAPSHOT_MISSING이 아니다');
+set local role postgres;
+select ok(
+  (select consumed_at is null from public.duel_item_grants where id = :'ur_g'),
+  'and the slot is untouched, so the player loses nothing to an unreachable page'
+);
+
+-- Mixed page: exactly one resolvable target, so the destination is not a matter of
+-- luck. This is the assertion that would have caught the defect.
+select pg_temp.mkroom('00000000-0000-0000-0014-00000000f01b', 'PGT01B', true,
+  array['Page M'], array['pM'], array['rM'], 'pZ');
+select pg_temp.give('00000000-0000-0000-0014-00000000f01b',
+  '00000000-0000-0000-0014-000000000002', 0, 'attack', 'random_link_move') as g \gset mx_
+select pg_temp.as_user('00000000-0000-0000-0014-000000000002');
+select is(
+  public.use_duel_item_v3('00000000-0000-0000-0014-00000000f01b', :'mx_g',
+    '00000000-0000-0000-0014-00000000e031', null)->>'result',
+  'applied', '해석 가능한 링크가 하나라도 있으면 강제 이동이 성립한다');
+set local role postgres;
+select is(
+  (select current_page_id from public.room_players
+   where room_id = '00000000-0000-0000-0014-00000000f01b'
+     and user_id = '00000000-0000-0000-0014-000000000001'), 'p2',
+  '그리고 목적지는 해석 가능한 그 하나다 — 뽑기 운이 아니다');
 set local role postgres;
 select ok(
   (select consumed_at is null from public.duel_item_grants where id = :'nl_g'),
