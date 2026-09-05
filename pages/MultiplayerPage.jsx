@@ -12,6 +12,34 @@ import {
   findGroupRoomByCode,
   joinGroupRoom,
 } from "../services/groupMultiplayerService";
+import {
+  DUEL_ITEM_ROLE,
+  DUEL_ROLE_LABELS,
+  DUEL_SLOT_COUNT,
+  getDuelItemsByRole,
+} from "../data/duelItems";
+
+/**
+ * 안내 문구의 아이템 목록은 **카탈로그에서 만든다.**
+ *
+ * 예전에는 10줄이 손으로 적혀 있었고 그래서 어긋났다 — 지워진 셋(언어 변경·링크
+ * 하이라이트·현재 문서 교환)과 비활성된 미니게임이 남아 있었고, 새로 들어온 넷(링크
+ * 검열·링크 미리보기·역링크·역사 되감기)은 빠져 있었다. **설명이 카탈로그를 베끼면
+ * 카탈로그가 바뀔 때마다 다시 어긋난다.** 그래서 베끼지 않고 읽는다.
+ *
+ * `getDuelItemsByRole`이 비활성 아이템을 이미 걸러 주므로 `swap_current`는 들어오지
+ * 않는다. 역할 순서는 슬롯 순서와 같다 (`DUEL_SLOT_PLAN`).
+ */
+const DUEL_ITEM_HELP_SECTIONS = [
+  DUEL_ITEM_ROLE.ATTACK,
+  DUEL_ITEM_ROLE.SEARCH,
+  DUEL_ITEM_ROLE.DEFENSE,
+  DUEL_ITEM_ROLE.JOKER,
+].map((role) => ({
+  role,
+  label: DUEL_ROLE_LABELS[role],
+  items: getDuelItemsByRole(role),
+}));
 
 export default function MultiplayerPage() {
   const navigate = useNavigate();
@@ -299,7 +327,10 @@ export default function MultiplayerPage() {
                   <li>내 목표는 상대가 설정한 목표 문서입니다.</li>
                   <li>먼저 목표 문서에 도달한 사람이 승리합니다.</li>
                   <li>상대 현재 문서, 이동 횟수, 상태를 확인할 수 있습니다.</li>
-                  <li>아이템으로 상대를 방해하거나 자신을 보조할 수 있습니다.</li>
+                  <li>
+                    아이템전으로 만들면 시작할 때 {DUEL_SLOT_COUNT}칸을 받습니다.
+                    지급과 사용 판정은 서버가 하며, 새로고침해도 다시 뽑히지 않습니다.
+                  </li>
                 </ul>
 
                 <h3>2. 그룹모드</h3>
@@ -312,18 +343,22 @@ export default function MultiplayerPage() {
                 </ul>
 
                 <h3>3. 아이템 설명</h3>
-                <ul>
-                  <li><strong>시야 방해:</strong> 상대 화면을 먹물/페인트 효과로 잠시 가립니다.</li>
-                  <li><strong>언어 변경:</strong> 상대 현재 문서에 혼란 효과를 줍니다.</li>
-                  <li><strong>랜덤 링크 이동:</strong> 상대를 현재 문서의 랜덤 링크로 강제 이동시킵니다.</li>
-                  <li><strong>현재 문서 교환:</strong> 나와 상대의 현재 위치를 교환합니다.</li>
-                  <li><strong>링크 하이라이트:</strong> 목표와 관련 있을 가능성이 높은 링크를 표시합니다.</li>
-                  <li><strong>검색 기능:</strong> 현재 문서 안에서 검색 1회 사용합니다.</li>
-                  <li><strong>뒤로가기:</strong> 이전 문서로 한 번 되돌아갑니다.</li>
-                  <li><strong>랜덤 텔레포트:</strong> 무작위 문서로 이동합니다.</li>
-                  <li><strong>방어하기:</strong> 방해 효과 해제 + 일정 시간 면역을 얻습니다.</li>
-                  <li><strong>미니게임:</strong> 가위바위보 승자가 랜덤 아이템을 발동합니다.</li>
-                </ul>
+                <p>
+                  1vs1 아이템전에서만 나옵니다. 한 판에 {DUEL_SLOT_COUNT}칸을 받고,
+                  칸마다 역할이 정해져 있습니다.
+                </p>
+                {DUEL_ITEM_HELP_SECTIONS.map((section) => (
+                  <div key={section.role}>
+                    <h4>{section.label}</h4>
+                    <ul>
+                      {section.items.map((item) => (
+                        <li key={item.id}>
+                          <strong>{item.name}:</strong> {item.description}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
 
                 <h3>4. 새로고침 안내</h3>
                 <ul>
