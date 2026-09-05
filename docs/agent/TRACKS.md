@@ -72,7 +72,7 @@
 | **R6** | **운영 DB에 적용하지 않는다.** 트랙의 산출물은 migration **파일**이고, 적용은 별건 승인이다 (`AGENTS.md` §1) |
 | **R7** | **CSS는 `appStyles.js`에만 등록한다.** 컴포넌트·`main.jsx`에서 css를 static import하면 점검 화면 경로에 CSS 요청이 생기고 `tests/maintenanceGate.test.js:275`가 막는다 `[코드]` |
 | **R8** | **수치에는 기준 커밋과 날짜를 붙인다** (`AGENTS.md` §6). 트랙마다 `npm test` 수가 달라지므로 특히 그렇다. 현재 베이스라인은 **144/144** (기준 `48e3f2d`, 2026-09-02) |
-| **R9** | **§2.3의 공유 자원 불변식을 깨지 않는다.** 파일 소유권으로 표현할 수 없는 겹침이 7건 있다 — 배열·상수·문자열 리터럴·CSS 클래스 이름·훅 반환 형태. **화이트리스트가 잡지 못하는 종류이므로 티켓 문구와 grep 가능한 불변식으로 강제한다** |
+| **R9** | **§2.3의 공유 자원 불변식을 깨지 않는다.** 파일 소유권으로 표현할 수 없는 겹침이 7건 있다 — 배열·상수·문자열 리터럴·CSS 클래스 이름·훅 반환 형태. **화이트리스트가 잡지 못하는 종류이므로 티켓 문구와 기계 검사 가능한 불변식으로 강제한다.** **2026-09-06 — ①③④를 개수에서 배열·의도 검사로 교체했다** (§2.3의 ⚠ 상자). **개수 기반 불변식을 새로 만들지 않는다** |
 | **R10** | **§2에 없는 파일은 동결로 취급한다.** 이름이 표에 없다는 것은 "자유"가 아니라 "소유자 미정"이다. 필요해지면 트랙을 멈추고 이 문서를 고친다 (R1) |
 
 ---
@@ -232,16 +232,53 @@
 
 | # | 공유 자원 | 파일은 갈렸는데 | **불변식** |
 |---|---|---|---|
-| **①** | **`data/itemPools.js`의 두 배열** — `SINGLE_ITEM_IDS`(4종) · `MULTI_ITEM_IDS`(10종). `highlight_links`가 양쪽에 있다 | 파일은 **C 소유**인데 `SINGLE_ITEM_IDS`의 소비자는 **B의 `GamePage.jsx`**다 (`useItemSystem` 경유) | **C는 `MULTI_ITEM_IDS`만 수정한다.** `git diff`에서 `SINGLE_ITEM_IDS` 블록이 변경되면 위반이다. **`grep -c 'highlight_links' data/itemPools.js` = 2 유지** |
+| **①** | **`data/itemPools.js`의 두 배열** — `SINGLE_ITEM_IDS`(4종) · `MULTI_ITEM_IDS`(10종). `highlight_links`가 양쪽에 있다 | 파일은 **C 소유**인데 `SINGLE_ITEM_IDS`의 소비자는 **B의 `GamePage.jsx`**다 (`useItemSystem` 경유) | **C는 `MULTI_ITEM_IDS`만 수정한다.** ~~`grep -c 'highlight_links' data/itemPools.js` = 2 유지~~ → **배열 검사로 교체 (2026-09-06)**: `SINGLE_ITEM_IDS`가 **`["highlight_links","search_once","go_back","random_teleport"]` 4원소와 순서까지 일치**하고, 그 블록이 `git diff`에서 **무변경**이면 통과다. **개수 검사는 폐기한다** — 트랙 C 시점 실측 `grep -c`는 **4**이고 **정상이다**(배열 1 + 주석 3). 아래 ⚠ 상자 |
 | **②** | **`utils/onlineGameSession.js`의 두 검증 함수** — `validateDuelGameSession`(`:191`) · `validateGroupGameSession`(`:130`) | 한 파일에 **C 영역과 동결 영역**이 같이 있다 | **동결.** C가 1:1 세션 복구를 고쳐야 하면 **트랙을 멈추고 이 문서를 고친다.** 그룹 함수와 공유하는 헬퍼(`normalizeOnlineGameError`·`retryRecoverable`)까지 흔들린다 |
-| **③** | **`useItemSystem()`의 반환 형태** — `inventory`·`canUseItem`·`useItem`·`activeEffects`·`immunityUntil`·`highlightRequestId`·`searchAvailable`·`consumeSearchAvailable`·`status`·`pushHistory`·`clearPageScopedEffects`·`initializeItems`·**`floatingMessage`** | 훅은 **C 소유**, 소비자는 **B의 `GamePage.jsx`** — **`itemSystem.` 멤버 접근이 13줄**이다 (`:423·426·491·821-824·835-837·841·844-845`). 별도로 선언 `:473`·가드 `:829`가 있어 `itemSystem`을 언급하는 줄은 15줄이다 `[코드, 2026-09-03 실측]` | **C는 반환 키를 제거·개명하지 않는다.** 추가만 허용. 위반하면 B의 파일이 런타임에 깨진다 |
-| **④** | **`"wiki-single-items"` localStorage 키** — **import되지 않고 문자열이 4파일 6줄에 복제돼 있다** | `hooks/useItemSystem.js:26`(**C**) 가 쓰고, `utils/singleGameSession.js:6`(**B**)·`pages/GamePage.jsx:176·672`(**B**)·`tests/guestSingleSession.test.js:197·205`(**B**)이 지운다 | **양쪽 다 이 문자열을 바꾸지 않는다.** 한쪽만 바꾸면 게스트 아이템 상태가 정리되지 않고 다음 게임으로 새어 나간다 (17 §6 위반). **`grep -rc '"wiki-single-items"' hooks utils pages tests` 합계 = 6 유지** — **세는 단위는 줄이다. "4곳"은 파일 수(4)를 줄 수로 잘못 적은 것이었다** `[코드, 2026-09-03 실측]` — 분기점 `ad569f2`에서도 6이었다. **A·B가 늘린 것이 아니다** |
-| **⑤** | **`mp-*` CSS 클래스 이름공간** — `css/multiplayer.css`에 최상위 규칙 131개 | 파일은 **C 소유**인데 **A의 `GroupRoomPage.jsx`**, **동결된 `GroupGamePage.jsx`**, 동결된 `OnlineGameRecoveryPanel.jsx`가 `mp-page`·`mp-card`·`mp-title`·`mp-action-btn` 등을 쓴다 `[코드]` | **C는 기존 `mp-*` 규칙을 개명·삭제하지 않는다.** 1:1 전용 스타일은 새 클래스로 추가한다. 위반하면 **CSS만 고쳤는데 그룹 화면이 바뀐다** |
+| **③** | **`useItemSystem()`의 반환 형태** — `inventory`·`canUseItem`·`useItem`·`activeEffects`·`immunityUntil`·`highlightRequestId`·`searchAvailable`·`consumeSearchAvailable`·`status`·`pushHistory`·`clearPageScopedEffects`·`initializeItems`·**`floatingMessage`** | 훅은 **C 소유**, 소비자는 **B의 `GamePage.jsx`** — **`itemSystem.` 멤버 접근이 13줄**이다 (`:423·426·491·821-824·835-837·841·844-845`). 별도로 선언 `:473`·가드 `:829`가 있어 `itemSystem`을 언급하는 줄은 15줄이다 `[코드, 2026-09-03 실측]` | **C는 반환 키를 제거·개명하지 않는다.** 추가만 허용. 위반하면 B의 파일이 런타임에 깨진다. **배열 검사 (2026-09-06)**: 반환 객체가 왼쪽 칸의 **13키를 전부 포함**하면 통과다 — **소비 줄 수(13)를 세지 않는다.** 그 숫자는 `GamePage.jsx`(B 소유)의 편집마다 흔들리고 **훅 계약과 무관하다.** 실측 2026-09-06: 13키 전원 존재, 반환 키 총 21개(추가는 허용) |
+| **④** | **`"wiki-single-items"` localStorage 키** — **import되지 않고 문자열이 4파일 6줄에 복제돼 있다** | `hooks/useItemSystem.js:26`(**C**) 가 쓰고, `utils/singleGameSession.js:6`(**B**)·`pages/GamePage.jsx:176·672`(**B**)·`tests/guestSingleSession.test.js:197·205`(**B**)이 지운다 | **양쪽 다 이 문자열을 바꾸지 않는다.** 한쪽만 바꾸면 게스트 아이템 상태가 정리되지 않고 다음 게임으로 새어 나간다 (17 §6 위반). ~~`grep -rc '"wiki-single-items"' hooks utils pages tests` 합계 = 6 유지~~ → **의도 검사로 교체 (2026-09-06)**: **`hooks/useItemSystem.js` · `utils/singleGameSession.js` · `pages/GamePage.jsx` · `tests/guestSingleSession.test.js` 네 파일이 모두 같은 리터럴 `"wiki-single-items"`를 쓴다**는 것이 불변식이다 — **한 파일이라도 다른 문자열을 쓰면 위반**이고, **줄 수가 6에서 달라지는 것은 위반이 아니다.** 실측 2026-09-06: 4파일 / 6줄, 전원 동일 리터럴. 이전 정정 이력(**"4곳"은 파일 수(4)를 줄 수로 적은 것** `[코드, 2026-09-03 실측]`, 분기점 `ad569f2`에서도 6)은 **개수 검사가 왜 못 미더운지의 사례로 보존한다** |
+| **⑤** | **`mp-*` CSS 클래스 이름공간** — `css/multiplayer.css`에 최상위 규칙 131개 | 파일은 **C 소유**인데 **A의 `GroupRoomPage.jsx`**, **동결된 `GroupGamePage.jsx`**, 동결된 `OnlineGameRecoveryPanel.jsx`가 `mp-page`·`mp-card`·`mp-title`·`mp-action-btn` 등을 쓴다 `[코드]` | **C는 기존 `mp-*` 규칙을 개명·삭제하지 않는다.** 1:1 전용 스타일은 새 클래스로 추가한다. 위반하면 **CSS만 고쳤는데 그룹 화면이 바뀐다**. **← 모범 형태. 그대로 둔다 (2026-09-06)** — 검사가 `^\.mp-`(**줄머리 앵커**)라 주석·문서·본문 인용이 걸리지 않고, **이 웨이브에서 한 번도 깨지지 않은 유일한 불변식이다.** 실측 2026-09-06: 최상위 규칙 **131개로 분기점과 동일**, 삭제·개명 **0건**, 신규 `.mp-` **0개** — C는 `.duel-item-*`라는 **별도 이름공간**을 썼다 |
 | **⑥** | **retire/result 어휘 문자열** — `"finished"`·`"retired"`·`"forfeited"`·`"left"` | **C**(`MultiplayerGamePage`) · 동결(`GroupGamePage`·`groupGameFlow`·`onlineGameSession`·`groupMultiplayerService`)에 **리터럴로 흩어져 있다**. ~~**A**(`GroupRoomPage`)~~ → **A는 이 어휘를 하나도 갖지 않았다** — 정정 근거는 §8-A 완료 행 | **어느 트랙도 이 문자열을 바꾸지 않는다.** C4가 **5값 어휘를 유지하기로 결정**했으므로 지금은 안전하다 — 그 결정이 이 불변식의 근거다 |
 | **⑦** | **`useAuth()`의 반환 형태** (`authContext.jsx`) | 파일은 **B 소유**인데 **13개 파일이 import한다** — A 4개·C 4개·동결 포함 `[코드]` | **B는 `user`·`loading`·`logout`과 `user.isGuest`·`user.id`·`user.displayName` 키를 유지한다.** 게스트 경계 작업이 정확히 이 형태를 만지는 작업이므로 **가장 조심할 항목이다** |
 
 > **④가 이 감사에서 가장 나쁜 형태다.** 공유 심볼이 아니라 **복제된 리터럴**이라
 > 컴파일러도 테스트도 잡지 못한다. 한쪽이 이름을 바꾸면 다른 쪽은 **조용히 아무것도 지우지 않는다.**
+
+> # ⚠ 2026-09-06 — **개수 불변식을 배열·의도 검사로 교체했다. 근거는 실물 위반 6건이다.**
+>
+> **불변식 5개가 이번 웨이브에서 6번 깨졌다** — ④가 서로 다른 트랙에서 **두 번** 깨져서 5 ≠ 6이다.
+> 위반은 전부 **거짓 양성**이었다: 지켜야 할 것은 지켜졌는데 **세는 방식이 틀렸다.**
+>
+> | 깨진 것 | 어떻게 | 실제로 계약은? |
+> |---|---|---|
+> | **①** | `grep -c 'highlight_links'` = 2 → **4** | **지켜졌다.** 배열은 바이트 동일. 늘어난 3은 **왜 동결인지 적은 주석**이다 |
+> | **④** (1차) | 합계 "4" → 실측 **6** | **지켜졌다.** "4"가 **파일 수를 줄 수로 적은 것**이었다 (2026-09-03 정정) |
+> | **④** (2차) | 인용 한 줄이 6 → **7** | **지켜졌다.** 트랙 C가 **범위 안 파일**(`hooks`·`utils`·`pages`·`tests`)에 이 리터럴을 인용했다가 **되돌렸다.** `docs/`였다면 애초에 세지 않았다 |
+> | **`duelSwapDisabled` 분기** | 분기 수 기반 | **지켜졌다.** 테스트 구조 변경이 개수만 흔들었다 |
+> | **`navigate` 3곳** | 지점 수 기반 | **지켜졌다.** 같은 이유 |
+> | **⑥** | 소비 줄 수 기반 | **지켜졌다.** ⑥이 세는 **리터럴 4종이 전부 무변동** (실측 2026-09-06, `pages utils services hooks components`: `finished` **32** · `retired` **12** · `forfeited` **6** · `left` **12** — 분기점과 전건 동일). **C4가 유지하기로 한 어휘는 5값이고, ⑥의 감시 대상은 그중 4개 리터럴이다** |
+>
+> **출처:** ①④(2차)·⑤·⑥은 **2026-09-06 통합 세션 실측**이다. ④(1차)는 2026-09-03 정정
+> 기록이고, **`duelSwapDisabled` 분기와 `navigate` 3곳은 `TRACK-C-HANDOFF.md` §1의 서술을
+> 옮긴 것으로 이 세션이 재측정하지 않았다** — 교체 판단은 실측된 네 건만으로도 선다.
+>
+> ### 검열되는 것은 이 문서가 아니라 **코드 옆 주석**이다
+>
+> **불변식의 범위가 리터럴보다 좁다** — 그래서 §2.3과 §1이 그 키를 **따옴표째로 인용하고도**
+> 불변식을 깨지 않았다. ④의 `grep`은 `hooks utils pages tests` **네 디렉터리만** 훑으므로
+> `docs/`는 **범위 밖**이고, ⑤는 `css/multiplayer.css` **한 파일만** 센다.
+>
+> **범위 안에서 검열되는 것은 정확히 "그 리터럴 옆에서 왜 그런지 적으려는 주석"이다.**
+> 회피가 두 번 실제로 일어났다 — `tests/explorationRecords.test.js`가 **일부러 인용을 피했고**,
+> 트랙 C가 인용했다가 **7이 되어 되돌렸다.** 즉 **불변식이 자기 설명을 검열했다.**
+> 그것이 교체 근거이고, 대상은 이 문서가 아니라 **코드 주석**이다.
+>
+> **①이 그 증거를 남겼다** — `data/itemPools.js`의 주석 3줄 중 하나는
+> **"§2.3-①은 `grep -c`가 2로 유지되기를"** 이라고 적으면서 **그 자체로 카운트를 깬다.**
+> 규칙을 설명하는 행위가 규칙 위반이 되는 형태다.
+>
+> **⑤가 답이다** — `^\.mp-` 줄머리 앵커는 **선언만 세고 인용을 세지 않는다.**
+> 교체한 ①③④는 전부 그 성질(**배열 일치 · 키 포함 · 파일 집합의 리터럴 동일**)로 옮겼다.
+> **개수는 근거가 아니라 참고값으로만 남긴다.**
 
 **추가로 확인해서 문제가 아니었던 것:**
 
