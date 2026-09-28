@@ -119,6 +119,24 @@ export default function MultiplayerGamePage() {
   const moveInFlightRef = useRef(false);
   const resultNavigationTimerRef = useRef(null);
 
+  /**
+   * 결과 화면이 이미 떴는가. **한 번 켜지면 이 경기 안에서 다시 꺼지지 않는다** —
+   * 경기는 끝났고 남은 일은 2.2초 뒤 로비로 가는 것뿐이다. 그 사이의 복구·연결 끊김
+   * 신호는 결과 화면을 덮지 못한다 (`recoverGame` 첫 줄과 두 채널의 상태 콜백).
+   */
+  const resultShownRef = useRef(false);
+  const handleRoomFinishedRef = useRef(null);
+
+  /**
+   * 이 화면이 한 번이라도 PLAYING에 들어갔는가. 끝난 방을 만났을 때 **"경기 중에
+   * 끝났다"** (결과 화면)와 **"끝난 방에 새로 들어왔다"** (fatal 안내)를 가르는 값이다.
+   */
+  const reachedPlayingRef = useRef(false);
+
+  useEffect(() => {
+    if (phase === PHASE.PLAYING) reachedPlayingRef.current = true;
+  }, [phase]);
+
   const myPlayer = useMemo(
     () => players.find((p) => p.user_id === user?.id),
     [players, user?.id]
@@ -327,7 +345,7 @@ export default function MultiplayerGamePage() {
             const latestRoom = await fetchRoom(roomId);
             setRoom(latestRoom);
             if (latestRoom.status === "finished") {
-              recoverGameRef.current?.();
+              handleRoomFinishedRef.current?.(latestRoom);
             }
           } catch (err) {
             console.error("game_rooms realtime refresh failed:", err);
@@ -377,6 +395,7 @@ export default function MultiplayerGamePage() {
     gameChannelRef.current = channel;
     channel.subscribe((status, error) => {
       if (gameChannelRef.current !== channel) return;
+      if (resultShownRef.current) return;
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
         console.error("duel realtime disconnected:", status, error);
         setPending(false);
@@ -396,6 +415,7 @@ export default function MultiplayerGamePage() {
 
   const recoverGame = useCallback(async () => {
     if (!roomId || !user?.id) return;
+    if (resultShownRef.current) return;
 
     const generation = recoveryGenerationRef.current + 1;
     recoveryGenerationRef.current = generation;
@@ -498,6 +518,17 @@ export default function MultiplayerGamePage() {
       setPlayers(authoritativePlayers);
 
       if (session.outcome === "finished") {
+        /**
+         * **경기 중에 끝났으면 결과 화면으로 간다.** 이 복구는 완주 신호와 경합할 수
+         * 있다 (alt-tab·재연결이 realtime보다 먼저 방을 읽은 경우). 그때 아래 fatal로
+         * 떨어지면 서버가 이미 확정한 승패를 화면이 버린다.
+         *
+         * 끝난 방에 **새로 들어온** 경우(새로고침·링크 재진입)는 예전 그대로 fatal이다 —
+         * 결과를 다시 보여 줄 화면이 이 페이지에는 없다.
+         */
+        if (reachedPlayingRef.current && handleRoomFinishedRef.current?.(session.room, { fromRecovery: true })) {
+          return;
+        }
         clearLocalGameState();
         setPageData(null);
         setRecovery({
@@ -703,14 +734,57 @@ export default function MultiplayerGamePage() {
   const hasSolved = (row) =>
     row?.player_status === "finished" || row?.has_finished === true;
 
-  const enterSolvedState = () => {
+  /**
+   * 결과 화면으로 들어가는 공통 절차. **한 번만 성립한다** — 이동 응답·realtime·복구가
+   * 같은 완주를 각자 알려 오므로, 두 번째부터는 아무것도 하지 않는다 (타이머도 한 번).
+   *
+   * 진행 중인 복구를 세대 번호로 무효화하고, 그 복구가 켜 둔 `pending`·`recovery`를
+   * 여기서 직접 끈다. 무효화된 복구는 자기 `finally`에서 그것을 끄지 않으므로,
+   * 끄지 않으면 결과 화면 위에 복구 패널이 남는다.
+   */
+  const settleIntoResult = (nextPhase) => {
+    if (resultShownRef.current) return false;
+    resultShownRef.current = true;
+    recoveryGenerationRef.current += 1;
+
     clearLocalGameState();
-    setPhase(PHASE.SUCCESS);
+    setRecovery(null);
+    setPending(false);
+    setIsPageLoading(false);
+    setIsLoading(false);
+    setPhase(nextPhase);
+    return true;
+  };
+
+  const enterSolvedState = () => {
+    if (!settleIntoResult(PHASE.SUCCESS)) return;
 
     resultNavigationTimerRef.current = setTimeout(() => {
       navigate("/multiplayer", { replace: true });
     }, 2200);
   };
+
+  /**
+   * 방이 끝났다는 신호를 받았을 때. **서버가 확정한 승자를 그대로 읽는다** —
+   * `apply_duel_move_v2`는 완주와 방 종료를 한 트랜잭션에서 쓰므로
+   * (`20260814092000_duel_authority_v2.sql:147`) 이 신호는 완주 이동과 동시에 온다.
+   * 예전에는 여기서 곧바로 복구를 불렀고, 복구는 끝난 방을 fatal로 그려서
+   * **양쪽 모두** 결과 화면 대신 "게임을 계속할 수 없습니다"를 봤다 (2026-09-28 운영 실측).
+   *
+   * 정상 완주가 아닌 종료(타임아웃·취소 등)는 예전 경로(복구 → 안내)를 그대로 탄다.
+   * 복구 안에서 불렸다면 다시 복구를 부르지 않는다 — 결과로 가지 못했다는 것만 돌려준다.
+   */
+  const handleRoomFinished = (finishedRoom, { fromRecovery = false } = {}) => {
+    const winnerUserId = finishedRoom?.winner_user_id;
+    if (finishedRoom?.finished_reason === "normal_finish" && winnerUserId) {
+      if (winnerUserId === user?.id) enterSolvedState();
+      else enterOpponentWinState();
+      return true;
+    }
+    if (!fromRecovery) recoverGameRef.current?.();
+    return false;
+  };
+  handleRoomFinishedRef.current = handleRoomFinished;
 
   const handleMove = async (nextTitle, { eventType = "NORMAL_LINK" } = {}) => {
     if (
@@ -1149,10 +1223,21 @@ export default function MultiplayerGamePage() {
       || "아이템";
     const iAmTarget = !!incoming.targetUserId && incoming.targetUserId === user?.id;
 
+    /**
+     * **역사 되감기는 target이 시전자 자신이다** — 서버는 `v_target_user_id := v_user_id`로
+     * 적고, 실제로 옮겨진 사람은 `metadata.rewoundUserIds`에 담는다
+     * (`20260904090000_duel_item_authority_v3.sql` REWIND 분기). 그래서 target만 보면
+     * 상대는 자기가 옮겨진 줄 모르고 화면이 이전 문서에 남는다 (2026-09-28 운영 실측).
+     */
+    const rewoundUserIds = Array.isArray(incoming.metadata?.rewoundUserIds)
+      ? incoming.metadata.rewoundUserIds
+      : [];
+    const iWasRewound = !iAmTarget && !!user?.id && rewoundUserIds.includes(user.id);
+
     switch (incoming.result) {
       case DUEL_ITEM_RESULT.APPLIED:
-        if (iAmTarget) {
-          if (incoming.itemId === "blind") applyBlind(incoming.effectExpiresAt);
+        if (iAmTarget || iWasRewound) {
+          if (iAmTarget && incoming.itemId === "blind") applyBlind(incoming.effectExpiresAt);
           showMessage(`상대가 ${itemName}을(를) 사용했습니다!`);
         }
         break;
@@ -1181,7 +1266,7 @@ export default function MultiplayerGamePage() {
     }
 
     // 이동은 서버가 이미 했다. 내 행이 움직였을 때만 화면을 맞춘다.
-    if (incoming.moveEventId && iAmTarget) {
+    if ((incoming.moveEventId && iAmTarget) || iWasRewound) {
       await resyncFromServerMove();
     }
 
@@ -1292,6 +1377,7 @@ export default function MultiplayerGamePage() {
     eventChannelRef.current = channel;
     channel.subscribe((status, error) => {
       if (eventChannelRef.current !== channel) return;
+      if (resultShownRef.current) return;
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
         console.error("duel event realtime disconnected:", status, error);
         setPending(false);
@@ -1375,7 +1461,7 @@ export default function MultiplayerGamePage() {
     const interval = setInterval(async () => {
       try {
         const latestRoom = await finalizeDuelIfExpired(roomId);
-        if (latestRoom?.status === "finished") recoverGameRef.current?.();
+        if (latestRoom?.status === "finished") handleRoomFinishedRef.current?.(latestRoom);
       } catch (error) {
         console.warn("duel timeout finalizer failed:", error);
       }
@@ -1399,21 +1485,26 @@ export default function MultiplayerGamePage() {
     return () => clearTimeout(timer);
   }, [miniGame]);
 
-  useEffect(() => {
-    if (!opponentPlayer?.has_finished) return;
-    if (myPlayer?.has_finished) return;
-
-    clearLocalGameState();
-    setPhase(PHASE.OPPONENT_WIN);
+  function enterOpponentWinState() {
+    if (!settleIntoResult(PHASE.OPPONENT_WIN)) return;
 
     resultNavigationTimerRef.current = setTimeout(() => {
       navigate("/multiplayer", { replace: true });
     }, 2200);
+  }
+
+  useEffect(() => {
+    if (!opponentPlayer?.has_finished) return;
+    if (myPlayer?.has_finished) return;
+    // 끝난 방에 새로 들어온 경우는 복구가 fatal 안내를 그린다 (recoverGame의 finished 분기).
+    if (!reachedPlayingRef.current) return;
+
+    enterOpponentWinState();
+    // enterOpponentWinState는 매 렌더 새로 만들어지지만 한 번만 성립한다 (resultShownRef).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     opponentPlayer?.has_finished,
     myPlayer?.has_finished,
-    navigate,
-    clearLocalGameState,
   ]);
 
   useEffect(() => () => {
