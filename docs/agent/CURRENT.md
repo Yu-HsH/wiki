@@ -1,9 +1,15 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-09-28**
-기준 커밋: **`fc46c95`** (`fix(duel): show the result screen on finish, and resync the opponent on history_rewind`)
-마지막 **코드** 커밋: **`fc46c95`**. 이 문서 갱신 커밋은 자신의 해시를 담을 수 없으므로 기준 커밋은 부모인 `fc46c95`다 (`AGENTS.md` §7).
+기준 커밋: **`09b684a`** (`docs: record September 28 deploy and prepare D1 keepalive`)
+마지막 **앱 코드** 커밋: **`fc46c95`**. 이 문서 갱신 커밋은 자신의 해시를 담을 수 없으므로 기준 커밋은 부모인 `09b684a`다 (`AGENTS.md` §7).
 브랜치: `feat/group-final-gaps`
+
+> # ⚑ 2026-09-28 — `main` push #6: D1 워크플로 기본 브랜치 반영 `[사용자 승인]`
+>
+> `origin`의 기본 브랜치는 `main`이고, push 전 `main = feat/group-final-gaps = fc46c95`를 `git ls-remote`로 확인했다 `[산출물]`. `09b684a`와 **이 문서 갱신 커밋**을 두 ref에 동일하게 push한다. `fc46c95` 이후 앱 코드 변경은 **0**이다. `.github/workflows/keepalive.yml`을 기본 브랜치에 두기 위한 **`AGENTS.md` §1.1 건별 승인 예외**이며, `main` push는 Vercel 프로덕션 **재배포를 트리거한다**. 사용자 화면의 코드 변경은 없지만 재배포 성공과 워크플로 첫 실행은 별도 확인 대상이다.
+>
+> **D1 상태:** 워크플로 기본 브랜치 반영, **GitHub secrets 등록·첫 실행 검증 대기**. `SUPABASE_URL`·`SUPABASE_ANON_KEY`는 사용자가 GitHub에 등록한다. 아래 #4·#5 배포 기록은 그대로 유지한다.
 
 > # ⚑ 2026-09-28 — 운영 배포 #4·#5 완료, D1 실제 발생 `[사용자 보고]`
 >
@@ -15,7 +21,7 @@
 >
 > **남은 관찰:** 결과 화면 경합 경로는 2026-07-26부터 잠재했고 **8월 정상 이유는 미확정**이다. 2026-09-28에 처음 실측했다. 체크리스트 **14번(아이템으로 목표 도착)은 미검증**이다. 부채 ③의 강제 이동은 **운영의 목적지 커버리지가 로컬 fixture보다 나아 성공률이 높았다** `[사용자 관찰]`; 정량 성공률은 미측정이다.
 >
-> **D1:** 자동 정지가 실제 발생했다. `.github/workflows/keepalive.yml` 작성; **GitHub secrets 등록·기본 브랜치 반영·첫 실행 검증 대기**. **D6:** `supabase/seed.sql`에 후보 8행을 옮겼다; 로컬 `db reset` 후 함수 실측은 아래 검증 기록을 따른다. 아래 2026-09-06 상자와 이후 날짜가 붙은 기록은 **당시 상태**이며, 현재 배포·migration 값은 이 상자와 §3이 우선한다.
+> **D1:** 자동 정지가 실제 발생했다. `.github/workflows/keepalive.yml`을 기본 브랜치에 반영하고 **GitHub secrets 등록·첫 실행 검증 대기**. **D6:** `supabase/seed.sql`에 후보 8행을 옮겼다; 로컬 `db reset` 후 함수 실측은 아래 검증 기록을 따른다. 아래 2026-09-06 상자와 이후 날짜가 붙은 기록은 **당시 상태**이며, 현재 배포·migration 값은 이 상자와 §3이 우선한다.
 
 > # ⚑ 2026-09-06 — **트랙 C가 통합됐다. 웨이브 2가 끝났다. 배포는 하지 않는다 — migration이 2개 있다.**
 >
@@ -341,6 +347,8 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 | **로컬 시드·오늘 도전 함수** | **pool 8행/활성 8행 · migration 15행 · 함수 정상 반환** | **2026-09-28** | 기준 HEAD `fc46c95` + 미커밋 작업 트리에서 `npx supabase db reset --local --yes`와 `npx supabase db query --local` 실측 `[산출물]`. 운영 DB 미접근 |
 | `npm test` | **330/330** (fail 0, skipped 0) | **2026-09-28** | 기준 HEAD `fc46c95` + 이 문서·시드·워크플로의 미커밋 작업 트리에서 실행 `[산출물]` |
 | `npm run build` | **PASS** (exit 0, 217 modules) | **2026-09-28** | 기준 HEAD `fc46c95` + 같은 미커밋 작업 트리에서 실행 `[산출물]`. 기존 500 kB chunk 경고 유지 |
+| **#6 배포 전 `npm test`** | **330/330** (fail 0, skipped 0) | **2026-09-28** | 기준 HEAD `09b684a` + `AGENTS.md`·이 문서 미커밋 작업 트리 `[산출물]`. 앱 코드 변경 0 |
+| **#6 배포 전 `npm run build`** | **PASS** (exit 0, 217 modules) | **2026-09-28** | 기준 HEAD `09b684a` + 같은 미커밋 문서 작업 트리 `[산출물]`. `App-Ci6c53FV.js` 567.78 kB로 이전 측정과 동일; 기존 500 kB 경고 유지 |
 | pgTAP Packet 13 | 33/33 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP spectator emoji atomicity | 22/22 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP Server Authority V2 | 97/97 | 2026-08-18 | `339fb77` 이전 |
@@ -461,7 +469,7 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 
 ## 3. 원격 상태
 
-**현재 기준 (2026-09-28):** 사용자 실행 후 `main = feat/group-final-gaps = fc46c95` `[사용자 보고]`. 로컬 remote-tracking ref도 두 브랜치를 `fc46c95`로 가리킨다 `[산출물]`. 원격 직접 재조회(`git ls-remote origin`)는 이 세션에서 하지 않았다. 저장소 migration **15개** = 사용자 검증 운영 migration **15개**, 차이 **0**. 다음 변경은 현재 feature 브랜치에만 커밋하고 `main`에는 올리지 않는다 (`AGENTS.md` §1.1·§2).
+**현재 기준 (2026-09-28):** #6 push 직전 `git ls-remote origin`으로 `main = feat/group-final-gaps = fc46c95`를 직접 확인했다 `[산출물]`. 사용자가 승인한 #6에서 `09b684a`와 이 문서 갱신 커밋을 두 브랜치에 올린다. 저장소 migration **15개** = 사용자 검증 운영 migration **15개**, 차이 **0**. 이후 `main` push는 다시 건별 승인 대상이다 (`AGENTS.md` §1.1·§2).
 
 **아래 2026-09-04 원격 측정과 2026-09-03 배포 상자는 당시 이력이다.** 현재 ref·운영 DB 값으로 재사용하지 않는다.
 
@@ -593,7 +601,7 @@ Vercel 프로덕션에 배포된 상태다.
 게이트 ON은 W1-b 실행 **전에** 프로덕션 URL에서 점검 화면 렌더로 확인했고
 `[사용자 확인, 2026-08-29]`, 해제 후에는 **앱 렌더로 확인했다** `[사용자 확인, 2026-09-02]`.
 
-### `main` push 이력 — **5건 (2026-09-28 현재)**
+### `main` push 이력 — **6건 (2026-09-28 현재)**
 
 | | 시점 | 대상 | 사유 | 게이트 | 기록 |
 |---|---|---|---|---|---|
@@ -602,17 +610,18 @@ Vercel 프로덕션에 배포된 상태다.
 | **#3** | **2026-09-03** | **`9eba7e9..a784d2e` 17커밋 (코드 3 + merge 3 + 문서 11)** | **트랙 A·B·N2 배포** | **없음** | **위 ⚑ 상자** |
 | **#4** | **2026-09-28** | **`a784d2e..f6e2b2f`** | **운영 DB migration 3개 적용 후 C 프론트 배포. 아이템 10종 applied, 결과 화면 회귀 발견** | **없음** | `[사용자 실행·보고]`, `docs/agent/TRACK-C-HANDOFF.md` §3.6 |
 | **#5** | **2026-09-28** | **`f6e2b2f..fc46c95`** | **1:1 결과 화면 hotfix 배포. 운영 완주 판정 정상 재확인** | **없음** | `[사용자 실행·보고]`, `fc46c95` |
+| **#6** | **2026-09-28** | **`fc46c95..09b684a` + 이 문서 갱신 커밋** | **D1 워크플로를 GitHub 기본 브랜치에 반영. 앱 코드 변경 0, Vercel 재배포 트리거** | **없음** | `[사용자 승인]`, `AGENTS.md` §1.1 예외; push 후 원격 ref 확인 |
 
 **W1-a·W1-b의 전제는 같았다** — 유지보수 게이트 ON, 사용자 노출 0, 게이트 미변경, DB 영향 없음.
 W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[사용자 확인, 2026-08-29]`.
 **W1-b는 창 밖이라 예외의 성격이 달랐다** — 창의 승인이 아니라 건별 승인이었다.
 
-> **#3~#5는 게이트 해제 후의 건별 승인 사례다.** #3은 앞의 둘과 종류가 다르다.
+> **#3~#6은 게이트 해제 후의 건별 승인 사례다.** #3은 앞의 둘과 종류가 다르다.
 > W1-a·W1-b는 **"게이트가 받아 주니까 올린다"** 였고, **#3은 "실사용자에게 노출해도 된다고
 > 판단해서 올린다"** 다. `AGENTS.md` §1.1이 승인 조건을 ②에서 ③으로 바꾼 뒤의 **첫 적용 사례**이며,
 > **그 조건은 배포 전 검증(`npm test`·`npm run build`·해당 경로 수동 확인)이었고 충족됐다.**
 >
-> **그래도 선례가 되지 않는다.** 다섯 건 모두 **건별 승인**이고 **그 승인은 각자의 push에서 끝났다.**
+> **그래도 선례가 되지 않는다.** 여섯 건 모두 **건별 승인**이고 **그 승인은 각자의 push에서 끝났다.**
 > **"저번에 게이트 없이 올렸으니까"는 승인이 아니다** — `AGENTS.md` §1의 문장 그대로다.
 > **다음 push는 그 시점의 변경 내용으로 다시 판단한다.**
 
@@ -678,7 +687,7 @@ W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[�
 
 ## 4. 진행 중인 작업
 
-**2026-09-28 현황:** 트랙 C와 15a의 migration 3개 및 C 프론트는 운영에 반영됐다 (§3 #4). 결과 화면 hotfix도 배포·운영 재확인했다 (§3 #5). 아래의 "통합만 됨/운영 12개/배포하지 않는다"는 2026-09-04~06의 진행 이력이다. 현재 남은 항목은 **D1 워크플로 활성화**, **체크리스트 14번**, 부채 ③의 정량 검증이다. **D6 로컬 시드 실측은 완료**했다. 3코스 창 자체는 아직 열지 않았다.
+**2026-09-28 현황:** 트랙 C와 15a의 migration 3개 및 C 프론트는 운영에 반영됐다 (§3 #4). 결과 화면 hotfix도 배포·운영 재확인했다 (§3 #5). 아래의 "통합만 됨/운영 12개/배포하지 않는다"는 2026-09-04~06의 진행 이력이다. 현재 남은 항목은 **D1 GitHub secrets 등록·첫 실행 확인**, **체크리스트 14번**, 부채 ③의 정량 검증이다. **D6 로컬 시드 실측은 완료**했다. 3코스 창 자체는 아직 열지 않았다.
 
 - ~~**트랙 A·B — 코드 완료, 배포 전**~~ → **배포됨 (2026-09-03).** A·B·N2가 `a784d2e`로
   `main`에 올라가 **실사용자에게 닿았다** (§3의 ⚑ 상자). **`npm test` 204/204 ·
@@ -766,7 +775,7 @@ W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[�
 
 ## 5. 다음 작업
 
-**2026-09-28 현재:** D1은 워크플로 작성 뒤 **secrets 등록·기본 브랜치 반영·첫 실행**을 기다린다. D6 로컬 시드 리허설은 완료했다 (§5.0 D절). 운영에서 결과 화면 hotfix를 재확인했으나 **아이템으로 목표 도착(체크리스트 14번)**은 아직 재현하지 않았다 (`docs/agent/TRACK-C-HANDOFF.md` §3.6). 아래 2026-09-02~06의 착수 순서와 "운영 migration 12개" 문구는 **당시 계획/이력**이며 현재 값은 상단 2026-09-28 상자와 §3을 따른다.
+**2026-09-28 현재:** D1 워크플로는 #6으로 기본 브랜치에 반영한다. **secrets 등록·첫 실행**을 기다린다. D6 로컬 시드 리허설은 완료했다 (§5.0 D절). 운영에서 결과 화면 hotfix를 재확인했으나 **아이템으로 목표 도착(체크리스트 14번)**은 아직 재현하지 않았다 (`docs/agent/TRACK-C-HANDOFF.md` §3.6). 아래 2026-09-02~06의 착수 순서와 "운영 migration 12개" 문구는 **당시 계획/이력**이며 현재 값은 상단 2026-09-28 상자와 §3을 따른다.
 
 ### 5.0 지금 할 일 — **2026-09-02 재작성**
 
@@ -1074,7 +1083,7 @@ W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[�
 
 | # | 항목 | 왜 지금 등재하나 |
 |---|---|---|
-| **D1** | **자동 일시정지 실제 발생 — 일일 공개 읽기 워크플로 작성됨, secrets 등록·기본 브랜치 반영 대기** | **아래** |
+| **D1** | **자동 일시정지 실제 발생 — 일일 공개 읽기 워크플로 기본 브랜치 반영, secrets 등록·첫 실행 대기** | **아래** |
 
 **D1 상세.** 무료 요금제는 일정 기간 무활동 시 프로젝트를 **자동 일시정지**한다 `[외부]`.
 CUTOVER-PLAN §3.3이 **7일**로 적고 있고, 창 절차가 P4(프로젝트 Active)를 **전날과 당일에 각각**
@@ -1097,9 +1106,9 @@ CUTOVER-PLAN §3.3이 **7일**로 적고 있고, 창 절차가 P4(프로젝트 A
 
 > **2026-09-28 갱신:** 사용자가 **약 3주 비활동 뒤 운영 DB 자동 정지**를 발견해 대시보드에서 Restore했다 `[사용자 보고]`. 정지 시작 시각과 사용자 노출 기간은 **미확인**이다. 위의 "마지막 DB 활동" 등 2026-09-03 표는 당시 관찰이며 현재 상태가 아니다. `CUTOVER-PLAN.md`의 7일은 과거 문서값이다. 이번 관찰만으로 정확한 정지 임계·유예·알림 규칙을 확정하지 않는다.
 >
-> **D1 상태: 워크플로 작성됨, GitHub secrets 등록 대기.** `.github/workflows/keepalive.yml`이 매일 **12:17 KST**에 anon 키로 `public.profiles`의 exact count를 HEAD 요청한다. `profiles`는 공개 SELECT 정책을 갖는다 (`supabase/migrations/20260730170602_baseline_remote_schema.sql`의 `Anyone can read public profiles`). 응답 실패·count 헤더 부재·secret 누락은 job 실패로 끝난다. **운영 요청은 이 세션에서 하지 않았다.**
+> **D1 상태: 워크플로 기본 브랜치 반영, GitHub secrets 등록·첫 실행 대기.** `.github/workflows/keepalive.yml`이 매일 **12:17 KST**에 anon 키로 `public.profiles`의 exact count를 HEAD 요청한다. `profiles`는 공개 SELECT 정책을 갖는다 (`supabase/migrations/20260730170602_baseline_remote_schema.sql`의 `Anyone can read public profiles`). 응답 실패·count 헤더 부재·secret 누락은 job 실패로 끝난다. **운영 요청은 이 세션에서 하지 않았다.**
 >
-> **활성화 조건:** 사용자가 저장소 Secrets에 `SUPABASE_URL`·`SUPABASE_ANON_KEY`를 등록하고, 워크플로 파일이 **GitHub 기본 브랜치**에 올라가야 예약 실행이 시작된다. 현재 feature 브랜치 커밋만으로는 작동하지 않는다. 기본 브랜치가 `main`이라면 반영은 `AGENTS.md` §1.1의 **별도 건별 승인** 대상이다. 첫 실행과 실제 자동 정지 예방 효과는 **미검증**이다. 실패 이메일은 GitHub 개인 알림 설정에서 Actions → Email → **Only notify for failed workflows**를 켜야 한다 ([GitHub 안내](https://docs.github.com/en/subscriptions-and-notifications/how-tos/managing-github-actions-notifications)). [GitHub 예약 실행 안내](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)에 따르면 실행이 지연·누락될 수 있고, **공개 저장소**는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화된다.
+> **활성화 조건:** 사용자가 저장소 Secrets에 `SUPABASE_URL`·`SUPABASE_ANON_KEY`를 등록해야 한다. 기본 브랜치가 `main`인 것은 `git ls-remote --symref origin HEAD`로 확인했고, 워크플로 반영은 #6의 **건별 승인**으로 수행한다 (`AGENTS.md` §1.1). 첫 실행과 실제 자동 정지 예방 효과는 **미검증**이다. 실패 이메일은 GitHub 개인 알림 설정에서 Actions → Email → **Only notify for failed workflows**를 켜야 한다 ([GitHub 안내](https://docs.github.com/en/subscriptions-and-notifications/how-tos/managing-github-actions-notifications)). [GitHub 예약 실행 안내](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)에 따르면 실행이 지연·누락될 수 있고, **공개 저장소**는 60일간 저장소 활동이 없으면 예약 워크플로가 비활성화된다.
 
 **착수 순서 제안 (2026-09-03 갱신):** ~~B1~~ **완료 → A2 → B4·B5 → C.**
 **C(기능 작업) 안에서는 A·B가 끝났으므로 다음이 `TRACKS.md` 트랙 D(15a XP 원장)다** —
