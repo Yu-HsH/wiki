@@ -1,11 +1,20 @@
 # 병렬 트랙 파일 소유권 — 단일 기준
 
-갱신 날짜: 2026-09-03 (6차)
+갱신 날짜: 2026-09-28 (7차) — 이전 2026-09-03 (6차)
 기준 커밋: `a784d2e` (`fix(17a-2): gate the ranking full-view entry point for guests (N2)`)
 — **이것이 `origin/main`이다.** 2026-09-03에 배포됐다 (`CURRENT.md` §3)
 트랙 커밋: `e70c541`(A) · `7a7197e`(B) · `a784d2e`(N2) · 분기점 `ad569f2`
 이전 기준: `eeb7a16` · `527f896` · `b281e01`
 브랜치: `feat/group-final-gaps`
+
+> **7차 갱신 (2026-09-28) — 오늘 3코스가 범위 제외됐다. "3코스 창"이 없어졌다.**
+> 확정 스펙 §3.3 → **하루 1코스 유지** `[사용자 결정, 2026-09-28]` (`01-CONFIRMED-SPEC.md` §0).
+> **17a-1은 삭제**(티켓 대상 아님)이고, **15의 코스별 랭킹(§5.1)은 범위 제외**다 — 지금의 "오늘 TOP 3"가
+> 이미 단일 코스 랭킹이다. **§7은 창이 아니게 됐다** — 남은 3건(②③④)은 셋 다 DB 전용·프론트 무관이라
+> **일반 `db push`** 로 충분하다 (§7 ⚠ 상자). **§7.2·§7.6·§7.9는 "3코스 재검토 시 참고"로 보존한다.**
+> 다음 트랙 순서는 **15b → 15c → 17b → 16** (§1.1-c). 티켓은 아직 쓰지 않는다.
+> 이 갱신 시점의 사실: `main` = `feat/group-final-gaps` = `7e90b7a` · 트랙 C·15a는 **운영에 적용됐다**
+> (2026-09-28, `CURRENT.md` §3) — 아래 6차 이전 서술의 "배포되지 않았다"는 그 시점 기록이다.
 
 > **6차 갱신 (2026-09-03) — A·B·N2가 배포됐고, 다음 트랙의 선행 조건을 재확인했다.**
 > **C(14)는 G7 하나만 남았다** — B의 `resultReasonLabels.js` 의존이 해소됐고,
@@ -126,10 +135,21 @@
 | **로컬 Supabase 사용 여부** | **쓴다.** migration 적용 검증과 pgTAP(`supabase/tests/xp_ledger_v1.sql`)이 스택 위에서 돈다. **§1의 CODE GO 유효 조건이 그대로 적용된다** — 승인 이미지 digest·CLI `2.114.0` exact pin·project 격리 `wiki-packet13-r2-clean158`. **착수 시 `npm run supabase:preflight`를 먼저 통과시킨다** |
 | **migration 자리** | ~~**비어 있다.** 저장소 migration은 **여전히 12개**~~ → **채워졌다 (2026-09-04).** 저장소 migration은 **13개**이고 마지막이 `20260903090000_xp_ledger_v1.sql`이다 `[산출물]`. **운영은 여전히 12개다** — 13번째는 적용되지 않았다 (R6) |
 | **운영 적용** | **범위 밖.** 산출물은 migration **파일**까지다 (R6, `AGENTS.md` §1) |
-| **15b·15c** | **여전히 분리돼 있다. 둘 다 3코스 창 이후다** — 15b는 창 항목 ③④ 자체이고(§7.1), 15c는 **창 + 트랙 C**를 기다린다: 운영에 `grant_xp_v1`이 없고, duel 결과 경로는 **C 소유**다 (§6.3) |
+| **15b·15c** | ~~**여전히 분리돼 있다. 둘 다 3코스 창 이후다**~~ → **2026-09-28: "3코스 창"은 없어졌다. 15b는 ④(`total_xp`) 적용 후, 15c는 15b 후다 (§1.1-c).** 이하 원문 — 15b는 창 항목 ③④ 자체이고(§7.1), 15c는 **창 + 트랙 C**를 기다린다: 운영에 `grant_xp_v1`이 없고, duel 결과 경로는 **C 소유**다 (§6.3) |
 
 > **둘을 동시에 열 수도 있다.** C는 프론트+RPC 파일, 15a는 전부 신규 파일이라 **교집합이 0**이다
 > (§2.0). **다만 C는 G7 답이 있어야 시작하므로, 답이 없는 동안은 15a가 유일한 열린 트랙이다.**
+
+#### 1.1-c 다음 트랙 순서 — **15b → 15c → 17b → 16** `[2026-09-28, 정리만 — 티켓 미작성]`
+
+| 순서 | 트랙 | 선행 조건 | 상태 |
+|:-:|---|---|---|
+| **1** | **15b** — `profiles.total_xp` 갱신(`grant_xp_v1` 교체) + **원장 backfill** `[사용자 확정, 2026-09-28]` + 랭킹 정렬 | **④ 운영 적용** (`20260928090000`) | 대기 — migration 작성됨, 운영 미적용 |
+| **2** | **15c** — 결과 화면 XP 지급 (finalizer 연결) | **15b** | 대기 |
+| **3** | **17b** — 프로필 카드 장착 UI | **C1 보상 3테이블.** ⚠ **15a와 함께 적용되지 않았다** — 저장소 migration 16개 어디에도 `reward_catalog`·`user_reward_inventory`·`user_profile_equipment`가 없다 (2026-09-28 검색) `[코드]`. **17b는 C1 migration을 새로 만든다 — DB 변경 1건이 추가된다** `[사용자 확정, 2026-09-28]` | 대기 |
+| **4** | **16** — 업적·보상 | 14·15·17 전부 소비 (W3) | 마지막 |
+
+**티켓은 아직 쓰지 않는다.** 순서만 고정한다.
 
 ---
 
@@ -193,7 +213,7 @@
 | 파일 | 왜 동결인가 |
 |---|---|
 | **pages/GroupGamePage.jsx** (1603) | **한 파일이 세 역할을 한다** — 그룹 게임 + 관전 + **그룹 결과 2블록**(`:1212-1280` 내 기록, `:1450-1500` 최종 순위) `[코드]`. 어느 트랙에 줘도 그 트랙이 그룹 결과 화면의 소유자가 된다. **이 웨이브에는 그룹 결과를 바꿀 트랙이 없다** (§3) |
-| **services/dailyChallengeService.js** (109) | 17a-1(3코스) 소유. B의 범위는 "3코스 제외"다 |
+| **services/dailyChallengeService.js** (109) | ~~17a-1(3코스) 소유.~~ **17a-1 삭제 (2026-09-28) — 소유자 없이 동결 유지.** B의 범위는 "3코스 제외"였다 |
 | **utils/serverAuthority.js** (91) | 싱글·1:1·그룹 3경로가 전부 import한다 `[코드]`. 여기를 고치면 트랙 셋이 동시에 흔들린다 |
 | **services/groupMultiplayerService.js** · **services/groupSpectatorService.js** · **utils/groupGameFlow.js** · **utils/groupGameTimer.js** · **css/group.css** · **css/groupSpectator.css** | 그룹 축. 이 웨이브에 그룹 트랙이 없다 |
 | **utils/groupResultFormatter.js** · **tests/groupResultFormatter.test.js** | 그룹 축 + **⚠ 정정 대상이 등재돼 있다.** `disconnected_timeout: "연결 끊김"` → `"재접속 유예 종료"`, 그리고 `GroupGamePage.jsx:1479`의 `"RETIRE"` 고정 → 4용어 매핑 (C4 §3.1.1) `[사용자 결정]`. **실행은 그룹 결과 화면을 소유하는 트랙이 한다 — 트랙 B가 아니다.** 유일한 소비자가 동결된 `GroupGamePage.jsx`이고, 테스트가 옛 문자열을 assert한다 (`:11`) `[코드]` |
@@ -565,13 +585,26 @@ if found then
 
 ---
 
-## 7. 3코스 창 — **범위 확정 (2026-09-02)** `[사용자 확정]`
+## 7. ~~3코스 창~~ → **남은 DB 변경 3건 — 창이 아니다 (2026-09-28)** · 원문: 범위 확정 (2026-09-02) `[사용자 확정]`
+
+> ### ⚠ 2026-09-28 — **3코스 범위 제외로 이 절은 "창"이 아니게 됐다** `[사용자 결정]`
+>
+> **①(3코스 스키마 = 17a-1)이 빠졌다.** 남은 ②③④는 셋 다 **DB 전용·프론트 무관**이다 —
+> 배포된 프론트가 이미 ③의 3컬럼만 보내고(`ProfilePage.jsx:97-98`·`:160-161`), ④는 아무도 읽지
+> 않으며, ②는 쓰는 값이 `'completed'` 하나다. **따라서 리허설·게이트·창 문서가 필요 없고, 2026-09-28의
+> C·15a 적용과 같은 일반 `db push`로 충분하다** (`CURRENT.md` §5.0-D7).
+> 산출물: **`supabase/migrations/20260928090000_c4_check_c3_grant_total_xp.sql`** — 순서 **③ → ④ → ②**
+> (§7.3의 ③ → ④ 강제는 그대로다) + pgTAP `supabase/tests/c4_check_c3_grant_total_xp.sql` (30건).
+> **§7.1 ④의 "(+ 원장 backfill)"은 이 migration에 넣지 않았다 — 15b 소유로 확정** `[사용자 확정, 2026-09-28]` (§1.1-c).
+>
+> **§7.2(`drop function`)·§7.6(T-1~T6)·§7.9(ACL 절차)는 삭제하지 않는다 — "3코스 재검토 시 참고"로 보존한다.**
+> 그 조사는 틀리지 않았고, 3코스를 다시 열면 그대로 필요하다.
 
 ### 7.1 창 = **4항목**
 
 | # | 항목 | 대상 | DDL 초안 | 성격 |
 |---|---|---|---|---|
-| **①** | **`daily_challenges` 제약 교체 + `course_slot`** | `daily_challenges` | `add column course_slot` + `1..3` CHECK · `drop constraint daily_challenges_challenge_date_key` · `add constraint unique (challenge_date, course_slot)` · **`ensure_today_daily_challenge` 재생성** (§7.2) | **창의 본체** |
+| ~~**①**~~ | **17a-1 — 삭제 (2026-09-28, 3코스 범위 제외).** 원문: ~~**`daily_challenges` 제약 교체 + `course_slot`**~~ | `daily_challenges` | `add column course_slot` + `1..3` CHECK · `drop constraint daily_challenges_challenge_date_key` · `add constraint unique (challenge_date, course_slot)` · **`ensure_today_daily_challenge` 재생성** (§7.2) | **창의 본체** |
 | **②** | **`game_records.result_status` CHECK 1건** | `game_records` | `add constraint game_records_result_status_check` — 값 집합은 C4 §4.1 그대로 | **`match_end_reason`은 제외** — C4 §4.2가 죽은 컬럼으로 보존 결정 |
 | **③** | **`profiles` 컬럼 단위 grant 축소 — 3컬럼** | `profiles` 권한 | `revoke update ... from anon, authenticated` → `grant update (nickname, profile_image_url, updated_at) ... to authenticated` (C3 §5.1) | **`updated_at` 포함이 확정됐다** — 빼면 배포된 프론트가 깨진다 |
 | **④** | **`profiles.total_xp` 컬럼 추가** | `profiles` 구조 | `add column total_xp bigint not null default 0` + `profiles_total_xp_check` + `profiles_total_xp_idx` (+ 원장 backfill) | **③ 다음이어야 한다** |
@@ -585,7 +618,7 @@ if found then
 > (`DAILY_POOL_INSERT.sql`이 전부 null로 넣는다) `[코드]`.
 > **풀 개편은 창 범위 밖이고 후속이다.**
 
-### 7.2 ⚠ ①은 `create or replace`로 되지 않는다 — **`drop function`이 필요하다** `[코드]`
+### 7.2 ⚠ ①은 `create or replace`로 되지 않는다 — **`drop function`이 필요하다** `[코드]` — **3코스 재검토 시 참고 (2026-09-28)**
 
 `ensure_today_daily_challenge`의 현재 시그니처는
 `returns table(challenge_date date, start_title text, target_title text, hint text)`다
@@ -659,7 +692,7 @@ if found then
 > **"모든 사용자 동일 코스"가 그 실패 모드에서 깨진다** — 그래서 **프론트 변경을 창 직후에
 > 배포하는 것을 권한다.** 게이트 사유는 아니다.
 
-### 7.6 창 절차 초안 — **T-1 ~ T6** (8월 W0~W11의 축소판)
+### 7.6 창 절차 초안 — **T-1 ~ T6** (8월 W0~W11의 축소판) — **3코스 재검토 시 참고 (2026-09-28)**
 
 **뼈대는 `CUTOVER-PLAN.md`를 그대로 쓴다.** 아래는 **무엇을 빼고 무엇을 남겼는지**와
 이 창에만 있는 항목이다. **명령 표기 규칙(`npx` 접두 등)은 CUTOVER-PLAN §0.1을 따른다.**
@@ -728,7 +761,7 @@ if found then
 
 ---
 
-### 7.9 `ensure_today_daily_challenge` ACL 절차 — **창 절차 보강 (2026-09-02)** `[사용자 확정]`
+### 7.9 `ensure_today_daily_challenge` ACL 절차 — **창 절차 보강 (2026-09-02)** `[사용자 확정]` — **3코스 재검토 시 참고 (2026-09-28)**
 
 **`drop function`이 ACL을 지우므로 세 지점에 절차를 박는다.** 위험의 방향을 먼저 정확히 적는다.
 

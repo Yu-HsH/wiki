@@ -1,9 +1,40 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-09-28**
-기준 커밋: **`09b684a`** (`docs: record September 28 deploy and prepare D1 keepalive`)
-마지막 **앱 코드** 커밋: **`fc46c95`**. 이 문서 갱신 커밋은 자신의 해시를 담을 수 없으므로 기준 커밋은 부모인 `09b684a`다 (`AGENTS.md` §7).
+기준 커밋: **`7e90b7a`** (`docs: allow workflow main push and record deployment six`)
+마지막 **앱 코드** 커밋: **`fc46c95`** (프론트 변경은 그 뒤 0). **이 갱신 커밋은 migration 1개를 추가한다** — 운영 미적용 (아래 ⚑ 상자). 갱신 커밋은 자신의 해시를 담을 수 없으므로 기준 커밋은 부모인 `7e90b7a`다 (`AGENTS.md` §7).
+이전 기준: `09b684a`
 브랜치: `feat/group-final-gaps`
+
+> # ⚑ 2026-09-28 (3) — **오늘 3코스 범위 제외. 남은 DB 변경 3건을 일반 migration으로 준비했다**
+>
+> **결정** `[사용자, 2026-09-28]`: 확정 스펙 §3.3 "매일 세 개의 코스" → **하루 1코스 유지.** 근거는 진행 우선 —
+> 3코스는 `daily_challenges` UNIQUE 교체 · `ensure_today_daily_challenge` drop+create · anon ACL 재부여 ·
+> 게스트 경로가 얽혀 cutover 창이 필요했고 그 비용 대비 기능 가치가 낮다. **후속 웨이브에서 재검토 가능.**
+> 기록: `01-CONFIRMED-SPEC.md` §0(정정 이력) · `MOBILE-VALIDATION-CORRECTIONS.md` §1.1 · `PACKET-CONTRACT-GAPS.md` 5차 · `TRACKS.md` 7차.
+> **사라진 것:** 17a-1 · 15 §5.1 코스별 랭킹(지금의 "오늘 TOP 3"가 이미 단일 코스 랭킹) · G3·G12(**해소가 아니라 범위 제외**) ·
+> 시안 §02 `완료 1/3` · **"3코스 창" 개념.**
+>
+> **산출물 (이 커밋, 운영 미적용):** `supabase/migrations/20260928090000_c4_check_c3_grant_total_xp.sql` — **③ → ④ → ②**,
+> 데이터 손실 DDL **0**, 항목별 롤백 DDL 주석 · pgTAP `supabase/tests/c4_check_c3_grant_total_xp.sql` **30건**.
+> **저장소 16 ↔ 운영 15, 차이 1** (`20260928090000`). 적용은 **건별 승인 후 사용자 `db push`** (`AGENTS.md` §1).
+>
+> | 검증 (`7e90b7a` + 미커밋 작업 트리, 2026-09-28, 로컬) | 결과 |
+> |---|---|
+> | `npx supabase db reset --local` | **migration 16개 + seed 적용, exit 0** |
+> | pgTAP 전량 | **c4_check_c3 30/30** · duel_item_authority_v3 **148/148** · xp_ledger_v1 **128/128** · server_authority_v2 **97/97** · group_security_phase2c **49/49** · group_final_gaps_v13 **33/33** · group_spectator_emoji_atomicity **22/22** · group_match_lifecycle_phase2a **2/2** — `not ok` **0** |
+> | 음성 대조 | 테스트 트랜잭션 안에서 테이블 단위 UPDATE를 되살리면 **11건 실패** — 테스트가 권한을 실제로 잡는다 · ②의 가드는 범위 밖 행 1개로 **`GAME_RECORDS_RESULT_STATUS_OUT_OF_SET`을 내고 멈춘다** (둘 다 롤백, 상태 원복 확인) |
+> | `npm run supabase:preflight` | **11/11 PASS** · restart 0/0 |
+> | `npm test` · `npm run build` | **330/330** · **exit 0** |
+> | 프론트 스모크 (Playwright, 로컬) | `ProfilePage` 닉네임 저장 **204** · 사진 변경 **204**(Storage 업로드만 대체, `profiles` update는 실제) · DB 반영 확인 · 콘솔 오류 0. **같은 사용자로 REST `update({total_xp})` → 403 / `42501`** |
+>
+> **⚠ 운영 적용 전에 알아야 할 것 2건.**
+> ① **로컬 `game_records`는 0행이다** — ②의 CHECK가 로컬에서 통과한 것은 운영에 대해 아무것도 증명하지 않는다.
+> 그래서 migration **맨 앞의 읽기 전용 가드**가 범위 밖 행을 발견하면 **아무것도 적용하지 않고** 값·개수를 내며 멈춘다.
+> 멈추면 그 행을 보고하고 판단한다 — 운영 데이터를 추측으로 고치지 않는다 (`AGENTS.md` §5).
+> ② **`TRACKS.md` §7.1 ④의 "(+ 원장 backfill)"은 넣지 않았다.** `total_xp`는 전원 0으로 시작한다.
+> 운영 `xp_ledger`가 비어 있으면 C3 §6 불변식이 그대로 성립하지만, **운영 행 수는 확인하지 않았다** `확인 필요`.
+> **backfill은 15b 소유로 확정됐다** `[사용자 확정, 2026-09-28]`. **C1 보상 3테이블은 어느 migration에도 없고 17b가 만든다** `[사용자 확정]` (`TRACKS.md` §1.1-c).
 
 > # ⚑ 2026-09-28 — `main` push #6: D1 워크플로 기본 브랜치 반영 `[사용자 승인]`
 >
@@ -339,7 +370,7 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 | `npm run supabase:preflight` | **11/11 PASS** | **2026-09-06** | **`ab5af95`** 실측 `[산출물]`. **14·15번째 migration 적용 후** 재실행. `migration-history count=3` 유지 · `postmaster-stability before == after`, restart **0/0** · `postgres-log dangerous_marker=false benign_suppressed=2`. **CODE GO 유효 조건이 유지된다** |
 | **§2.3 공유 자원 불변식** | **7/7 의도 기준 통과** | **2026-09-06** | **`ab5af95`** 실측 `[산출물]`. ① `SINGLE_ITEM_IDS` 4원소 **바이트 동일** · ② `onlineGameSession.js` **무편집** · ③ 13키 전원 존재(`useItemSystem.js` **무편집**) · ④ **4파일 6줄 동일 리터럴** · ⑤ `^\.mp-` **131개, 삭제·개명 0** · ⑥ 어휘 4값 **32/12/6/12 무변동** · ⑦ `authContext.jsx` **무편집**, importer **13개**. **①은 개수 검사(`grep -c` = 2)로는 실측 4라 위반으로 잡힌다 — 늘어난 3은 주석이고, 그것이 개수 검사를 폐기한 근거다** (`TRACKS.md` §2.3 ⚠ 상자) |
 | **저장소 migration 수** | **15개** (마지막 `20260904100000_duel_item_link_resolvable_v3.sql`) | **2026-09-06** | `ab5af95` `[산출물]`. **로컬 스택에 15개 전량 적용됐다.** ~~13개~~ — C가 **2개**를 더했다 (`20260904090000` 신규 테이블·함수, `20260904100000` 함수 1개 `create or replace`) |
-| **운영 migration 수** | **12개** — **변화 없다** | 2026-08-28 | 창 W7 `[사용자 보고]`. **저장소 15 ↔ 운영 12, 차이는 3개다** — `20260903090000_xp_ledger_v1`(15a) · `20260904090000_duel_item_authority_v3`(C) · `20260904100000_duel_item_link_resolvable_v3`(C). **셋 다 운영에 없다** (R6, `AGENTS.md` §1). **이 중 3코스 창을 기다려야 하는 것은 없다** — 근거는 §5.0 D절 |
+| **운영 migration 수** | ~~**12개** — **변화 없다**~~ → **15개** (2026-09-28 사용자 `db push` · 검증 migrations 15) · **저장소 16** — 차이 `20260928090000` 1개, 미적용 | 2026-09-28 | 상단 ⚑ 상자 `[사용자 보고]`. 이하 2026-08-28 기록: 창 W7 `[사용자 보고]`. **저장소 15 ↔ 운영 12, 차이는 3개다** — `20260903090000_xp_ledger_v1`(15a) · `20260904090000_duel_item_authority_v3`(C) · `20260904100000_duel_item_link_resolvable_v3`(C). **셋 다 운영에 없다** (R6, `AGENTS.md` §1). **이 중 3코스 창을 기다려야 하는 것은 없다** — 근거는 §5.0 D절 |
 | **로컬 `daily_challenge_pool` 행 수** | **0행** (`is_active` 0 / 전체 0) | **2026-09-06** | `ab5af95` 실측 `[산출물]`. **`db reset --local` 이후 비어 있다.** 베이스라인 migration이 **테이블만 만들고 INSERT가 없으며**(`20260730170602:511` DDL, INSERT 0건) **`supabase/seed.sql`이 없다.** 그 결과 `select * from ensure_today_daily_challenge()`가 **`ERROR: No active daily challenge candidates`로 raise한다**(`20260730170602:77-79`). **운영에는 행이 있다** — 로컬만의 공백이다. §5.0 D절 |
 | **운영 DB 배포 #4 선행** | **tables 24 · public funcs 43 · migrations 15 · publication 4** | **2026-09-28** | 기준 코드 `f6e2b2f`, 사용자 검증값 `[사용자 보고]`. 이 세션에서 운영 DB 미접근. 저장소 15 ↔ 운영 15, 차이 0 |
 | **운영 아이템 스모크** | **10종 applied**, 결과 화면 회귀 발견 | **2026-09-28** | 기준 코드 `f6e2b2f`, 사용자 실측 `[사용자 보고]`; 회귀 분석은 `fc46c95`의 `docs/agent/TRACK-C-HANDOFF.md` §3.6 |
@@ -1126,6 +1157,7 @@ A1·A3·B2·B3·B6는 C와 병행 가능하다. **D1은 순서가 아니라 상�
 **웨이브 2가 닫혔다.** A · B · N2 · D(15a) · C가 전부 `feat/group-final-gaps`에 있고
 **merge 충돌은 다섯 번 다 0이었다.** 아래는 **C가 해결할 수 없거나 C의 산출이 아닌 것**이며,
 출처는 `TRACK-C-HANDOFF.md` §5다. **D1은 이 세션에서 처리했고, D2~D5는 등재이며 D6·D7은 창 항목이다.**
+**2026-09-28: 3코스 범위 제외로 "창 항목"이 없어졌다 — D7은 일반 migration으로 바뀌었다 (아래 D7).**
 
 | # | 항목 | 성격 | 상태 |
 |:-:|---|---|---|
@@ -1135,7 +1167,7 @@ A1·A3·B2·B3·B6는 C와 병행 가능하다. **D1은 순서가 아니라 상�
 | **D4** | 그룹 경로 `coalesce` 잠재 벽돌 | 관찰 — 조사 먼저 | **등재. 수정 금지** |
 | **D5** | `migration 무수정` 연속이 끊겼다 | 사실 기록 | **✅ 기록됨** |
 | **D6** | 로컬 `daily_challenge_pool` 0행 해소 | 창 준비 | **✅ 시드·로컬 reset·함수 조회 완료 (2026-09-28, 기준 `fc46c95` + 미커밋 작업 트리)** |
-| **D7** | 3코스 창 범위 최종 + C migration의 배포 순서 | 창 범위 확정 | **✅ 확정 (아래)** |
+| **D7** | ~~3코스 창 범위 최종~~ → **DB 변경 3항목(②③④)** + C migration의 배포 순서 | ~~창 범위 확정~~ → **일반 `db push`** | **migration 작성·로컬 검증 완료, 운영 미적용 (2026-09-28)** |
 
 ---
 
@@ -1258,9 +1290,21 @@ select * from public.ensure_today_daily_challenge();
 창 항목 ①이 **이 함수를 `drop` 후 재생성**하므로(`course_slot` 추가로 반환 타입이 바뀐다)
 **리허설이 곧 검증인 항목이고, 빈 풀에서는 리허설이 성립하지 않는다.**
 
-**D7. 3코스 창 범위 최종 — C의 migration 2개는 창이 필요 없다**
+**D7. ~~3코스 창 범위 최종~~ → DB 변경 3항목 — 창이 필요 없다 (2026-09-28 재판정)**
 
-**창 = 4항목 그대로다.** ① `daily_challenges` 제약 교체 + `course_slot`
+> **2026-09-28 재판정** `[사용자 결정]`. **3코스(①)가 범위 제외되면서 창 4항목이 DB 변경 3항목(②③④)이 됐다.**
+> **성격을 다시 판정했다 — 셋 다 DB 전용이고 프론트와 무관하다.** 배포된 프론트는 이미 ③의 3컬럼만 보내고
+> (`ProfilePage.jsx:97-98`·`:160-161` — C3가 인용한 `:86`·`:149`에서 줄만 옮겨졌다), ④는 아무도 읽지 않으며,
+> ②는 쓰는 값이 `'completed'` 하나다(`apply_single_move_v2:322`). **그러므로 리허설·게이트·창 문서가 필요 없다 —
+> 2026-09-28의 C·15a 적용과 같은 일반 `db push`다.** 순서 ③ → ④는 여전히 강제된다(C3 §5.1).
+>
+> 산출물은 `supabase/migrations/20260928090000_c4_check_c3_grant_total_xp.sql` 하나이고 검증은 상단 ⚑ 상자에 있다.
+> **계약과 다르게 한 곳은 없다** — ③은 C3 §5.1대로 `anon`에서도 회수하고, ④는 C3 §1의 DDL(컬럼 + CHECK + 인덱스)
+> 그대로이며, ②의 값 집합은 C4 **§4.1**(`completed`·`abandoned`·`expired`)이다. `match_end_reason`은 §4.2대로 제외.
+>
+> 아래는 2026-09-06의 원문이다. **①과 "창"이라는 틀만 무효가 됐고, C migration의 배포 순서 판정은 그대로 유효했다.**
+
+~~**창 = 4항목 그대로다.**~~ ① `daily_challenges` 제약 교체 + `course_slot`
 ② `game_records.result_status` CHECK 1건 ③ `profiles` 컬럼 단위 grant 축소 3컬럼
 ④ `profiles.total_xp` 추가. **순서 ③ → ④** 유지.
 
