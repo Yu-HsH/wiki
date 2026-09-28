@@ -1,0 +1,50 @@
+name: Supabase keepalive
+
+on:
+  schedule:
+    # 매일 12:17 KST. 정각은 GitHub Actions 예약 실행 지연이 잦아 피한다.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  count-profiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - name: Count public profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_ANON_KEY" ]]; then
+            echo 'SUPABASE_URL or SUPABASE_ANON_KEY secret is missing' >&2
+            exit 1
+          fi
+
+          headers=$(mktemp)
+          trap 'rm -f "$headers"' EXIT
+          curl --silent --show-error --fail --head \
+            --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30 \
+            --dump-header "$headers" --output /dev/null \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            --header 'Prefer: count=exact' \
+            "${SUPABASE_URL%/}/rest/v1/profiles?select=id&limit=1"
+
+          count=$(awk 'tolower($1) == "content-range:" {
+            gsub(/\r/, "", $2)
+            split($2, parts, "/")
+            total = parts[2]
+          } END {
+            if (total ~ /^[0-9]+$/) print total
+          }' "$headers")
+          if [[ -z "$count" ]]; then
+            echo 'No exact profiles count in Content-Range' >&2
+            exit 1
+          fi
+          echo "profiles_count=$count"

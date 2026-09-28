@@ -1,6 +1,6 @@
--- MainPage.jsx에 남아 있던 기존 DAILY_POOL 후보를 Supabase daily_challenge_pool에 넣는 SQL입니다.
--- Supabase SQL Editor에서 그대로 실행하면 됩니다.
--- 시작 문서는 현재 앱에서 사용하지 않으므로 start_title은 null로 넣습니다.
+-- 로컬 Supabase db reset 뒤 실행되는 개발용 시드입니다 (supabase/config.toml [db.seed]).
+-- 기존 DAILY_POOL_INSERT.sql의 후보 8행을 옮겼습니다. 운영 DB에는 자동 적용하지 않습니다.
+-- 시작 문서는 현재 앱에서 사용하지 않으므로 start_title은 null입니다.
 -- sort_order 101부터 넣어 기존 자동 후보와 충돌하지 않게 했습니다.
 
 insert into public.daily_challenge_pool (sort_order, start_title, target_title, hint, is_active)
@@ -18,11 +18,3 @@ on conflict (sort_order) do update set
   target_title = excluded.target_title,
   hint = excluded.hint,
   is_active = excluded.is_active;
-
--- 오늘의 도전을 위 후보 중 하나로 직접 지정하고 싶을 때 예시입니다.
--- target_title과 hint만 원하는 값으로 바꿔서 실행하세요.
--- insert into public.daily_challenges (challenge_date, target_title, hint)
--- values ('2026-05-26', '고래상어', '현존 가장 큰 어류')
--- on conflict (challenge_date) do update set
---   target_title = excluded.target_title,
---   hint = excluded.hint;
