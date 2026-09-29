@@ -1,10 +1,36 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-09-28**
-기준 커밋: **`4c35aa7`** (`feat(db): drop the 3-course scope and prepare the last three DB changes as a plain migration`)
-마지막 **앱 코드** 커밋: **`fc46c95`** (프론트 변경은 그 뒤 0) · 마지막 **migration** 커밋: **`4c35aa7`** — **운영 적용 완료 (2026-09-28 17:46)**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `4c35aa7`다 (`AGENTS.md` §7).
-이전 기준: `7e90b7a` · `09b684a`
+갱신 날짜: **2026-09-29**
+기준 커밋: **`fd6f916`** (`feat(xp): 15b-2 — XP ranking tab and level display from profiles.total_xp`)
+마지막 **앱 코드** 커밋: **`fd6f916`** (15b-2, **미배포**) · 마지막 **migration** 커밋: **`777ecdf`** (15b-1, `20260929090000`) — **운영 미적용**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `fd6f916`다 (`AGENTS.md` §7).
+이전 기준: `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps`
+
+> # ⚑ 2026-09-29 — **15b 완료·feat 통합. 저장소 17 ↔ 운영 16, 차이 1 (`20260929090000`). 배포는 15c와 묶는다**
+>
+> **결정** `[사용자 확정, 2026-09-29]`: ① 누적 출처 = `profiles.total_xp`, `total_xp + amount < 0`이면 원장 행 없이
+> `XP_AMOUNT_INVALID` — **단 원장에 이미 있는 키는 `granted:false`가 먼저다** (C2 §7 멱등성, 사용자 승인)
+> ② 타인 레벨 = `public.profile_level(profiles)` computed field, 공식은 DB에만 ③ `RankingPage` XP 탭 + `fetchXpRankings`,
+> `fetchRankings` 시그니처 불변, 로비 TOP 3 무변경 ④ `total_xp > 0` 필터 + 빈 상태, 탭은 숨기지 않는다
+> ⑤ 동점 `created_at asc, id asc` ⑥ A·B 소유 파일 직접 수정 — `TRACKS.md` §1.1-d.
+>
+> | 커밋 | 내용 |
+> |---|---|
+> | **`777ecdf`** 15b-1 | `20260929090000_xp_total_v1.sql` — **§0 가드**(C3 §6 불변식 0행이 아니면 `XP_TOTAL_OUT_OF_SYNC`로 전체 중단) · `grant_xp_v1` 교체(프로필 행 잠금, 원장 삽입 시에만 `total_xp += amount`·`updated_at`, 음수 가드) · `get_xp_summary_v1` 컬럼 읽기 · `profile_level` 신설. 시그니처·ACL 불변, 데이터 손실 DDL 0. pgTAP `xp_ledger_v1` 128 → **153** |
+> | **`fd6f916`** 15b-2 | XP 탭 · 랭킹 COMPACT Lv · 프로필/공개 프로필 FULL Lv + 진행 막대(`XpProgress`) · 로비 헤더 Lv. `tests/xpTotal.test.js` +13 |
+>
+> | 검증 (로컬 스택, 2026-09-29) | 결과 |
+> |---|---|
+> | `db reset` | **migration 17개** 적용 |
+> | pgTAP 전량 | xp_ledger_v1 **153/153** · c4_check_c3 **30/30**(무수정) · duel_item_authority_v3 **148/148** · server_authority_v2 **97/97** · group_security_phase2c **49/49** · group_final_gaps_v13 **33/33** · group_spectator_emoji_atomicity **22/22** · group_match_lifecycle_phase2a **2/2** — `not ok` **0** (`777ecdf` 작업 트리에서 측정) |
+> | `npm test` · `npm run build` · `supabase:preflight` | **343/343** · **exit 0** · **전 CASE PASS** (`fd6f916` 커밋 직전 작업 트리) |
+> | 데이터 스모크 | **15/15** — service_role `grant_xp_v1` → `total_xp` 반영 · 중복 무변경 · 음수 거부 · XP 정렬(동점 `created_at`) · `profile_level` · authenticated의 grant·`total_xp` write **42501** · C3 §6 불변식 **0행** |
+> | UI 스모크 (headless Playwright, 로컬 dev) | **7/7** — XP 탭 정렬·Lv · 공개 프로필 Lv + `20 / 125 XP` · 프로필 Lv + `20 / 100 XP` · 로비 헤더 Lv · 시간 랭킹 탭 정상. 첫 실행에 콘솔 409 1건이 있었고 **이후 3회 재현되지 않았다** — 요청 URL 미확인 |
+> | §2.3 불변식 | ①③④⑤⑦ 대상 파일 **무편집** · ⑥ 리터럴 증감 **0** (현재 원시 수 33/13/6/12 — 09-06 기록 32/12/6/12와의 차이는 이 변경 밖) |
+>
+> **미검증:** XP 탭 **빈 상태 화면**(단위 테스트만) · 게스트 헤더(코드 경로만). **`main`은 `7e90b7a` 그대로** —
+> 15b는 feat 통합만 했고 **`20260929090000` 운영 적용과 프론트 배포는 15c와 묶는다** `[사용자 결정]`.
+> **적용 순서 주의:** 15b 프론트는 `profile_level`·`total_xp`를 select하므로 **migration이 프론트보다 먼저**다.
 
 > # ⚑ 2026-09-28 (4) — **`20260928090000` 운영 적용 완료. 저장소 16 = 운영 16, 차이 0** `[사용자 실행·보고]`
 >
@@ -396,6 +422,9 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 | `npm test` | **330/330** (fail 0, skipped 0) | **2026-09-28** | 기준 HEAD `fc46c95` + 이 문서·시드·워크플로의 미커밋 작업 트리에서 실행 `[산출물]` |
 | `npm run build` | **PASS** (exit 0, 217 modules) | **2026-09-28** | 기준 HEAD `fc46c95` + 같은 미커밋 작업 트리에서 실행 `[산출물]`. 기존 500 kB chunk 경고 유지 |
 | **#6 배포 전 `npm test`** | **330/330** (fail 0, skipped 0) | **2026-09-28** | 기준 HEAD `09b684a` + `AGENTS.md`·이 문서 미커밋 작업 트리 `[산출물]`. 앱 코드 변경 0 |
+| `npm test` | **343/343** (fail 0) | **2026-09-29** | 기준 HEAD `777ecdf` + 15b-2 미커밋 작업 트리 → `fd6f916`로 커밋 `[산출물]`. **+13** — `tests/xpTotal.test.js` 단독. 330 + 13 = 343 |
+| **pgTAP `xp_ledger_v1`** | **153/153** (`not ok` 0) | **2026-09-29** | `f8e8fc5` + 15b-1 작업 트리(→ `777ecdf`) `[산출물]`. **+25**(§9) · 15a 단언 1건 반전 · §7 픽스처 2건이 `total_xp`를 함께 옮기도록 수정 |
+| **저장소 migration 수** | **17개** (마지막 `20260929090000_xp_total_v1.sql`) | **2026-09-29** | `777ecdf` `[산출물]`. 로컬 17개 전량 적용. **운영 16 — 차이 1, 운영 미적용** |
 | **#6 배포 전 `npm run build`** | **PASS** (exit 0, 217 modules) | **2026-09-28** | 기준 HEAD `09b684a` + 같은 미커밋 문서 작업 트리 `[산출물]`. `App-Ci6c53FV.js` 567.78 kB로 이전 측정과 동일; 기존 500 kB 경고 유지 |
 | pgTAP Packet 13 | 33/33 | 2026-08-18 | `339fb77` 이전 |
 | pgTAP spectator emoji atomicity | 22/22 | 2026-08-18 | `339fb77` 이전 |
@@ -516,6 +545,8 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 ---
 
 ## 3. 원격 상태
+
+**2026-09-29 재측정:** `git ls-remote origin` → `main = 7e90b7a` · `feat/group-final-gaps = f8e8fc5` `[산출물]`. 로컬 `feat`는 그 위에 **3커밋**(`777ecdf` 15b-1 · `fd6f916` 15b-2 · 이 문서 갱신)이 더 있고 **아직 push하지 않았다.** 저장소 migration **17** ↔ 운영 **16**, 차이 **1** (`20260929090000`). `main` push·운영 적용은 15c와 묶어 건별 승인한다 (`AGENTS.md` §1·§1.1).
 
 **현재 기준 (2026-09-28):** #6 push 직전 `git ls-remote origin`으로 `main = feat/group-final-gaps = fc46c95`를 직접 확인했다 `[산출물]`. 사용자가 승인한 #6에서 `09b684a`와 이 문서 갱신 커밋을 두 브랜치에 올린다. 저장소 migration **15개** = 사용자 검증 운영 migration **15개**, 차이 **0**. 이후 `main` push는 다시 건별 승인 대상이다 (`AGENTS.md` §1.1·§2).
 
@@ -734,6 +765,9 @@ W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[�
 ---
 
 ## 4. 진행 중인 작업
+
+- **15b — 완료·feat 통합 (2026-09-29, `777ecdf`·`fd6f916`). 운영 미적용·미배포.** 다음은 **15c**(finalizer XP 지급).
+  **15c 배포 때 `20260929090000`을 함께 적용한다** — 순서는 migration → 프론트. 상세는 상단 ⚑ 2026-09-29 상자.
 
 **2026-09-28 현황:** 트랙 C와 15a의 migration 3개 및 C 프론트는 운영에 반영됐다 (§3 #4). 결과 화면 hotfix도 배포·운영 재확인했다 (§3 #5). 아래의 "통합만 됨/운영 12개/배포하지 않는다"는 2026-09-04~06의 진행 이력이다. 현재 남은 항목은 **D1 GitHub secrets 등록·첫 실행 확인**, **체크리스트 14번**, 부채 ③의 정량 검증이다. **D6 로컬 시드 실측은 완료**했다. 3코스 창 자체는 아직 열지 않았다.
 
