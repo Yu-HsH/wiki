@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { fetchPublicProfile, fetchAllProfileStats } from "../services/profileStatsService";
+import { fetchXpSummary } from "../services/xpService";
 import ProfileCard from "./ProfileCard";
+import XpProgress from "./XpProgress";
 import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
 
 /**
@@ -12,6 +14,7 @@ import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.j
 export default function UserProfileModal({ userId, isOpen, onClose }) {
     const [profile, setProfile] = useState(null);
     const [stats, setStats] = useState(null);
+    const [xpSummary, setXpSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
@@ -26,14 +29,18 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
         let isMounted = true;
         setLoading(true);
         setError(false);
+        setXpSummary(null);
 
         Promise.all([
             fetchPublicProfile(userId),
-            fetchAllProfileStats(userId)
-        ]).then(([profileData, statsData]) => {
+            fetchAllProfileStats(userId),
+            // 진행도는 부가 정보다 — 실패해도 프로필은 연다. 레벨은 profile_level이 채운다.
+            fetchXpSummary(userId).catch(() => null)
+        ]).then(([profileData, statsData, xpData]) => {
             if (isMounted) {
                 setProfile(profileData);
                 setStats(statsData);
+                setXpSummary(xpData);
                 setLoading(false);
             }
         }).catch((err) => {
@@ -79,11 +86,12 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                 ) : (
                     <div className="user-profile-modal-content">
                         <div className="user-profile-modal-header">
-                            {/* C5 §4 "공개 프로필 — 전부. 편집 없음". 레벨·칭호·배지는 슬롯이다 */}
+                            {/* C5 §4 "공개 프로필 — 전부. 편집 없음". 레벨은 15b가 채운다. 칭호·배지는 슬롯이다 */}
                             <ProfileCard
                                 card={buildProfileCard({
                                     userId,
                                     nickname: profile?.nickname,
+                                    level: profile?.profile_level ?? null,
                                     legacyImageUrl: profile?.profile_image_url,
                                     source: "live",
                                 })}
@@ -94,6 +102,8 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                                 <span>@{profile?.username || "알수없음"}</span>
                             </ProfileCard>
                         </div>
+
+                        <XpProgress summary={xpSummary} />
 
                         <div className="user-profile-modal-stats">
                             <div className="stat-box">

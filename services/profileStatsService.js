@@ -130,7 +130,7 @@ export async function fetchPublicProfile(userId) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("username, nickname, profile_image_url")
+    .select("username, nickname, profile_image_url, total_xp, profile_level")
     .eq("id", userId)
     .single();
 

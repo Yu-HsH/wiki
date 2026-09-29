@@ -218,3 +218,34 @@
   outline-offset: 2px;
   border-radius: 6px;
 }
+
+/* ── XP 진행도 — FULL 밀도 전용 (components/XpProgress.jsx, 트랙 15b) ── */
+
+.pcard-xp {
+  width: 100%;
+  max-width: 280px;
+  margin: 6px auto 12px;
+  font-size: 0.8rem;
+}
+
+.pcard-xp-bar {
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  /* 밝은 프로필 카드와 어두운 공개 프로필 모달에서 모두 보이는 중립 트랙 */
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.pcard-xp-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--app-brand, #6366f1), var(--app-brand-deep, #4338ca));
+}
+
+.pcard-xp-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  opacity: 0.75;
+}

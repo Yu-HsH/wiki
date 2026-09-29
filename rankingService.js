@@ -8,6 +8,18 @@ import { isSupabaseConfigured, supabase } from "./supabaseClient.js";
 const LOCAL_RECORDS_KEY = "wiki_game_records";
 
 /**
+ * 프로필 조회에 덧붙이는 XP 컬럼. `profile_level`은 저장된 컬럼이 아니라
+ * `public.profile_level(profiles)` computed field다 (20260929090000).
+ */
+const PROFILE_XP_COLUMNS = "total_xp, profile_level";
+
+function toNumberOrNull(value) {
+  if (value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+/**
  * 싱글 기록 단일 조회 경로가 읽는 컬럼.
  *
  * 결과 화면과 프로필 history가 **같은 조회 경로**를 써야 한다 (패킷 17 §4·§8).
@@ -291,7 +303,9 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
         pathTitles: record.path_titles ?? [],
         createdAt: record.created_at,
         profileImageUrl: null,
-        nickname: null
+        nickname: null,
+        level: null,
+        totalXp: null
       }));
   }
 
@@ -322,7 +336,7 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
   if (userIds.length > 0) {
     const { data: profileData } = await supabase
       .from("profiles")
-      .select("id, nickname, profile_image_url")
+      .select(`id, nickname, profile_image_url, ${PROFILE_XP_COLUMNS}`)
       .in("id", userIds);
     profiles = profileData || [];
   }
@@ -342,7 +356,52 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
       pathTitles: record.path_titles ?? [],
       createdAt: record.created_at,
       profileImageUrl: profile?.profile_image_url || null,
-      nickname: profile?.nickname || null
+      nickname: profile?.nickname || null,
+      level: toNumberOrNull(profile?.profile_level),
+      totalXp: toNumberOrNull(profile?.total_xp)
     };
   });
+}
+
+/**
+ * 누적 XP 랭킹 한 행을 프론트 표기로 정규화합니다.
+ * `level`은 서버의 `profile_level` computed field 값 그대로입니다 — 레벨 공식은 DB에만 있습니다 (C3 §3·§4).
+ */
+export function normalizeXpRankingRow(row) {
+  return {
+    userId: row.id,
+    nickname: row.nickname ?? null,
+    profileImageUrl: row.profile_image_url ?? null,
+    totalXp: Number(row.total_xp ?? 0),
+    level: toNumberOrNull(row.profile_level),
+  };
+}
+
+/**
+ * 누적 XP 랭킹을 가져옵니다 (패킷 15 §5.3).
+ *
+ * - XP가 0인 탐험가는 싣지 않습니다. 전원 0이면 빈 배열이고, 화면이 빈 상태를 보여 줍니다.
+ * - 동점은 가입 순(`created_at` 오름차순), 그다음 `id` 오름차순입니다 — 순서가 매번 같아야 합니다.
+ * - 로컬 데모 모드에는 XP가 없으므로 빈 배열입니다.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.limit] 상위 N명
+ * @param {Object} [options.client] 조회에 쓸 Supabase 클라이언트 (미지정 시 전역 설정)
+ * @returns {Promise<Array<{userId, nickname, profileImageUrl, totalXp, level}>>}
+ */
+export async function fetchXpRankings({ limit = 50, client } = {}) {
+  const db = resolveRecordsClient(client);
+  if (!db) return [];
+
+  const { data, error } = await db
+    .from("profiles")
+    .select(`id, nickname, profile_image_url, ${PROFILE_XP_COLUMNS}`)
+    .gt("total_xp", 0)
+    .order("total_xp", { ascending: false })
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data || []).map(normalizeXpRankingRow);
 }

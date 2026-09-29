@@ -4,7 +4,9 @@ import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
 import { supabase } from "../supabaseClient";
 import { fetchAllProfileStats } from "../services/profileStatsService";
+import { fetchXpSummary } from "../services/xpService";
 import ProfileCard from "../components/ProfileCard";
+import XpProgress from "../components/XpProgress";
 import { DENSITY, NAME_FALLBACK, buildProfileCard, resolveDisplayName } from "../utils/profileCard.js";
 
 /**
@@ -28,6 +30,7 @@ export default function ProfilePage() {
   // 전적 관련 상태
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [xpSummary, setXpSummary] = useState(null);
 
   /* ── 데이터 로딩 (프로필 + 전적) ── */
   useEffect(() => {
@@ -42,11 +45,16 @@ export default function ProfilePage() {
         // 1. 프로필 정보 조회
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("username, nickname, profile_image_url")
+          .select("username, nickname, profile_image_url, total_xp, profile_level")
           .eq("id", user.id)
           .single();
 
         if (!profileError && profileData) setProfile(profileData);
+
+        // 진행도 쌍은 서버가 계산한다 (C3 §4). 실패해도 프로필 화면은 그대로 보인다.
+        fetchXpSummary(user.id)
+          .then(setXpSummary)
+          .catch((xpError) => console.error("XP 요약 로드 실패:", xpError));
 
         // 2. 전체 전적 조회
         const statsData = await fetchAllProfileStats(user.id);
@@ -67,10 +75,12 @@ export default function ProfilePage() {
   // 편집 대상인 원본 닉네임. 표시용 이름은 C5 §3.3이 ProfileCard 안에서 결정한다.
   const storedNickname = profile?.nickname || user?.nickname || user?.displayName || "";
 
-  // C5 §2의 카드 형태. 레벨·칭호·배지·프레임·배경은 슬롯이며 C1/C3 DDL 이후에 채운다.
+  // C5 §2의 카드 형태. 레벨은 `profile_level` computed field(15b)가 채운다.
+  // 칭호·배지·프레임·배경은 아직 슬롯이다.
   const profileCard = buildProfileCard({
     userId: user?.id,
     nickname: storedNickname,
+    level: profile?.profile_level ?? null,
     legacyImageUrl: profile?.profile_image_url,
     source: "live",
   });
@@ -212,6 +222,8 @@ export default function ProfilePage() {
               <div className="pcard-avatar-overlay">업로드...</div>
             )}
           </div>
+
+          <XpProgress summary={xpSummary} />
 
           <label style={{ cursor: uploading || user?.isGuest ? "not-allowed" : "pointer" }}>
             <span style={{ fontSize: "0.85rem", color: "var(--app-brand-deep)", fontWeight: 600 }}>

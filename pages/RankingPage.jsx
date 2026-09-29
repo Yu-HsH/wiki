@@ -2,10 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
-import { fetchRankings } from "../rankingService";
+import { fetchRankings, fetchXpRankings } from "../rankingService";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 import ProfileCard from "../components/ProfileCard";
 import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
+import { formatXp } from "../utils/xpProgress.js";
+
+/** 누적 XP 탭 — 기간 탭과 같은 줄에 있지만 데이터 원천이 다르다 (`profiles.total_xp`). */
+const XP_TAB = "xp";
 
 function formatDuration(totalSeconds) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -24,10 +28,13 @@ function formatDate(value) {
 export default function RankingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [period, setPeriod] = useState("all"); // "all", "weekly", "daily"
+  const [period, setPeriod] = useState("all"); // "all", "weekly", "daily", XP_TAB
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [records, setRecords] = useState([]);
+  // 탭 전환 직후 한 프레임 동안 다른 형태의 행이 그려지지 않도록 상태를 나눈다.
+  const [xpRows, setXpRows] = useState([]);
+  const isXpTab = period === XP_TAB;
   const [expandedId, setExpandedId] = useState(null);
 
   // 2. 모달 상태 추가
@@ -47,8 +54,13 @@ export default function RankingPage() {
       try {
         setLoading(true);
         setError("");
-        const ranking = await fetchRankings({ period, limit: 50 });
-        if (!cancelled) setRecords(ranking);
+        if (period === XP_TAB) {
+          const rows = await fetchXpRankings({ limit: 50 });
+          if (!cancelled) setXpRows(rows);
+        } else {
+          const ranking = await fetchRankings({ period, limit: 50 });
+          if (!cancelled) setRecords(ranking);
+        }
       } catch (fetchError) {
         if (!cancelled) setError(fetchError?.message || "Could not load ranking.");
       } finally {
@@ -67,8 +79,10 @@ export default function RankingPage() {
       <header className="dashboard-header">
         <div>
           <p className="dashboard-badge">RANKING</p>
-          <h1>Time Attack Leaderboard</h1>
-          <p className="dashboard-muted">Fastest players to reach random target pages.</p>
+          <h1>{isXpTab ? "XP Leaderboard" : "Time Attack Leaderboard"}</h1>
+          <p className="dashboard-muted">
+            {isXpTab ? "누적 XP가 많은 탐험가 순입니다." : "Fastest players to reach random target pages."}
+          </p>
         </div>
         <div className="header-actions">
           <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate(LOBBY_PATH)}>
@@ -100,17 +114,72 @@ export default function RankingPage() {
           >
             All Time
           </button>
+          <button
+            type="button"
+            className={isXpTab ? "toggle-btn active" : "toggle-btn"}
+            onClick={() => setPeriod(XP_TAB)}
+          >
+            XP
+          </button>
         </div>
       </section>
 
       <section className="dashboard-card ranking-table-wrap">
         {loading && <p className="dashboard-muted">Loading ranking...</p>}
         {error && <p className="app-error">{error}</p>}
-        {!loading && !error && records.length === 0 && (
+        {!loading && !error && isXpTab && xpRows.length === 0 && (
+          <p className="dashboard-muted">아직 XP를 얻은 탐험가가 없습니다. 게임을 완주하면 이곳에 이름이 올라갑니다.</p>
+        )}
+
+        {!loading && isXpTab && xpRows.length > 0 && (
+          <div className="ranking-table-scroll">
+            <table className="ranking-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Player</th>
+                  <th>누적 XP</th>
+                </tr>
+              </thead>
+              <tbody>
+                {xpRows.map((row, index) => {
+                  const isMine = row.userId === user.id;
+                  // C5 §4 랭킹 = COMPACT. 레벨은 profile_level computed field 값이다.
+                  const profileCard = buildProfileCard({
+                    userId: row.userId,
+                    nickname: row.nickname,
+                    level: row.level,
+                    legacyImageUrl: row.profileImageUrl,
+                    source: "live",
+                  });
+
+                  return (
+                    <tr key={row.userId} className={isMine ? "mine" : ""}>
+                      <td>{index + 1}</td>
+                      <td className="ranking-player-cell">
+                        <ProfileCard
+                          card={profileCard}
+                          size="sm"
+                          density={DENSITY.COMPACT}
+                          nameFallback={NAME_FALLBACK.EXPLORER}
+                          interactive
+                          onClick={() => handleUserClick(row.userId)}
+                        />
+                      </td>
+                      <td>{formatXp(row.totalXp)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!loading && !error && !isXpTab && records.length === 0 && (
           <p className="dashboard-muted">No records yet. Start the first run.</p>
         )}
 
-        {!loading && records.length > 0 && (
+        {!loading && !isXpTab && records.length > 0 && (
           <div className="ranking-table-scroll">
             <table className="ranking-table">
               <thead>
@@ -130,10 +199,11 @@ export default function RankingPage() {
                   const isExpanded = expandedId === record.id;
                   const rowKey = record.id || `${record.userId}-${record.createdAt}-${index}`;
 
-                  // C5 §2의 카드 형태. 레벨·칭호·배지는 슬롯이며 C1/C3 DDL 이후에 채운다.
+                  // C5 §2의 카드 형태. 레벨은 15b가 채운다. 칭호·배지는 아직 슬롯이다.
                   const profileCard = buildProfileCard({
                     userId: record.userId,
                     nickname: record.nickname || record.playerName,
+                    level: record.level ?? null,
                     legacyImageUrl: record.profileImageUrl,
                     source: "live",
                   });

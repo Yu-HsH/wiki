@@ -5,6 +5,7 @@ import { fetchUserStats, fetchRankings } from "../rankingService";
 import AdBanner from "../components/AdBanner";
 import { searchWikiTitleCandidates } from "../services/wikiService";
 import { fetchAllProfileStats } from "../services/profileStatsService";
+import { fetchXpSummary } from "../services/xpService";
 import { fetchTodayDailyChallenge, getFallbackDailyChallenge } from "../services/dailyChallengeService";
 import { trackEvent } from "../services/analyticsService";
 
@@ -60,6 +61,8 @@ export default function MainPage() {
   });
 
   const [rankingView, setRankingView] = useState("today");
+  // 헤더의 Lv. 표시. 게스트는 XP가 없으므로 항상 null이다 (15 §2).
+  const [headerLevel, setHeaderLevel] = useState(null);
 
 
   const [loading, setLoading] = useState(true);
@@ -128,6 +131,19 @@ export default function MainPage() {
   }, [user.id]);
 
   useEffect(() => {
+    if (user.isGuest) {
+      setHeaderLevel(null);
+      return;
+    }
+    let cancelled = false;
+    // 레벨은 서버가 계산한다 (C3 §4). 실패하면 표시만 빠지고 로비는 그대로 뜬다.
+    fetchXpSummary(user.id)
+      .then((summary) => { if (!cancelled) setHeaderLevel(summary.level); })
+      .catch(() => { if (!cancelled) setHeaderLevel(null); });
+    return () => { cancelled = true; };
+  }, [user.id, user.isGuest]);
+
+  useEffect(() => {
     try {
       const today = new Intl.DateTimeFormat("en-CA", {
         year: "numeric",
@@ -194,7 +210,16 @@ export default function MainPage() {
         <header className="dashboard-header">
           <div>
             <p className="dashboard-badge">Wiki Race</p>
-            <h1>{user.displayName}님, 반가워요 👋</h1>
+            <h1>
+              {headerLevel !== null && (
+                <>
+                  <span className="pcard-level" aria-label={`레벨 ${headerLevel}`}>
+                    Lv.{headerLevel}
+                  </span>{" "}
+                </>
+              )}
+              {user.displayName}님, 반가워요 👋
+            </h1>
             <p className="dashboard-muted">
               {user.isGuest && (
                 <span className="dashboard-muted">

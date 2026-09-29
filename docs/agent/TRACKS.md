@@ -151,6 +151,26 @@
 
 **티켓은 아직 쓰지 않는다.** 순서만 고정한다.
 
+#### 1.1-d 15b 파일 소유권 예외 — **A·B 소유 파일을 15b가 직접 고쳤다** `[사용자 결정 6, 2026-09-29]`
+
+**근거:** 트랙이 순차로 진행된다 — A·B는 완료·통합됐고 동시에 도는 트랙이 없으므로 §2의 소유권이
+막으려던 동시 편집 충돌이 생길 수 없다. **소유권 지도(§2.1)는 바꾸지 않는다** — 다음에 트랙이
+병렬로 돌면 원래 소유자가 다시 적용된다. **선례로 확장하지 않는다.**
+
+| 파일 | 소유 | 15b가 바꾼 것 | 지킨 것 |
+|---|:-:|---|---|
+| `rankingService.js` | B | `fetchXpRankings({limit, client})` 신설 · `fetchRankings` 내부 `profiles` select에 `total_xp, profile_level` 추가, 행에 `level`·`totalXp` 키 추가 | **`fetchRankings` 시그니처 불변** (결정 3). 기존 반환 키 제거·개명 0 (§8-A 범위 밖 ⑨의 취지 — 추가만) |
+| `services/profileStatsService.js` | B | `fetchPublicProfile`의 select에 `total_xp, profile_level` 추가 | 반환은 여전히 `profiles` 행 그대로 — 키 추가만 |
+| `pages/MainPage.jsx` | B | 헤더 이름 앞 `Lv.N` (`fetchXpSummary`) | **로비 TOP 3 무변경** (결정 3) · 게스트 영역·오늘 코스 블록 무편집 |
+| `pages/RankingPage.jsx` | A | **XP 탭** (# · 플레이어(Lv) · 누적 XP, 빈 상태 문구) · 시간 랭킹 행 COMPACT 카드에 `level` | 기존 3탭·표 구조 유지 |
+| `pages/ProfilePage.jsx` | A | select에 `total_xp, profile_level` · FULL 카드 `level` · 진행 막대 | **`profiles` update payload 2곳 무변경** — C3-① 3컬럼 grant가 여기에 걸린다 (§4.3) |
+| `components/UserProfileModal.jsx` | A | FULL 카드 `level` · 진행 막대 | **prop 계약 `{userId, isOpen, onClose}` 불변** (§2.2) |
+| `css/profileCard.css` | A | `.pcard-xp*` 규칙 추가 | `pcard-` 접두만 · `mp-` 0 (§2.3-⑤) |
+
+**신규 파일 (15b 소유):** `components/XpProgress.jsx` · `utils/xpProgress.js` · `tests/xpTotal.test.js` ·
+`supabase/migrations/20260929090000_xp_total_v1.sql`. **그룹 참가자 행(MINIMAL)은 level을 보이지
+않으므로 무변경**이다 (C5 §4).
+
 ---
 
 ## 2. 파일 소유권 지도
