@@ -1,5 +1,6 @@
--- Wiki Race 2.0 Track 15a contract tests for the XP ledger.
--- Run after 20260903090000_xp_ledger_v1.sql on a local Supabase database:
+-- Wiki Race 2.0 Track 15a/15b contract tests for the XP ledger.
+-- Run after 20260903090000_xp_ledger_v1.sql, 20260928090000 and
+-- 20260929090000_xp_total_v1.sql (section 9) on a local Supabase database:
 --   docker exec -i <db container> psql -U postgres -d postgres \
 --     -v ON_ERROR_STOP=1 -f - < supabase/tests/xp_ledger_v1.sql
 --
@@ -8,7 +9,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(128);
+select plan(153);
 
 set local role postgres;
 
@@ -236,11 +237,13 @@ select ok(
   'level_from_total_xp is immutable (C3 §4)'
 );
 
--- Acceptance ②: the 15a/15b split holds only while this body leaves profiles alone.
+-- 15a's acceptance ② asserted the opposite ("never updates public.profiles").
+-- 20260929090000 replaced the body, so the live function is the 15b edition.
+-- The 15a *file* is still checked for that in tests/xpLedger.test.js.
 select ok(
-  (select prosrc !~* 'update\s+public\.profiles' from pg_proc
+  (select prosrc ~* 'update\s+public\.profiles' from pg_proc
    where oid = 'public.grant_xp_v1(uuid, text, uuid, integer, integer, text)'::regprocedure),
-  '15a grant_xp_v1 never updates public.profiles (TRACKS §6.1 condition C1)'
+  '15b grant_xp_v1 maintains public.profiles.total_xp (C3 §5)'
 );
 
 /* ──────────────────────────────────────────────────────────────
@@ -686,8 +689,11 @@ select is(
   'level 2 still needs 100 XP to reach level 3'
 );
 
+-- Fixture resets below go around grant_xp_v1, so each one moves the ledger and
+-- profiles.total_xp together. That keeps the C3 §6 invariant (section 9) true.
 set local role postgres;
 delete from public.xp_ledger where user_id = '00000000-0000-0000-0015-000000000002';
+update public.profiles set total_xp = 0 where id = '00000000-0000-0000-0015-000000000002';
 select is(
   (public.get_xp_summary_v1('00000000-0000-0000-0015-000000000002') ->> 'total_xp'),
   '0',
@@ -707,6 +713,7 @@ select is(
 insert into public.xp_ledger (user_id, xp_class, source_type, source_id, base_amount, amount)
 values ('00000000-0000-0000-0015-000000000002', 'admin', 'admin_adjustment',
         '00000000-0000-0000-0018-000000000001', 3975, 3975);
+update public.profiles set total_xp = 3975 where id = '00000000-0000-0000-0015-000000000002';
 select is(
   (public.get_xp_summary_v1('00000000-0000-0000-0015-000000000002') ->> 'level'),
   '27',
@@ -770,6 +777,203 @@ select throws_ok(
 );
 
 set local role postgres;
+
+/* ──────────────────────────────────────────────────────────────
+ * 9. 15b — profiles.total_xp (20260929090000). C3 §5·§6.
+ * ────────────────────────────────────────────────────────────── */
+
+insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values
+  ('00000000-0000-0000-0015-000000000003', 'authenticated', 'authenticated', 'xp-3@local.test', '{}', '{}', now(), now()),
+  ('00000000-0000-0000-0015-000000000004', 'authenticated', 'authenticated', 'xp-4@local.test', '{}', '{}', now(), now())
+on conflict (id) do nothing;
+
+insert into public.profiles (id, username, nickname, synthetic_email, updated_at)
+values
+  ('00000000-0000-0000-0015-000000000003', 'xp-3', 'XP Three', 'xp-3@local.test', '2000-01-01T00:00:00Z'),
+  ('00000000-0000-0000-0015-000000000004', 'xp-4', 'XP Four', 'xp-4@local.test', '2000-01-01T00:00:00Z')
+on conflict (id) do nothing;
+
+-- 9.1 Shape.
+select has_function('public', 'profile_level', array['profiles'],
+  'the profile_level computed field exists (decision ②)');
+select ok(
+  (select not prosecdef from pg_proc
+   where oid = 'public.profile_level(public.profiles)'::regprocedure),
+  'profile_level runs with invoker rights — RLS on profiles still decides the rows'
+);
+select ok(
+  has_function_privilege('anon', 'public.profile_level(public.profiles)', 'execute')
+    and has_function_privilege('authenticated', 'public.profile_level(public.profiles)', 'execute'),
+  'anon and authenticated can read profile_level'
+);
+select ok(
+  has_function_privilege('anon', 'public.level_from_total_xp(bigint)', 'execute')
+    and has_function_privilege('authenticated', 'public.level_from_total_xp(bigint)', 'execute'),
+  'the invoker-rights computed field can reach level_from_total_xp for both roles'
+);
+select ok(
+  (select prosrc !~* 'sum\s*\(\s*amount' and prosrc ~* 'from\s+public\.profiles'
+   from pg_proc where oid = 'public.get_xp_summary_v1(uuid)'::regprocedure),
+  'get_xp_summary_v1 reads profiles.total_xp, not a ledger sum (decision ①)'
+);
+
+-- 9.2 The earlier sections went through grant_xp_v1, so the column followed.
+select is(
+  (select total_xp from public.profiles where id = '00000000-0000-0000-0015-000000000001'),
+  1000::bigint,
+  'the grants of section 5 accumulated in profiles.total_xp'
+);
+
+-- 9.3 A grant adds exactly its amount.
+select is(
+  (public.grant_xp_v1(
+     '00000000-0000-0000-0015-000000000003', 'single_random_finish',
+     '00000000-0000-0000-0020-000000000001', 20, 20) ->> 'total_xp'),
+  '20',
+  'the returned total is profiles.total_xp after the grant'
+);
+select is(
+  (select total_xp from public.profiles where id = '00000000-0000-0000-0015-000000000003'),
+  20::bigint,
+  'a 20 XP grant raises total_xp by exactly 20'
+);
+select ok(
+  (select updated_at > '2000-01-01T00:00:00Z'::timestamptz from public.profiles
+   where id = '00000000-0000-0000-0015-000000000003'),
+  'a real grant touches updated_at'
+);
+
+-- 9.4 A repeated call changes nothing on profiles.
+update public.profiles set updated_at = '2000-01-01T00:00:00Z'
+ where id = '00000000-0000-0000-0015-000000000003';
+select is(
+  (public.grant_xp_v1(
+     '00000000-0000-0000-0015-000000000003', 'single_random_finish',
+     '00000000-0000-0000-0020-000000000001', 20, 20) ->> 'granted'),
+  'false',
+  'a repeated call is granted:false in 15b too'
+);
+select is(
+  (select total_xp || '|' || updated_at::text from public.profiles
+   where id = '00000000-0000-0000-0015-000000000003'),
+  '20|' || '2000-01-01T00:00:00Z'::timestamptz::text,
+  'a repeated call leaves total_xp and updated_at untouched'
+);
+
+-- 9.5 A 0 XP grant writes its ledger row but does not move the total.
+select is(
+  (public.grant_xp_v1(
+     '00000000-0000-0000-0015-000000000003', 'duel_loss_forfeit',
+     '00000000-0000-0000-0020-000000000002', 0, 0) ->> 'granted'),
+  'true',
+  'a 0 XP forfeit is still granted'
+);
+select is(
+  (select total_xp from public.profiles where id = '00000000-0000-0000-0015-000000000003'),
+  20::bigint,
+  'a 0 XP grant leaves total_xp unchanged'
+);
+
+-- 9.6 One grant across several levels.
+create temporary table xp_15b_multi_level on commit drop as
+select public.grant_xp_v1(
+         '00000000-0000-0000-0015-000000000003', 'admin_adjustment',
+         '00000000-0000-0000-0020-000000000003', 1000, 1000) as result;
+
+select is(
+  (select (result ->> 'level_before') || '→' || (result ->> 'level_after') from xp_15b_multi_level),
+  '1→10',
+  '20 → 1020 XP crosses nine thresholds in one call (15 §4)'
+);
+select is(
+  (select total_xp from public.profiles where id = '00000000-0000-0000-0015-000000000003'),
+  1020::bigint,
+  'the multi-level grant landed in the column'
+);
+select is(
+  (select public.profile_level(p) from public.profiles p
+   where p.id = '00000000-0000-0000-0015-000000000003'),
+  10,
+  'profile_level derives level 10 from total_xp 1020'
+);
+
+-- 9.7 Decision ①: a grant that would go below 0 is refused with no ledger row.
+select is(
+  (public.grant_xp_v1(
+     '00000000-0000-0000-0015-000000000003', 'admin_adjustment',
+     '00000000-0000-0000-0020-000000000004', -2000, -2000) ->> 'code'),
+  'XP_AMOUNT_INVALID',
+  'an adjustment below 0 total is refused with XP_AMOUNT_INVALID'
+);
+select is(
+  (select count(*)::integer from public.xp_ledger
+   where source_id = '00000000-0000-0000-0020-000000000004'),
+  0,
+  'the refused adjustment left no ledger row'
+);
+select is(
+  (select total_xp from public.profiles where id = '00000000-0000-0000-0015-000000000003'),
+  1020::bigint,
+  'the refused adjustment left total_xp unchanged'
+);
+
+-- Down to exactly 0 is allowed, and retrying that adjustment is idempotent even
+-- though 0 + amount would now be negative.
+select is(
+  (public.grant_xp_v1(
+     '00000000-0000-0000-0015-000000000004', 'admin_adjustment',
+     '00000000-0000-0000-0020-000000000005', 50, 50) ->> 'total_xp'),
+  '50',
+  'xp-4 is given 50 XP'
+);
+select is(
+  (public.grant_xp_v1(
+     '00000000-0000-0000-0015-000000000004', 'admin_adjustment',
+     '00000000-0000-0000-0020-000000000006', -50, -50) ->> 'total_xp'),
+  '0',
+  'an adjustment down to exactly 0 is allowed'
+);
+select is(
+  (public.grant_xp_v1(
+     '00000000-0000-0000-0015-000000000004', 'admin_adjustment',
+     '00000000-0000-0000-0020-000000000006', -50, -50)::text),
+  jsonb_build_object('ok', true, 'granted', false, 'ledger_id', null,
+                     'total_xp', 0, 'level_before', 1, 'level_after', 1)::text,
+  'retrying an applied negative adjustment is granted:false, not XP_AMOUNT_INVALID'
+);
+
+-- 9.8 The summary follows the column. Desync it on purpose, then restore it.
+update public.profiles set total_xp = total_xp + 7
+ where id = '00000000-0000-0000-0015-000000000004';
+select is(
+  (public.get_xp_summary_v1('00000000-0000-0000-0015-000000000004') ->> 'total_xp'),
+  '7',
+  'get_xp_summary_v1 reports profiles.total_xp even when the ledger says 0'
+);
+update public.profiles set total_xp = total_xp - 7
+ where id = '00000000-0000-0000-0015-000000000004';
+
+-- 9.9 Another explorer's level is readable through the computed field.
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0015-000000000001';
+select is(
+  (select public.profile_level(p) from public.profiles p
+   where p.id = '00000000-0000-0000-0015-000000000003'),
+  10,
+  'a signed-in explorer reads another explorer''s level'
+);
+set local role postgres;
+
+-- 9.10 C3 §6 invariant — every total_xp equals its ledger sum.
+select is_empty(
+  $$select p.id, p.total_xp, coalesce(sum(l.amount), 0) as ledger_total
+      from public.profiles p
+      left join public.xp_ledger l on l.user_id = p.id
+     group by p.id, p.total_xp
+    having p.total_xp <> coalesce(sum(l.amount), 0)$$,
+  'C3 §6 invariant query returns 0 rows'
+);
 
 select * from finish();
 rollback;
