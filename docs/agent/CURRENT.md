@@ -1,9 +1,9 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-09-30**
-기준 커밋: **`ec7b6fa`** (`docs: record 15c-2, the group concurrency run, debt X3 and invented copy`)
-마지막 **앱 코드** 커밋: **`47577ae`** (15c-2, **운영 배포됨 — `main` push #7**) · 마지막 **migration** 커밋: **`d12ce5e`** (15c-1, `20260930090000`) — **운영 적용됨**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `ec7b6fa`다 (`AGENTS.md` §7).
-이전 기준: `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+기준 커밋: **`2b0ea54`** (`docs: record the 2026-09-30 production deploy of 15b and 15c`)
+마지막 **앱 코드** 커밋: **`47577ae`** (15c-2, **운영 배포됨 — `main` push #7**) · 마지막 **migration** 커밋: **`d12ce5e`** (15c-1, `20260930090000`) — **운영 적용됨**. 이 갱신 커밋은 문서만 바꾸며(`AGENTS.md` §1.1에 push #7 반영 포함), 기준 커밋은 부모인 `2b0ea54`다 (`AGENTS.md` §7).
+이전 기준: `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main` = `origin/feat/group-final-gaps` = `ec7b6fa`** (`git ls-remote`, 2026-09-30 배포 직후). 이 문서 갱신 커밋부터 두 ref가 다시 갈라지는 것이 정상이다 (`AGENTS.md` §1.1 — 문서 전용 커밋은 `main`에 올리지 않는다)
 
 > # ⚑ 2026-09-30 (3) — **15b·15c 운영 배포 완료. 운영 18 = 저장소 18, 차이 0. 첫 운영 XP 지급 확인** `[사용자 실행·보고]`
