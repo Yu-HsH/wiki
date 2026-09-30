@@ -176,6 +176,8 @@
 | `pages/MultiplayerGamePage.jsx` | C | 승/패 카드에 `<ResultXp scope="duel">` · 결과 유지 **2200 → 4000ms** | 결과 판정·복구 경로 무변경. `duelResultHotfix.test.js`는 기준 문자열만 갱신 |
 | `services/xpService.js` | D | 읽기 함수 2개 추가 | 기존 export 무변경 · 지급 경로 없음 |
 
+**오늘 코스 버튼 hotfix (2026-09-30, `3693dd7`)** `[사용자 승인]` — `pages/MainPage.jsx`(B)의 **오늘 코스 블록**은 §2.2가 "B 범위 밖"으로 둔 영역이다. **N2(2026-09-03)와 같은 1회 예외**로 고쳤다: 초기값 `useState(null)` · 조회 전 로딩 문구 + `aria-busy` · 버튼 `disabled` + `onClick` 가드 · 예외 시 fallback 대입. **fallback 자체(G14)는 무변경.**
+
 **15c-2 신규 파일:** `utils/xpResultDisplay.js` · `components/ResultXp.jsx` · `css/resultXp.css` · `tests/xpResultDisplay.test.js`.
 
 **신규 파일 (15b 소유):** `components/XpProgress.jsx` · `utils/xpProgress.js` · `tests/xpTotal.test.js` ·

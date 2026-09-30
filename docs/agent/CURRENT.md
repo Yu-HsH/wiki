@@ -1,10 +1,21 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-09-30**
-기준 커밋: **`2b0ea54`** (`docs: record the 2026-09-30 production deploy of 15b and 15c`)
-마지막 **앱 코드** 커밋: **`47577ae`** (15c-2, **운영 배포됨 — `main` push #7**) · 마지막 **migration** 커밋: **`d12ce5e`** (15c-1, `20260930090000`) — **운영 적용됨**. 이 갱신 커밋은 문서만 바꾸며(`AGENTS.md` §1.1에 push #7 반영 포함), 기준 커밋은 부모인 `2b0ea54`다 (`AGENTS.md` §7).
-이전 기준: `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
-브랜치: `feat/group-final-gaps` — **`origin/main` = `origin/feat/group-final-gaps` = `ec7b6fa`** (`git ls-remote`, 2026-09-30 배포 직후). 이 문서 갱신 커밋부터 두 ref가 다시 갈라지는 것이 정상이다 (`AGENTS.md` §1.1 — 문서 전용 커밋은 `main`에 올리지 않는다)
+기준 커밋: **`3693dd7`** (`fix(lobby): the daily-course button waits for today's course`)
+마지막 **앱 코드** 커밋: **`3693dd7`** (오늘 코스 버튼 hotfix, **미배포 — `main` push #8 승인 대기**) · 마지막 **migration** 커밋: **`d12ce5e`** (15c-1, `20260930090000`) — **운영 적용됨**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `3693dd7`다 (`AGENTS.md` §7).
+이전 기준: `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+브랜치: `feat/group-final-gaps` — **`origin/main` = `ec7b6fa`** (push #7) · **`origin/feat/group-final-gaps` = `d6d0973`** (2026-09-30 백업 push, `AGENTS.md` §1.1 #7 반영 커밋). `3693dd7`과 이 문서 커밋은 아직 push하지 않았다
+
+> # ⚑ 2026-09-30 (4) — **오늘 코스 버튼 fallback 경합 hotfix — 커밋 `3693dd7`, `main` push #8 승인 대기**
+>
+> **결정** `[사용자 확정]`: (가) 초기값에서 fallback을 빼고 로딩 상태를 둔다 · 문구 `오늘의 탐험을 불러오는 중…`(발명 4번, GAPS §4.5) · G14는 무변경 · `MainPage.jsx` 오늘 코스 블록 1회 예외(`TRACKS.md` §1.1-d).
+>
+> | 검증 (2026-09-30, `3693dd7` 커밋 직전 작업 트리, 로컬 스택) | 결과 |
+> |---|---|
+> | `npm test` · `npm run build` | **370/370** (+5 `tests/dailyChallengeReady.test.js`) · **exit 0** |
+> | 로컬 Playwright | **8/8 PASS** — ① RPC 3초 지연: 로딩 문구·버튼 비활성·`aria-busy`, 로딩 중 클릭 무반응, 조회 후 DB 코스 `GPT (언어 모델)`·활성, **시작된 런의 목표 = 오늘 코스** ② RPC·select 모두 실패: fallback `축구` 표시·플레이 가능(기존 동작 보존) ③ 게스트: ①과 같은 게이트. 정리 후 스모크 사용자·런 0 |
+>
+> **변경 범위:** `pages/MainPage.jsx` 1파일 + 테스트 1파일. **DB 변경 0.** 이 hotfix가 닫는 것: (3) 상자의 "hotfix 대상" · (2) 상자의 관찰 2번.
 
 > # ⚑ 2026-09-30 (3) — **15b·15c 운영 배포 완료. 운영 18 = 저장소 18, 차이 0. 첫 운영 XP 지급 확인** `[사용자 실행·보고]`
 >
