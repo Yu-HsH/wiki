@@ -16,6 +16,7 @@ export const SINGLE_ITEM_IDS = [
  *   `mini_game` — **기본 지급에서만 제외**한다. 정의(`data/items.js`)와
  *   `room_events`의 `mini_game_*` 3종은 **보존**한다 (AGENTS.md §4, 사용자 확정 Q5).
  * 추가 4: `link_censorship` · `link_preview` · `backlink_reflect` · `history_rewind`.
+ * 14b 추가 1 (2026-09-30): `link_index` — 빠른 링크 블록을 대신하는 탐색 아이템.
  *
  * ⚠ **`SINGLE_ITEM_IDS`는 이 트랙에서 읽기 전용·동결이다** (`TRACKS.md` §2.3-①).
  * `highlight_links`는 싱글 풀에 남아 있고 `pages/GamePage.jsx`(트랙 B)가
@@ -36,6 +37,7 @@ export const MULTI_ITEM_IDS = [
     "link_censorship",
     "search_once",
     "link_preview",
+    "link_index",
     "cleanse_shield",
     "go_back",
     "backlink_reflect",

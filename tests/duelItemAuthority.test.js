@@ -112,13 +112,13 @@ test("mini_game과 swap_current의 정의는 지우지 않는다 (AGENTS.md §4)
  * 3. 카탈로그와 지급 목록이 어긋나지 않는다
  * ──────────────────────────────────────────────────────────── */
 
-test("MULTI_ITEM_IDS는 duelItems의 활성 10종과 같은 집합이다", () => {
+test("MULTI_ITEM_IDS는 duelItems의 활성 11종과 같은 집합이다 (14b에서 10 → 11)", () => {
   assert.deepEqual(
     [...MULTI_ITEM_IDS].sort(),
     [...ACTIVE_DUEL_ITEM_IDS].sort(),
     "지급 목록과 카탈로그가 갈리면 이름 없는 슬롯이 생긴다"
   );
-  assert.equal(MULTI_ITEM_IDS.length, 10);
+  assert.equal(MULTI_ITEM_IDS.length, 11);
   assert.equal(
     new Set(MULTI_ITEM_IDS).size,
     MULTI_ITEM_IDS.length,
@@ -851,7 +851,7 @@ test("P7 — 아이템 안내를 카탈로그에서 만든다 (베끼지 않는�
     "아이템 항목이 리터럴로 적혀 있다 — 카탈로그에서 만들어야 한다"
   );
 
-  // ③ 지급되는 10종이 곧 안내에 나오는 10종이다. 역할 넷으로 나눠 그리므로
+  // ③ 지급되는 11종이 곧 안내에 나오는 11종이다. 역할 넷으로 나눠 그리므로
   //    합계가 지급 풀과 같아야 한다.
   const shown = [
     DUEL_ITEM_ROLE.ATTACK,

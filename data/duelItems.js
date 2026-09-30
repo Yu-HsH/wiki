@@ -15,6 +15,8 @@
  * 서버다 (`01-CONFIRMED-SPEC.md` §5.1, `14-DUEL-ITEMS.md` §8).
  * 서버는 같은 값을 `supabase/migrations/20260904090000_duel_item_authority_v3.sql`에
  * 자기 사본으로 갖고, 두 사본이 어긋나지 않는 것을 `tests/duelItemAuthority.test.js`가 확인한다.
+ * 14b(2026-09-30)부터 서버 카탈로그의 최신본은 `20260930100000_duel_item_link_index_v3.sql`이다 —
+ * 테스트는 카탈로그를 정의하는 **마지막** migration을 읽어 대조한다.
  *
  * ## 등재된 부채 1건 — `random_teleport` `[사용자 확정, 2026-09-04 / Q3]`
  * 확정 스펙 §5.5의 "특수:임의 문서"는 **이동 가능한 무작위 문서**를 요구하지만,
@@ -69,7 +71,7 @@ export const DUEL_ITEM_EVENT_TYPE = "duel_item_event";
 export const DUEL_ITEM_COOLDOWN_MS = 2500;
 
 /**
- * 아이템 정의 11종 — 활성 10 + 비활성 1.
+ * 아이템 정의 12종 — 활성 11 + 비활성 1. (14b에서 `link_index` 추가, 2026-09-30)
  *
  * `duration`: 지속 ms. `0`이면 즉발이다.
  * `charges`: 방어 대기 상태가 받아내는 공격 횟수.
@@ -111,7 +113,7 @@ export const DUEL_ITEM_DEFS = Object.freeze([
         blockable: true,
         reflectable: true,
         moveEventType: null,
-        description: "6초 동안 상대의 유효 링크 약 50%를 봉인합니다. 최소 2개는 남습니다.",
+        description: "6초 동안 상대 본문 링크 약 50%를 회색으로 막습니다. 최소 2개는 남습니다.",
     }),
     Object.freeze({
         id: "search_once",
@@ -135,6 +137,19 @@ export const DUEL_ITEM_DEFS = Object.freeze([
         reflectable: false,
         moveEventType: null,
         description: "15초 동안 최대 3개 링크의 연결 문서 첫 문장을 이동 전에 확인합니다.",
+    }),
+    Object.freeze({
+        // 14b — 빠른 링크 블록을 대신한다 (`01-CONFIRMED-SPEC.md` §0 2026-09-30).
+        // 목록은 이미 받은 `pageData.links`다. 서버는 만료 시각만 적는다.
+        id: "link_index",
+        name: "링크만 보기",
+        role: DUEL_ITEM_ROLE.SEARCH,
+        target: DUEL_ITEM_TARGET.SELF,
+        duration: 20000,
+        blockable: false,
+        reflectable: false,
+        moveEventType: null,
+        description: "20초 동안 현재 문서의 링크 전부를 가나다순 목록으로 봅니다. 누르면 그 문서로 이동하고, 이동하면 닫힙니다.",
     }),
     Object.freeze({
         id: "cleanse_shield",
@@ -305,7 +320,13 @@ export function canUseDuelItem(item, context = {}) {
     if (item.id === "go_back") {
         return (context.historyLength ?? 0) > 0;
     }
-    if (item.id === "random_link_move" || item.id === "random_teleport") {
+    // 14b Q3 — 링크가 없는 문서에서 빈 목록을 여는 데 아이템을 쓰지 않게 한다.
+    // 서버는 링크 수를 보지 않으므로 이 검사가 유일한 방어다.
+    if (
+        item.id === "random_link_move" ||
+        item.id === "random_teleport" ||
+        item.id === "link_index"
+    ) {
         return (context.linkCount ?? 0) > 0;
     }
     return true;
