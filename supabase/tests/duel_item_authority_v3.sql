@@ -1,5 +1,6 @@
 -- Wiki Race 2.0 Track C contract tests for duel item server authority v3.
--- Run after 20260904090000_duel_item_authority_v3.sql on a local Supabase database:
+-- Run after 20260904090000_duel_item_authority_v3.sql (and, since 14b,
+-- 20260930100000_duel_item_link_index_v3.sql) on a local Supabase database:
 --   docker exec -i <db container> psql -U postgres -d postgres \
 --     -v ON_ERROR_STOP=1 -f - < supabase/tests/duel_item_authority_v3.sql
 --
@@ -14,7 +15,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(148);
+select plan(157);
 
 set local role postgres;
 
@@ -207,15 +208,20 @@ select ok(
 );
 
 /* ──────────────────────────────────────────────────────────────
- * 2. Catalog — ten active items in four roles.
+ * 2. Catalog — eleven active items in four roles (14b added link_index).
  * ────────────────────────────────────────────────────────────── */
 
-select is((select count(*)::integer from private.duel_item_catalog_v3()), 10,
-  'the server catalog holds exactly the ten active duel items');
+select is((select count(*)::integer from private.duel_item_catalog_v3()), 11,
+  'the server catalog holds exactly the eleven active duel items');
 select is((select count(*)::integer from private.duel_item_catalog_v3() where slot_role = 'attack'), 3,
   '공격 pool: 먹물 공격 · 잘못된 링크 · 링크 검열');
-select is((select count(*)::integer from private.duel_item_catalog_v3() where slot_role = 'search'), 2,
-  '탐색 pool: 문서 내 검색 · 링크 미리보기');
+select is((select count(*)::integer from private.duel_item_catalog_v3() where slot_role = 'search'), 3,
+  '탐색 pool: 문서 내 검색 · 링크 미리보기 · 링크만 보기');
+select ok(
+  (select duration_ms = 20000 and charges = 0 and not blockable and not reflectable
+          and move_event_type is null
+   from private.duel_item_catalog_v3() where item_id = 'link_index'),
+  '링크만 보기 — 20s, self target, neither blockable nor reflectable, never moves');
 select is((select count(*)::integer from private.duel_item_catalog_v3() where slot_role = 'defense'), 3,
   '방어 pool: 편집 보호 · 되돌리기 · 역링크');
 select is((select count(*)::integer from private.duel_item_catalog_v3() where slot_role = 'joker'), 2,
@@ -1084,6 +1090,67 @@ select is(
 select is(
   public.get_duel_item_state_v3('00000000-0000-0000-0014-00000000f002')->>'use_items',
   'false', 'and a non-item duel reports itself as such');
+
+/* ──────────────────────────────────────────────────────────────
+ * 12. 14b — 링크만 보기 (link_index).
+ * ────────────────────────────────────────────────────────────── */
+
+-- Room fb0a is chosen because its wildcard roll is 66, i.e. 탐색: each player then
+-- holds TWO search items drawn from the three-item pool. Before 14b that pool had
+-- exactly two, so this is the case the new row must not break.
+set local role postgres;
+select pg_temp.mkroom('00000000-0000-0000-0014-00000000fb0a', 'PGT14A');
+select pg_temp.as_user('00000000-0000-0000-0014-000000000001');
+select ok(
+  (public.ensure_duel_item_grant_v3('00000000-0000-0000-0014-00000000fb0a')->>'ok')::boolean,
+  'a room whose 변칙 slot rolls 탐색 is granted without exhausting the pool'
+);
+set local role postgres;
+select is(
+  (select count(*)::integer from public.duel_item_grants
+   where room_id = '00000000-0000-0000-0014-00000000fb0a'), 10,
+  'five slots each, as for every other room');
+select is(
+  (select array_agg(cnt order by user_id) from (
+     select user_id, count(*)::integer as cnt from public.duel_item_grants
+     where room_id = '00000000-0000-0000-0014-00000000fb0a' and slot_role = 'search'
+     group by user_id) t),
+  array[2, 2],
+  'both players hold two search slots — the wildcard really was 탐색');
+select ok(
+  (select bool_and(item_id = any (array['search_once', 'link_preview', 'link_index']))
+   from public.duel_item_grants
+   where room_id = '00000000-0000-0000-0014-00000000fb0a' and slot_role = 'search'),
+  'the search slots draw only from the three search items'
+);
+
+select pg_temp.mkroom('00000000-0000-0000-0014-00000000fb20', 'PGT14B');
+select pg_temp.give('00000000-0000-0000-0014-00000000fb20',
+  '00000000-0000-0000-0014-000000000001', 1, 'search', 'link_index') as g \gset li_
+select pg_temp.as_user('00000000-0000-0000-0014-000000000001');
+select is(
+  public.use_duel_item_v3('00000000-0000-0000-0014-00000000fb20', :'li_g',
+    '00000000-0000-0000-0014-00000000e14b', null)->>'code',
+  'ITEM_USED', 'the grant CHECK accepts link_index and the item applies');
+set local role postgres;
+select ok(
+  (select result = 'applied' and move_event_id is null
+          and target_user_id = '00000000-0000-0000-0014-000000000001'
+   from public.duel_item_events where grant_id = :'li_g'),
+  'it targets the user and writes no move'
+);
+select is(
+  (select effect_expires_at - server_timestamp
+   from public.duel_item_events where grant_id = :'li_g'),
+  interval '20 seconds',
+  'the server expiry is 20 seconds after the use — the client timer reads this');
+select ok(
+  (select move_count = 0 and current_page_id = 'pA'
+   from public.room_players
+   where room_id = '00000000-0000-0000-0014-00000000fb20'
+     and user_id = '00000000-0000-0000-0014-000000000001'),
+  'opening the index moves nobody and costs no move'
+);
 
 set local role postgres;
 
