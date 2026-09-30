@@ -72,7 +72,9 @@ export default function MainPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [dailyChallenge, setDailyChallenge] = useState(getFallbackDailyChallenge);
+  // 조회가 끝나기 전에는 코스가 없다. fallback을 초기값으로 두면 조회 전 클릭이 fallback 코스로
+  // 게임을 시작하고, 그 완주는 오늘 코스가 아닌 목표 지정(15 XP)으로 분류된다 (15c 스모크 실측).
+  const [dailyChallenge, setDailyChallenge] = useState(null);
 
   // ⬇️ 검색 실행 핸들러 수정
   const handleSearchKeyword = async () => {
@@ -172,7 +174,14 @@ export default function MainPage() {
     let cancelled = false;
 
     const loadDailyChallenge = async () => {
-      const challenge = await fetchTodayDailyChallenge();
+      let challenge;
+      try {
+        challenge = await fetchTodayDailyChallenge();
+      } catch (error) {
+        // 예전에는 초기값이 fallback이라 예외가 나도 fallback이 남았다. 그 동작을 유지한다 (G14는 별건).
+        console.warn("오늘의 도전을 불러오지 못해 기본 코스를 표시합니다.", error);
+        challenge = getFallbackDailyChallenge();
+      }
       if (!cancelled) {
         setDailyChallenge(challenge);
       }
@@ -376,23 +385,27 @@ export default function MainPage() {
 
 
         {/* ── 오늘의 도전 ── */}
-        <section className="dashboard-card daily-card">
+        <section className="dashboard-card daily-card" aria-busy={!dailyChallenge}>
           <div className="daily-head">
             <span className="daily-badge">🗓️ TODAY’S CHALLENGE</span>
             <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
           </div>
-          <p className="daily-keyword">{dailyChallenge.keyword}</p>
-          <p className="daily-hint">{dailyChallenge.hint}</p>
+          <p className="daily-keyword">{dailyChallenge?.keyword ?? "오늘의 탐험을 불러오는 중…"}</p>
+          {dailyChallenge && <p className="daily-hint">{dailyChallenge.hint}</p>}
           <button
             type="button"
             className="app-btn app-btn-primary daily-btn"
-            onClick={() => navigate("/game", {
-              state: {
-                mode: "custom",
-                keyword: dailyChallenge.keyword,
-                targetTitle: dailyChallenge.keyword,
-              },
-            })}
+            disabled={!dailyChallenge}
+            onClick={() => {
+              if (!dailyChallenge) return;
+              navigate("/game", {
+                state: {
+                  mode: "custom",
+                  keyword: dailyChallenge.keyword,
+                  targetTitle: dailyChallenge.keyword,
+                },
+              });
+            }}
           >
             ★ 오늘의 도전에 참여하기
           </button>
