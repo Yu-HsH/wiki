@@ -2187,6 +2187,17 @@
   color: #e6edf3;
 }
 
+/* 14b — 링크 검열 (가): 본문 앵커. `components/WikiViewer.jsx`가 붙인다.
+   회색 하나로만 구분하지 않는다 — 취소선을 함께 쓴다 (Q2). `!important`는
+   `.mp-game-main .wiki-inline-link`(:hover 포함)보다 앞서기 위한 것이다. */
+.duel-item-censored,
+.duel-item-censored:hover {
+  color: #8b949e !important;
+  text-decoration: line-through !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
 @media (max-width: 640px) {
   .duel-item-slot {
     min-height: 60px;

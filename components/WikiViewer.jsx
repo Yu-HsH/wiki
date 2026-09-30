@@ -1,6 +1,16 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDuration, normalizeTitle } from "../services/wikiService";
 import { TARGET_SUMMARY_STATUS } from "../utils/groupTargetSummary";
+
+/**
+ * 14b — 링크 검열 (가)의 표시 (`01-CONFIRMED-SPEC.md` §5.2 정정 2026-09-30).
+ * `censoredTitles`를 받은 본문 앵커는 회색 + 취소선 + `aria-disabled`이고 눌러도 아무 일이
+ * 없다 — 오류가 아니다. **1:1만 이 prop을 넘긴다.** 싱글·그룹은 넘기지 않으므로 기본값
+ * (빈 배열)이 되고, 두 모드의 렌더는 빠른 링크 블록이 빠진 것 말고는 그대로다.
+ * 서버는 검열 링크 이동을 막지 않는다 — 부채 (`TRACKS.md` §8-14b Q1).
+ */
+const NO_CENSORED_TITLES = Object.freeze([]);
+export const CENSORED_LINK_CLASS = "duel-item-censored";
 
 
 
@@ -11,7 +21,6 @@ export default function WikiViewer({
   currentSummary,
   currentDocumentHtml,
   links,
-  quickLinks,
   isLoading,
   elapsedSeconds,
   clickCount,
@@ -23,9 +32,13 @@ export default function WikiViewer({
   highlightRequestId = 0,
   status = {},
   readOnly = false,
+  censoredTitles = NO_CENSORED_TITLES,
 }) {
   const articleRef = useRef(null);
-  const stableQuickLinks = Array.isArray(quickLinks) ? quickLinks : links.slice(0, 20);
+  const censoredSet = useMemo(
+    () => new Set((censoredTitles || []).map((title) => normalizeTitle(title))),
+    [censoredTitles]
+  );
   const [headings, setHeadings] = useState([]);
   const [showFindToast, setShowFindToast] = useState(false);
   const [activeId, setActiveId] = useState("");
@@ -118,22 +131,12 @@ export default function WikiViewer({
       };
     });
 
-    // 빠른 이동 링크 영역도 네비게이션 마지막에 추가
-    extracted.push({
-      id: "quick-links-section",
-      text: "빠른 이동 링크",
-      level: 2,
-      element: document.getElementById("quick-links-section")
-    });
-
     setHeadings(extracted);
 
     // 스크롤 시 현재 읽고 있는 섹션 하이라이트
     const handleScroll = () => {
       let currentActive = "";
       const targets = [...elements];
-      const quickLinks = document.getElementById("quick-links-section");
-      if (quickLinks) targets.push(quickLinks);
 
       for (const el of targets) {
         const rect = el.getBoundingClientRect();
@@ -220,6 +223,21 @@ export default function WikiViewer({
     });
   }, [articleHighlightedLinks, currentDocumentHtml]);
 
+  // 14b — 검열된 본문 앵커를 표시한다. 문서가 바뀌면 새 앵커에 다시 건다.
+  useEffect(() => {
+    if (!articleRef.current) return;
+
+    articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((a) => {
+      const censored = censoredSet.has(normalizeTitle(a.getAttribute("data-wiki-title") || ""));
+      a.classList.toggle(CENSORED_LINK_CLASS, censored);
+      if (censored) {
+        a.setAttribute("aria-disabled", "true");
+      } else {
+        a.removeAttribute("aria-disabled");
+      }
+    });
+  }, [censoredSet, currentDocumentHtml]);
+
   const scrollToHeading = (id) => {
     const el = document.getElementById(id);
     if (el) {
@@ -239,8 +257,10 @@ export default function WikiViewer({
     event.preventDefault();
     const nextTitle = link.getAttribute("data-wiki-title");
     if (!nextTitle) return;
+    // 검열된 링크는 무반응이다 — 오류 안내도 이동 요청도 없다.
+    if (censoredSet.has(normalizeTitle(nextTitle))) return;
     onLinkClick?.(nextTitle);
-  }, [onLinkClick, readOnly]);
+  }, [censoredSet, onLinkClick, readOnly]);
 
   useEffect(() => {
     if (!readOnly || !articleRef.current) return undefined;
@@ -572,7 +592,7 @@ export default function WikiViewer({
         />
       </section>
 
-      {/* 14b — 아래 두 요소는 빠른 링크 블록 안에 있었다. 블록을 빼기 전에 밖으로 옮긴다.
+      {/* 14b — 아래 두 요소는 빠른 링크 블록 안에 있었다 (블록은 14b에서 제거됐다).
           먹물 오버레이는 position: fixed라 DOM 위치가 바뀌어도 화면을 덮는 방식은 같다. */}
       {!isLoading && links.length === 0 && (
         <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다.</p>
@@ -583,47 +603,6 @@ export default function WikiViewer({
         </div>
       )}
 
-      <section className="links-card" id="quick-links-section">
-        <div className="links-header">
-          <h3>빠른 이동 링크</h3>
-          <span className="links-count">{stableQuickLinks.length} 개 제공됨</span>
-        </div>
-        <div className="links-grid">
-          {stableQuickLinks.map((linkTitle) => {
-            const isHighlighted = articleHighlightedLinks.includes(
-              linkTitle.trim().toLowerCase()
-            );
-
-            const className = `link-chip ${isHighlighted ? "wiki-link--highlighted" : ""}`;
-            if (readOnly) {
-              return (
-                <a
-                  key={linkTitle}
-                  className={className}
-                  href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(linkTitle).replaceAll("%20", "_")}`}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  {isHighlighted ? "⭐ " : ""}
-                  {linkTitle}
-                </a>
-              );
-            }
-
-            return (
-              <button
-                key={linkTitle}
-                className={className}
-                onClick={() => onLinkClick?.(linkTitle)}
-                disabled={isLoading}
-              >
-                {isHighlighted ? "⭐ " : ""}
-                {linkTitle}
-              </button>
-            );
-          })}
-        </div>
-      </section>
     </div>
 
   );

@@ -722,7 +722,11 @@ test("P5 — 새 규칙은 파일 끝의 한 덩어리이고 전부 .duel-item- 
 
 test("P5 — JSX가 쓰는 클래스와 CSS 규칙이 정확히 맞는다", () => {
   const pattern = /duel-item-[a-z]+(?:__[a-z-]+)?(?:--[a-z]+)?/g;
-  const used = new Set([...barSource.matchAll(pattern)].map((match) => match[0]));
+  // 14b — `WikiViewer.jsx`가 검열 앵커에 `duel-item-censored`를 붙이므로 소비자가 둘이다.
+  const viewerSource = read("components/WikiViewer.jsx");
+  const used = new Set(
+    [...barSource.matchAll(pattern), ...viewerSource.matchAll(pattern)].map((match) => match[0])
+  );
   const defined = new Set(
     [...cssSource.matchAll(new RegExp(`\\.(${pattern.source})`, "g"))].map(
       (match) => match[1]

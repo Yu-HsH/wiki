@@ -140,3 +140,45 @@ test("링크 검열 설명이 (가)를 따른다 — 회색으로 막는다", ()
     assert.match(getDuelItem("link_censorship").description, /회색/);
     assert.doesNotMatch(getDuelItem("link_censorship").description, /봉인/);
 });
+
+/* ────────────────────────────────────────────────────────────
+ * 3. WikiViewer — 빠른 링크 블록 제거 · 검열 (가) · 세 모드 불변식
+ * ──────────────────────────────────────────────────────────── */
+
+const viewerSource = read("components/WikiViewer.jsx");
+
+test("세 모드 공통 — WikiViewer에 빠른 링크 블록이 없다", () => {
+    for (const gone of ["quick-links-section", "빠른 이동 링크", "stableQuickLinks", "link-chip", "links-card"]) {
+        assert.equal(viewerSource.includes(gone), false, `${gone}가 남아 있다`);
+    }
+    assert.doesNotMatch(viewerSource, /^\s*quickLinks,/m, "quickLinks prop을 더 받지 않는다");
+});
+
+test("블록에 있던 먹물 오버레이와 빈 링크 안내는 블록 밖에 남았다 (실측 ⑥ · Q5)", () => {
+    assert.match(viewerSource, /status\?\.blind && \(\s*<div className="blind-overlay">/);
+    assert.match(viewerSource, /이 문서에는 이동 가능한 내부 링크가 없습니다\./);
+});
+
+test("검열 — 기본값은 빈 배열이고, 표시는 회색·취소선 클래스 + aria-disabled다 (Q2)", () => {
+    assert.match(viewerSource, /censoredTitles = NO_CENSORED_TITLES/);
+    assert.match(viewerSource, /const NO_CENSORED_TITLES = Object\.freeze\(\[\]\)/);
+    assert.match(viewerSource, /classList\.toggle\(CENSORED_LINK_CLASS, censored\)/);
+    assert.match(viewerSource, /setAttribute\("aria-disabled", "true"\)/);
+    const css = read("css/multiplayer.css");
+    const rule = css.slice(css.indexOf(".duel-item-censored,"));
+    assert.match(rule.slice(0, rule.indexOf("}")), /line-through/);
+});
+
+test("검열 — 누르면 아무 일도 없다: onLinkClick 전에 돌아간다 (오류가 아니다)", () => {
+    const handler = viewerSource.slice(viewerSource.indexOf("const handleDocumentClick"));
+    const body = handler.slice(0, handler.indexOf("}, ["));
+    const guardAt = body.indexOf("if (censoredSet.has(normalizeTitle(nextTitle))) return;");
+    assert.ok(guardAt > 0, "검열 가드가 없다");
+    assert.ok(guardAt < body.indexOf("onLinkClick?.(nextTitle)"), "가드가 이동 요청보다 먼저다");
+});
+
+test("싱글·그룹은 censoredTitles를 넘기지 않는다 — 검열 회색 0", () => {
+    for (const page of ["pages/GamePage.jsx", "pages/GroupGamePage.jsx"]) {
+        assert.equal(read(page).includes("censoredTitles"), false, page);
+    }
+});
