@@ -572,14 +572,22 @@ export default function WikiViewer({
         />
       </section>
 
+      {/* 14b — 아래 두 요소는 빠른 링크 블록 안에 있었다. 블록을 빼기 전에 밖으로 옮긴다.
+          먹물 오버레이는 position: fixed라 DOM 위치가 바뀌어도 화면을 덮는 방식은 같다. */}
+      {!isLoading && links.length === 0 && (
+        <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다.</p>
+      )}
+      {status?.blind && (
+        <div className="blind-overlay">
+          <div className="blind-text">시야 방해 중...</div>
+        </div>
+      )}
+
       <section className="links-card" id="quick-links-section">
         <div className="links-header">
           <h3>빠른 이동 링크</h3>
           <span className="links-count">{stableQuickLinks.length} 개 제공됨</span>
         </div>
-        {!isLoading && links.length === 0 && (
-          <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다.</p>
-        )}
         <div className="links-grid">
           {stableQuickLinks.map((linkTitle) => {
             const isHighlighted = articleHighlightedLinks.includes(
@@ -615,11 +623,6 @@ export default function WikiViewer({
             );
           })}
         </div>
-        {status?.blind && (
-          <div className="blind-overlay">
-            <div className="blind-text">시야 방해 중...</div>
-          </div>
-        )}
       </section>
     </div>
 
