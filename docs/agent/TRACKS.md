@@ -1,11 +1,18 @@
 # 병렬 트랙 파일 소유권 — 단일 기준
 
-갱신 날짜: 2026-09-28 (7차) — 이전 2026-09-03 (6차)
+갱신 날짜: 2026-09-30 (8차) — 이전 2026-09-28 (7차) · 2026-09-03 (6차)
 기준 커밋: `a784d2e` (`fix(17a-2): gate the ranking full-view entry point for guests (N2)`)
 — **이것이 `origin/main`이다.** 2026-09-03에 배포됐다 (`CURRENT.md` §3)
 트랙 커밋: `e70c541`(A) · `7a7197e`(B) · `a784d2e`(N2) · 분기점 `ad569f2`
 이전 기준: `eeb7a16` · `527f896` · `b281e01`
 브랜치: `feat/group-final-gaps`
+
+> **8차 갱신 (2026-09-30) — 14b가 17b 앞에 들어왔다. 순서는 14b → 17b → 16.**
+> 빠른 링크를 기본 화면에서 빼고 탐색 아이템 `link_index`(링크만 보기)로 옮기는 결정이 나왔다
+> `[사용자 결정, 2026-09-30]` (`01-CONFIRMED-SPEC.md` §0). **16이 최종 카탈로그 위에서 만들어져야 하므로
+> 14b를 지금 연다** (§1.1-c). 티켓은 **§8-14b**다 — 이 트랙은 티켓을 쓴다.
+> 이 갱신 시점의 사실: 15b·15c는 운영 배포됐다(`main` push #7) · `main` = `4719100`(push #8) ·
+> 이 갱신의 문서 기준 커밋 `db33aa8`. 위 헤더의 기준 커밋 `a784d2e`는 7차까지의 기록이며 **8차는 헤더 표를 새로 재측정하지 않았다.**
 
 > **7차 갱신 (2026-09-28) — 오늘 3코스가 범위 제외됐다. "3코스 창"이 없어졌다.**
 > 확정 스펙 §3.3 → **하루 1코스 유지** `[사용자 결정, 2026-09-28]` (`01-CONFIRMED-SPEC.md` §0).
@@ -140,16 +147,18 @@
 > **둘을 동시에 열 수도 있다.** C는 프론트+RPC 파일, 15a는 전부 신규 파일이라 **교집합이 0**이다
 > (§2.0). **다만 C는 G7 답이 있어야 시작하므로, 답이 없는 동안은 15a가 유일한 열린 트랙이다.**
 
-#### 1.1-c 다음 트랙 순서 — **15b → 15c → 17b → 16** `[2026-09-28, 정리만 — 티켓 미작성]`
+#### 1.1-c 다음 트랙 순서 — ~~**15b → 15c → 17b → 16**~~ → **14b → 17b → 16** `[2026-09-28 정리 · 2026-09-30 갱신 — 15b·15c 완료, 14b 추가]`
 
 | 순서 | 트랙 | 선행 조건 | 상태 |
 |:-:|---|---|---|
 | **1** | **15b** — `profiles.total_xp` 갱신(`grant_xp_v1` 교체) + ~~**원장 backfill**~~ **(불필요 — 운영 `xp_ledger` 0행, 2026-09-28)** + 랭킹 정렬 | **④ 운영 적용** (`20260928090000`) | **완료 (2026-09-29, `777ecdf`·`fd6f916`). 운영 배포 완료 (2026-09-30, 15c와 함께 — `CURRENT.md` push #7).** 파일 소유권 예외는 §1.1-d |
 | **2** | **15c** — 결과 화면 XP 지급 (finalizer 연결) | **15b** | **15c-1(서버) 완료 (2026-09-30, `d12ce5e`)** — 트리거 3개, finalizer 본문 무편집, 그룹은 **런타임 예외** `[사용자 승인]`. **15c-2(싱글·1:1 결과 화면 표시) 완료 (`47577ae`)** — migration 없음. 그룹 표시는 동결로 제외(부채 X2), 1:1 기권·이탈 결과 화면 부재(부채 X3). **운영 배포 완료 (2026-09-30, `main` push #7, 15b와 함께).** 배포 시 `20260929090000` → `20260930090000` 순서. 상세 `CURRENT.md` 상단 상자 |
+| **2.5** | **14b** — 빠른 링크 아이템화 (`link_index` 추가 · 링크 검열 (가) · 빠른 링크 블록 제거) `[사용자 결정, 2026-09-30]` | **없다.** 1:1 카탈로그 migration 1개. **16이 최종 카탈로그를 소비하므로 16 앞이고, 17b와는 파일 교집합이 없다** | **티켓 작성 완료 (§8-14b, 2026-09-30). 착수 전** |
 | **3** | **17b** — 프로필 카드 장착 UI | **C1 보상 3테이블.** ⚠ **15a와 함께 적용되지 않았다** — 저장소 migration 16개 어디에도 `reward_catalog`·`user_reward_inventory`·`user_profile_equipment`가 없다 (2026-09-28 검색) `[코드]`. **17b는 C1 migration을 새로 만든다 — DB 변경 1건이 추가된다** `[사용자 확정, 2026-09-28]` | 대기 |
 | **4** | **16** — 업적·보상 | 14·15·17 전부 소비 (W3) | 마지막 |
 
-**티켓은 아직 쓰지 않는다.** 순서만 고정한다.
+~~**티켓은 아직 쓰지 않는다.** 순서만 고정한다.~~ → **14b는 티켓을 썼다 (§8-14b, 2026-09-30).** 17b·16은 아직 순서만 고정한다.
+남은 순서: **14b → 17b → 16.** 1·2번(15b·15c)은 완료·배포됐다.
 
 #### 1.1-d 15b 파일 소유권 예외 — **A·B 소유 파일을 15b가 직접 고쳤다** `[사용자 결정 6, 2026-09-29]`
 
@@ -254,7 +263,7 @@
 | **supabase/migrations/** 기존 12개 · **supabase/baseline/remote_schema.sql** | append-only (R5) |
 | **docs/contracts/** C1~C5 · README | **계약이다.** 트랙이 계약을 바꾸려면 트랙 밖 결정이 먼저다. 발견한 불일치는 §9에 모은다 |
 | **docs/design/\*.html** | 시안 원본. 수정하지 않는다 (`PACKET-CONTRACT-GAPS.md` §8) |
-| wiki.jsx · components/WikiViewer.jsx · services/wikiService.js · services/wikiLinkPolicy.js · services/wikiSnapshotService.js · css/wiki.css | 본문·링크 정책 축. 어느 트랙의 범위도 아니다 |
+| wiki.jsx · components/WikiViewer.jsx · services/wikiService.js · services/wikiLinkPolicy.js · services/wikiSnapshotService.js · css/wiki.css | 본문·링크 정책 축. 어느 트랙의 범위도 아니다. **예외: `components/WikiViewer.jsx`는 14b 한정으로 동결 해제** `[사용자 결정, 2026-09-30]` — 범위는 §8-14b의 두 항목(빠른 링크 블록 제거 · `censoredTitles` prop)과 그에 딸린 오버레이·안내문 이동(§8-14b 실측 ⑥)뿐이고, 14b가 끝나면 다시 동결된다 |
 | **css/app.css** (2344) | **A와 B가 함께 쓴다** — `.profile-avatar-*`·`.ranking-avatar-*`(A 영역)와 `.auth-*`·MainPage 스타일(B 영역)이 한 파일에 있다 `[코드]`. **A의 신규 스타일은 `css/profileCard.css`로 가고, 기존 클래스는 감사 전까지 그대로 둔다** (`AGENTS.md` §4) |
 | **utils/appRoutes.js** (15) | **A·B·C가 전부 import한다** (`ProfilePage`·`RankingPage`(A) · `GamePage`·`App.jsx`(B) · `MultiplayerPage`(C)) `[코드]`. 게다가 `tests/appRouting.test.js`가 상수와 함수를 직접 검사한다 |
 | **components/CountdownOverlay.jsx · EffectOverlay.jsx · ExitGuard.jsx · FloatingHud.jsx · PageLoadingOverlay.jsx · ScrollToTopButton.jsx · OnlineGameRecoveryPanel.jsx** | **싱글(B)·1:1(C)·그룹(동결)이 같은 컴포넌트를 mount한다** `[코드]`. **C가 새 아이템 연출이 필요하면 새 컴포넌트를 만든다** — `EffectOverlay`를 고치면 B의 싱글 화면이 함께 바뀐다 |
@@ -1033,6 +1042,48 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 > **15a가 C2의 `확인 필요` 2건을 닫았다.** ①`floor`·②KST가 **제안에서 확정으로** 올라갔다 —
 > 근거는 문서가 아니라 **구현과 양쪽 테스트**다 (`C2-XP-LEDGER.md` §0 정정 이력).
 > **C2-③(XP 겹침)은 열린 채로 남는다** — 3열 유니크가 겹침을 허용하는 쪽이다.
+
+### 8-14b. 빠른 링크 아이템화 — `link_index` 추가 · 링크 검열 (가) · 빠른 링크 블록 제거 — **착수 전 (2026-09-30 작성)**
+
+**결정** `[사용자 결정, 2026-09-30]` — 스펙 정정은 `01-CONFIRMED-SPEC.md` §0 2026-09-30 행 · §2 · §5.2 · §5.3,
+매트릭스는 `code/14-DUEL-ITEMS.md` §4, 시안은 `docs/design/MOBILE-VALIDATION-CORRECTIONS.md` §7.
+
+| | |
+|---|---|
+| **목표** | **세 모드의 게임 화면에서 빠른 링크 블록을 없애고, 그 역할을 1:1 탐색 아이템 `link_index`(표시명 "링크만 보기")로 옮긴다.** 누르면 상자가 열리고 현재 문서의 링크 전부가 가나다순 단어 목록으로 나온다. 필터 입력창이 있고, 단어를 누르면 **일반 이동과 같은 경로로** 이동한다. 이동하면 닫히고 최대 20초 유지된다. 데이터는 `pageData.links`(이미 전체 링크) — **서버 계산을 더하지 않는다.** 함께 **링크 검열을 (가)안으로 바꾼다** — 본문 링크 50%(최소 2개 남김)가 6초간 회색·클릭 불가, 색인이 열려 있으면 색인에서도 회색. 탐색 후보는 `search_once`·`link_preview`·`link_index` **3종**, 활성 카탈로그 **11종** |
+| **범위 밖** | ① **`SINGLE_ITEM_IDS` — 동결** (§2.3-①). `link_index`는 1:1 전용이고 `MULTI_ITEM_IDS`에만 들어간다 ② **`pages/GamePage.jsx`·`pages/GroupGamePage.jsx` 무편집** — 둘은 `censoredTitles`를 넘기지 않는다. 두 모드의 렌더 변화는 **빠른 링크 제거 하나뿐**이다 ③ **빠른 링크 계산 코드 삭제** — `services/wikiService.js`의 `quickLinks`·`services/wikiLinkPolicy.js`·그 테스트는 남는다 (`AGENTS.md` §4). `quickLinks` prop이 쓰이지 않게 될 뿐이다 ④ **CSS 규칙 삭제** — `.links-card`(`css/app.css`·`css/wiki.css`·`css/multiplayer.css:843`)는 지우지 않는다. `css/app.css`는 동결이고 `mp-*`는 삭제·개명 금지다 (§2.3-⑤) ⑤ **서버의 검열 강제** — (가)는 렌더 수준 결정이다. 아래 실측 ②와 질문 Q1 ⑥ `swap_current` 활성화 ⑦ `link_preview`의 `maxPreviews` 서버 권위 (부채 ②, v4) ⑧ 운영 적용 (R6) — migration 적용과 `main` push는 각각 건별 승인 (`AGENTS.md` §1·§1.1) |
+| **읽을 파일 — 스펙** | `01-CONFIRMED-SPEC.md` §0(2026-09-30 행)·§2·§5.1~§5.3 · `code/14-DUEL-ITEMS.md` §2·§4·§6 · `docs/design/MOBILE-VALIDATION-CORRECTIONS.md` §7 · 참고: Freeze v1 `07-09 QuickLinksFull`(드로어의 ESC·이동 시 닫힘) · `07-04 LinkCensor`(봉인 표현) |
+| **읽을 파일 — 코드** | `data/duelItems.js` 전문 · `data/itemPools.js` · `supabase/migrations/20260904090000_duel_item_authority_v3.sql` `:58-88`(카탈로그) · `:129-141`(grant CHECK) · `:560-590`(지급 루프) · `:831-834` · `:877-882` · `:946-965`(검열 분기) · `components/WikiViewer.jsx` `:28` · `:121-137` · `:230-243` · `:575-623` · `components/DuelItemBar.jsx`(미리보기 패널 `:430-470`이 형태 참고) · `pages/MultiplayerGamePage.jsx` `:790`(`handleMove`) · `:998-1030` · `:1618-1660` · `css/wiki.css:537`(`.blind-overlay`) · `tests/duelItemAuthority.test.js` `:33` · `:115-124` · `:814-817` · `supabase/tests/duel_item_authority_v3.sql` `:213-222` |
+| **건드릴 파일** | **기존** `data/duelItems.js`(`link_index` 행 · `link_censorship` 설명 · 머리 주석 "11종 — 활성 10 + 비활성 1" → 12종·활성 11) · `data/itemPools.js`(**`MULTI_ITEM_IDS`만** — `link_index` 추가) · **`components/WikiViewer.jsx` — 동결 해제, 14b 한정** (빠른 링크 블록 제거 · `censoredTitles` prop 신설) · `components/DuelItemBar.jsx`(색인 패널) · `pages/MultiplayerGamePage.jsx`(`censoredTitles` 계산·전달 · 색인 상태 · 이동 시 닫힘) · `css/multiplayer.css`(**추가만**) · `tests/duelItemAuthority.test.js` · `supabase/tests/duel_item_authority_v3.sql` — **신규** migration 1개 (파일명은 착수 시점 최대 `20260930090000`보다 큰 값, 예 `2026MMDDhhmmss_duel_item_link_index_v3.sql`) · 신규 테스트 1개 이상 (예 `tests/duelLinkIndex.test.js`) |
+| **수용조건 — 화면** | ① **세 모드에서 빠른 링크 블록 0** — 싱글 · 1:1 · 그룹(플레이 + 관전 `readOnly`) ② **1:1:** `link_index` 사용 → 상자가 열린다 · **가나다순** · 필터 입력이 목록을 줄인다 · 단어 클릭이 이동한다(이동 `+1`, 일반 이동과 같은 `handleMove`) · **이동하면 닫힌다** · **20초 뒤 닫힌다** ③ **1:1:** `link_censorship`이 걸리면 본문 링크가 **회색 + 클릭 무반응(오류 아님)**. 색인이 열려 있으면 색인도 같은 링크가 회색 ④ 먹물이 걸리면 색인도 덮인다(4초) — 아이템 슬롯은 스펙 §5.2대로 유지된다 ⑤ 강제 이동(`random_link_move`·`random_teleport`·`history_rewind`) 뒤 색인이 닫힌다 ⑥ **싱글·그룹: 검열 회색 0** |
+| **수용조건 — grep 불변식** | ① `grep -c censoredTitles pages/GamePage.jsx pages/GroupGamePage.jsx` → **각 0** ② `git diff <착수 기준> -- pages/GamePage.jsx pages/GroupGamePage.jsx` → **빈 diff** ③ `git diff <착수 기준> -- data/itemPools.js`에서 `SINGLE_ITEM_IDS` 블록 변경 **0** ④ `components/WikiViewer.jsx`의 `quick-links-section` → **0** ⑤ `css/multiplayer.css`의 기존 `mp-*` 선택자 삭제·개명 **0** ⑥ 기존 migration 파일 diff **0** (append-only, R5) |
+| **수용조건 — 테스트** | **`npm test`:** 매트릭스(`link_index`는 역할 `search`, `blockable:false`·`reflectable:false`) · 정렬(가나다 — 비교 기준을 테스트에 고정한다, 예 `localeCompare(…, "ko")`) · 필터 · 20초 · 검열 회색 · **세 모드 불변식**(위 grep을 테스트로) · `MULTI_ITEM_IDS` = 활성 **11종** 집합 일치. **pgTAP:** 카탈로그 **11행** · 탐색 **3행** · 5슬롯 지급 성립(변칙 = 탐색인 방 포함, `DUEL_ITEM_POOL_EXHAUSTED` 없음) · grant CHECK가 `link_index`를 받는다 · `link_index` 사용이 `applied`이고 이동을 만들지 않는다. **기존 전 스위트 통과** — 수치는 기준 커밋·날짜와 함께 적는다 (`AGENTS.md` §6). `npm run build` exit 0 · 로컬 2세션 UI 스모크 |
+| **의존** | **없다.** 17b와 파일 교집합이 없다(17b는 프로필·보상 축). **16보다 먼저 끝나야 한다** — 16이 최종 카탈로그 위에서 만들어진다 |
+
+#### 8-14b 착수 전 실측 — 결정문의 전제와 코드가 다른 곳 `[코드, 2026-09-30, 기준 db33aa8]`
+
+**결정은 바뀌지 않는다. 구현 경로가 결정문의 가정과 다르다.**
+
+| # | 결정문의 전제 | 코드 | 14b에 주는 영향 |
+|:-:|---|---|---|
+| **①** | "현재 6c 구현은 검열 제목을 `links` 배열에서 제거한다" | **아니다.** `MultiplayerGamePage.jsx:1623`은 `pageData?.links`를 **거르지 않고** `WikiViewer`에 넘긴다. `censoredTitles`를 읽는 곳은 `:1004-1024`(미리보기 후보의 `censored` 표시)와 `DuelItemBar.jsx:445-463`(미리보기 패널의 회색·`disabled`)뿐이다. 프론트에서 `censor`가 나오는 파일은 이 둘과 `data/`·`services/duelItemService.js`·`css/multiplayer.css`·테스트뿐이다 | **지금 본문에는 검열이 전혀 적용되지 않는다.** 14b는 "배열 제거 → 회색"으로 **바꾸는** 것이 아니라 본문 검열을 **처음 만든다.** 되돌릴 배열 필터 코드는 없다 |
+| **②** | "본문에서 누르면 `LINK_NOT_ALLOWED`가 나는지 확인" | **나지 않는다 — 이동이 성공한다.** 1:1 일반 이동 RPC(`20260814092000_duel_authority_v2.sql:118-121`)는 스냅샷 링크 존재만 본다. **`duel_item_events`를 참조하는 migration은 `20260904090000` 하나뿐**이고 이동 경로가 아니다 | (가)의 "클릭 불가"는 **클라이언트만 막는다.** 서버는 검열 링크 이동을 막지 않는다 — `maxPreviews`(부채 ②)와 같은 종류의 우회 가능 지점이다. **Q1** |
+| **③** | "`use_duel_item_v3`의 검열 분기가 전체 링크에서 고르는지" | **스냅샷 전체에서 고른다.** `:946-962` — 피해자 현재 `(page_id, revision_id)` 스냅샷의 `wiki_snapshot_links` **전부**를 `md5` 순으로 세우고 `least(total/2, total-2)`개를 봉인한다. 빠른 링크 20개가 아니다 | 전제대로다. **단 서버 집합(`target_title_snapshot`)과 클라이언트 `pageData.links`(본문 앵커 ∩ API, `services/wikiService.js:418-423`)는 계산 경로가 다르다** — 스냅샷은 Edge Function `wiki-snapshot`이 만든다. 두 집합이 같은지는 `확인 필요`. 매칭은 `normalizeTitle`로 한다(`:1008`이 이미 그렇게 한다) |
+| **④** | "맞으면 서버 변경은 카탈로그뿐" | **카탈로그만으로는 안 된다.** `duel_item_grants_item_id_check`(`:129-141`)가 **10개 ID를 열거한 CHECK**다. 카탈로그에만 넣으면 지급 INSERT가 CHECK에 걸린다 | migration은 **카탈로그 `create or replace`(시그니처 불변) + CHECK drop/add** 두 가지다. `use_duel_item_v3`는 **고치지 않아도 된다** — 카탈로그 조회(`:831-834`) 뒤 공격이 아닌 자기 대상은 `else` 분기(`:880-882`)로 가고, `move_event_type`이 `null`이면 이동 없이 `duration_ms`로 만료만 적는다. 지급 루프(`:560-590`)도 카탈로그를 역할로 거르므로 무변경 |
+| **⑤** | — | **10을 고정한 테스트가 셋이다:** pgTAP `:213-222`(카탈로그 10 · 탐색 2) · `duelItemAuthority.test.js:115-124`(`MULTI_ITEM_IDS.length` 10) · 같은 파일 `:33`이 **`20260904090000` 한 파일만** 읽어 `:814-817`에서 카탈로그 행을 정규식으로 본다 | 셋 다 14b에서 고친다. 서버·클라이언트 사본 대조는 **새 migration의 카탈로그를 읽어야** 의미가 있다 — 경로 상수 하나로는 새 행을 못 본다 |
+| **⑥** | "빠른 링크 블록 제거" | **먹물 오버레이가 그 블록 안에 있다.** `WikiViewer.jsx:618-622`의 `.blind-overlay`가 `#quick-links-section` 안에서 렌더된다(`position: fixed`, `css/wiki.css:537`). 같은 블록에 **링크 0개 안내문**(`:580-582`)도 있고, 목차의 `빠른 이동 링크` 항목(`:121-127`)과 스크롤 대상(`:135-136`)이 이 블록을 가리킨다 | 블록을 통째로 지우면 **싱글(`GamePage.jsx`의 `status`)과 1:1(`status.blind`)의 먹물 연출이 함께 사라진다.** 오버레이와 안내문은 블록 밖으로 옮기고, 목차 항목·스크롤 대상은 함께 뺀다 |
+| **⑦** | "세 모드" | 그룹에는 `WikiViewer`가 **둘**이다 — 플레이 `GroupGamePage.jsx:1528`, 관전 `readOnly` `:1413` | 둘 다 블록이 빠진다. `GroupGamePage.jsx`는 동결이고 **고치지 않는다** — `WikiViewer` 안에서만 바뀐다 |
+| **⑧** | — | 싱글 `highlight_links`는 본문 앵커에 클래스를 붙인다(`WikiViewer.jsx:206-221`). 빠른 링크 칩의 `⭐`는 **두 번째 표시**다 | 블록을 빼도 싱글 아이템은 동작한다. 칩의 `⭐`가 사라지는 것은 스모크에서 확인한다 |
+
+#### 8-14b 착수 전 질문 — **답이 있어야 해당 부분을 구현한다**
+
+| | 질문 | 기본값 (답이 없을 때) |
+|:-:|---|---|
+| **Q1** | 검열 링크 이동을 **서버도 막을까?** (1:1 이동 RPC가 유효한 검열 이벤트를 보게 한다 — RPC 교체라 migration이 커진다) | **막지 않는다.** (가)는 렌더 결정이다. 우회 가능 지점을 **부채로 등재**한다 |
+| **Q2** | 회색만으로 충분한가? Freeze v1 `07-04`는 **색 단독 표현 금지**(취소선 + `봉인` 배지)를 요구했다 | **회색 + 취소선 + `aria-disabled`.** 배지 문구는 새 발명이 되므로 넣지 않는다 |
+| **Q3** | 현재 문서에 링크가 0개면 `link_index`를 **못 쓰게** 할까? (`canUseDuelItem`이 `random_link_move`에 하는 것처럼) | **못 쓰게 한다** — 빈 상자를 여는 데 아이템을 쓰지 않게 한다. 서버는 링크 수를 보지 않으므로 클라이언트 사전 검증뿐이다 |
+| **Q4** | 20초 타이머의 기준은 서버 `effect_expires_at`인가 클라이언트 열림 시각인가 | **서버 `effect_expires_at`** — `link_preview`가 같은 방식이다(`MultiplayerGamePage.jsx:1017`) |
+| **Q5** | 링크 0개 안내문(`이 문서에는 이동 가능한 내부 링크가 없습니다`)을 남길까 | **남긴다** — 빠른 링크가 아니라 문서 상태 안내다. 블록 밖으로 옮긴다 |
 
 ---
 
