@@ -1,10 +1,34 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-09-30**
-기준 커밋: **`d12ce5e`** (`feat(db): 15c-1 — result finalizers pay XP through grant_xp_v1`)
-마지막 **앱 코드** 커밋: **`fd6f916`** (15b-2, **미배포**) · 마지막 **migration** 커밋: **`d12ce5e`** (15c-1, `20260930090000`) — **운영 미적용**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `d12ce5e`다 (`AGENTS.md` §7).
-이전 기준: `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
-브랜치: `feat/group-final-gaps`
+기준 커밋: **`47577ae`** (`feat(xp): 15c-2 — result screens show the XP the triggers paid`)
+마지막 **앱 코드** 커밋: **`47577ae`** (15c-2, **미배포**) · 마지막 **migration** 커밋: **`d12ce5e`** (15c-1, `20260930090000`) — **운영 미적용**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `47577ae`다 (`AGENTS.md` §7).
+이전 기준: `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+브랜치: `feat/group-final-gaps` — **`origin/feat/group-final-gaps` = `4a0e3d8`** (2026-09-30 백업 push `abdc70d..4a0e3d8`, `[사용자 승인]`). **`origin/main` = `7e90b7a` 그대로.** 15c-2 두 커밋은 아직 push하지 않았다
+
+> # ⚑ 2026-09-30 (2) — **15c 완료·feat 커밋. 배포 대기 — migration 2개(`20260929090000` → `20260930090000`) + 프론트(15b·15c-2)**
+>
+> **결정** `[사용자 확정, 2026-09-30]`: migration 없음(기존 RLS로 읽는다) · 레벨업 = "지급 후 현재 레벨 안 XP < 획득량"(공식은 프론트에 두지 않는다) ·
+> 표시 위치 = 싱글 `SuccessOverlay`(B) + 1:1 정상 승패 2블록(C) · 1:1 결과 유지 **2200 → 4000ms** · 발명 문구 3건 확정·GAPS 등재 ·
+> `appStyles.js`(A) 한 줄 예외 — `TRACKS.md` §1.1-d · 1:1 재조회 후에도 행이 없으면 `console.warn`(roomId).
+>
+> | 커밋 | 내용 |
+> |---|---|
+> | **`47577ae`** 15c-2 | 신규 `utils/xpResultDisplay.js`(순수 표시 모델) · `components/ResultXp.jsx` · `css/resultXp.css`(`rxp-`만) · `tests/xpResultDisplay.test.js` **14건**. `xpService.js`에 읽기 2개(`fetchResultXp`·`fetchDuelResultXp`) 추가. `SuccessOverlay`(기록 ▸ **XP** ▸ 경로) · `MultiplayerGamePage` 승/패 카드 · 타이머 4000ms · `duelResultHotfix.test.js` 기준 문자열 갱신 · `appStyles.js` import 1줄 |
+>
+> | 검증 (2026-09-30, `47577ae` 커밋 직전 작업 트리, 로컬 스택 18 migration) | 결과 |
+> |---|---|
+> | `npm test` · `npm run build` | **365/365** · **exit 0** |
+> | **UI 스모크** (headless Playwright, 로컬 dev, 실제 로그인 세션·실제 RPC·실제 트리거) | **9/9 PASS** — 싱글 오늘 코스 첫 완주 `+25 XP 오늘의 탐험 코스 최초 완주` + `레벨 업! Lv.1 → Lv.2` + `15 / 100 XP` · 오늘 코스 재완주 `같은 코스는 처음 완주할 때만 XP를 받아요`(원장 0행) · 목표 지정 첫 완주 `+15 XP` · 게스트 `로그인하면 XP와 레벨이 저장됩니다` · 1:1 승자 `+50 XP 1:1 정상 승리` + 레벨 업 · 패자 `+25 XP 1:1 정상 패배` `25 / 100 XP` · 결과 카드 약 4초 유지 후 `/multiplayer`. 픽스처 조작은 **런 목표를 현재 문서의 링크로 옮기는 것**과 1:1 방 생성뿐이다. 정리 후 스모크 사용자·방·런 0 |
+> | 그룹 동시성 하니스 | **8/8 PASS** — 아래 15c-1 상자 |
+>
+> **부채 (신규 1건):** **X3 — 1:1 기권·연결 이탈 결과 화면 부재.** 몰수승 30은 지급되지만 그 종료는 결과 화면 없이 복구 경로로 간다(`MultiplayerGamePage.jsx:778-785`). 해소 조건: **디자인 트랙이 결과 화면을 다시 그릴 때** `[사용자 결정]`. (X1·X2는 아래 15c-1 상자)
+>
+> **스모크가 드러낸 것 2건 (15c-2 결함 아님):**
+> - **콘솔 409의 정체 — 재현됐다.** 그날 첫 로비 로드에서 `ensure_today_daily_challenge`가 **409**를 냈다. 동시 호출 둘이 `daily_challenges_challenge_date_key`에 부딪힌 것이다(행이 스모크 중 `01:44:34`에 생성됨). 클라이언트는 fallback select로 **올바른 행을 얻는다** — 기능 영향 없음. 두 번째 실행(행 존재)에서는 나오지 않았다. **15b의 "URL 미포착 409"와 같은 것으로 추정**한다 (URL이 없어 대조는 불가). 같은 첫 실행에서 `game_records` GET **401** 2건도 나왔고 재실행에서 없었다 — 원인 미확인 `확인 필요`.
+> - **오늘 코스 버튼의 fallback 경합.** `MainPage`가 `useState(getFallbackDailyChallenge)`로 시작해 조회 완료 전 클릭하면 **fallback 키워드로 게임이 시작된다.** 이제 이것이 XP에 닿는다 — 그 완주는 오늘 코스가 아니라 **목표 지정 15**로 분류된다 (스모크 첫 실행에서 실측). 15c-1 상자의 "알려진 한계"에 있던 경우의 실제 발생 경로다. 소유 B 영역(`MainPage` 오늘 코스 블록은 범위 밖 규칙) — **등재만** `확인 필요`.
+>
+> **배포 전 확인:** migration 2개 운영 적용(건별 승인) → 프론트 `main` push(건별 승인). 트리거는 배포된 번들과 무관하므로 DB가 먼저여도 안전하다.
 
 > # ⚑ 2026-09-30 — **15c-1 완료·feat 커밋. 저장소 18 ↔ 운영 16, 차이 2 (`20260929090000` → `20260930090000` 순서). 15c-2(표시)는 미착수**
 >
@@ -22,7 +46,7 @@
 > | pgTAP 전량 | **xp_result_grants_v1 100/100** · xp_ledger_v1 **153/153** · c4_check_c3 **30/30** · duel_item_authority_v3 **148/148** · server_authority_v2 **97/97** · group_security_phase2c **49/49** · group_final_gaps_v13 **33/33** · group_spectator_emoji_atomicity **22/22** · group_match_lifecycle_phase2a **2/2** — `not ok` **0**. 기존 8개는 적용 전 기준선(`abdc70d`)과 **같은 534/534** |
 > | 음성 대조 | 테스트 트랜잭션 안에서 트리거 3개를 끄면 **38건 실패** (롤백) — 테스트가 지급을 실제로 잡는다 |
 > | 격리 | 프로필 없는 사용자(`AUTH_REQUIRED`) · 임시 CHECK로 `grant_xp_v1`을 raise시킴(안쪽) · 분류 함수를 raise하게 교체(바깥) — **세 경우 모두 경기 커밋, 원장 0행, `total_xp` 무변동, WARNING 1건씩.** 원인 제거 후 `grant_result_xp_v1`이 **정확히 1회** 지급 |
-> | 동시성 하니스 | `duel_item_concurrency_v3` **3시나리오 × 5, deadlock 0** · `server_authority_concurrency_v2` **PASS**. **`group_final_gaps_v13_hardening_concurrency`는 실행 불가** — PowerShell 7이 필요한데 이 환경에 없다 (`ProcessStartInfo.ArgumentList`). 픽스처 SQL 전 단계에서 멈춰 DB에 쓰지 않았다. **그룹 동시 종료의 락 순서는 미검증** `확인 필요` |
+> | 동시성 하니스 | `duel_item_concurrency_v3` **3시나리오 × 5, deadlock 0** · `server_authority_concurrency_v2` **PASS** · **`group_final_gaps_v13_hardening_concurrency -Scenario all` — 8/8 PASS, exit 0** (pwsh 7.6.6, 2026-09-30, 로컬 18 migration, 기준 `4a0e3d8`): host leave · 결정적 락 순서 4종(hard/grace × finalizer/emoji 선행) · 마감 동일 시각 2종 · 동시 3번째 완주. **FAIL·WARNING·deadlock·cleanup 실패 0.** 6개 방이 `time_limit`/`grace_timeout`으로 종료되며 INVARIANT 유지. 정리 후 그룹 방 0 · C3 §6 불변식 불일치 0. 하니스는 XP를 assert하지 않는다 — 결과 행이 `profiles` FK를 갖고 WARNING이 0이므로 지급이 성공했다고 **추정**한다. **배포 전 필수 조건 충족** `[사용자 지정]`. (처음 1회는 PowerShell 5.1에서 `ProcessStartInfo.ArgumentList`로 픽스처 전 단계에서 멈췄다) |
 > | `npm test` · `npm run build` | **351/351** · **exit 0** |
 >
 > **부채 (신규 2건):**
@@ -56,6 +80,7 @@
 > | §2.3 불변식 | ①③④⑤⑦ 대상 파일 **무편집** · ⑥ 리터럴 증감 **0** (현재 원시 수 33/13/6/12 — 09-06 기록 32/12/6/12와의 차이는 이 변경 밖) |
 >
 > **남은 관찰:** 콘솔 409 — 15b UI 스모크 첫 실행에서 1회, URL 미포착, 이후 3회 재현 안 됨. 15c 스모크에서 재관찰.
+> → **2026-09-30 15c-2 스모크에서 재현 — `ensure_today_daily_challenge`의 그날 첫 호출 경합으로 추정** (위 (2) 상자).
 > **미검증:** XP 탭 **빈 상태 화면**(단위 테스트만) · 게스트 헤더(코드 경로만). **`main`은 `7e90b7a` 그대로** —
 > 15b는 feat 통합만 했고 **`20260929090000` 운영 적용과 프론트 배포는 15c와 묶는다** `[사용자 결정]`.
 > **적용 순서 주의:** 15b 프론트는 `profile_level`·`total_xp`를 select하므로 **migration이 프론트보다 먼저**다.

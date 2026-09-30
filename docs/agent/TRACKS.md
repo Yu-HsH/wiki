@@ -145,7 +145,7 @@
 | 순서 | 트랙 | 선행 조건 | 상태 |
 |:-:|---|---|---|
 | **1** | **15b** — `profiles.total_xp` 갱신(`grant_xp_v1` 교체) + ~~**원장 backfill**~~ **(불필요 — 운영 `xp_ledger` 0행, 2026-09-28)** + 랭킹 정렬 | **④ 운영 적용** (`20260928090000`) | **완료·feat 통합 (2026-09-29, `777ecdf`·`fd6f916`).** 운영 미적용·미배포 — 15c와 묶는다. 파일 소유권 예외는 §1.1-d |
-| **2** | **15c** — 결과 화면 XP 지급 (finalizer 연결) | **15b** | **15c-1(서버) 완료·feat 커밋 (2026-09-30, `d12ce5e`)** — 트리거 3개, finalizer 본문 무편집, 그룹은 **런타임 예외** `[사용자 승인]`. **15c-2(싱글·1:1 결과 화면 표시) 미착수.** 그룹 표시는 동결로 제외(부채 X2). 배포 시 `20260929090000` → `20260930090000` 순서. 상세 `CURRENT.md` 상단 상자 |
+| **2** | **15c** — 결과 화면 XP 지급 (finalizer 연결) | **15b** | **15c-1(서버) 완료 (2026-09-30, `d12ce5e`)** — 트리거 3개, finalizer 본문 무편집, 그룹은 **런타임 예외** `[사용자 승인]`. **15c-2(싱글·1:1 결과 화면 표시) 완료 (`47577ae`)** — migration 없음. 그룹 표시는 동결로 제외(부채 X2), 1:1 기권·이탈 결과 화면 부재(부채 X3). **미배포.** 배포 시 `20260929090000` → `20260930090000` 순서. 상세 `CURRENT.md` 상단 상자 |
 | **3** | **17b** — 프로필 카드 장착 UI | **C1 보상 3테이블.** ⚠ **15a와 함께 적용되지 않았다** — 저장소 migration 16개 어디에도 `reward_catalog`·`user_reward_inventory`·`user_profile_equipment`가 없다 (2026-09-28 검색) `[코드]`. **17b는 C1 migration을 새로 만든다 — DB 변경 1건이 추가된다** `[사용자 확정, 2026-09-28]` | 대기 |
 | **4** | **16** — 업적·보상 | 14·15·17 전부 소비 (W3) | 마지막 |
 
@@ -166,6 +166,17 @@
 | `pages/ProfilePage.jsx` | A | select에 `total_xp, profile_level` · FULL 카드 `level` · 진행 막대 | **`profiles` update payload 2곳 무변경** — C3-① 3컬럼 grant가 여기에 걸린다 (§4.3) |
 | `components/UserProfileModal.jsx` | A | FULL 카드 `level` · 진행 막대 | **prop 계약 `{userId, isOpen, onClose}` 불변** (§2.2) |
 | `css/profileCard.css` | A | `.pcard-xp*` 규칙 추가 | `pcard-` 접두만 · `mp-` 0 (§2.3-⑤) |
+
+**15c-2 추가 (2026-09-30, `47577ae`)** `[사용자 승인]` — 같은 근거(순차 진행)로 A·B·C·D 소유 파일을 최소 범위로 고쳤다:
+
+| 파일 | 소유 | 15c-2가 바꾼 것 | 지킨 것 |
+|---|:-:|---|---|
+| `appStyles.js` | A | `import "./css/resultXp.css";` **1줄** | 기존 import 순서·수 불변 (`profileCard.test.js:303` 유지) |
+| `components/SuccessOverlay.jsx` | B | `<ResultXp scope="single">` 1블록 (기록 요약 ▸ **XP** ▸ 경로) | 순위·경로·버튼 무변경 |
+| `pages/MultiplayerGamePage.jsx` | C | 승/패 카드에 `<ResultXp scope="duel">` · 결과 유지 **2200 → 4000ms** | 결과 판정·복구 경로 무변경. `duelResultHotfix.test.js`는 기준 문자열만 갱신 |
+| `services/xpService.js` | D | 읽기 함수 2개 추가 | 기존 export 무변경 · 지급 경로 없음 |
+
+**15c-2 신규 파일:** `utils/xpResultDisplay.js` · `components/ResultXp.jsx` · `css/resultXp.css` · `tests/xpResultDisplay.test.js`.
 
 **신규 파일 (15b 소유):** `components/XpProgress.jsx` · `utils/xpProgress.js` · `tests/xpTotal.test.js` ·
 `supabase/migrations/20260929090000_xp_total_v1.sql`. **그룹 참가자 행(MINIMAL)은 level을 보이지
