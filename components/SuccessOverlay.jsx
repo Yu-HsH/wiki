@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../authContext";
 import { fetchRankings, fetchSingleRunResult } from "../rankingService";
 import { formatDuration } from "../services/wikiService";
+import ResultXp from "./ResultXp.jsx";
 
 /**
  * 게임 성공 시 표시되는 오버레이 컴포넌트
@@ -97,6 +98,16 @@ export default function SuccessOverlay({
             <span style={statValueStyle}>{displayClickCount} 회</span>
           </div>
         </div>
+
+        {/* 이번 결과 XP — 기록 ▸ XP ▸ 경로 순서 (패킷 15 §6). 서버 기록이 확정된 뒤에만 조회한다 */}
+        {!isLoading && (
+          <ResultXp
+            scope="single"
+            isGuest={Boolean(user?.isGuest)}
+            userId={user?.id ?? null}
+            sourceId={serverRecord?.id ?? null}
+          />
+        )}
 
         <div style={contentAreaStyle}>
           {/* 목표 문서 강조 */}

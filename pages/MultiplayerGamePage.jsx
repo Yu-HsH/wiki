@@ -21,6 +21,7 @@ import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
+import ResultXp from "../components/ResultXp.jsx";
 import { trackEvent } from "../services/analyticsService";
 
 import CountdownOverlay from "../components/CountdownOverlay";
@@ -761,7 +762,7 @@ export default function MultiplayerGamePage() {
 
     resultNavigationTimerRef.current = setTimeout(() => {
       navigate("/multiplayer", { replace: true });
-    }, 2200);
+    }, 4000);
   };
 
   /**
@@ -1490,7 +1491,7 @@ export default function MultiplayerGamePage() {
 
     resultNavigationTimerRef.current = setTimeout(() => {
       navigate("/multiplayer", { replace: true });
-    }, 2200);
+    }, 4000);
   }
 
   useEffect(() => {
@@ -1726,6 +1727,7 @@ export default function MultiplayerGamePage() {
           <div className="mp-result-card">
             <h2>🎉 승리!</h2>
             <p>목표 문서에 먼저 도착했습니다.</p>
+            <ResultXp scope="duel" userId={user?.id ?? null} roomId={roomId} tone="dark" />
           </div>
         </div>
       )}
@@ -1735,6 +1737,7 @@ export default function MultiplayerGamePage() {
           <div className="mp-result-card">
             <h2>😢 패배</h2>
             <p>상대가 먼저 목표 문서에 도착했습니다.</p>
+            <ResultXp scope="duel" userId={user?.id ?? null} roomId={roomId} tone="dark" />
           </div>
         </div>
       )}

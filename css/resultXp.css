@@ -1,0 +1,53 @@
+/* 결과 화면 XP 영역 (트랙 15c-2). `rxp-` 접두만 쓴다 — `mp-`·`pcard-`는 건드리지 않는다
+   (TRACKS §2.3-⑤). 진행 막대는 `XpProgress`의 `pcard-xp` 규칙을 그대로 쓴다. */
+
+.rxp {
+  margin: 12px auto 4px;
+  max-width: 320px;
+  text-align: center;
+}
+
+.rxp-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 8px;
+}
+
+.rxp-gain {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--brand, #6366f1);
+}
+
+.rxp--dark .rxp-gain {
+  color: #a5b4fc;
+}
+
+.rxp-reason {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.rxp-decay {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.rxp .rxp-note {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.rxp .rxp-levelup {
+  margin: 8px 0 0;
+  font-weight: 800;
+  color: #f59e0b;
+}
+
+.rxp-progress {
+  margin-top: 8px;
+}

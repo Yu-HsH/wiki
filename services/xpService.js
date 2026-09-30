@@ -127,3 +127,43 @@ export async function fetchOwnXpLedger({ limit = 20 } = {}) {
   if (error) throw error;
   return (data || []).map(normalizeXpLedgerEntry).filter(Boolean);
 }
+
+const LEDGER_COLUMNS =
+  "id, xp_class, source_type, source_id, base_amount, amount, decay_reason, granted_at";
+
+/**
+ * 결과 하나에 대한 본인 원장 행 (트랙 15c-2).
+ *
+ * `sourceId`는 C2 §3의 결과 ID다 — 싱글은 `game_records.id`. RLS가 본인 행만 돌려주므로
+ * `user_id` 조건을 걸지 않는다 (C2 §6). 빈 배열은 "이 결과에 지급이 없다"는 뜻이다.
+ */
+export async function fetchResultXp({ sourceId } = {}) {
+  requireSupabase();
+  if (!sourceId) return [];
+  const { data, error } = await supabase
+    .from("xp_ledger")
+    .select(LEDGER_COLUMNS)
+    .eq("source_id", sourceId)
+    .order("granted_at", { ascending: true });
+  if (error) throw error;
+  return (data || []).map(normalizeXpLedgerEntry).filter(Boolean);
+}
+
+/**
+ * 1:1 방의 결과 XP. `match_history`는 참가자만 읽을 수 있다(RLS
+ * "Players can read related match history") — 방 ID로 결과 ID를 찾고 원장을 읽는다.
+ *
+ * @returns {Promise<{matchId: string|null, entries: Array}>}
+ */
+export async function fetchDuelResultXp({ roomId } = {}) {
+  requireSupabase();
+  if (!roomId) return { matchId: null, entries: [] };
+  const { data, error } = await supabase
+    .from("match_history")
+    .select("id")
+    .eq("room_id", roomId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.id) return { matchId: null, entries: [] };
+  return { matchId: data.id, entries: await fetchResultXp({ sourceId: data.id }) };
+}

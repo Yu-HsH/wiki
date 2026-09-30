@@ -13,3 +13,4 @@ import "./css/group.css";
 import "./css/groupSpectator.css";
 import "./css/recovery.css";
 import "./css/profileCard.css";
+import "./css/resultXp.css";
