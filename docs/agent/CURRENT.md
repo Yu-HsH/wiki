@@ -1,10 +1,37 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-09-30**
-기준 커밋: **`518654c`** (`docs: record 15b — total_xp authority and XP ranking, feat only`)
-마지막 **앱 코드** 커밋: **`fd6f916`** (15b-2, **미배포**) · 마지막 **migration** 커밋: **`777ecdf`** (15b-1, `20260929090000`) — **운영 미적용**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `518654c`다 (`AGENTS.md` §7).
-이전 기준: `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+기준 커밋: **`d12ce5e`** (`feat(db): 15c-1 — result finalizers pay XP through grant_xp_v1`)
+마지막 **앱 코드** 커밋: **`fd6f916`** (15b-2, **미배포**) · 마지막 **migration** 커밋: **`d12ce5e`** (15c-1, `20260930090000`) — **운영 미적용**. 이 갱신 커밋은 문서만 바꾸며, 기준 커밋은 부모인 `d12ce5e`다 (`AGENTS.md` §7).
+이전 기준: `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps`
+
+> # ⚑ 2026-09-30 — **15c-1 완료·feat 커밋. 저장소 18 ↔ 운영 16, 차이 2 (`20260929090000` → `20260930090000` 순서). 15c-2(표시)는 미착수**
+>
+> **결정** `[사용자 확정, 2026-09-30]`: ① 트리거 방식 — 그룹 **런타임** 예외 승인(파일 동결은 유지, pgTAP 전 스위트로 확인)
+> ② 싱글 모드 = **서버 추론** ③ 오늘 코스는 25만(15 중복 없음) ④ 오늘 코스의 날짜 = **완주 시각(KST)**
+> ⑤ 1:1 감쇠 카운트 = 기권 포함·cancelled만 제외 ⑥ 소급 없음 ⑦ 실패는 `raise warning`만 ⑧ 15c-1(서버)/15c-2(표시) 분할.
+>
+> | 커밋 | 내용 |
+> |---|---|
+> | **`d12ce5e`** 15c-1 | `20260930090000_xp_result_grants_v1.sql` — **AFTER 트리거 3개**(`game_records` INSERT → 싱글 · `match_history` INSERT → 1:1 4경로 · `game_rooms` UPDATE OF status → 그룹 2경로). **finalizer 본문 재정의 0 · drop 0 · 기존 함수 시그니처 변경 0.** 신규: `private.duel_decay_v1` · `private.try_grant_xp_v1`(안쪽 격리) · `private.grant_{single,duel,group}_result_xp_v1` · `private.grant_result_xp_on_write_v1`(바깥 격리) · **`public.grant_result_xp_v1(scope, result_id)`** — 멱등 재지급, `service_role` 전용. pgTAP `xp_result_grants_v1` **100건** · `tests/xpResultGrants.test.js` **8건** |
+>
+> | 검증 (로컬 스택, 2026-09-30, `d12ce5e` 커밋 직전 작업 트리) | 결과 |
+> |---|---|
+> | `migration up --local` | `20260930090000` 적용 — 로컬 **18개** |
+> | pgTAP 전량 | **xp_result_grants_v1 100/100** · xp_ledger_v1 **153/153** · c4_check_c3 **30/30** · duel_item_authority_v3 **148/148** · server_authority_v2 **97/97** · group_security_phase2c **49/49** · group_final_gaps_v13 **33/33** · group_spectator_emoji_atomicity **22/22** · group_match_lifecycle_phase2a **2/2** — `not ok` **0**. 기존 8개는 적용 전 기준선(`abdc70d`)과 **같은 534/534** |
+> | 음성 대조 | 테스트 트랜잭션 안에서 트리거 3개를 끄면 **38건 실패** (롤백) — 테스트가 지급을 실제로 잡는다 |
+> | 격리 | 프로필 없는 사용자(`AUTH_REQUIRED`) · 임시 CHECK로 `grant_xp_v1`을 raise시킴(안쪽) · 분류 함수를 raise하게 교체(바깥) — **세 경우 모두 경기 커밋, 원장 0행, `total_xp` 무변동, WARNING 1건씩.** 원인 제거 후 `grant_result_xp_v1`이 **정확히 1회** 지급 |
+> | 동시성 하니스 | `duel_item_concurrency_v3` **3시나리오 × 5, deadlock 0** · `server_authority_concurrency_v2` **PASS**. **`group_final_gaps_v13_hardening_concurrency`는 실행 불가** — PowerShell 7이 필요한데 이 환경에 없다 (`ProcessStartInfo.ArgumentList`). 픽스처 SQL 전 단계에서 멈춰 DB에 쓰지 않았다. **그룹 동시 종료의 락 순서는 미검증** `확인 필요` |
+> | `npm test` · `npm run build` | **351/351** · **exit 0** |
+>
+> **부채 (신규 2건):**
+> - **X1 — 랜덤 탐험 20 XP 미지급.** `single_game_runs`에 서버가 정한 모드가 없어 랜덤/목표 지정을 구분할 수 없다. 오늘 코스가 아닌 완주는 전부 목표 지정 규칙(쌍 최초 15)을 적용하므로 **랜덤 완주가 5 XP 덜 받는다.** 해소 조건: **`run_mode`를 서버가 결정하는 구조로 갈 때** `[사용자 결정]`.
+> - **X2 — 그룹 결과 화면 XP 표시 제외.** 지급은 되지만 `GroupGamePage.jsx`가 동결(`TRACKS.md` §2.1)이라 15c-2에서 표시하지 않는다. 해소 조건: 그룹 결과 화면을 소유하는 트랙.
+>
+> **알려진 한계 (코드 주석에 기록):** 오늘 코스 판정은 `game_records.target_title`과 `daily_challenges.target_title`의 정규화 비교다 — 리다이렉트로 제목이 바뀐 문서나 프론트 fallback 코스는 목표 지정(15)으로 분류된다. "최초"는 **원장 기준**(첫 지급)이며 15c 이전 완주는 세지 않는다(결정 ⑥).
+>
+> **배포 순서:** `20260929090000` → `20260930090000`. 트리거는 배포된 번들과 무관하게 동작하므로 **DB가 프론트보다 먼저여도 안전하다** — 적용 즉시 지급이 시작되고 표시는 15c-2가 붙인다. **운영 적용·`main` push는 둘 다 건별 승인 대상이다** (`AGENTS.md` §1·§1.1).
 
 > # ⚑ 2026-09-29 — **15b 완료·feat 통합. 저장소 17 ↔ 운영 16, 차이 1 (`20260929090000`). 배포는 15c와 묶는다**
 >
