@@ -331,3 +331,43 @@ export function canUseDuelItem(item, context = {}) {
     }
     return true;
 }
+
+/* ────────────────────────────────────────────────────────────
+ * 14b — 링크만 보기 · 링크 검열 (가)의 순수 함수
+ *
+ * 화면 컴포넌트가 끌어올 수 있는 모듈이 이 카탈로그뿐이라(`tests/duelItemAuthority.test.js`
+ * "HUD가 끌어오는 모듈") 여기에 둔다. 제목 정규화는 받지 않는다 — 부모가 이미
+ * `normalizeTitle`로 맞춘 값을 넘긴다.
+ * ──────────────────────────────────────────────────────────── */
+
+/** 가나다순. 한글 음절은 유니코드 순서가 곧 가나다순이고, 섞인 문자는 ICU 한국어 규칙을 따른다. */
+export function sortLinkIndexTitles(titles = []) {
+    const unique = [...new Set((Array.isArray(titles) ? titles : []).filter(Boolean))];
+    return unique.sort((a, b) => a.localeCompare(b, "ko"));
+}
+
+/** 필터 — 대소문자와 앞뒤 공백을 무시하고 포함 여부로 거른다. 빈 입력은 전부 보인다. */
+export function filterLinkIndexEntries(entries = [], query = "") {
+    const needle = String(query || "").trim().toLowerCase();
+    if (!needle) return entries;
+    return entries.filter((entry) => String(entry?.title || "").toLowerCase().includes(needle));
+}
+
+/**
+ * 지금 나에게 걸린 검열 제목. `activeEffects`는 서버가 **나에게 걸린 것만** 준다
+ * (`fetchDuelItemState`). 만료는 조회 뒤에 오므로 여기서 시각으로 다시 거른다.
+ */
+export function selectCensoredTitles(activeEffects = [], now = Date.now()) {
+    return (Array.isArray(activeEffects) ? activeEffects : [])
+        .filter((effect) => effect?.itemId === "link_censorship")
+        .filter((effect) => effect.expiresAt == null || effect.expiresAt > now)
+        .flatMap((effect) => effect.metadata?.censoredTitles || []);
+}
+
+/** 다음 검열 만료 시각 — 부모가 그 순간에 다시 그리도록 타이머를 건다. 없으면 null. */
+export function nextCensorExpiry(activeEffects = [], now = Date.now()) {
+    const times = (Array.isArray(activeEffects) ? activeEffects : [])
+        .filter((effect) => effect?.itemId === "link_censorship" && effect.expiresAt > now)
+        .map((effect) => effect.expiresAt);
+    return times.length > 0 ? Math.min(...times) : null;
+}

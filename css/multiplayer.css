@@ -2198,6 +2198,123 @@
   opacity: 0.7;
 }
 
+/* 14b — 링크만 보기 패널. 미리보기 패널과 같은 모양이고 색만 다르다.
+   목록이 길 수 있으므로(문서당 수백 개) 높이를 묶고 안에서 스크롤한다. */
+.duel-item-index {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 170, 255, 0.28);
+  background: rgba(120, 170, 255, 0.06);
+}
+
+.duel-item-index__head {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-right: 22px;
+}
+
+.duel-item-index__title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #9cc3ff;
+}
+
+.duel-item-index__meta {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.duel-item-index__close {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.duel-item-index__filter {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.25);
+  color: #e6edf3;
+  font-size: 12px;
+}
+
+.duel-item-index__words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.duel-item-index__word {
+  max-width: 100%;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e6edf3;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.duel-item-index__word:hover:enabled {
+  border-color: rgba(120, 170, 255, 0.55);
+  background: rgba(120, 170, 255, 0.14);
+}
+
+.duel-item-index__word:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+/* 본문과 같은 검열 표현 — 회색 + 취소선 (Q2) */
+.duel-item-index__word--censored,
+.duel-item-index__word--censored:hover:enabled {
+  color: #8b949e;
+  text-decoration: line-through;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: transparent;
+  cursor: not-allowed;
+}
+
+/* 먹물 — 패널을 덮는다. 전체 화면 오버레이와 별개로 패널 안에서도 가린다 */
+.duel-item-index__ink {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.88);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 @media (max-width: 640px) {
   .duel-item-slot {
     min-height: 60px;

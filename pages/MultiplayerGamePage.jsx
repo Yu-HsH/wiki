@@ -37,6 +37,9 @@ import {
   DUEL_ITEM_EVENT_TYPE,
   DUEL_ITEM_RESULT,
   getDuelItem,
+  nextCensorExpiry,
+  selectCensoredTitles,
+  sortLinkIndexTitles,
 } from "../data/duelItems";
 import {
   ensureDuelItemGrant,
@@ -229,6 +232,16 @@ export default function MultiplayerGamePage() {
    */
   const [itemFailure, setItemFailure] = useState(null);
   const [linkPreview, setLinkPreview] = useState(null);
+
+  /**
+   * 14b — 링크만 보기. `{ expiresAt, openedOnTitle }`이고 목록은 매 렌더 `pageData.links`에서
+   * 만든다. 닫히는 길은 넷이다: 20초(서버 `effect_expires_at`, Q4) · 문서가 바뀜(일반 이동·
+   * 강제 이동·되감기 전부) · 닫기 버튼 · ESC.
+   */
+  const [linkIndex, setLinkIndex] = useState(null);
+
+  /** 검열 만료 순간에 다시 그리기 위한 값. 검열 목록 자체는 `activeEffects`에서 온다. */
+  const [censorClock, setCensorClock] = useState(0);
 
   /**
    * 마지막 RPC에서 잰 서버-클라이언트 시계 편차. `normalizeDuelItemEvent`가 알림의
@@ -1001,12 +1014,18 @@ export default function MultiplayerGamePage() {
       return;
     }
 
+    if (item.id === "link_index") {
+      setLinkIndex({
+        expiresAt: outcome.effectExpiresAt,
+        openedOnTitle: pageDataRef.current?.title || "",
+      });
+      return;
+    }
+
     if (item.id === "link_preview") {
+      // 14b — 본문·색인과 같은 선택 함수를 쓴다 (만료된 검열은 빼고).
       const censored = new Set(
-        activeEffects
-          .filter((effect) => effect.itemId === "link_censorship")
-          .flatMap((effect) => effect.metadata?.censoredTitles || [])
-          .map((title) => normalizeTitle(title))
+        selectCensoredTitles(activeEffects, Date.now()).map((title) => normalizeTitle(title))
       );
 
       previewAbortRef.current?.abort();
@@ -1197,6 +1216,72 @@ export default function MultiplayerGamePage() {
   }, [linkPreview?.expiresAt, closeLinkPreview]);
 
   useEffect(() => () => previewAbortRef.current?.abort(), []);
+
+  /**
+   * 14b — 링크 검열 (가). **나에게 걸린** 검열 제목이고, 본문(`WikiViewer`)과 색인이
+   * 같은 배열을 읽는다 — 두 곳의 회색 집합이 갈라질 수 없다. 만료는 조회 뒤에 오므로
+   * `nextCensorExpiry`에 타이머를 걸어 그 순간 다시 계산한다.
+   */
+  const censoredTitles = useMemo(
+    () => selectCensoredTitles(activeEffects, Date.now()),
+    // censorClock은 값이 아니라 "만료 시각이 지났다"는 신호다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeEffects, censorClock]
+  );
+
+  useEffect(() => {
+    const expiry = nextCensorExpiry(activeEffects, Date.now());
+    if (expiry == null) return undefined;
+    const timer = setTimeout(
+      () => setCensorClock((tick) => tick + 1),
+      Math.max(0, expiry - Date.now()) + 20
+    );
+    return () => clearTimeout(timer);
+  }, [activeEffects, censorClock]);
+
+  const closeLinkIndex = useCallback(() => setLinkIndex(null), []);
+
+  useEffect(() => {
+    const expiresAt = linkIndex?.expiresAt;
+    if (!expiresAt) return undefined;
+    const remaining = expiresAt - Date.now();
+    if (remaining <= 0) {
+      closeLinkIndex();
+      return undefined;
+    }
+    const timer = setTimeout(closeLinkIndex, remaining);
+    return () => clearTimeout(timer);
+  }, [linkIndex?.expiresAt, closeLinkIndex]);
+
+  // 이동하면 닫힌다 — 어떤 경로로 옮겨졌든 현재 문서 제목이 바뀐 것으로 판단한다.
+  useEffect(() => {
+    if (!linkIndex) return;
+    if (normalizeTitle(pageData?.title || "") !== normalizeTitle(linkIndex.openedOnTitle || "")) {
+      closeLinkIndex();
+    }
+  }, [pageData?.title, linkIndex, closeLinkIndex]);
+
+  const linkIndexView = useMemo(() => {
+    if (!linkIndex) return null;
+    const censored = new Set(censoredTitles.map((title) => normalizeTitle(title)));
+    return {
+      expiresAt: linkIndex.expiresAt,
+      entries: sortLinkIndexTitles(pageData?.links || []).map((title) => ({
+        title,
+        censored: censored.has(normalizeTitle(title)),
+      })),
+    };
+  }, [linkIndex, pageData?.links, censoredTitles]);
+
+  /** 색인의 단어 = 본문 링크와 같은 경로. 검열된 단어는 무반응이다. */
+  const handleLinkIndexMove = (title) => {
+    if (!title) return;
+    const blocked = censoredTitles.some(
+      (censoredTitle) => normalizeTitle(censoredTitle) === normalizeTitle(title)
+    );
+    if (blocked || status.blind) return;
+    handleMove(title);
+  };
 
   /**
    * 아이템 알림 하나. **아이템 ID로 갈라지지 않는다** — 서버가 대상 선정·차단·반사·
@@ -1627,6 +1712,7 @@ export default function MultiplayerGamePage() {
             clickCount={myPlayer?.move_count || 0}
             startTitle={myPlayer?.start_title || ""}
             onLinkClick={handleMove}
+            censoredTitles={censoredTitles}
             blindActive={status.blind}
             highlightRequestId={highlightRequestId}
             searchAvailable={searchAvailable}
@@ -1654,6 +1740,11 @@ export default function MultiplayerGamePage() {
               onRequestStateRefresh={refreshDuelItemState}
               onPreviewLink={handlePreviewLink}
               onClosePreview={handleClosePreview}
+              linkIndex={linkIndexView}
+              blindActive={status.blind}
+              navigating={isLoading}
+              onLinkIndexMove={handleLinkIndexMove}
+              onCloseLinkIndex={closeLinkIndex}
             />
 
             <EffectOverlay

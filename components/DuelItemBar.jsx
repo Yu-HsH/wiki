@@ -5,11 +5,12 @@ import {
     DUEL_ITEM_COOLDOWN_MS,
     DUEL_ROLE_LABELS,
     DUEL_SLOT_COUNT,
+    filterLinkIndexEntries,
     getDuelItem,
 } from "../data/duelItems.js";
 
 /**
- * 1:1 아이템 HUD — 5슬롯 + `link_preview` 패널 (트랙 C, P5).
+ * 1:1 아이템 HUD — 5슬롯 + `link_preview` 패널 (트랙 C, P5) + `link_index` 패널 (14b).
  *
  * `components/ItemBar.jsx`는 **건드리지 않는다.** 싱글 아이템의 소비자가 그 파일이고
  * prop 계약이 동결이다 (`TRACKS.md` §2.3-③). 1:1은 슬롯 수·역할 축·서버 권위가 전부
@@ -128,12 +129,18 @@ export default function DuelItemBar({
     onRequestStateRefresh,
     onPreviewLink,
     onClosePreview,
+    linkIndex = null,
+    blindActive = false,
+    navigating = false,
+    onLinkIndexMove,
+    onCloseLinkIndex,
 }) {
     const hasDeadline =
         cooldownUntil != null ||
         activeEffects.length > 0 ||
         pendingDefenses.length > 0 ||
-        linkPreview?.expiresAt != null;
+        linkPreview?.expiresAt != null ||
+        linkIndex?.expiresAt != null;
     const now = useTicker(hasDeadline);
 
     const cooldownRemaining = cooldownUntil == null ? 0 : Math.max(0, cooldownUntil - now);
@@ -249,6 +256,17 @@ export default function DuelItemBar({
                     now={now}
                     onPreviewLink={onPreviewLink}
                     onClosePreview={onClosePreview}
+                />
+            )}
+
+            {linkIndex && (
+                <DuelLinkIndexPanel
+                    linkIndex={linkIndex}
+                    now={now}
+                    blindActive={blindActive}
+                    navigating={navigating}
+                    onLinkIndexMove={onLinkIndexMove}
+                    onCloseLinkIndex={onCloseLinkIndex}
                 />
             )}
         </aside>
@@ -502,6 +520,102 @@ function DuelLinkPreviewPanel({ linkPreview, now, onPreviewLink, onClosePreview 
                     </p>
                 )}
             </div>
+        </section>
+    );
+}
+
+/* ────────────────────────────────────────────────────────────
+ * link_index 패널 — 링크만 보기 (14b)
+ *
+ * 목록은 부모가 `pageData.links`에서 가나다순으로 만들어 내려 준다 — 새 조회가 없다.
+ * 이 패널이 갖는 상태는 **필터 입력 하나뿐**이다. 닫히는 조건(20초 · 이동 · 닫기 ·
+ * ESC) 가운데 앞의 둘은 부모가 판단하고, 여기서는 닫기와 ESC만 올려 보낸다.
+ *
+ * - **검열된 단어**는 본문과 같은 집합이다(부모가 같은 배열로 표시한다). 회색 + 취소선 +
+ *   `aria-disabled`이고 눌러도 무반응이다 (Q2).
+ * - **먹물**이 걸리면 패널도 덮인다. 슬롯은 스펙 §5.2대로 쓸 수 있지만, 이 목록은 본문과
+ *   같은 "읽는 영역"이라 가린다 (`14-DUEL-ITEMS.md` §4 정정 2026-09-30).
+ * ──────────────────────────────────────────────────────────── */
+
+function DuelLinkIndexPanel({
+    linkIndex,
+    now,
+    blindActive,
+    navigating,
+    onLinkIndexMove,
+    onCloseLinkIndex,
+}) {
+    const [query, setQuery] = useState("");
+    const { expiresAt = null, entries = [] } = linkIndex;
+    const visible = filterLinkIndexEntries(entries, query);
+    const remainingMs = expiresAt == null ? null : Math.max(0, expiresAt - now);
+
+    return (
+        <section
+            className="duel-item-index"
+            aria-label="링크만 보기"
+            onKeyDown={(event) => {
+                if (event.key === "Escape") onCloseLinkIndex?.();
+            }}
+        >
+            <header className="duel-item-index__head">
+                <span className="duel-item-index__title">링크만 보기</span>
+                <span className="duel-item-index__meta">
+                    {visible.length}/{entries.length}
+                    {remainingMs != null ? ` · ${formatSeconds(remainingMs)}초` : ""}
+                </span>
+                {onCloseLinkIndex && (
+                    <button
+                        type="button"
+                        className="duel-item-index__close"
+                        onClick={onCloseLinkIndex}
+                        aria-label="링크만 보기 닫기"
+                    >
+                        ✕
+                    </button>
+                )}
+            </header>
+
+            <input
+                type="search"
+                className="duel-item-index__filter"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="필터"
+                aria-label="링크 필터"
+                disabled={blindActive}
+                autoFocus
+            />
+
+            <ul className="duel-item-index__words">
+                {visible.map((entry) => (
+                    <li key={entry.title}>
+                        <button
+                            type="button"
+                            className={[
+                                "duel-item-index__word",
+                                entry.censored ? "duel-item-index__word--censored" : "",
+                            ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            aria-disabled={entry.censored || undefined}
+                            disabled={navigating || blindActive}
+                            onClick={() => {
+                                if (entry.censored) return;
+                                onLinkIndexMove?.(entry.title);
+                            }}
+                        >
+                            {entry.title}
+                        </button>
+                    </li>
+                ))}
+            </ul>
+
+            {blindActive && (
+                <div className="duel-item-index__ink" aria-hidden="true">
+                    시야 방해 중...
+                </div>
+            )}
         </section>
     );
 }

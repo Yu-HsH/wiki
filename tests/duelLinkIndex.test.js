@@ -8,8 +8,12 @@ import {
     ACTIVE_DUEL_ITEM_IDS,
     canUseDuelItem,
     DUEL_ITEM_ROLE,
+    filterLinkIndexEntries,
     getDuelItem,
     getDuelItemsByRole,
+    nextCensorExpiry,
+    selectCensoredTitles,
+    sortLinkIndexTitles,
 } from "../data/duelItems.js";
 
 /**
@@ -181,4 +185,111 @@ test("싱글·그룹은 censoredTitles를 넘기지 않는다 — 검열 회색 
     for (const page of ["pages/GamePage.jsx", "pages/GroupGamePage.jsx"]) {
         assert.equal(read(page).includes("censoredTitles"), false, page);
     }
+});
+
+/* ────────────────────────────────────────────────────────────
+ * 4. 링크만 보기 — 정렬 · 필터 · 20초 · 이동 시 닫힘 · 검열 · 먹물
+ * ──────────────────────────────────────────────────────────── */
+
+test("정렬 — 가나다순이고 중복·빈 값을 뺀다 (기준: localeCompare(…, \"ko\"))", () => {
+    assert.deepEqual(
+        sortLinkIndexTitles(["하늘", "가방", "나무", "", null, "가방", "다리", "가"]),
+        ["가", "가방", "나무", "다리", "하늘"]
+    );
+    assert.deepEqual(sortLinkIndexTitles(undefined), []);
+});
+
+test("필터 — 포함 여부 · 대소문자·앞뒤 공백 무시 · 빈 입력은 전부", () => {
+    const entries = ["금속 활자", "활판 인쇄", "Gutenberg", "르네상스"].map((title) => ({ title }));
+    assert.deepEqual(filterLinkIndexEntries(entries, " 활 ").map((e) => e.title), ["금속 활자", "활판 인쇄"]);
+    assert.deepEqual(filterLinkIndexEntries(entries, "gUTEN").map((e) => e.title), ["Gutenberg"]);
+    assert.equal(filterLinkIndexEntries(entries, "").length, 4);
+    assert.equal(filterLinkIndexEntries(entries, "없는말").length, 0);
+});
+
+test("검열 목록 — 나에게 걸린 link_censorship의 제목, 만료되면 빠진다", () => {
+    const now = 1_000_000;
+    const effects = [
+        { itemId: "link_censorship", expiresAt: now + 3000, metadata: { censoredTitles: ["A", "B"] } },
+        { itemId: "link_censorship", expiresAt: now - 1, metadata: { censoredTitles: ["OLD"] } },
+        { itemId: "blind", expiresAt: now + 3000, metadata: {} },
+        { itemId: "link_censorship", expiresAt: now + 5000, metadata: {} },
+    ];
+    assert.deepEqual(selectCensoredTitles(effects, now), ["A", "B"]);
+    assert.equal(nextCensorExpiry(effects, now), now + 3000);
+    assert.deepEqual(selectCensoredTitles(effects, now + 6000), []);
+    assert.equal(nextCensorExpiry(effects, now + 6000), null);
+    assert.deepEqual(selectCensoredTitles(null, now), []);
+});
+
+const pageSource = read("pages/MultiplayerGamePage.jsx");
+const barSource = read("components/DuelItemBar.jsx");
+
+/** `from`부터 `to`까지의 소스 조각. 정규식보다 읽기 쉬운 포함 검사용이다. */
+function slice(source, from, to) {
+    const start = source.indexOf(from);
+    assert.ok(start >= 0, `${from}가 없다`);
+    const end = source.indexOf(to, start + from.length);
+    return source.slice(start, end < 0 ? undefined : end);
+}
+
+test("1:1 — 본문과 색인이 같은 검열 배열을 읽는다 (두 회색 집합이 갈라질 수 없다)", () => {
+    assert.ok(pageSource.includes("censoredTitles={censoredTitles}"));
+    assert.ok(pageSource.includes("() => selectCensoredTitles(activeEffects, Date.now())"));
+    assert.ok(slice(pageSource, "const linkIndexView = useMemo", "}, [").includes("censoredTitles.map"));
+});
+
+test("1:1 — 검열 만료 순간 다시 그린다 (nextCensorExpiry 타이머)", () => {
+    assert.ok(pageSource.includes("nextCensorExpiry(activeEffects, Date.now())"));
+    assert.ok(pageSource.includes("setCensorClock((tick) => tick + 1)"));
+});
+
+test("link_index — 서버 성공(applied) 뒤에만 열리고, 20초 기준은 서버 만료 시각이다 (Q4)", () => {
+    const branch = slice(pageSource, 'if (item.id === "link_index")', "return;");
+    assert.ok(branch.includes("expiresAt: outcome.effectExpiresAt"));
+    // applyLocalItemEffect는 APPLIED 갈래에서만 불린다.
+    assert.ok(
+        slice(pageSource, "if (outcome.result === DUEL_ITEM_RESULT.APPLIED)", "}").includes(
+            "applyLocalItemEffect(item, outcome)"
+        )
+    );
+    assert.ok(
+        slice(pageSource, "const expiresAt = linkIndex?.expiresAt;", "}, [").includes(
+            "setTimeout(closeLinkIndex, remaining)"
+        )
+    );
+});
+
+test("link_index — 문서가 바뀌면 닫힌다: 일반 이동 · 강제 이동 · 되감기 전부 (14 §4)", () => {
+    // 강제 이동 3종(random_link_move·random_teleport·history_rewind)은 모두
+    // applyMyAuthoritativeRow → setPageData로 문서를 바꾼다. 닫기는 그 결과만 본다.
+    const effect = slice(pageSource, "// 이동하면 닫힌다", "}, [pageData?.title, linkIndex, closeLinkIndex]);");
+    assert.ok(effect.includes('normalizeTitle(pageData?.title || "") !== normalizeTitle(linkIndex.openedOnTitle || "")'));
+    assert.ok(effect.includes("closeLinkIndex();"));
+    assert.ok(pageSource.includes('openedOnTitle: pageDataRef.current?.title || ""'));
+});
+
+test("link_index — 단어 클릭은 일반 이동(handleMove)이다. 검열·먹물 중에는 무반응", () => {
+    const body = slice(pageSource, "const handleLinkIndexMove", "\n  };");
+    assert.ok(body.includes("if (blocked || status.blind) return;"));
+    assert.ok(body.indexOf("if (blocked || status.blind) return;") < body.indexOf("handleMove(title);"));
+});
+
+test("패널 — 필터 · 닫기 · ESC · 검열 aria-disabled · 먹물 덮개", () => {
+    const panel = barSource.slice(barSource.indexOf("function DuelLinkIndexPanel"));
+    for (const piece of [
+        "filterLinkIndexEntries(entries, query)",
+        'event.key === "Escape") onCloseLinkIndex?.()',
+        "aria-disabled={entry.censored || undefined}",
+        "if (entry.censored) return;",
+        '<div className="duel-item-index__ink"',
+        "disabled={navigating || blindActive}",
+    ]) {
+        assert.ok(panel.includes(piece), piece);
+    }
+});
+
+test("패널 — HUD가 끌어오는 모듈은 여전히 react와 1:1 카탈로그뿐이다", () => {
+    const imported = [...barSource.matchAll(/from\s*"([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(imported.sort(), ["../data/duelItems.js", "react"]);
 });
