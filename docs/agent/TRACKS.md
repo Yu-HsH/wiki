@@ -1136,8 +1136,8 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 
 **남은 것:** ① **운영 적용** — migration `20260930100000` 적용 → 검증 → `main` push. **순서가 강제된다**: 프론트가 먼저 나가면
 운영 카탈로그에 `link_index`가 없어 지급은 10종 그대로이고 문제는 없지만, **migration이 먼저여야** 새 번들의 색인이 실제로 지급된다.
-각각 건별 승인 (`AGENTS.md` §1·§1.1) ② **`pages/PublicContentPage.jsx:44` 가이드 문구가 "빠른 이동 링크"를 먼저 훑으라고 안내한다** —
-이제 없는 기능이다. 14b 범위 밖 파일이라 고치지 않았다. 문구 결정이 필요하다 ③ `docs/design/MOBILE-VALIDATION-CORRECTIONS.md` §7.1의
+각각 건별 승인 (`AGENTS.md` §1·§1.1) ② ~~**`pages/PublicContentPage.jsx:44` 가이드 문구가 "빠른 이동 링크"를 먼저 훑으라고 안내한다**~~ →
+**닫힘 (`ffabdc0`, 2026-10-01)** — "제목, 요약, 첫 문단의 본문 링크를 먼저 훑는 편이 좋습니다"로 바꿨다 `[사용자 지시]` ③ `docs/design/MOBILE-VALIDATION-CORRECTIONS.md` §7.1의
 설계 문서 목록(`21-SCREEN-MATRIX.md` 등)은 여전히 목록만 있다.
 
 ---
