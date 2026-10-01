@@ -1,11 +1,17 @@
 # 병렬 트랙 파일 소유권 — 단일 기준
 
-갱신 날짜: 2026-09-30 (8차) — 이전 2026-09-28 (7차) · 2026-09-03 (6차)
-기준 커밋: `a784d2e` (`fix(17a-2): gate the ranking full-view entry point for guests (N2)`)
-— **이것이 `origin/main`이다.** 2026-09-03에 배포됐다 (`CURRENT.md` §3)
+갱신 날짜: 2026-10-01 (9차) — 이전 2026-09-30 (8차) · 2026-09-28 (7차) · 2026-09-03 (6차)
+기준 커밋: `29eb3e6` (`docs: record main push #9 — 14b deployed, production 19 = repo 19`)
+— **원격 재조회 (2026-10-01): `origin/main = dee9497`, `origin/feat/group-final-gaps = 29eb3e6`.** 아래 A~D 표는 당시 웨이브 기록이며 현재 판정은 `CURRENT.md`와 §1.1-c다. 8차 이전 헤더 기준은 `a784d2e`였다.
 트랙 커밋: `e70c541`(A) · `7a7197e`(B) · `a784d2e`(N2) · 분기점 `ad569f2`
 이전 기준: `eeb7a16` · `527f896` · `b281e01`
 브랜치: `feat/group-final-gaps`
+
+> **9차 갱신 (2026-10-01) — 14c 준비. 남은 순서 17b → 14c → 16.**
+> **방장만 목표 검색·선택 → 상대에게 즉시 공개 → 방장 START, READY 없음** `[사용자 결정, 2026-10-01]`.
+> 시작은 랜덤 유지하되 **START 직전 스냅샷한 identity를 시작 RPC에 넘겨 그 문서를 쓴다**.
+> 스펙 정정은 `01-CONFIRMED-SPEC.md` §0·§4.3, 시안 대조는 `MOBILE-VALIDATION-CORRECTIONS.md` §8,
+> 티켓은 **§8-14c**. **문서 준비 완료·구현 대기·운영 미접근**이다. 목표 저장은 **방장 `room_players.target_*` 재사용**, 새 `game_rooms.duel_target_*` 컬럼은 만들지 않는 것으로 판정했다.
 
 > **8차 갱신 (2026-09-30) — 14b가 17b 앞에 들어왔다. 순서는 14b → 17b → 16.**
 > 빠른 링크를 기본 화면에서 빼고 탐색 아이템 `link_index`(링크만 보기)로 옮기는 결정이 나왔다
@@ -147,7 +153,7 @@
 > **둘을 동시에 열 수도 있다.** C는 프론트+RPC 파일, 15a는 전부 신규 파일이라 **교집합이 0**이다
 > (§2.0). **다만 C는 G7 답이 있어야 시작하므로, 답이 없는 동안은 15a가 유일한 열린 트랙이다.**
 
-#### 1.1-c 다음 트랙 순서 — ~~**15b → 15c → 17b → 16**~~ → ~~**14b → 17b → 16**~~ → **남은 순서 17b → 16** `[2026-09-28 정리 · 2026-09-30 14b 추가 · 2026-10-01 14b 완료]`
+#### 1.1-c 다음 트랙 순서 — ~~**15b → 15c → 17b → 16**~~ → ~~**14b → 17b → 16**~~ → ~~**17b → 16**~~ → **남은 순서 17b → 14c → 16** `[2026-09-28 정리 · 2026-09-30 14b 추가 · 2026-10-01 14b 완료·14c 추가]`
 
 | 순서 | 트랙 | 선행 조건 | 상태 |
 |:-:|---|---|---|
@@ -155,10 +161,11 @@
 | **2** | **15c** — 결과 화면 XP 지급 (finalizer 연결) | **15b** | **15c-1(서버) 완료 (2026-09-30, `d12ce5e`)** — 트리거 3개, finalizer 본문 무편집, 그룹은 **런타임 예외** `[사용자 승인]`. **15c-2(싱글·1:1 결과 화면 표시) 완료 (`47577ae`)** — migration 없음. 그룹 표시는 동결로 제외(부채 X2), 1:1 기권·이탈 결과 화면 부재(부채 X3). **운영 배포 완료 (2026-09-30, `main` push #7, 15b와 함께).** 배포 시 `20260929090000` → `20260930090000` 순서. 상세 `CURRENT.md` 상단 상자 |
 | **2.5** | **14b** — 빠른 링크 아이템화 (`link_index` 추가 · 링크 검열 (가) · 빠른 링크 블록 제거) `[사용자 결정, 2026-09-30]` | **없다.** 1:1 카탈로그 migration 1개. **16이 최종 카탈로그를 소비하므로 16 앞이고, 17b와는 파일 교집합이 없다** | **완료 · 운영 배포 (2026-10-01).** 구현 `4dba85e`~`50485ef` (§8-14b 완료 실측) → 운영 migration `20260930100000` 적용·검증 → `main` push #9 (`4719100..dee9497`) `[사용자 실행·확인]` (`CURRENT.md` ⚑ (7)) |
 | **3** | **17b** — 프로필 카드 장착 UI | **C1 보상 3테이블.** ⚠ **15a와 함께 적용되지 않았다** — 저장소 migration 16개 어디에도 `reward_catalog`·`user_reward_inventory`·`user_profile_equipment`가 없다 (2026-09-28 검색) `[코드]`. **17b는 C1 migration을 새로 만든다 — DB 변경 1건이 추가된다** `[사용자 확정, 2026-09-28]` | 대기 |
+| **3.5** | **14c** — 1:1 방장 목표 선택 · READY 제거 · START 직전 랜덤 시작 identity 사용 `[사용자 결정, 2026-10-01]` | **순서상 17b 다음.** 14b는 완료. 새 라이프사이클 migration은 17b 반영 후 최대 버전 뒤에 생성한다. 16은 최종 1:1 계약을 소비한다 | **준비 완료 · 구현 대기** — §8-14c |
 | **4** | **16** — 업적·보상 | 14·15·17 전부 소비 (W3) | 마지막 |
 
-~~**티켓은 아직 쓰지 않는다.** 순서만 고정한다.~~ → **14b는 티켓을 썼다 (§8-14b, 2026-09-30).** 17b·16은 아직 순서만 고정한다.
-남은 순서: **17b → 16.** 15b·15c·14b는 완료·배포됐다 (14b: 2026-10-01, push #9).
+~~**티켓은 아직 쓰지 않는다.** 순서만 고정한다.~~ → **14b·14c는 티켓을 썼다 (§8-14b, 2026-09-30 · §8-14c, 2026-10-01).** 17b·16은 아직 순서만 고정한다.
+남은 순서: **17b → 14c → 16.** 15b·15c·14b는 완료·배포됐다 (14b: 2026-10-01, push #9). 14c 준비는 앱 코드·migration 변경이 아니다.
 
 #### 1.1-d 15b 파일 소유권 예외 — **A·B 소유 파일을 15b가 직접 고쳤다** `[사용자 결정 6, 2026-09-29]`
 
@@ -241,6 +248,8 @@
 | css/multiplayer.css | 1732 | **C** | 1:1 HUD·결과 스타일 |
 | data/items.js · data/itemPools.js · utils/itemSystem.js · hooks/useItemSystem.js · components/ItemBar.jsx | 160·25·80·315·51 | **C** | **조건부 — §2.2. 삭제 금지·prop 계약 유지** |
 | tests/duelSwapDisabled.test.js · tests/serverAuthorityMigration.test.js | — | **C** | 기존 아이템·V2 계약 테스트 |
+| **supabase/migrations/…_duel_host_target_v2.sql** · **supabase/tests/server_authority_v2.sql** · **tests/duelHostTarget.test.js** | 신규·기존 | **14c** | §8-14c 한정. migration은 신규만, 기존 pgTAP은 1:1 시작 계약 교체·추가만. 원본 migration은 무편집 |
+| **utils/onlineGameSession.js** · **tests/onlineGameSession.test.js** | 기존 | **14c 한정** | `validateDuelGameSession`·1:1 사례만. 그룹 함수·기존 그룹 테스트는 바이트 불변 (§2.1 예외) |
 | **supabase/migrations/…_xp_ledger_v1.sql** | 신규 | **D** | §2.4 |
 | **supabase/tests/xp_ledger_v1.sql** | 신규 | **D** | pgTAP |
 | **services/xpService.js** | 신규 | **D** | ~~지급·요약 RPC 클라이언트~~ → **요약·본인 원장 조회** (`get_xp_summary_v1` + RLS 아래 `xp_ledger` select). **지급 래퍼는 없다** — C2 §7이 `grant_xp_v1`에 `authenticated execute`를 주지 않으므로 **클라이언트 지급 경로가 성립하지 않는다.** 정정 2026-09-04 |
@@ -267,7 +276,7 @@
 | **css/app.css** (2344) | **A와 B가 함께 쓴다** — `.profile-avatar-*`·`.ranking-avatar-*`(A 영역)와 `.auth-*`·MainPage 스타일(B 영역)이 한 파일에 있다 `[코드]`. **A의 신규 스타일은 `css/profileCard.css`로 가고, 기존 클래스는 감사 전까지 그대로 둔다** (`AGENTS.md` §4) |
 | **utils/appRoutes.js** (15) | **A·B·C가 전부 import한다** (`ProfilePage`·`RankingPage`(A) · `GamePage`·`App.jsx`(B) · `MultiplayerPage`(C)) `[코드]`. 게다가 `tests/appRouting.test.js`가 상수와 함수를 직접 검사한다 |
 | **components/CountdownOverlay.jsx · EffectOverlay.jsx · ExitGuard.jsx · FloatingHud.jsx · PageLoadingOverlay.jsx · ScrollToTopButton.jsx · OnlineGameRecoveryPanel.jsx** | **싱글(B)·1:1(C)·그룹(동결)이 같은 컴포넌트를 mount한다** `[코드]`. **C가 새 아이템 연출이 필요하면 새 컴포넌트를 만든다** — `EffectOverlay`를 고치면 B의 싱글 화면이 함께 바뀐다 |
-| **utils/onlineGameSession.js** (262) | **한 파일에 `validateDuelGameSession`(C 영역)과 `validateGroupGameSession`(동결 영역)이 함께 있다** `:130`·`:191` `[코드]`. `itemPools.js`와 같은 형태의 겹침이다 (§2.3-②) |
+| **utils/onlineGameSession.js** (262) | **한 파일에 `validateDuelGameSession`(C 영역)과 `validateGroupGameSession`(동결 영역)이 함께 있다** `:130`·`:191` `[코드]`. `itemPools.js`와 같은 형태의 겹침이다 (§2.3-②). **14c 한정 예외** `[사용자 결정, 2026-10-01]` — `validateDuelGameSession`의 공통 목표 판정만 변경 가능. `validateGroupGameSession`·공유 helper는 무편집, 관련 그룹 테스트는 바이트 불변 (§8-14c) |
 | **supabaseClient.js · services/targetService.js · utils/latestRequest.js · utils/groupTargetSummary.js · components/GameSetup.jsx · components/AdBanner.jsx · components/GroupPickOverlay.jsx · pages/PublicContentPage.jsx · css/recovery.css** | 여러 축이 공유하거나 어느 트랙의 범위도 아니다 |
 
 ### 2.2 공유 위험이 남은 파일 — 소유는 하나, 조건이 붙는다
@@ -295,7 +304,7 @@
 | # | 공유 자원 | 파일은 갈렸는데 | **불변식** |
 |---|---|---|---|
 | **①** | **`data/itemPools.js`의 두 배열** — `SINGLE_ITEM_IDS`(4종) · `MULTI_ITEM_IDS`(10종). `highlight_links`가 양쪽에 있다 | 파일은 **C 소유**인데 `SINGLE_ITEM_IDS`의 소비자는 **B의 `GamePage.jsx`**다 (`useItemSystem` 경유) | **C는 `MULTI_ITEM_IDS`만 수정한다.** ~~`grep -c 'highlight_links' data/itemPools.js` = 2 유지~~ → **배열 검사로 교체 (2026-09-06)**: `SINGLE_ITEM_IDS`가 **`["highlight_links","search_once","go_back","random_teleport"]` 4원소와 순서까지 일치**하고, 그 블록이 `git diff`에서 **무변경**이면 통과다. **개수 검사는 폐기한다** — 트랙 C 시점 실측 `grep -c`는 **4**이고 **정상이다**(배열 1 + 주석 3). 아래 ⚠ 상자 |
-| **②** | **`utils/onlineGameSession.js`의 두 검증 함수** — `validateDuelGameSession`(`:191`) · `validateGroupGameSession`(`:130`) | 한 파일에 **C 영역과 동결 영역**이 같이 있다 | **동결.** C가 1:1 세션 복구를 고쳐야 하면 **트랙을 멈추고 이 문서를 고친다.** 그룹 함수와 공유하는 헬퍼(`normalizeOnlineGameError`·`retryRecoverable`)까지 흔들린다 |
+| **②** | **`utils/onlineGameSession.js`의 두 검증 함수** — `validateDuelGameSession`(`:191`) · `validateGroupGameSession`(`:130`) | 한 파일에 **C 영역과 동결 영역**이 같이 있다 | **일반 C 트랙은 동결.** 1:1 세션 복구 변경은 먼저 이 문서를 고친다. **14c는 §2.1·§8-14c에 등재한 공통 목표 판정만 예외**다 `[사용자 결정, 2026-10-01]`. 그룹 함수·공유 helper(`normalizeOnlineGameError`·`retryRecoverable` 포함)와 기존 그룹 테스트는 바이트 불변 |
 | **③** | **`useItemSystem()`의 반환 형태** — `inventory`·`canUseItem`·`useItem`·`activeEffects`·`immunityUntil`·`highlightRequestId`·`searchAvailable`·`consumeSearchAvailable`·`status`·`pushHistory`·`clearPageScopedEffects`·`initializeItems`·**`floatingMessage`** | 훅은 **C 소유**, 소비자는 **B의 `GamePage.jsx`** — **`itemSystem.` 멤버 접근이 13줄**이다 (`:423·426·491·821-824·835-837·841·844-845`). 별도로 선언 `:473`·가드 `:829`가 있어 `itemSystem`을 언급하는 줄은 15줄이다 `[코드, 2026-09-03 실측]` | **C는 반환 키를 제거·개명하지 않는다.** 추가만 허용. 위반하면 B의 파일이 런타임에 깨진다. **배열 검사 (2026-09-06)**: 반환 객체가 왼쪽 칸의 **13키를 전부 포함**하면 통과다 — **소비 줄 수(13)를 세지 않는다.** 그 숫자는 `GamePage.jsx`(B 소유)의 편집마다 흔들리고 **훅 계약과 무관하다.** 실측 2026-09-06: 13키 전원 존재, 반환 키 총 21개(추가는 허용) |
 | **④** | **`"wiki-single-items"` localStorage 키** — **import되지 않고 문자열이 4파일 6줄에 복제돼 있다** | `hooks/useItemSystem.js:26`(**C**) 가 쓰고, `utils/singleGameSession.js:6`(**B**)·`pages/GamePage.jsx:176·672`(**B**)·`tests/guestSingleSession.test.js:197·205`(**B**)이 지운다 | **양쪽 다 이 문자열을 바꾸지 않는다.** 한쪽만 바꾸면 게스트 아이템 상태가 정리되지 않고 다음 게임으로 새어 나간다 (17 §6 위반). ~~`grep -rc '"wiki-single-items"' hooks utils pages tests` 합계 = 6 유지~~ → **의도 검사로 교체 (2026-09-06)**: **`hooks/useItemSystem.js` · `utils/singleGameSession.js` · `pages/GamePage.jsx` · `tests/guestSingleSession.test.js` 네 파일이 모두 같은 리터럴 `"wiki-single-items"`를 쓴다**는 것이 불변식이다 — **한 파일이라도 다른 문자열을 쓰면 위반**이고, **줄 수가 6에서 달라지는 것은 위반이 아니다.** 실측 2026-09-06: 4파일 / 6줄, 전원 동일 리터럴. 이전 정정 이력(**"4곳"은 파일 수(4)를 줄 수로 적은 것** `[코드, 2026-09-03 실측]`, 분기점 `ad569f2`에서도 6)은 **개수 검사가 왜 못 미더운지의 사례로 보존한다** |
 | **⑤** | **`mp-*` CSS 클래스 이름공간** — `css/multiplayer.css`에 최상위 규칙 131개 | 파일은 **C 소유**인데 **A의 `GroupRoomPage.jsx`**, **동결된 `GroupGamePage.jsx`**, 동결된 `OnlineGameRecoveryPanel.jsx`가 `mp-page`·`mp-card`·`mp-title`·`mp-action-btn` 등을 쓴다 `[코드]` | **C는 기존 `mp-*` 규칙을 개명·삭제하지 않는다.** 1:1 전용 스타일은 새 클래스로 추가한다. 위반하면 **CSS만 고쳤는데 그룹 화면이 바뀐다**. **← 모범 형태. 그대로 둔다 (2026-09-06)** — 검사가 `^\.mp-`(**줄머리 앵커**)라 주석·문서·본문 인용이 걸리지 않고, **이 웨이브에서 한 번도 깨지지 않은 유일한 불변식이다.** 실측 2026-09-06: 최상위 규칙 **131개로 분기점과 동일**, 삭제·개명 **0건**, 신규 `.mp-` **0개** — C는 `.duel-item-*`라는 **별도 이름공간**을 썼다 |
@@ -362,6 +371,9 @@
 | `20260904 0*` | **창 (§7)** | `20260904010000_profiles_grant_narrow.sql` → `…020000_profiles_total_xp.sql` → `…030000_daily_challenges_course_slot.sql` → `…040000_game_records_result_status_check.sql` |
 
 **파일명은 제안이다. 순서 관계만 계약이다** — 창 블록의 4개는 **적은 순서대로 적용돼야 한다** (§7.2).
+**14c 예약 (2026-10-01):** 17b 반영 후 `supabase migration new duel_host_target_v2`로 신규 파일을 생성하고,
+그 시점 저장소 최대 migration 버전보다 뒤인지 확인한다. 준비 기준 `29eb3e6`의 최대 버전은 `20260930100000`이나,
+**14c 파일명을 이 값만 보고 미리 고정하지 않는다** (§8-14c). 이번 준비 작업은 migration 파일을 만들지 않는다.
 `supabase:preflight`는 고정된 3개 버전만 조회하므로 새 migration이 늘어도 깨지지 않는다
 (`scripts/supabase-runtime-preflight.mjs:136-138`) `[코드]`. **통합 시점(2026-09-04)에 실측으로
 확인했다** — 13번째 migration이 붙은 뒤에도 `migration-history`는 `count=3`으로 PASS했다.
@@ -1141,6 +1153,76 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 설계 문서 목록(`21-SCREEN-MATRIX.md` 등)은 여전히 목록만 있다.
 
 ---
+
+### 8-14c. 1:1 방장 목표 선택 · READY 없음 · START 직전 랜덤 시작 identity — **준비 완료 · 구현 대기 (2026-10-01)**
+
+**결정** `[사용자 결정, 2026-10-01]` — (a) 방장이 대기실에서 목표 검색·선택 → 상대에게 바로 표시 → 방장 START.
+상대는 방에 있으면 되고 READY는 없다. 시작은 랜덤 유지하며 START 직전 스냅샷한 identity를 서버가 사용한다.
+근거: `01-CONFIRMED-SPEC.md` §0·§4.1·§4.3, `MOBILE-VALIDATION-CORRECTIONS.md` §8.
+**이번 산출물은 문서뿐이다.** 아래 변경·수용조건은 향후 14c 구현 범위이며 아직 실행·완료되지 않았다.
+
+| | |
+|---|---|
+| **목표** | 두 사람의 개별 목표 제출·READY·일치 검사를 **방장 공통 목표 선택**으로 바꾼다. 대기실에서 선택이 저장되면 상대도 바로 본다. START는 **방장 목표 존재 + 참가자 2명**으로 결정한다. 시작은 START 직전 클라이언트가 랜덤으로 가져와 스냅샷한 정확한 `page_id/revision_id`를 서버가 검증하여 양쪽에 배정한다 |
+| **범위 밖** | ① 목표 숨김·동시 공개·공개용 타이머·후보 풀 서버 선택(b) — 아래 보류 항목 ② `target_candidates`·`daily_challenge_pool`·싱글 랜덤 목표·그룹 목표/READY 변경 ③ 그룹에서 쓰는 `room_players.is_ready`·`submitted_target_*` 컬럼 삭제 ④ 기존 migration·baseline 수정 ⑤ 아이템 카탈로그·지급·승패·XP·결과 화면·17b 장착 UI 재설계 ⑥ 시안 HTML 수정 ⑦ 운영 migration/Edge Function 적용·`main` push — 별건 승인 (`AGENTS.md` §1·§1.1) |
+| **읽을 파일 — 스펙·시안** | `01-CONFIRMED-SPEC.md` §0·§4 · `MOBILE-VALIDATION-CORRECTIONS.md` §8 · Freeze v1 `03-09 DuelWaiting`(READY 없음·방장 START·상대 퇴장). 모바일 §04는 **레이스**, §03은 탐험 방식 로비이므로 1:1 대기실을 이미 설계했다고 읽지 않는다 |
+| **읽을 파일 — 코드** | `20260814092000_duel_authority_v2.sql:5-50`(생성·참가) · `20260814091000_server_authority_rpc_v2.sql:806-911`(목표·시작·초기화) · `20260814090000_server_authority_v2.sql:178-194`(revision 검증) · `20260814093000_server_authority_cutover_v2.sql`(직접 쓰기 금지) · `RoomPage.jsx:149-211,216-335,494-654` · `multiplayerService.js:44-85,98-129` · `MultiplayerGamePage.jsx:282-291,430-484` · `onlineGameSession.js:191-237` · `server_authority_v2.sql:236-302` · `onlineGameSession.test.js` · `serverAuthorityMigration.test.js` · `duelResultHotfix.test.js` |
+| **건드릴 파일** | **신규** migration `…_duel_host_target_v2.sql` 1개 (§2.4, 17b 다음) · `tests/duelHostTarget.test.js`. **기존** `pages/RoomPage.jsx` · `services/multiplayerService.js` · `pages/MultiplayerGamePage.jsx`(공통 목표 읽기만) · `utils/onlineGameSession.js`(**`validateDuelGameSession`만 동결 해제**) · `tests/onlineGameSession.test.js`(1:1만) · `supabase/tests/server_authority_v2.sql`(아래 표의 교체·추가) · `css/multiplayer.css`(필요할 때 추가만). 소스의 현재 행 번호는 기준 `29eb3e6`, 2026-10-01 |
+| **수용조건 — 서버** | ① waiting 방의 **비방장 `set_duel_target_v2` → `DUEL_HOST_ONLY`**, 목표 미기입 파라미터여도 권한 검사가 먼저이며 저장·버전 변경 없음 ② 방장 목표 없이 START 거부(`DUEL_HOST_TARGET_REQUIRED`) ③ 참가자 수가 2가 아니면 START 거부(`DUEL_PARTICIPANTS_REQUIRED`), 비방장 START는 기존 `HOST_REQUIRED` 유지 ④ 양쪽 `is_ready=false`·상대 목표 NULL이어도 방장 목표 + 2명이면 시작 가능 ⑤ `DUEL_PLAYERS_NOT_READY`·`DUEL_TARGETS_MUST_MATCH`는 **신규 유효 시작 RPC에서 제거**(과거 migration 텍스트는 보존) ⑥ 방장 목표를 **`user_id = game_rooms.host_user_id`**로 읽고 양쪽 `target_title/page_id/revision_id`에 복사·revision 정규화 ⑦ 전달한 시작 `page_id/revision_id`의 정확한 스냅샷을 쓰며 다른 과거 스냅샷으로 대체하지 않음 ⑧ 입력 시작 identity 누락·스냅샷 없음·목표와 같은 page ID는 거부, 실패 시 방/양쪽 행 변경 없음 ⑨ 시작·초기화의 room 잠금·공통 시작 복사·두 명 초기화 뒤 playing 전환·재접속 불변 ⑩ 직접 table 쓰기 권한을 되살리지 않고 변경 시그니처의 PUBLIC/anon EXECUTE 차단 유지 |
+| **수용조건 — 화면** | ① 방장만 검색·선택 UI, 후보 선택 시 summary·snapshot 확보 후 setter를 호출해 **별도 READY 없이 저장** ② 상대에게 **"방장이 고른 목표: X"** 표시(서버에 저장된 방장 행), 초기 진입·재접속·Realtime 목표 변경 반영 ③ 양쪽 READY 버튼/배지·각자 목표 선택·"상대가 풀 목표 문서" 라벨 제거 ④ START는 방장만, **2명 + 저장된 방장 목표**일 때 가능; 목표/시작 문서 로딩·저장 실패·상대 퇴장 시 시작 불가 ⑤ START 직전 `fetchDistinctRandomTitle` → `fetchPageData` → `ensureWikiSnapshot` **반환 identity** → `startRoomGame` → RPC가 이어짐 ⑥ 게임 HUD·VS 소개가 공통 목표를 표시하고 상대 행을 반대로 읽는 관례 제거 ⑦ starting에서 상대 행 목표가 아직 NULL인 조회 조합은 방장 공통 목표로 복원 가능, 실제 공통 목표 누락은 `MISSING_TARGET` 유지 ⑧ 기존 이동·아이템·완주·재접속 흐름 회귀 없음 |
+| **수용조건 — 불변식** | 기존 migration/baseline diff 없음. `GamePage.jsx`·`GroupGamePage.jsx`·`GroupRoomPage.jsx`·`groupMultiplayerService.js`·`wikiService.js`·`wikiSnapshotService.js`·아이템/XP 소스 무편집. `onlineGameSession.js`의 그룹 함수·공유 helper와 그룹 테스트는 바이트 불변. `is_ready/submitted_target_*` 스키마 유지. CSS 기존 `mp-*` 규칙 삭제·개명 없음. `navigate("/multiplayer", { replace: true })` 계약 유지 (§2.2) |
+| **수용조건 — 테스트** | 아래 pgTAP 교체 목록 + 신규 권한/목표 누락/준비 없음/시작 identity/정규화/거부 원자성/초기화 사례. `npm test` 전량 · `npm run build` · 로컬 pgTAP 전 스위트 · 2세션 UI 스모크(목표 변경, 미선택 START, 비아이템/아이템, 랜덤 시작과 공통 목표, F5/재접속, 완주). 결과 수는 실측 커밋·날짜와 함께 기록하고 **97건 유지를 합격조건으로 삼지 않는다**(추가·교체 후 개수 기록). 이번 준비에서는 실행하지 않았다 |
+| **의존** | **17b → 14c → 16** `[사용자 결정, 2026-10-01]`. 17b 반영 후 HEAD·파일 소유·migration 최대 버전을 다시 확인한다. 신규 시작 시그니처는 프론트 계약 변경이므로 **migration 승인과 배포 승인 시 구프론트/기존 대기실 세션 영향·적용 순서를 확인**한다. 문서 준비 commit/push는 feat에만 |
+
+#### 8-14c 설계 판정 — 목표 저장 위치와 RPC 계약
+
+**목표 저장: 방장 `room_players.target_*` 재사용.** 방의 방장 identity(`game_rooms.host_user_id`)로 행을 찾는다.
+대기 중 상대는 그 행의 저장된 목표를 읽고, START는 그 행을 원본으로 양쪽 목표를 정규화하여 복사한다.
+새 `game_rooms.duel_target_*`는 **이번 트랙에서 추가하지 않는다** — 숨김·후보 서버 선택 요구가 없고,
+기존 공개/Realtime 경로·게임 진행의 `room_players.target_*`를 재사용하면 추가 컬럼과 이중 쓰기 계약을 피할 수 있다.
+구현 규모 판정은 **소~중**(대기실·서비스·1:1 복구 계약 + 신규 라이프사이클 migration)이며 검증 시간 추정은 하지 않는다.
+
+- **setter:** 기존 `set_duel_target_v2(uuid,text,text,text,boolean)` 시그니처를 유지하고 host 체크를 추가한다.
+  마지막 `p_is_ready`는 **호환 인자일 뿐 1:1 준비·시작 조건에 쓰지 않는다**. 클라이언트 setter는 고정 호환값을 넘기고 READY 상태를 조작하지 않는다.
+  waiting 방·인증 검사 후 host 권한을 확인하고 목표 검증/저장을 한다. `DUEL_HOST_ONLY` 실패는 무변경이어야 한다.
+- **start:** 현 함수는 **`start_duel_room_v2(p_room_id uuid)` 하나뿐이며 `p_start_*` 인자가 없다**.
+  지금 무시되는 `p_start_*`는 **`initialize_duel_player_v2`의 인자**다 (`20260814091000:830,884-908`).
+  14c는 시작 RPC를 **`start_duel_room_v2(p_room_id uuid, p_start_title text, p_start_page_id text, p_start_revision_id text)`**로 교체한다.
+  시작 인자에 default를 주지 않는다. 새 migration에서 **구 1인자 함수만 명시적으로 교체(drop, CASCADE 금지)**하고,
+  새 시그니처에 기존 authenticated/service_role 허용·PUBLIC/anon 차단 ACL을 다시 설정한다. 구 호출의 md5 fallback 경로는 남기지 않는다.
+- **시작 검증:** 전달된 ID·revision이 있는 정확한 스냅샷을 조회한다. 실제 저장 제목은 스냅샷의 canonical 제목으로 정규화하고,
+  클라이언트 제목 위조가 공통 시작 제목을 바꾸지 못하게 한다. 누락은 `DUEL_START_IDENTITY_REQUIRED`,
+  캐시 미존재는 기존 `DUEL_START_SNAPSHOT_REQUIRED`, 시작=목표는 `DUEL_START_EQUALS_TARGET`으로 거부한다.
+  이 오류명은 **14c 티켓 계약이며 현재 구현된 오류명이라고 읽지 않는다**. 목표 스냅샷 검증(`DUEL_TARGET_SNAPSHOT_REQUIRED`)은 유지한다.
+- **초기화:** 공통 시작을 `game_rooms.duel_start_*`에서 복사하는 현 계약을 유지한다. 초기화 RPC에 시작 결정 권한을 다시 주지 않는다.
+- **프론트 공통 목표:** 대기/starting에서는 `host_user_id`의 저장된 목표를 기준으로 읽고, playing의 양쪽 목표는 서버 복사 결과다.
+  `MultiplayerGamePage.jsx:282`와 `validateDuelGameSession:219`의 **"상대 행 필수"** 전제만 걷어 내고 목표 누락·참가자·활성 상태 검사는 유지한다.
+
+#### 8-14c 기존 pgTAP 교체 목록 — 실행 결과가 아닌 소스 감사 `[코드, 기준 29eb3e6, 2026-10-01]`
+
+`supabase/tests/server_authority_v2.sql`은 `no_plan()`이고 **최상위 pgTAP assertion 97개를 정적 확인**했다.
+기존 **97/97 통과는 `d12ce5e` 커밋 직전 작업 트리, 2026-09-30 로컬 실행 기록**(`CURRENT.md` 15c-1 pgTAP 전량 표)이며
+**이번 세션에서는 DB 테스트를 실행하지 않았다**. TAP 번호는 현재 소스 assertion 순서다.
+
+| TAP 번호·줄 | 현재 사례 | 14c 교체·유지 판정 |
+|---|---|---|
+| **#29 · :236-240** | `set_duel_target_v2`가 playing 방에서 `DUEL_ROOM_NOT_WAITING` | **유지**. setter 시그니처·host 호출·상태 거부가 보존되어야 한다. 새 비방장 거부 테스트로 대체하지 말고 별도로 추가 |
+| **#30 · :241-245** | 1인자 `start_duel_room_v2`가 playing 방에서 거부 | **호출부 교체 필수** — 새 시작 identity 인자를 넘기고 기존 `DUEL_ROOM_NOT_WAITING` 기대값은 유지. 미교체 시 구 시그니처 삭제 때문에 함수 미존재로 실패 |
+| **#34 · :283-287** | 서로 다른 목표가 `DUEL_TARGETS_MUST_MATCH` | **의미 교체 필수** — 방장 목표 없음 → `DUEL_HOST_TARGET_REQUIRED`. 각자 선택·일치 검사 테스트는 폐기. 별도 신규 사례로 상대 미제출/다른 과거 목표여도 방장 목표가 배정됨을 검증 |
+| **#35 · :294-298** | 목표를 같게 맞춘 뒤 1인자 start → `starting` | **호출·fixture·설명 교체 필수** — `:289-292` 상대 목표를 방장 목표로 수동 맞추는 준비 단계 제거, **양쪽 준비 false + 방장 목표만 존재 + 정확한 시작 identity**로 시작 성공 |
+| **#36 · :299-303** | 양쪽 목표가 `v2-middle/200` | **정규화 불변식 유지·fixture 갱신** — 목표 원본을 방장으로 고정하고 상대가 제출하지 않아도 동일 목표가 복사됨을 검증. 다른 제목/revision 입력에 대한 서버 정규화도 추가 |
+
+**새로 추가할 pgTAP:** 비방장 setter(`DUEL_HOST_ONLY`, NULL 목표 입력 포함)·비방장 START·목표 없음·1명/3명 START·
+양쪽 READY false 시작 성공·host를 user_id 정렬 첫 행과 다르게 한 fixture·
+**과거 캐시 문서 B가 있어도 요청 A의 정확한 page/revision/title이 `duel_start_*` 및 양쪽 초기화에 기록됨**·
+누락/없는 revision/목표와 같은 시작 거부 및 무변경·위조 제목 canonical 정규화·두 초기화 호출의 동일 시작/재호출 보존·
+구 start 시그니처 없음·새 시그니처 ACL. 기존 시작 호출은 위 #30·#34·#35 세 곳이다. 나머지 기존 assertion은 회귀 검증 대상으로 유지한다.
+
+#### 8-14c 보류 — (b)로 갈 때 재검토할 것
+
+**목표 숨김·동시 공개는 이번 범위에서 제외한다.** (b) 사전 검증 후보 풀의 서버 선택을 다시 결정할 때만
+후보 검증/스냅샷 연결·선택 주체·비공개 보관·RPC/REST/Realtime 사전 노출·공통 공개 시각을 함께 재검토한다.
+방장이 고르는 (a)에서는 방장이 이미 목표를 알므로 양쪽에 같은 깜짝 공개를 약속하지 않는다.
 
 ## 9. 문서 불일치 — **5건. 3건을 고쳤다** (①은 2026-09-03에 다시 정정됐다)
 
