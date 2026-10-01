@@ -156,3 +156,119 @@ export function orderedBadges(badges) {
     .map((entry) => entry.badge)
     .slice(0, MAX_BADGES);
 }
+
+/* ────────────────────────────────────────────────────────────────
+ * 17b — C1 보상 장착 → 카드 슬롯 (서버 응답 매핑)
+ * ──────────────────────────────────────────────────────────────── */
+
+/**
+ * 프로필 카드에 걸리는 장착 슬롯 — C1 §3의 9종 중 카드 요소 5종 (C5 §2).
+ * 경로 색상·완주 효과 등 경기 표현 4종은 DB가 받지만 카드에 없다.
+ * `indexes`가 C1 §3의 `slot_index` CHECK와 같다 — 배지만 1~3이다.
+ */
+export const PROFILE_CARD_SLOTS = Object.freeze([
+  Object.freeze({ slot: "profile_icon", cardKey: "icon", label: "프로필 아이콘", indexes: Object.freeze([1]) }),
+  Object.freeze({ slot: "title", cardKey: "title", label: "대표 칭호", indexes: Object.freeze([1]) }),
+  Object.freeze({ slot: "badge", cardKey: "badges", label: "대표 배지", indexes: Object.freeze([1, 2, 3]) }),
+  Object.freeze({ slot: "frame", cardKey: "frame", label: "프로필 프레임", indexes: Object.freeze([1]) }),
+  Object.freeze({ slot: "background", cardKey: "background", label: "프로필 배경", indexes: Object.freeze([1]) }),
+]);
+
+const CARD_SLOT_KEYS = Object.freeze(["icon", "title", "badges", "frame", "background"]);
+
+/**
+ * 서버의 RewardRef(`private.reward_ref_v1`)를 C5 §2의 형태로 정규화한다.
+ * `slotIndex`(배지 순서)와 `retired`(C1-② 장착 유지 표식)는 덧붙은 필드다.
+ */
+export function normalizeRewardRef(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const rewardId = normalizeText(raw.rewardId ?? raw.reward_id);
+  if (!rewardId) return null;
+  const slotIndex = Number(raw.slotIndex ?? raw.slot_index);
+  return {
+    rewardId,
+    kind: normalizeText(raw.kind),
+    displayName: normalizeText(raw.displayName ?? raw.display_name) ?? rewardId,
+    assetRef: normalizeText(raw.assetRef ?? raw.asset_ref),
+    slotIndex: Number.isFinite(slotIndex) ? slotIndex : null,
+    retired: raw.retired === true,
+  };
+}
+
+/** `get_profile_card_v1`·`get_profile_cards_v1`의 카드 하나 → C5 §2 카드. */
+export function cardFromServer(raw) {
+  if (!raw || typeof raw !== "object") return buildProfileCard();
+  const level = Number(raw.level);
+  return buildProfileCard({
+    userId: raw.userId ?? null,
+    nickname: raw.nickname,
+    level: Number.isFinite(level) ? level : null,
+    icon: normalizeRewardRef(raw.icon),
+    title: normalizeRewardRef(raw.title),
+    badges: Array.isArray(raw.badges) ? raw.badges.map(normalizeRewardRef).filter(Boolean) : [],
+    frame: normalizeRewardRef(raw.frame),
+    background: normalizeRewardRef(raw.background),
+    legacyImageUrl: raw.legacyImageUrl,
+    source: "live",
+  });
+}
+
+/**
+ * 보상 슬롯 5개만 `serverCard`에서 가져와 `baseCard`에 얹는다.
+ *
+ * 랭킹·그룹 행은 닉네임·레벨·이미지를 자기 조회(행 데이터·스냅샷)에서 이미 갖고 있다.
+ * 그 값은 그대로 두고 장착 결과만 병합한다 — 배치 조회가 실패하거나 늦어도
+ * 행은 기존대로 그려진다. `source`도 바꾸지 않는다 (C5 §2.1).
+ */
+export function mergeRewardSlots(baseCard, serverCard) {
+  const base = buildProfileCard(baseCard ?? {});
+  if (!serverCard) return base;
+  const rewards = cardFromServer(serverCard);
+  const merged = { ...base };
+  for (const key of CARD_SLOT_KEYS) merged[key] = rewards[key];
+  return merged;
+}
+
+/**
+ * `equip/unequip_profile_reward_v1`의 `equipment[]`(전체 장착 상태)로 카드 슬롯을 다시 만든다.
+ * 서버가 확정한 상태만 표시한다 (spec §10) — 클라이언트가 슬롯을 추측하지 않는다.
+ */
+export function applyEquipment(baseCard, equipment) {
+  const base = buildProfileCard(baseCard ?? {});
+  const next = { ...base, icon: null, title: null, badges: [], frame: null, background: null };
+  if (!Array.isArray(equipment)) return next;
+  for (const entry of equipment) {
+    const definition = PROFILE_CARD_SLOTS.find((item) => item.slot === entry?.slot);
+    if (!definition) continue;
+    const ref = normalizeRewardRef({ ...entry.reward, slotIndex: entry.slotIndex ?? entry.reward?.slotIndex });
+    if (!ref) continue;
+    if (definition.cardKey === "badges") next.badges = [...next.badges, ref];
+    else next[definition.cardKey] = ref;
+  }
+  next.badges = orderedBadges(next.badges);
+  return next;
+}
+
+/** 슬롯 위치에 지금 장착된 보상 — 편집 UI의 "현재" 표시용. */
+export function equippedAt(card, slot, slotIndex = 1) {
+  const definition = PROFILE_CARD_SLOTS.find((item) => item.slot === slot);
+  if (!definition || !card) return null;
+  if (definition.cardKey === "badges") {
+    return (card.badges ?? []).find((badge) => badge?.slotIndex === slotIndex) ?? null;
+  }
+  return card[definition.cardKey] ?? null;
+}
+
+const EQUIP_ERROR_TEXT = Object.freeze({
+  AUTH_REQUIRED: "로그인한 탐험가만 꾸밀 수 있습니다.",
+  REWARD_NOT_OWNED: "보유하지 않은 보상입니다.",
+  SLOT_KIND_MISMATCH: "이 자리에 장착할 수 없는 보상입니다.",
+  SLOT_INDEX_INVALID: "장착할 수 없는 자리입니다.",
+  REWARD_RETIRED: "더 이상 장착할 수 없는 보상입니다.",
+  SLOT_EMPTY: "이미 비어 있는 자리입니다.",
+});
+
+/** C1 §4 실패 코드 → 문구. 모르는 코드는 일반 문구로 떨어진다. */
+export function equipErrorMessage(code) {
+  return EQUIP_ERROR_TEXT[code] ?? "장착 상태를 저장하지 못했습니다.";
+}
