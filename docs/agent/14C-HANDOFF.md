@@ -52,6 +52,56 @@ npx --no-install supabase test db --local @tapFiles
 `npm test` **422/422**(413 + 9), `npm run build` exit 0.
 기존 bundle 500 kB 경고는 남아 있다. DB 변경은 14c-1 이후 없음.
 
-## 다음 단계
+## 14c-3 스모크·구독 연결 보정
 
-14c-3: 로컬 2세션 UI 스모크·통합 인계. 운영 적용/배포는 이번 요청 범위 밖.
+클라이언트 단계 커밋: `f3ab081`. `[코드]`
+
+로컬 UI 스모크에서 초기 SELECT와 Realtime 구독 연결 사이에 참가 이벤트를 놓치면
+방장 목록이 1명으로 남아 START가 비활성인 경우를 재현했다.
+`RoomPage.jsx`의 SUBSCRIBED 콜백에서 방·참가자를 한 번 재조회하여 초기 연결/재연결 공백을 보정했다.
+`scripts/duel-host-target-smoke.mjs` 추가: 실제 로컬 Auth/RPC/Realtime와 결정적 Wikipedia/snapshot 응답.
+기존 의존성(Vite/Playwright/Supabase)만 사용하며, URL을 loopback 54321로 제한한다.
+키·세션·비밀번호는 메모리에서만 사용하고 생성 계정·방·문서는 finally에서 삭제한다.
+
+최종 검증 `[산출물, 기준 f3ab081 + 14c-3 미커밋 작업 트리, 2026-10-01]`:
+
+| 검증 | 결과 |
+|---|---|
+| Node | `npm test` **422/422**, 실패 0 |
+| 빌드 | `npm run build` exit 0, 기존 500 kB 번들 경고 유지 |
+| UI | `node scripts/duel-host-target-smoke.mjs` **30/30** |
+| 로컬 DB | migration **21행**, 최대 `20261001100000`, `start_duel_room_v2(uuid,text,text,text)`만 존재 |
+| 런타임 | 고정 preflight PASS, PostgreSQL postmaster/restart count 유지. 과거 전체 로그 판정은 defer |
+| 불변식 | 착수 `42a3df3` 대비 그룹 함수·공유 helper·기존 그룹/공유 helper 테스트 내용 불변; 기존 migration·그룹/싱글/아이템/XP 소스·contracts·CSS 무변경 |
+
+UI 범위: 비아이템/아이템 각각 ① 1명·목표 미선택 START 차단 ② 상대 검색/START UI 없음
+③ READY false 양쪽·후보 선택 즉시 저장·Realtime 공개 ④ 대기실 F5
+⑤ 목표 변경 로딩 차단·Realtime 변경 ⑥ 랜덤 시작 스냅샷 반환 identity 정확히 1회 전달
+⑦ VS 양쪽 공통 목표 ⑧ 두 초기화 후 playing·양쪽 동일 시작/목표
+⑨ 양쪽 HUD ⑩ 아이템 지급 0/10 ⑪ 플레이 F5 ⑫ 새 로그인 세션으로 방 URL 복구
+⑬ 실제 본문 링크→이동 RPC→양쪽 승리/패배 결과. 비아이템에서는 저장 실패/재선택과 상대 퇴장/재참가 추가.
+브라우저 pageerror 0. 테스트 계정·방·문서 잔여 0.
+로컬 산출물: `.temp/14c-ui/summary.json`, `waiting-{false,true}.png`, `playing-{false,true}.png`(Git ignore).
+
+pgTAP **771/771**은 14c-1(`3d027ba` 직전, 위 표기) 측정값이다. 이후 DB 소스 변경이 없어 재실행하지 않았다.
+수용조건의 로컬 구현/실행 검증을 통과했으며 **운영 적용 완료로 읽지 않는다.**
+
+```powershell
+npm test
+npm run build
+node scripts/duel-host-target-smoke.mjs
+```
+
+## 통합 세션 인계 · 남은 위험
+
+- 트랙 규칙대로 `CURRENT.md`·`TRACKS.md`·`docs/contracts` 무수정.
+  통합 시 14c 로컬 구현 완료·위 커밋/검증 근거를 CURRENT/TRACKS에 반영한다.
+- 운영 migration **20**은 사용자 착수 보고이고 이번 트랙에서 재조회하지 않았다.
+  저장소/로컬은 **21**이므로 운영 미적용 신규 1개(`20261001100000`)가 남는다.
+- 구 START 서명 삭제와 setter host-only 적용 때문에 **운영 DB를 먼저 바꾸면 구 번들의 START·guest READY가 실패**한다.
+  구 목표/READY 흐름을 보존하는 fallback은 만들지 않았다. 향후 migration 적용과 프론트 배포는
+  각각 별건 승인, DB → 프론트 순서의 중단 창·열려 있는 구 대기실 새로고침 안내를 검토한다.
+  이미 starting/playing인 방은 기존 initialize RPC·저장된 공통 시작 계약으로 계속 진행한다. `[코드]`
+- Wikipedia/snapshot 응답을 고정한 스모크이며 **실제 Wikipedia 랜덤·실제 Edge 외부 호출은 미검증**이다.
+  실제 로컬 DB RPC·Auth·Realtime·이동·결과·XP 기존 스위트는 실행 검증했다.
+- 그룹 DB/RPC/READY·아이템·보상 지급·승패를 재설계하지 않았다. 추가 기능/운영 배포는 이번 요청 범위 밖.

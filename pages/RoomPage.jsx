@@ -139,7 +139,20 @@ export default function RoomPage() {
           }
         }
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status !== "SUBSCRIBED") return;
+        // Join/target changes can occur between the initial SELECT and socket
+        // subscription. Refresh once when connected (also on reconnect).
+        try {
+          const [latestRoom, latestPlayers] = await Promise.all([
+            fetchRoom(roomId), fetchRoomPlayers(roomId),
+          ]);
+          setRoom(latestRoom);
+          setPlayers(latestPlayers);
+        } catch (error) {
+          console.error("room subscription refresh failed:", error);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
