@@ -1,10 +1,24 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-10-01**
-기준 커밋: **`29eb3e6`** (`docs: record main push #9 — 14b deployed, production 19 = repo 19`) — 이번 14c 준비 문서 커밋의 부모. **`origin/main = dee9497`, `origin/feat/group-final-gaps = 29eb3e6`** (2026-10-01, 이번 커밋 전 원격 재조회)
-마지막 **앱 코드** 커밋: **`ffabdc0`** (가이드 문구, **운영 배포됨 — `main` push #9**. 14b 마지막 코드 커밋은 `50485ef`) · 마지막 **migration** 커밋: **`4dba85e`** (14b-1, `20260930100000`) — **운영 적용됨 (2026-10-01)**. **운영 migration 19 = 저장소 19, 차이 0** `[사용자 검증]`. 이번 갱신은 **14c 스펙 정정·티켓 준비만**이며 앱 코드·migration·운영 변경은 없다. 기준 커밋은 문서 커밋의 부모 `29eb3e6`이다 (`AGENTS.md` §7).
-이전 기준: `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+기준 커밋: **`dc388d9`** (`feat(17b-1): C1 reward tables — catalog, inventory, equipment + card RPCs`) — 이번 17b-1 기록 문서 커밋의 부모. 원격은 미조회 (이번 커밋 전 push 없음)
+마지막 **앱 코드** 커밋: **`ffabdc0`** (가이드 문구, **운영 배포됨 — `main` push #9**) · 마지막 **migration** 커밋: **`dc388d9`** (17b-1, `20261001090000_c1_reward_tables_v1.sql`) — **로컬만 적용, 운영 미적용.** **저장소 migration 20 · 운영 19 (차이 1 = 17b-1)**. 운영 적용은 별도 건별 승인이다 (`AGENTS.md` §1).
+이전 기준: `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main = dee9497`, `origin/feat/group-final-gaps = 29eb3e6`** (2026-10-01, 이번 문서 커밋 전 `git ls-remote`). 원격 feature는 이 기록 이후 이번 문서 커밋을 push하면 갱신된다. 문서 전용 변경은 feature에만 백업한다 (`AGENTS.md` §1.1).
+
+> # ⚑ 2026-10-01 (9) — **17b-1 완료 (로컬) — C1 보상 3테이블 migration. 운영 미적용**
+>
+> **판정** `[사용자 결정, 2026-10-01]`: C1-① 번들 = 16 소유 · ② retired 장착 유지(신규 장착만 `REWARD_RETIRED`) · ③ kind↔slot = RPC 검증 ·
+> ④ 기본 아이콘 **6종** `icon_default_{compass,book,globe,lantern,map,quill}`, `system_default`로 전원 지급(backfill + `profiles` AFTER INSERT 트리거), 임시 SVG `public/profile-icons/*.svg` ·
+> **배치 RPC `get_profile_cards_v1(uuid[])` 추가** (C1 §4 밖 — 통합 시 계약 반영, `docs/contracts` 무수정) · 그룹 대기실 칭호는 실시간 배치 조회(스냅샷 DDL 없음) · legacy 업로드 UI 제거(값은 fallback 유지).
+>
+> | 항목 | 결과 (기준 `dc388d9`, 2026-10-01, 로컬 스택 `wiki-packet13-r2-clean158`) |
+> |---|---|
+> | migration | `20261001090000_c1_reward_tables_v1.sql` — `npx supabase migration up --local` 적용, 로컬 이력 **20행** · 카탈로그 6행 · backfill 24행(프로필 4 × 6) `[산출물]` |
+> | pgTAP | 신규 `c1_reward_tables_v1` **96/96** · 전체 **739/739** (기존 643 불변 + 96), `not ok` 0 `[산출물]` |
+> | 남은 단계 | 17b-2a 서비스·매핑 → 17b-2b ProfilePage 장착 UI·아이콘 SVG → 17b-2c 랭킹·모달·그룹 live 병합 → 17b-3 스모크·HANDOFF |
+>
+> **운영 DB 미접근.** 17b 구현·운영 반영은 아직 완료로 표시하지 않는다.
 
 > # ⚑ 2026-10-01 (8) — **14c 준비 완료 · 구현 대기 — 방장 목표 선택, READY 없음**
 >
