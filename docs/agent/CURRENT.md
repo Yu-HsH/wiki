@@ -1,9 +1,9 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-10-01**
-기준 커밋: **`ee99197`** (`docs: record 17b-1 — C1 reward tables applied locally, pgTAP 739/739`) — 17b-2a 커밋의 부모. 원격은 미조회 (17b 시작 후 push 없음)
+기준 커밋: **`7f748e6`** (`feat(17b-2a): profile reward service and card-slot mapping`) — 17b-2b 커밋의 부모. 원격은 미조회 (17b 시작 후 push 없음)
 마지막 **앱 코드** 커밋: **`ffabdc0`** (가이드 문구, **운영 배포됨 — `main` push #9**) · 마지막 **migration** 커밋: **`dc388d9`** (17b-1, `20261001090000_c1_reward_tables_v1.sql`) — **로컬만 적용, 운영 미적용.** **저장소 migration 20 · 운영 19 (차이 1 = 17b-1)**. 운영 적용은 별도 건별 승인이다 (`AGENTS.md` §1).
-이전 기준: `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+이전 기준: `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main = dee9497`, `origin/feat/group-final-gaps = 29eb3e6`** (2026-10-01, 이번 문서 커밋 전 `git ls-remote`). 원격 feature는 이 기록 이후 이번 문서 커밋을 push하면 갱신된다. 문서 전용 변경은 feature에만 백업한다 (`AGENTS.md` §1.1).
 
 > # ⚑ 2026-10-01 (9) — **17b-1 완료 (로컬) — C1 보상 3테이블 migration. 운영 미적용**
@@ -17,7 +17,8 @@
 > | migration | `20261001090000_c1_reward_tables_v1.sql` — `npx supabase migration up --local` 적용, 로컬 이력 **20행** · 카탈로그 6행 · backfill 24행(프로필 4 × 6) `[산출물]` |
 > | pgTAP | 신규 `c1_reward_tables_v1` **96/96** · 전체 **739/739** (기존 643 불변 + 96), `not ok` 0 `[산출물]` |
 > | 17b-2a | `services/profileRewardService.js`(카드 단건·배치 · 보유 목록 · equip/unequip) + `utils/profileCard.js` 매핑(`cardFromServer`·`mergeRewardSlots`·`applyEquipment`). `tests/profileRewards.test.js` **15건** · `npm test` **409/409** (394 + 15, 기준 `ee99197` + 미커밋 작업 트리) `[산출물]` |
-> | 남은 단계 | ~~17b-2a 서비스·매핑~~ → 17b-2b ProfilePage 장착 UI·아이콘 SVG → 17b-2c 랭킹·모달·그룹 live 병합 → 17b-3 스모크·HANDOFF |
+> | 17b-2b | `components/ProfileRewardEditor.jsx`(슬롯 행 7 · `<details>` 접힘 · 44px 대상 · 서버 응답만 반영) · ProfilePage **업로드 UI 제거**(`profile_image_url` 읽기는 유지) · `public/profile-icons/*.svg` 6장 · 프레임·배경 표시 + SR 이름. `npm test` **412/412** · build exit 0 (기준 `7f748e6` + 미커밋 작업 트리) `[산출물]` |
+> | 남은 단계 | ~~17b-2a~~ · ~~17b-2b~~ → 17b-2c 랭킹·모달·그룹 live 병합 → 17b-3 스모크·HANDOFF |
 >
 > **운영 DB 미접근.** 17b 구현·운영 반영은 아직 완료로 표시하지 않는다.
 

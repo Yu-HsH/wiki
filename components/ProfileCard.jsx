@@ -13,8 +13,8 @@ import {
  *
  * 크기·밀도만 prop으로 받는다 (C5 §5). fallback 규칙은 지점별로 달라지지 않는다.
  *
- * **레벨·칭호·배지·프레임·배경은 이 웨이브에서 슬롯이다** — 호출자가 전부 `null`/`[]`을
- * 넘기므로 렌더되지 않는다 (TRACKS.md §8-A 범위 밖 ④). C1/C3 DDL 이후 15b·16·17b가 채운다.
+ * 레벨은 15b가, 아이콘·칭호·배지·프레임·배경은 17b가 C1 장착 상태로 채운다
+ * (`get_profile_card(s)_v1` → `mergeRewardSlots`). 없으면 `null`/`[]`이고 렌더되지 않는다.
  *
  * @param {object} props
  * @param {object} props.card C5 §2의 카드 형태
@@ -107,6 +107,15 @@ export default function ProfileCard({
               </li>
             ))}
           </ul>
+        )}
+
+        {/* 프레임·배경은 시각 톤뿐이라 이름을 screen reader에 따로 준다 — C5 §3.4 (17b) */}
+        {(frame || background) && (
+          <span className="pcard-sr">
+            {[frame && `프로필 프레임 ${frame.displayName}`, background && `프로필 배경 ${background.displayName}`]
+              .filter(Boolean)
+              .join(", ")}
+          </span>
         )}
 
         {children && <div className="pcard-extra">{children}</div>}

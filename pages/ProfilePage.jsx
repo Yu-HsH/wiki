@@ -7,12 +7,24 @@ import { fetchAllProfileStats } from "../services/profileStatsService";
 import { fetchXpSummary } from "../services/xpService";
 import ProfileCard from "../components/ProfileCard";
 import XpProgress from "../components/XpProgress";
-import { DENSITY, NAME_FALLBACK, buildProfileCard, resolveDisplayName } from "../utils/profileCard.js";
+import ProfileRewardEditor from "../components/ProfileRewardEditor";
+import { fetchOwnRewardInventory, fetchProfileCard } from "../services/profileRewardService";
+import {
+  DENSITY,
+  NAME_FALLBACK,
+  applyEquipment,
+  buildProfileCard,
+  mergeRewardSlots,
+  resolveDisplayName,
+} from "../utils/profileCard.js";
 
 /**
  * 프로필 관리 페이지 컴포넌트
- * - 유저의 아이디(조회용), 닉네임, 프로필 이미지를 보여줍니다.
- * - 싱글 플레이, 1vs1, 그룹 모드 전적 요약을 추가로 보여줍니다.
+ * - 유저의 아이디(조회용), 닉네임, 프로필 카드를 보여줍니다.
+ * - 프로필 꾸미기(장착 편집, 17b)와 싱글 플레이, 1vs1, 그룹 모드 전적 요약을 보여줍니다.
+ *
+ * 사용자 이미지 업로드는 없다 (spec §10·§12, 17 §5.1). 기존 `profile_image_url` 값과
+ * `avatars` storage object는 지우지 않고 C5 §3.1의 2단계 fallback으로 계속 읽는다.
  */
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -23,7 +35,6 @@ export default function ProfilePage() {
   const [editMode, setEditMode] = useState(false);
   const [nicknameInput, setNicknameInput] = useState("");
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
 
@@ -32,11 +43,17 @@ export default function ProfilePage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [xpSummary, setXpSummary] = useState(null);
 
+  // 장착 상태 (C1 §3). 서버 응답으로만 바뀐다 — 처음엔 카드 RPC, 이후 equip/unequip 응답.
+  const [rewardSlots, setRewardSlots] = useState(null);
+  const [ownedRewards, setOwnedRewards] = useState([]);
+  const [rewardsLoading, setRewardsLoading] = useState(true);
+
   /* ── 데이터 로딩 (프로필 + 전적) ── */
   useEffect(() => {
     if (!user || user.isGuest) {
       setLoading(false);
       setStatsLoading(false);
+      setRewardsLoading(false);
       return;
     }
 
@@ -55,6 +72,15 @@ export default function ProfilePage() {
         fetchXpSummary(user.id)
           .then(setXpSummary)
           .catch((xpError) => console.error("XP 요약 로드 실패:", xpError));
+
+        // 장착 상태와 보유 목록 — 실패해도 카드는 기본 표시(legacy·이니셜)로 남는다.
+        Promise.all([fetchProfileCard(user.id), fetchOwnRewardInventory()])
+          .then(([card, owned]) => {
+            setRewardSlots(card);
+            setOwnedRewards(owned);
+          })
+          .catch((rewardError) => console.error("프로필 보상 로드 실패:", rewardError))
+          .finally(() => setRewardsLoading(false));
 
         // 2. 전체 전적 조회
         const statsData = await fetchAllProfileStats(user.id);
@@ -75,15 +101,22 @@ export default function ProfilePage() {
   // 편집 대상인 원본 닉네임. 표시용 이름은 C5 §3.3이 ProfileCard 안에서 결정한다.
   const storedNickname = profile?.nickname || user?.nickname || user?.displayName || "";
 
-  // C5 §2의 카드 형태. 레벨은 `profile_level` computed field(15b)가 채운다.
-  // 칭호·배지·프레임·배경은 아직 슬롯이다.
-  const profileCard = buildProfileCard({
-    userId: user?.id,
-    nickname: storedNickname,
-    level: profile?.profile_level ?? null,
-    legacyImageUrl: profile?.profile_image_url,
-    source: "live",
-  });
+  // C5 §2의 카드 형태. 레벨은 `profile_level` computed field(15b)가,
+  // 아이콘·칭호·배지·프레임·배경은 C1 장착 상태(17b)가 채운다.
+  const profileCard = mergeRewardSlots(
+    buildProfileCard({
+      userId: user?.id,
+      nickname: storedNickname,
+      level: profile?.profile_level ?? null,
+      legacyImageUrl: profile?.profile_image_url,
+      source: "live",
+    }),
+    rewardSlots
+  );
+
+  const handleEquipment = (equipment) => {
+    setRewardSlots(applyEquipment(profileCard, equipment));
+  };
   const displayName = resolveDisplayName(profileCard, NAME_FALLBACK.EXPLORER);
 
   // 시간 포맷팅 헬퍼 (초 -> M:SS)
@@ -133,57 +166,6 @@ export default function ProfilePage() {
     navigate("/login");
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      setSaveError("이미지 크기는 2MB를 초과할 수 없습니다.");
-      return;
-    }
-
-    try {
-      setUploading(true);
-      setSaveError("");
-      setSaveSuccess("");
-
-      const fileExt = file.name.split(".").pop() || 'png';
-      const fileName = `profile.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, {
-          upsert: true,
-          contentType: file.type
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
-      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ profile_image_url: avatarUrl, updated_at: new Date().toISOString() })
-        .eq("id", user.id);
-
-      if (updateError) throw updateError;
-
-      setProfile((prev) => ({ ...prev, profile_image_url: avatarUrl }));
-      setSaveSuccess("프로필 사진이 성공적으로 변경되었습니다.");
-    } catch (error) {
-      console.error("Upload error:", error);
-      setSaveError(error.message || "업로드 중 오류가 발생했습니다.");
-    } finally {
-      setUploading(false);
-      e.target.value = null;
-    }
-  };
-
   if (loading) {
     return (
       <div className="app-center">
@@ -210,7 +192,7 @@ export default function ProfilePage() {
         {/* Avatar Section */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "1rem 0" }}>
           <div className="pcard-upload-slot">
-            {/* C5 §4 "프로필 — 전부". 장착 편집 진입점은 17b가 붙인다 */}
+            {/* C5 §4 "프로필 — 전부". 장착 편집은 아래 ProfileRewardEditor (17b) */}
             <ProfileCard
               card={profileCard}
               size="xl"
@@ -218,25 +200,19 @@ export default function ProfilePage() {
               nameFallback={NAME_FALLBACK.EXPLORER}
               className="pcard--stacked"
             />
-            {uploading && (
-              <div className="pcard-avatar-overlay">업로드...</div>
-            )}
           </div>
 
           <XpProgress summary={xpSummary} />
 
-          <label style={{ cursor: uploading || user?.isGuest ? "not-allowed" : "pointer" }}>
-            <span style={{ fontSize: "0.85rem", color: "var(--app-brand-deep)", fontWeight: 600 }}>
-              {user?.isGuest ? "게스트는 변경 불가" : "사진 변경"}
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-              disabled={uploading || user?.isGuest}
+          {/* 게스트는 장착 상태를 만들 수 없다 (17 §6) — 편집 자체를 렌더하지 않는다 */}
+          {user && !user.isGuest && (
+            <ProfileRewardEditor
+              card={profileCard}
+              owned={ownedRewards}
+              loading={rewardsLoading}
+              onEquipment={handleEquipment}
             />
-          </label>
+          )}
         </div>
 
         {/* Basic Info */}

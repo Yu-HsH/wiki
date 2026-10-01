@@ -249,3 +249,155 @@
   margin-top: 4px;
   opacity: 0.75;
 }
+
+/* ── 장착 표시 — 프레임·배경 (트랙 17b) ─────────────────────
+ * 아트가 없으므로(C5 §6-④) 프레임은 아바타 테두리, 배경은 카드 바탕 톤으로만 표시한다.
+ * 이름은 `.pcard-sr`가 screen reader에 준다 (C5 §3.4) — 색만으로 구분하지 않는다.
+ */
+.pcard--framed .pcard-avatar {
+  box-shadow: 0 0 0 2px var(--app-card, #fff), 0 0 0 4px var(--app-brand, #6366f1);
+}
+
+.pcard--backed {
+  padding: 8px 12px;
+  border: 1px solid var(--app-line, rgba(148, 163, 184, 0.35));
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(148, 163, 184, 0.12));
+}
+
+.pcard-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── 프로필 꾸미기 편집 (components/ProfileRewardEditor.jsx, 트랙 17b) ── */
+
+.preward {
+  width: 100%;
+  margin: 4px 0 12px;
+  border: 1px solid var(--app-line, rgba(148, 163, 184, 0.35));
+  border-radius: 6px;
+  text-align: left;
+}
+
+.preward-summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preward-rows {
+  margin: 0;
+  padding: 0 12px 8px;
+  list-style: none;
+}
+
+.preward-row {
+  padding: 6px 0;
+  border-top: 1px solid var(--app-line, rgba(148, 163, 184, 0.35));
+}
+
+.preward-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.preward-label {
+  flex: 0 0 96px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.preward-current {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.preward-toggle {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.preward-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 0 4px;
+}
+
+.preward-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 10px;
+  border: 1px solid var(--app-line, rgba(148, 163, 184, 0.5));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 선택 상태는 테두리 두께와 "장착 중" 글자로도 구분한다 — 색만으로 구분하지 않는다 */
+.preward-choice--selected {
+  border: 2px solid var(--app-brand, #6366f1);
+  cursor: default;
+}
+
+.preward-choice:focus-visible,
+.preward-summary:focus-visible {
+  outline: 2px solid var(--app-brand, #6366f1);
+  outline-offset: 2px;
+}
+
+.preward-choice-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.preward-tag {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.preward-clear {
+  min-height: 44px;
+}
+
+.preward-muted {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.preward-error {
+  margin: 0 12px 8px;
+}
+
+@media (max-width: 480px) {
+  .preward-label {
+    flex-basis: 76px;
+  }
+}

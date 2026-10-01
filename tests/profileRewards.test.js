@@ -235,3 +235,34 @@ test("migration: 파괴적 DDL 0 (drop table·truncate·delete from profiles 없
   assert.doesNotMatch(body, /\bdelete\s+from\s+public\.profiles\b/i);
   assert.doesNotMatch(body, /\balter\s+table\s+public\.profiles\b/i);
 });
+
+/* ── 17b-2b 편집 UI·아이콘 에셋 ──────────────────────────────── */
+
+test("기본 아이콘 6종: migration의 asset_ref마다 public/ SVG가 있다", () => {
+  const refs = [...migration.matchAll(/'(\/profile-icons\/[a-z]+\.svg)'/g)].map((m) => m[1]);
+  assert.equal(refs.length, 6);
+  for (const ref of refs) {
+    const svg = read(`public${ref}`);
+    assert.match(svg, /^<svg[^>]*viewBox="0 0 64 64"/);
+    assert.match(svg, /<title>[^<]+<\/title>/, "SVG도 이름을 갖는다");
+  }
+});
+
+test("ProfilePage: 업로드 UI 제거, 편집기 연결, legacy 값은 계속 읽는다", () => {
+  const page = read("pages/ProfilePage.jsx");
+  assert.doesNotMatch(page, /type="file"/);
+  assert.doesNotMatch(page, /storage\s*\.from\("avatars"\)/);
+  assert.doesNotMatch(page, /profile_image_url:\s*avatarUrl/, "profile_image_url 쓰기 경로 없음");
+  assert.match(page, /select\("username, nickname, profile_image_url, total_xp, profile_level"\)/, "읽기는 유지 (C5 §3.1 2단계)");
+  assert.match(page, /<ProfileRewardEditor/);
+  assert.match(page, /user && !user\.isGuest && \(\s*<ProfileRewardEditor/, "게스트는 편집기를 받지 않는다 (17 §6)");
+  assert.match(page, /mergeRewardSlots\(/);
+});
+
+test("ProfileRewardEditor: 서버 응답만 반영 (낙관적 갱신 없음), 접히는 섹션, 빈 alt 없음", () => {
+  const editor = read("components/ProfileRewardEditor.jsx");
+  assert.match(editor, /<details className="preward">/);
+  assert.match(editor, /const equipment = await request\(\);\s*onEquipment\?\.\(equipment\);/);
+  assert.doesNotMatch(editor, /alt=""/);
+  assert.match(editor, /aria-pressed=\{selected\}/, "선택 상태를 색 말고도 전달");
+});
