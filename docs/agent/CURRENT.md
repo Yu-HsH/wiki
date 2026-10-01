@@ -1,12 +1,23 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-10-01**
-기준 커밋: **`afd0e7b`** (`feat(17b-2b): profile reward editor on ProfilePage, default icon art`) — 17b-2c 커밋의 부모. 원격은 미조회 (17b 시작 후 push 없음)
-마지막 **앱 코드** 커밋: **`ffabdc0`** (가이드 문구, **운영 배포됨 — `main` push #9**) · 마지막 **migration** 커밋: **`dc388d9`** (17b-1, `20261001090000_c1_reward_tables_v1.sql`) — **로컬만 적용, 운영 미적용.** **저장소 migration 20 · 운영 19 (차이 1 = 17b-1)**. 운영 적용은 별도 건별 승인이다 (`AGENTS.md` §1).
-이전 기준: `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+기준 커밋: **`bc2b46f`** (`feat(17b-2c): other players' cards read equipment in one batch`) — **`origin/main = origin/feat/group-final-gaps = bc2b46f`** (`main` push #10 직후 `git ls-remote`, 2026-10-01). 이 기록 커밋의 부모
+마지막 **앱 코드** 커밋: **`bc2b46f`** (17b-2c, **운영 배포됨 — `main` push #10**) · 마지막 **migration** 커밋: **`dc388d9`** (17b-1, `20261001090000_c1_reward_tables_v1.sql`) — **운영 적용됨 (2026-10-01)** `[사용자 실행·검증: migrations 20 · catalog 6 · inventory 858 = 143×6]`. **운영 migration 20 = 저장소 20, 차이 0.**
+이전 기준: `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main = dee9497`, `origin/feat/group-final-gaps = 29eb3e6`** (2026-10-01, 이번 문서 커밋 전 `git ls-remote`). 원격 feature는 이 기록 이후 이번 문서 커밋을 push하면 갱신된다. 문서 전용 변경은 feature에만 백업한다 (`AGENTS.md` §1.1).
 
-> # ⚑ 2026-10-01 (9) — **17b 구현 완료 (로컬) — C1 보상 3테이블 + 장착 UI. 운영 미적용 · `main` 미반영**
+> # ⚑ 2026-10-01 (10) — **17b 운영 배포 — migration `20261001090000` 적용 → `main` push #10 (`dee9497..bc2b46f`)**
+>
+> | 단계 | 결과 |
+> |---|---|
+> | 운영 migration | `20261001090000_c1_reward_tables_v1.sql` 적용 `[사용자 실행·검증]` — **migrations 20 · `reward_catalog` 6 · `user_reward_inventory` 858 = 프로필 143 × 기본 아이콘 6** |
+> | 배포 전 검증 (기준 `bc2b46f`, 2026-10-01 push 직전 재실행) | `npm test` **413/413** · `npm run build` exit 0 `[산출물]`. 로컬 pgTAP 739/739 · 2계정 UI 스모크 20/20은 아래 (9) 상자 |
+> | push | `origin/feat/group-final-gaps` `595cf87..bc2b46f` → `origin/main` `dee9497..bc2b46f` (fast-forward). push 후 `git ls-remote`로 `main = feat = bc2b46f` 확인 `[산출물]`. 14c 준비 문서 `595cf87`이 함께 올라갔다(문서, 앱 영향 없음) |
+> | 운영 확인 | **아직 없다** — 프로필 꾸미기 장착 · 새로고침 복원 · 랭킹 상대 칭호/아이콘을 운영에서 확인하면 이 행을 채운다 |
+>
+> **17b 완료 (운영 확인 대기).** 남은 순서 **14c → 16**. 통합 시 계약 반영 항목은 아래 (9) 상자.
+
+> # ⚑ 2026-10-01 (9) — **17b 구현 완료 (로컬) — C1 보상 3테이블 + 장착 UI** (→ (10)에서 운영 배포)
 >
 > **판정** `[사용자 결정, 2026-10-01]`: C1-① 번들 = 16 소유 · ② retired 장착 유지(신규 장착만 `REWARD_RETIRED`) · ③ kind↔slot = RPC 검증 ·
 > ④ 기본 아이콘 **6종** `icon_default_{compass,book,globe,lantern,map,quill}`, `system_default`로 전원 지급(backfill + `profiles` AFTER INSERT 트리거), 임시 SVG `public/profile-icons/*.svg` ·
@@ -884,12 +895,13 @@ Vercel 프로덕션에 배포된 상태다.
 | **#7** | **2026-09-30** | **`7e90b7a..ec7b6fa`** (코드 4 + 문서 5 + 이미 운영에 있던 `4c35aa7`) | **15b·15c 배포.** 선행: 운영 migration 2개(`20260929090000`·`20260930090000`) 적용·검증. 운영 스모크 싱글 `+15 XP` — **첫 운영 XP 지급** | **없음** | `[사용자 실행·보고]`, 위 ⚑ (3) 상자; push 후 `git ls-remote` 로 `main = ec7b6fa` 확인 |
 | **#8** | **2026-09-30** | **`ec7b6fa..4719100`** (코드 1 `3693dd7` + 문서 3) | **오늘 코스 버튼 fallback 경합 hotfix.** DB 변경 0. 운영 확인: 로딩 문구 → 코스명 전환, 오늘 코스 완주 `+25 XP` — **운영 첫 25 지급** | **없음** | `[사용자 승인]` 이 세션이 실행, `[사용자 확인]` 운영 결과; 위 ⚑ (4) 상자 |
 | **#9** | **2026-10-01** | **`4719100..dee9497`** (코드 6 + 문서 4) | **14b 배포 — 빠른 링크 아이템화.** 선행: 백업 `20261001-1135` → 운영 migration `20260930100000` 적용·검증(19개 · CHECK 11종). 운영 확인: 빠른 링크 제거 · 링크만 보기 · 링크 검열 | **없음** | `[사용자 실행·확인]`, 위 ⚑ (7) 상자; push 후 `git ls-remote`로 `main = dee9497` 확인 |
+| **#10** | **2026-10-01** | **`dee9497..bc2b46f`** (코드 4 `dc388d9`·`7f748e6`·`afd0e7b`·`bc2b46f` + 문서 3 — 14c 준비 `595cf87` 포함) | **17b 배포 — 프로필 카드 장착 UI + C1 보상 3테이블.** 선행: 운영 migration `20261001090000` 적용(사용자 검증: migrations 20 · catalog 6 · inventory 858 = 143×6). 배포 전 검증(기준 `bc2b46f`, 2026-10-01 재실행): `npm test` 413/413 · build exit 0. 로컬: pgTAP 739/739 · 2계정 UI 스모크 20/20 | **없음** | `[사용자 승인]` 이 세션이 실행; 운영 migration은 `[사용자 실행·검증]`; push 후 `git ls-remote`로 `main = feat = bc2b46f` 확인. **운영 화면 확인은 아직 없다** |
 
 **W1-a·W1-b의 전제는 같았다** — 유지보수 게이트 ON, 사용자 노출 0, 게이트 미변경, DB 영향 없음.
 W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[사용자 확인, 2026-08-29]`.
 **W1-b는 창 밖이라 예외의 성격이 달랐다** — 창의 승인이 아니라 건별 승인이었다.
 
-> **#3~#9는 게이트 해제 후의 건별 승인 사례다.** #3은 앞의 둘과 종류가 다르다.
+> **#3~#10은 게이트 해제 후의 건별 승인 사례다.** #3은 앞의 둘과 종류가 다르다.
 > W1-a·W1-b는 **"게이트가 받아 주니까 올린다"** 였고, **#3은 "실사용자에게 노출해도 된다고
 > 판단해서 올린다"** 다. `AGENTS.md` §1.1이 승인 조건을 ②에서 ③으로 바꾼 뒤의 **첫 적용 사례**이며,
 > **그 조건은 배포 전 검증(`npm test`·`npm run build`·해당 경로 수동 확인)이었고 충족됐다.**
