@@ -279,8 +279,9 @@ export default function MultiplayerGamePage() {
     setItemEffect(text);
     setTimeout(() => setItemEffect(null), 1200);
   };
-  const myTargetTitle = opponentPlayer?.target_title || "";
-  const opponentTargetTitle = myPlayer?.target_title || "";
+  const commonTargetTitle = players.find((player) => player.user_id === room?.host_user_id)?.target_title || "";
+  const myTargetTitle = commonTargetTitle;
+  const opponentTargetTitle = commonTargetTitle;
 
   const targetForViewer = useMemo(
     () => ({

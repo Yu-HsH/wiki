@@ -97,6 +97,45 @@ test("1:1 게임 URL은 참가자가 없거나 종료된 경우 진행 화면을
   assert.equal(finished.outcome, "finished");
 });
 
+test("1:1 starting은 상대 목표 NULL이어도 방장 공통 목표로 양쪽을 복구한다", () => {
+  const room = { status: "starting", host_user_id: "host" };
+  const players = [
+    { user_id: "guest", target_title: null },
+    { user_id: "host", target_title: "공통 목표" },
+  ];
+  for (const userId of ["host", "guest"]) {
+    const session = validateDuelGameSession({ room, players, userId });
+    assert.equal(session.targetTitle, "공통 목표");
+    assert.equal(session.outcome, "active");
+  }
+});
+
+test("1:1은 상대의 과거 목표로 방장 목표 누락을 숨기지 않는다", () => {
+  for (const status of ["starting", "playing"]) {
+    assert.throws(() => validateDuelGameSession({
+      room: { status, host_user_id: "host" },
+      players: [
+        { user_id: "host", start_title: "시작", current_title: "현재" },
+        { user_id: "guest", target_title: "과거 목표" },
+      ],
+      userId: "host",
+    }), (error) => error.code === "MISSING_TARGET");
+  }
+});
+
+test("1:1 공통 목표 변경 후에도 상대 퇴장·현재 진행 누락 검사는 유지한다", () => {
+  const room = { status: "playing", host_user_id: "host" };
+  const host = { user_id: "host", target_title: "공통 목표" };
+  assert.throws(() => validateDuelGameSession({ room, players: [host], userId: "host" }),
+    (error) => error.code === "OPPONENT_LEFT");
+  assert.throws(() => validateDuelGameSession({ room, players: [host, { user_id: "guest" }], userId: "host" }),
+    (error) => error.code === "MISSING_PROGRESS");
+  assert.equal(validateDuelGameSession({
+    room, players: [{ ...host, start_title: "시작", current_title: "현재" }, { user_id: "guest" }],
+    userId: "host",
+  }).currentTitle, "현재");
+});
+
 test("일시 오류는 제한 횟수만 재시도하고 성공 상태를 반환한다", async () => {
   let calls = 0;
   const result = await retryRecoverable(

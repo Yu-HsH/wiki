@@ -216,7 +216,11 @@ export function validateDuelGameSession({ room, players, userId, now = Date.now(
     throw fatalSessionError("OPPONENT_LEFT", "상대 참가자가 없어 게임을 계속할 수 없습니다.");
   }
 
-  if (!opponent.target_title) {
+  // starting room/players reads may arrive separately. The host is the source
+  // of the common target even before the guest's copied row is observed.
+  const host = getPlayer(players, room.host_user_id);
+  const targetTitle = host?.target_title || "";
+  if (!targetTitle) {
     throw fatalSessionError("MISSING_TARGET", "서버에 목표 문서 정보가 없습니다.");
   }
 
@@ -230,6 +234,7 @@ export function validateDuelGameSession({ room, players, userId, now = Date.now(
     players,
     me,
     opponent,
+    targetTitle,
     currentTitle: me.current_title || "",
     moveCount: Math.max(0, Number(me.move_count) || 0),
     elapsedSeconds: elapsedSecondsFromServer(room.started_at, now),

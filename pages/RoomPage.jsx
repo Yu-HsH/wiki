@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   fetchRoom,
@@ -24,7 +24,7 @@ import UserProfileModal from "../components/UserProfileModal";
  * 대전 대기실 페이지
  *
  * 변경 포인트:
- * - target 입력은 "검색 → 후보 선택 → 준비 완료" 방식
+ * - 방장만 "검색 → 후보 선택 → 즉시 저장", 양쪽 공통 목표를 공개한다.
  * - raw keyword(keywordInput)와 실제 target_title(selectedTargetTitle)를 분리
  * - 자동 보정 / 자동 확정 제거
  */
@@ -46,6 +46,9 @@ export default function RoomPage() {
   const [selectedTargetTitle, setSelectedTargetTitle] = useState("");
   const [targetSuggestions, setTargetSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [savingTarget, setSavingTarget] = useState(false);
+  const [targetSaveFailed, setTargetSaveFailed] = useState(false);
+  const lobbyActionRef = useRef(false);
 
   // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
@@ -147,13 +150,8 @@ export default function RoomPage() {
   // players 기반 파생값
   // ----------------------------
   const hostPlayer = useMemo(
-    () => players.find((player) => player.role === "host"),
-    [players]
-  );
-
-  const guestPlayer = useMemo(
-    () => players.find((player) => player.role === "guest"),
-    [players]
+    () => players.find((player) => player.user_id === room?.host_user_id),
+    [players, room?.host_user_id]
   );
 
   const myPlayer = useMemo(
@@ -166,37 +164,37 @@ export default function RoomPage() {
     [players, user?.id]
   );
 
-  const isHost = myPlayer?.role === "host";
-  const hasGuest = !!guestPlayer;
-
-  const myReadyState = !!myPlayer?.is_ready;
-  const opponentReady = !!opponentPlayer?.is_ready;
-  const allReady = myReadyState && opponentReady;
+  const isHost = !!user?.id && room?.host_user_id === user.id;
+  const hasGuest = players.length === 2 && !!hostPlayer && !!opponentPlayer;
+  const hasHostTarget = !!(hostPlayer?.target_title && hostPlayer?.target_page_id);
+  const canStart = isHost && hasGuest && hasHostTarget && room?.status === "waiting"
+    && !savingTarget && !isSearching && !starting && !targetSaveFailed;
+  const targetBusy = savingTarget || isSearching || starting;
 
   // ----------------------------
   // DB -> 로컬 입력값 동기화
   // - 이미 저장된 target_title이 있으면 복원
   // ----------------------------
   useEffect(() => {
-    if (!myPlayer) return;
+    if (!isHost) return;
 
-    if (myPlayer.target_title) {
-      setSelectedTargetTitle(myPlayer.target_title);
-      setKeywordInput(myPlayer.target_title);
+    if (hostPlayer?.target_title) {
+      setSelectedTargetTitle(hostPlayer.target_title);
+      setKeywordInput(hostPlayer.target_title);
     } else {
       setSelectedTargetTitle("");
     }
-  }, [myPlayer]);
+  }, [isHost, hostPlayer?.target_title]);
 
   // ----------------------------
   // room.status 기반 시작
   // ----------------------------
   useEffect(() => {
-    if (!room || room.status !== "starting") return;
+    if (!room || !["starting", "playing"].includes(room.status)) return;
 
     navigate(`/multiplayer/game/${roomId}`, {
       state: {
-        myTarget: myPlayer?.target_title || "",
+        myTarget: hostPlayer?.target_title || "",
         myStart: myPlayer?.start_title || "",
         opponentName: opponentPlayer?.nickname_snapshot || "상대",
       },
@@ -205,7 +203,7 @@ export default function RoomPage() {
     room,
     roomId,
     navigate,
-    myPlayer?.target_title,
+    hostPlayer?.target_title,
     myPlayer?.start_title,
     opponentPlayer?.nickname_snapshot,
   ]);
@@ -214,7 +212,8 @@ export default function RoomPage() {
   // 위키 검색 실행
   // ----------------------------
   const handleSearch = async () => {
-    if (!keywordInput.trim() || myReadyState) return;
+    if (!isHost || room?.status !== "waiting" || !keywordInput.trim() || lobbyActionRef.current) return;
+    lobbyActionRef.current = true;
 
     try {
       setIsSearching(true);
@@ -233,78 +232,41 @@ export default function RoomPage() {
       setSubmitError("검색 중 오류가 발생했습니다.");
     } finally {
       setIsSearching(false);
+      lobbyActionRef.current = false;
     }
   };
 
   // ----------------------------
   // 후보 선택
   // ----------------------------
-  const handleSelectSuggestion = (item) => {
-    setSelectedTargetTitle(item.title);
-    setKeywordInput(item.title);
-    setSubmitError("");
-    setTargetSuggestions([]);
-  };
-
-  // ----------------------------
-  // 준비 완료
-  // - 반드시 사용자가 선택한 title만 저장
-  // ----------------------------
-  const handleReady = async () => {
-    if (!selectedTargetTitle || !roomId || !user?.id) {
-      setSubmitError("먼저 검색 결과에서 목표 문서를 선택해주세요.");
-      return;
-    }
-
+  const handleSelectSuggestion = async (item) => {
+    if (!isHost || room?.status !== "waiting" || !roomId || lobbyActionRef.current) return;
+    lobbyActionRef.current = true;
+    setSavingTarget(true);
     try {
       setSubmitError("");
-
-      const targetPage = await fetchPageSummary(selectedTargetTitle);
-      await ensureWikiSnapshot({
-        title: targetPage.canonicalTitle || selectedTargetTitle,
-        canonicalTitle: targetPage.canonicalTitle || selectedTargetTitle,
-        pageId: targetPage.pageId,
-        revisionId: targetPage.revisionId,
+      const targetPage = await fetchPageSummary(item.title);
+      const targetIdentity = await ensureWikiSnapshot(targetPage);
+      const savedPlayer = await setDuelTargetV2(roomId, {
+        title: targetIdentity.canonicalTitle,
+        pageId: targetIdentity.pageId,
+        revisionId: targetIdentity.revisionId,
       });
-      await setDuelTargetV2(roomId, {
-        title: targetPage.canonicalTitle || selectedTargetTitle,
-        pageId: targetPage.pageId,
-        revisionId: targetPage.revisionId,
-        isReady: true,
-      });
-
-      const playerData = await fetchRoomPlayers(roomId);
-      setPlayers(playerData);
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "준비 상태 저장에 실패했습니다."
-      );
-    }
-  };
-
-  // ----------------------------
-  // 준비 해제
-  // ----------------------------
-  const handleUnready = async () => {
-    if (!roomId || !user?.id) return;
-
-    try {
-      setSubmitError("");
+      setPlayers((previous) => previous.map((player) =>
+        player.user_id === savedPlayer.user_id ? savedPlayer : player
+      ));
+      setSelectedTargetTitle(savedPlayer.target_title);
+      setKeywordInput(savedPlayer.target_title);
       setTargetSuggestions([]);
-
-      await setDuelTargetV2(roomId, {
-        title: myPlayer?.target_title || selectedTargetTitle,
-        pageId: myPlayer?.target_page_id,
-        revisionId: myPlayer?.target_revision_id,
-        isReady: false,
-      });
-
-      const playerData = await fetchRoomPlayers(roomId);
-      setPlayers(playerData);
+      setTargetSaveFailed(false);
     } catch (error) {
+      setTargetSaveFailed(true);
       setSubmitError(
-        error instanceof Error ? error.message : "준비 해제에 실패했습니다."
+        error?.message || "목표 문서 저장에 실패했습니다. 다시 선택해주세요."
       );
+    } finally {
+      setSavingTarget(false);
+      lobbyActionRef.current = false;
     }
   };
 
@@ -312,26 +274,31 @@ export default function RoomPage() {
   // 호스트 게임 시작
   // ----------------------------
   const handleStartGame = async () => {
-    if (!roomId || !user?.id) return;
+    if (!canStart || !roomId || !user?.id || lobbyActionRef.current) return;
+    lobbyActionRef.current = true;
 
     try {
       setSubmitError("");
       setStarting(true);
       const currentPlayers = await fetchRoomPlayers(roomId);
-      const excludedTitles = new Set(
-        currentPlayers.map((player) => normalizeTitle(player.target_title)).filter(Boolean)
-      );
+      const currentHost = currentPlayers.find((player) => player.user_id === room.host_user_id);
+      if (currentPlayers.length !== 2 || !currentHost?.target_title || !currentHost?.target_page_id) {
+        setPlayers(currentPlayers);
+        throw new Error("참가자 2명과 방장이 고른 목표가 있어야 시작할 수 있습니다.");
+      }
+      const excludedTitles = new Set([normalizeTitle(currentHost.target_title)]);
       const candidateTitle = await fetchDistinctRandomTitle(excludedTitles);
       const candidatePage = await fetchPageData(candidateTitle);
-      await ensureWikiSnapshot(candidatePage);
-      await startRoomGame(roomId, user.id);
+      const startIdentity = await ensureWikiSnapshot(candidatePage);
+      await startRoomGame(roomId, user.id, startIdentity);
     } catch (error) {
       console.error("startRoomGame failed:", error);
       setSubmitError(
-        error instanceof Error ? error.message : "게임 시작에 실패했습니다."
+        error?.message || "게임 시작에 실패했습니다."
       );
     } finally {
       setStarting(false);
+      lobbyActionRef.current = false;
     }
   };
 
@@ -441,15 +408,15 @@ export default function RoomPage() {
             </div>
           )}
 
-          {hasGuest && !allReady && room?.status === "waiting" && (
+          {hasGuest && !hasHostTarget && room?.status === "waiting" && (
             <div className="room-status-pill room-status--setting">
-              🎯 목표 문서를 설정하고 준비하세요
+              🎯 방장이 목표를 고르는 중
             </div>
           )}
 
-          {allReady && room?.status === "waiting" && !starting && (
+          {hasGuest && hasHostTarget && room?.status === "waiting" && !targetBusy && (
             <div className="room-status-pill room-status--ready">
-              ✅ 모두 준비 완료!
+              🎯 공통 목표가 선택되었습니다
             </div>
           )}
 
@@ -468,7 +435,7 @@ export default function RoomPage() {
 
         <div className="room-players">
           {/* 내 패널 */}
-          <div className={`room-player-card ${myReadyState ? "room-player--ready" : ""}`}>
+          <div className="room-player-card">
             <div className="room-player-role">
               {isHost ? "👑 HOST" : "⚔️ GUEST"}
             </div>
@@ -491,8 +458,9 @@ export default function RoomPage() {
               {myPlayer?.nickname_snapshot || user?.displayName || "나"}
             </div>
 
+            {isHost ? (
             <div className="room-target-section">
-              <label className="room-target-label">상대가 풀 목표 문서 (검색 후 선택)</label>
+              <label className="room-target-label">공통 목표 문서 (검색 후 선택)</label>
 
               <div style={{ display: "flex", gap: "8px" }}>
                 <input
@@ -501,7 +469,7 @@ export default function RoomPage() {
                   type="text"
                   placeholder="예: 알베르트 아인슈타인"
                   value={keywordInput}
-                  disabled={myReadyState || room?.status !== "waiting"}
+                  disabled={targetBusy || room?.status !== "waiting"}
                   onChange={(e) => {
                     setKeywordInput(e.target.value);
                     setSubmitError("");
@@ -509,7 +477,7 @@ export default function RoomPage() {
                     setSelectedTargetTitle("");
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !myReadyState) {
+                    if (e.key === "Enter") {
                       handleSearch();
                     }
                   }}
@@ -517,7 +485,7 @@ export default function RoomPage() {
                 <button
                   type="button"
                   className="mp-action-btn"
-                  disabled={myReadyState || room?.status !== "waiting" || isSearching}
+                  disabled={targetBusy || room?.status !== "waiting"}
                   onClick={handleSearch}
                 >
                   {isSearching ? "..." : "검색"}
@@ -527,17 +495,26 @@ export default function RoomPage() {
               {/* 현재 선택된 문서 표시 */}
               {selectedTargetTitle && !targetSuggestions.length && (
                 <div style={{ marginTop: "10px", fontSize: "13px", opacity: 0.85 }}>
-                  선택된 목표: <strong>{selectedTargetTitle}</strong>
+                  방장이 고른 목표: <strong>{selectedTargetTitle}</strong>
                 </div>
               )}
             </div>
+            ) : (
+              <div className="room-target-section room-target-display">
+                {hostPlayer?.target_title
+                  ? `방장이 고른 목표: ${hostPlayer.target_title}`
+                  : "방장이 목표를 고르는 중"}
+              </div>
+            )}
 
             {/* 검색 결과 후보 */}
-            {!myReadyState && targetSuggestions.length > 0 && (
+            {isHost && targetSuggestions.length > 0 && (
               <div className="search-results-list" style={{ marginTop: "12px" }}>
                 {targetSuggestions.map((item) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.title}
+                    disabled={targetBusy || room?.status !== "waiting"}
                     onClick={() => handleSelectSuggestion(item)}
                     className={`search-item ${selectedTargetTitle === item.title ? "selected" : ""}`}
                   >
@@ -546,45 +523,19 @@ export default function RoomPage() {
                       className="search-item-snippet"
                       dangerouslySetInnerHTML={{ __html: item.snippet || "" }}
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
 
-            {!myReadyState ? (
-              <button
-                type="button"
-                className="mp-action-btn mp-action-btn--primary room-ready-btn"
-                disabled={!selectedTargetTitle || room?.status !== "waiting"}
-                onClick={handleReady}
-                style={{ marginTop: "16px" }}
-              >
-                ✅ 준비 완료
-              </button>
-            ) : (
-              <>
-                <div className="room-ready-badge">READY</div>
-
-                {room?.status === "waiting" && (
-                  <button
-                    type="button"
-                    className="mp-action-btn room-ready-btn"
-                    onClick={handleUnready}
-                    style={{ marginTop: "12px" }}
-                  >
-                    준비 해제
-                  </button>
-                )}
-              </>
-            )}
+            {savingTarget && <p role="status">목표 문서 저장 중...</p>}
           </div>
 
           <div className="room-vs">VS</div>
 
           {/* 상대 패널 */}
           <div
-            className={`room-player-card room-player--opponent ${opponentPlayer?.is_ready ? "room-player--ready" : ""
-              } ${!opponentPlayer ? "room-player--empty" : ""}`}
+            className={`room-player-card room-player--opponent ${!opponentPlayer ? "room-player--empty" : ""}`}
           >
             {opponentPlayer ? (
               <>
@@ -611,20 +562,13 @@ export default function RoomPage() {
                 </div>
 
                 <div className="room-target-section">
-                  <label className="room-target-label">내가 풀 목표 문서</label>
                   <div className="room-target-display">
-                    {opponentPlayer.target_title || "설정 중..."}
+                    {hostPlayer?.target_title
+                      ? `방장이 고른 목표: ${hostPlayer.target_title}`
+                      : "방장이 목표를 고르는 중"}
                   </div>
                 </div>
 
-                {opponentPlayer.is_ready ? (
-                  <div className="room-ready-badge">READY</div>
-                ) : (
-                  <div className="room-waiting-badge">
-                    <span className="mp-spinner mp-spinner--sm" />
-                    준비 중
-                  </div>
-                )}
               </>
             ) : (
               <>
@@ -637,18 +581,18 @@ export default function RoomPage() {
         </div>
 
         <div style={{ marginTop: "24px", textAlign: "center" }}>
-          {isHost && hasGuest && allReady && room?.status === "waiting" && (
+          {isHost && room?.status === "waiting" && (
             <button
               type="button"
               className="mp-action-btn mp-action-btn--primary"
               onClick={handleStartGame}
-              disabled={starting}
+              disabled={!canStart}
             >
               {starting ? "시작 중..." : "게임 시작"}
             </button>
           )}
 
-          {!isHost && hasGuest && allReady && room?.status === "waiting" && (
+          {!isHost && room?.status === "waiting" && (
             <p className="mp-subtitle">
               호스트가 게임을 시작할 때까지 기다려주세요.
             </p>

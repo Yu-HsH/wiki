@@ -71,7 +71,7 @@ export async function fetchRoom(roomId) {
 
 export async function setDuelTargetV2(
     roomId,
-    { title, pageId, revisionId, isReady = true }
+    { title, pageId, revisionId }
 ) {
     requireSupabase();
     const { data, error } = await supabase.rpc("set_duel_target_v2", {
@@ -79,7 +79,7 @@ export async function setDuelTargetV2(
         p_target_title: title,
         p_target_page_id: pageId == null ? null : String(pageId),
         p_target_revision_id: revisionId == null ? null : String(revisionId),
-        p_is_ready: isReady,
+        p_is_ready: false, // 14c: compatibility argument; READY has no duel meaning.
     });
     if (error) throw error;
     return normalizeRpcRow(data);
@@ -95,10 +95,13 @@ export async function leaveRoom(roomId, userId) {
     return normalizeRpcRow(data);
 }
 
-export async function startRoomGame(roomId, userId) {
+export async function startRoomGame(roomId, userId, identity) {
     requireSupabase();
     const { data, error } = await supabase.rpc("start_duel_room_v2", {
         p_room_id: roomId,
+        p_start_title: identity?.canonicalTitle || identity?.title || null,
+        p_start_page_id: identity?.pageId == null ? null : String(identity.pageId),
+        p_start_revision_id: identity?.revisionId == null ? null : String(identity.revisionId),
     });
     if (error) throw error;
     return data;

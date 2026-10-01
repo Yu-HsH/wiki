@@ -33,8 +33,25 @@ $tapFiles = Get-ChildItem supabase/tests/*.sql | Where-Object { $_.Name -ne 'gro
 npx --no-install supabase test db --local @tapFiles
 ```
 
+## 14c-2 클라이언트
+
+서버 단계 커밋: `3d027ba`. `[코드]`
+
+- `pages/RoomPage.jsx`: host_user_id 기준 검색/선택 권한. 후보 클릭 즉시 summary → snapshot
+  반환 identity → setter; READY UI 제거. 서버에 저장된 방장 목표를 양쪽에 공개.
+  START는 2명+저장 목표 조건, 검색/저장/시작 및 목표 저장 실패 시 차단. 단일 작업 ref로 중복 호출 방지.
+  기존 랜덤 → 본문 → snapshot 경로의 반환 identity를 START에 전달. playing 대기실 재접속도 게임으로 복구.
+- `services/multiplayerService.js`: setter의 `p_is_ready=false` 고정; START identity 인자 3개 추가.
+- `pages/MultiplayerGamePage.jsx`: host_user_id 행의 공통 목표를 양쪽 HUD/VS 소개에서 읽는다.
+- `utils/onlineGameSession.js`: validateDuelGameSession만 변경, host 공통 목표로 starting 조회 조합 복원.
+  목표 누락·참가자·진행 검사는 유지. 그룹 함수/공유 helper 무변경.
+- `tests/duelHostTarget.test.js`: 서비스 실제 호출·오류 전파·화면 계약.
+  `tests/onlineGameSession.test.js`: 1:1 복구 3건 추가, 기존 그룹/공유 helper 테스트 무변경.
+
+검증 `[산출물, 기준 3d027ba + 14c-2 미커밋 작업 트리, 2026-10-01]`:
+`npm test` **422/422**(413 + 9), `npm run build` exit 0.
+기존 bundle 500 kB 경고는 남아 있다. DB 변경은 14c-1 이후 없음.
+
 ## 다음 단계
 
-14c-2: RoomPage 후보 선택 즉시 summary/snapshot 반환 identity 저장, 방장만 선택·START,
-랜덤 스냅샷 반환 identity 전달. 게임 화면/1:1 복구는 host_user_id의 공통 목표 사용.
 14c-3: 로컬 2세션 UI 스모크·통합 인계. 운영 적용/배포는 이번 요청 범위 밖.
