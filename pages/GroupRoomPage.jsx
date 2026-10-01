@@ -16,7 +16,8 @@ import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { createGroupEntryMarker } from "../utils/groupGameFlow";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 import ProfileCard from "../components/ProfileCard";
-import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
+import useProfileCards from "../hooks/useProfileCards.js";
+import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
 
 export default function GroupRoomPage() {
     const { roomId } = useParams();
@@ -48,6 +49,10 @@ export default function GroupRoomPage() {
         () => players.find((player) => player.user_id === user?.id),
         [players, user?.id]
     );
+
+    // 참가자 행의 칭호·아이콘 — 스냅샷을 늘리지 않고(C5-②) 대기실에서 배치 1회 조회한다 (17b).
+    // 참가자 집합이 바뀔 때만 다시 부른다. 경기 중 화면(GroupGamePage)은 동결이라 대상이 아니다.
+    const rewardCards = useProfileCards([user?.id, ...players.map((player) => player.user_id)]);
 
     const isHost = room?.host_user_id === user?.id;
     const readyCount = players.filter((player) => player.is_ready).length;
@@ -370,12 +375,15 @@ export default function GroupRoomPage() {
                         <div className="group-my-profile">
                             {/* C5 §4 그룹 참가자 행 — 내 행. 출처는 스냅샷이 아니라 로그인 세션이다 */}
                             <ProfileCard
-                                card={buildProfileCard({
-                                    userId: myPlayer?.user_id ?? user?.id,
-                                    nickname: user?.displayName,
-                                    legacyImageUrl: user?.photoURL,
-                                    source: "snapshot",
-                                })}
+                                card={mergeRewardSlots(
+                                    buildProfileCard({
+                                        userId: myPlayer?.user_id ?? user?.id,
+                                        nickname: user?.displayName,
+                                        legacyImageUrl: user?.photoURL,
+                                        source: "snapshot",
+                                    }),
+                                    rewardCards[myPlayer?.user_id ?? user?.id]
+                                )}
                                 size="md"
                                 density={DENSITY.MINIMAL}
                                 nameFallback={NAME_FALLBACK.PARTICIPANT}
@@ -481,12 +489,15 @@ export default function GroupRoomPage() {
                                     <div className="group-player-info">
                                         {/* 3. 플레이어 아바타·이름 클릭 연동. C5 §4 그룹 참가자 행 — 출처는 스냅샷 */}
                                         <ProfileCard
-                                            card={buildProfileCard({
-                                                userId: player.user_id,
-                                                nickname: player.nickname_snapshot,
-                                                legacyImageUrl: player.profile_image_snapshot,
-                                                source: "snapshot",
-                                            })}
+                                            card={mergeRewardSlots(
+                                                buildProfileCard({
+                                                    userId: player.user_id,
+                                                    nickname: player.nickname_snapshot,
+                                                    legacyImageUrl: player.profile_image_snapshot,
+                                                    source: "snapshot",
+                                                }),
+                                                rewardCards[player.user_id]
+                                            )}
                                             size="xs"
                                             density={DENSITY.MINIMAL}
                                             nameFallback={NAME_FALLBACK.PARTICIPANT}

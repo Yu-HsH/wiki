@@ -266,3 +266,23 @@ test("ProfileRewardEditor: 서버 응답만 반영 (낙관적 갱신 없음), �
   assert.doesNotMatch(editor, /alt=""/);
   assert.match(editor, /aria-pressed=\{selected\}/, "선택 상태를 색 말고도 전달");
 });
+
+/* ── 17b-2c 남의 카드 — 4지점이 같은 병합을 쓴다 ─────────────── */
+
+test("남의 카드: 랭킹·그룹 대기실은 배치 훅, 모달은 단건 — 행마다 RPC를 부르지 않는다", () => {
+  const ranking = read("pages/RankingPage.jsx");
+  const group = read("pages/GroupRoomPage.jsx");
+  const modal = read("components/UserProfileModal.jsx");
+  const hook = read("hooks/useProfileCards.js");
+
+  for (const source of [ranking, group]) {
+    assert.match(source, /useProfileCards\(/);
+    assert.doesNotMatch(source, /fetchProfileCard\(|get_profile_card_v1/, "행 안에서 단건 조회 없음");
+  }
+  assert.equal((ranking.match(/mergeRewardSlots\(/g) || []).length, 2, "랭킹 두 표");
+  assert.equal((group.match(/mergeRewardSlots\(/g) || []).length, 2, "그룹 대기실 두 지점");
+  assert.match(modal, /fetchProfileCard\(userId\)\.catch\(\(\) => null\)/, "모달: 실패해도 프로필은 연다");
+  assert.match(modal, /mergeRewardSlots\(/);
+  assert.match(hook, /\}, \[key\]\);/, "집합이 바뀔 때만 다시 조회");
+  assert.doesNotMatch(read("pages/GroupGamePage.jsx"), /useProfileCards|mergeRewardSlots/, "경기 중 화면은 동결");
+});

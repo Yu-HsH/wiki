@@ -3,7 +3,8 @@ import { fetchPublicProfile, fetchAllProfileStats } from "../services/profileSta
 import { fetchXpSummary } from "../services/xpService";
 import ProfileCard from "./ProfileCard";
 import XpProgress from "./XpProgress";
-import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
+import { fetchProfileCard } from "../services/profileRewardService";
+import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
 
 /**
  * 공개 프로필 — C5 §4의 두 번째 렌더 지점.
@@ -15,6 +16,7 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
     const [profile, setProfile] = useState(null);
     const [stats, setStats] = useState(null);
     const [xpSummary, setXpSummary] = useState(null);
+    const [rewardCard, setRewardCard] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
@@ -30,17 +32,21 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
         setLoading(true);
         setError(false);
         setXpSummary(null);
+        setRewardCard(null);
 
         Promise.all([
             fetchPublicProfile(userId),
             fetchAllProfileStats(userId),
             // 진행도는 부가 정보다 — 실패해도 프로필은 연다. 레벨은 profile_level이 채운다.
-            fetchXpSummary(userId).catch(() => null)
-        ]).then(([profileData, statsData, xpData]) => {
+            fetchXpSummary(userId).catch(() => null),
+            // 장착 상태도 부가 정보다 — 실패하면 legacy·이니셜 표시로 남는다 (17b).
+            fetchProfileCard(userId).catch(() => null)
+        ]).then(([profileData, statsData, xpData, rewardData]) => {
             if (isMounted) {
                 setProfile(profileData);
                 setStats(statsData);
                 setXpSummary(xpData);
+                setRewardCard(rewardData);
                 setLoading(false);
             }
         }).catch((err) => {
@@ -86,15 +92,18 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                 ) : (
                     <div className="user-profile-modal-content">
                         <div className="user-profile-modal-header">
-                            {/* C5 §4 "공개 프로필 — 전부. 편집 없음". 레벨은 15b가 채운다. 칭호·배지는 슬롯이다 */}
+                            {/* C5 §4 "공개 프로필 — 전부. 편집 없음". 레벨은 15b가, 장착 상태는 17b가 채운다 */}
                             <ProfileCard
-                                card={buildProfileCard({
-                                    userId,
-                                    nickname: profile?.nickname,
-                                    level: profile?.profile_level ?? null,
-                                    legacyImageUrl: profile?.profile_image_url,
-                                    source: "live",
-                                })}
+                                card={mergeRewardSlots(
+                                    buildProfileCard({
+                                        userId,
+                                        nickname: profile?.nickname,
+                                        level: profile?.profile_level ?? null,
+                                        legacyImageUrl: profile?.profile_image_url,
+                                        source: "live",
+                                    }),
+                                    rewardCard
+                                )}
                                 size="lg"
                                 density={DENSITY.FULL}
                                 nameFallback={NAME_FALLBACK.EXPLORER}

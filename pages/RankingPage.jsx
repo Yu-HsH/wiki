@@ -5,7 +5,8 @@ import { LOBBY_PATH } from "../utils/appRoutes";
 import { fetchRankings, fetchXpRankings } from "../rankingService";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 import ProfileCard from "../components/ProfileCard";
-import { DENSITY, NAME_FALLBACK, buildProfileCard } from "../utils/profileCard.js";
+import useProfileCards from "../hooks/useProfileCards.js";
+import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
 import { formatXp } from "../utils/xpProgress.js";
 
 /** 누적 XP 탭 — 기간 탭과 같은 줄에 있지만 데이터 원천이 다르다 (`profiles.total_xp`). */
@@ -36,6 +37,9 @@ export default function RankingPage() {
   const [xpRows, setXpRows] = useState([]);
   const isXpTab = period === XP_TAB;
   const [expandedId, setExpandedId] = useState(null);
+
+  // 행의 장착 상태(아이콘·칭호)는 보이는 표의 사용자 집합으로 배치 1회 조회한다 — 17b, N+1 없음.
+  const rewardCards = useProfileCards(isXpTab ? xpRows.map((row) => row.userId) : records.map((record) => record.userId));
 
   // 2. 모달 상태 추가
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -144,14 +148,18 @@ export default function RankingPage() {
               <tbody>
                 {xpRows.map((row, index) => {
                   const isMine = row.userId === user.id;
-                  // C5 §4 랭킹 = COMPACT. 레벨은 profile_level computed field 값이다.
-                  const profileCard = buildProfileCard({
-                    userId: row.userId,
-                    nickname: row.nickname,
-                    level: row.level,
-                    legacyImageUrl: row.profileImageUrl,
-                    source: "live",
-                  });
+                  // C5 §4 랭킹 = COMPACT. 레벨은 profile_level computed field 값이고,
+                  // 아이콘·칭호는 배치 조회한 장착 상태다 (17b).
+                  const profileCard = mergeRewardSlots(
+                    buildProfileCard({
+                      userId: row.userId,
+                      nickname: row.nickname,
+                      level: row.level,
+                      legacyImageUrl: row.profileImageUrl,
+                      source: "live",
+                    }),
+                    rewardCards[row.userId]
+                  );
 
                   return (
                     <tr key={row.userId} className={isMine ? "mine" : ""}>
@@ -199,14 +207,17 @@ export default function RankingPage() {
                   const isExpanded = expandedId === record.id;
                   const rowKey = record.id || `${record.userId}-${record.createdAt}-${index}`;
 
-                  // C5 §2의 카드 형태. 레벨은 15b가 채운다. 칭호·배지는 아직 슬롯이다.
-                  const profileCard = buildProfileCard({
-                    userId: record.userId,
-                    nickname: record.nickname || record.playerName,
-                    level: record.level ?? null,
-                    legacyImageUrl: record.profileImageUrl,
-                    source: "live",
-                  });
+                  // C5 §2의 카드 형태. 레벨은 15b가, 아이콘·칭호는 장착 상태(17b)가 채운다.
+                  const profileCard = mergeRewardSlots(
+                    buildProfileCard({
+                      userId: record.userId,
+                      nickname: record.nickname || record.playerName,
+                      level: record.level ?? null,
+                      legacyImageUrl: record.profileImageUrl,
+                      source: "live",
+                    }),
+                    rewardCards[record.userId]
+                  );
 
                   return (
                     <React.Fragment key={rowKey}>
