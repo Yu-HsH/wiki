@@ -239,7 +239,7 @@ select throws_ok(
   'set_duel_target_v2 rejects a playing room'
 );
 select throws_ok(
-  $$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000001')$$,
+  $$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000001', 'V2 Start', 'v2-start', '100')$$,
   'P0001', 'DUEL_ROOM_NOT_WAITING',
   'start_duel_room_v2 rejects a playing room'
 );
@@ -268,39 +268,165 @@ insert into public.game_rooms(
 )
 values (
   '00000000-0000-0000-000a-000000000002', 'V2DUEL2',
-  '00000000-0000-0000-0008-000000000001', 'waiting', 'duel', 2, 2, true, 0
+  '00000000-0000-0000-0008-000000000002', 'waiting', 'duel', 2, 2, true, 0
 );
 insert into public.room_players(
   id, room_id, user_id, role, nickname_snapshot, is_ready, player_status,
   target_title, target_page_id, target_revision_id, progress_version
 )
 values
-  ('00000000-0000-0000-000b-000000000003', '00000000-0000-0000-000a-000000000002', '00000000-0000-0000-0008-000000000001', 'host', 'V2 One', true, 'waiting', 'V2 Middle', 'v2-middle', '200', 0),
-  ('00000000-0000-0000-000b-000000000004', '00000000-0000-0000-000a-000000000002', '00000000-0000-0000-0008-000000000002', 'guest', 'V2 Two', true, 'waiting', 'V2 Target', 'v2-target', '300', 0);
+  ('00000000-0000-0000-000b-000000000003', '00000000-0000-0000-000a-000000000002', '00000000-0000-0000-0008-000000000001', 'guest', 'V2 One', false, 'waiting', null, null, null, 0),
+  ('00000000-0000-0000-000b-000000000004', '00000000-0000-0000-000a-000000000002', '00000000-0000-0000-0008-000000000002', 'host', 'V2 Two', false, 'waiting', null, null, null, 0);
 
 set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0008-000000000001';
+set local request.jwt.claim.sub = '00000000-0000-0000-0008-000000000002';
 select throws_ok(
-  $$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000002')$$,
-  'P0001', 'DUEL_TARGETS_MUST_MATCH',
-  'duel start rejects two different target pages'
+  $$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000002', 'V2 Start', 'v2-start', '100')$$,
+  'P0001', 'DUEL_HOST_TARGET_REQUIRED',
+  'duel start rejects a missing host target'
 );
 
 set local role postgres;
 update public.room_players
-set target_title = 'V2 Middle', target_page_id = 'v2-middle', target_revision_id = '200'
+set target_title = 'V2 Middle', target_page_id = 'v2-middle', target_revision_id = null
 where id = '00000000-0000-0000-000b-000000000004';
 set local role authenticated;
 select is(
-  (select status from public.start_duel_room_v2('00000000-0000-0000-000a-000000000002')),
+  (select status from public.start_duel_room_v2('00000000-0000-0000-000a-000000000002', 'Forged start title', 'v2-start', '100')),
   'starting',
-  'duel starts after server confirms one common target'
+  'duel starts with only the host target and both readiness flags false'
 );
 select is(
   (select count(*)::integer from public.room_players where room_id = '00000000-0000-0000-000a-000000000002' and target_page_id = 'v2-middle' and target_revision_id = '200'),
   2,
-  'server writes the same target identity to both duel participants'
+  'server resolves the host revision and copies the target to both participants'
 );
+
+-- 14c lifecycle coverage (the preceding assertions replace old #30/#34/#35).
+select is(to_regprocedure('public.start_duel_room_v2(uuid)')::text, null::text,
+  'old START signature and md5 fallback are gone');
+select ok(has_function_privilege('authenticated', 'public.start_duel_room_v2(uuid,text,text,text)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.start_duel_room_v2(uuid,text,text,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.start_duel_room_v2(uuid,text,text,text)', 'EXECUTE'),
+  'new START allows authenticated/service role and blocks anon');
+select ok(not exists (
+  select 1 from pg_proc p, lateral aclexplode(p.proacl) a
+  where p.oid = 'public.start_duel_room_v2(uuid,text,text,text)'::regprocedure
+    and a.grantee = 0 and a.privilege_type = 'EXECUTE'
+), 'new START has no PUBLIC execute');
+select is((select duel_start_title from public.game_rooms where room_code = 'V2DUEL2'),
+  'V2 Start', 'forged START title is normalized to the exact snapshot canonical title');
+select is((select duel_start_page_id || '/' || duel_start_revision_id from public.game_rooms where room_code = 'V2DUEL2'),
+  'v2-start/100', 'requested start identity wins over other cached documents');
+select is((select count(*)::integer from public.room_players where room_id = '00000000-0000-0000-000a-000000000002' and not is_ready),
+  2, 'START does not set readiness');
+select is((select start_page_id || '/' || start_revision_id from public.initialize_duel_player_v2(
+  '00000000-0000-0000-000a-000000000002', 'Ignored', 'v2-target', '300')),
+  'v2-start/100', 'host initialization copies the room identity, ignoring supplied identity');
+select is((select status from public.game_rooms where room_code = 'V2DUEL2'), 'starting',
+  'one initialization keeps starting');
+select is((select progress_version from public.initialize_duel_player_v2(
+  '00000000-0000-0000-000a-000000000002', null, null, null)), 2::bigint,
+  'repeated host initialization preserves progress');
+set local request.jwt.claim.sub = '00000000-0000-0000-0008-000000000001';
+select is((select start_page_id || '/' || start_revision_id from public.initialize_duel_player_v2(
+  '00000000-0000-0000-000a-000000000002', null, null, null)),
+  'v2-start/100', 'guest initializes with the identical common start');
+select is((select status from public.game_rooms where room_code = 'V2DUEL2'), 'playing',
+  'two initializations transition to playing');
+
+set local role postgres;
+insert into public.game_rooms(id, room_code, host_user_id, status, mode, min_players, max_players, use_items, state_version)
+values ('00000000-0000-0000-000a-000000000014', 'V2HOST14',
+  '00000000-0000-0000-0008-000000000002', 'waiting', 'duel', 2, 2, false, 0);
+insert into public.room_players(room_id, user_id, role, nickname_snapshot, is_ready, player_status)
+values
+  ('00000000-0000-0000-000a-000000000014', '00000000-0000-0000-0008-000000000002', 'host', 'Host 14c', false, 'waiting'),
+  ('00000000-0000-0000-000a-000000000014', '00000000-0000-0000-0008-000000000001', 'guest', 'Guest 14c', false, 'waiting');
+-- JSON captures all row fields, including timestamps and both version counters.
+create temporary table duel_14c_before as
+select (select to_jsonb(r) from public.game_rooms r where room_code = 'V2HOST14') as room,
+  (select jsonb_agg(to_jsonb(p) order by user_id) from public.room_players p
+   where room_id = '00000000-0000-0000-000a-000000000014') as players;
+grant select on duel_14c_before to authenticated;
+set local role authenticated;
+select throws_ok($$select public.set_duel_target_v2('00000000-0000-0000-000a-000000000014', 'V2 Target', 'v2-target', '300', true)$$,
+  'P0001', 'DUEL_HOST_ONLY', 'guest cannot choose the common target');
+select throws_ok($$select public.set_duel_target_v2('00000000-0000-0000-000a-000000000014', null, null, null, false)$$,
+  'P0001', 'DUEL_HOST_ONLY', 'host authority is checked before NULL target validation');
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', null, null, null)$$,
+  'P0001', 'HOST_REQUIRED', 'guest cannot START even with invalid identity');
+select is((select to_jsonb(r) from public.game_rooms r where room_code = 'V2HOST14'),
+  (select room from duel_14c_before), 'guest rejections leave the room unchanged');
+select is((select jsonb_agg(to_jsonb(p) order by user_id) from public.room_players p
+  where room_id = '00000000-0000-0000-000a-000000000014'),
+  (select players from duel_14c_before), 'guest rejections leave both player rows unchanged');
+set local request.jwt.claim.sub = '00000000-0000-0000-0008-000000000002';
+select is((select target_title from public.set_duel_target_v2(
+  '00000000-0000-0000-000a-000000000014', '  V2 Target  ', 'v2-target', '300', true)),
+  'V2 Target', 'host setter persists its trimmed target immediately');
+select is((select is_ready from public.room_players where room_id = '00000000-0000-0000-000a-000000000014'
+  and user_id = '00000000-0000-0000-0008-000000000002'), false, 'compatibility ready argument is ignored');
+select is((select state_version from public.game_rooms where room_code = 'V2HOST14'), 1::bigint,
+  'successful target selection increments room version once');
+set local role postgres;
+truncate duel_14c_before;
+insert into duel_14c_before select
+  (select to_jsonb(r) from public.game_rooms r where room_code = 'V2HOST14'),
+  (select jsonb_agg(to_jsonb(p) order by user_id) from public.room_players p
+   where room_id = '00000000-0000-0000-000a-000000000014');
+set local role authenticated;
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', '', 'v2-start', '100')$$,
+  'P0001', 'DUEL_START_IDENTITY_REQUIRED', 'empty start title is rejected');
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', null, '100')$$,
+  'P0001', 'DUEL_START_IDENTITY_REQUIRED', 'missing start page is rejected');
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', 'v2-start', null)$$,
+  'P0001', 'DUEL_START_IDENTITY_REQUIRED', 'missing start revision cannot choose an older snapshot');
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', 'v2-start', '999')$$,
+  'P0001', 'DUEL_START_SNAPSHOT_REQUIRED', 'unknown exact revision cannot fall back to cached revision 100');
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'Unknown', 'unknown-page', '100')$$,
+  'P0001', 'DUEL_START_SNAPSHOT_REQUIRED', 'unknown start page is rejected');
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Target', 'v2-target', '300')$$,
+  'P0001', 'DUEL_START_EQUALS_TARGET', 'start cannot equal the common target');
+select is((select to_jsonb(r) from public.game_rooms r where room_code = 'V2HOST14'),
+  (select room from duel_14c_before), 'identity rejections leave all room fields unchanged');
+select is((select jsonb_agg(to_jsonb(p) order by user_id) from public.room_players p
+  where room_id = '00000000-0000-0000-000a-000000000014'),
+  (select players from duel_14c_before), 'identity rejections leave both rows and versions unchanged');
+
+set local role postgres;
+update public.room_players set target_revision_id = '999'
+where room_id = '00000000-0000-0000-000a-000000000014' and role = 'host';
+set local role authenticated;
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', 'v2-start', '100')$$,
+  'P0001', 'DUEL_TARGET_SNAPSHOT_REQUIRED', 'target snapshot validation remains enforced');
+set local role postgres;
+update public.room_players set target_revision_id = '300'
+where room_id = '00000000-0000-0000-000a-000000000014' and role = 'host';
+delete from public.room_players where room_id = '00000000-0000-0000-000a-000000000014' and role = 'guest';
+set local role authenticated;
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', 'v2-start', '100')$$,
+  'P0001', 'DUEL_PARTICIPANTS_REQUIRED', 'one participant cannot START');
+set local role postgres;
+insert into public.room_players(room_id, user_id, role, nickname_snapshot, is_ready, player_status, target_title, target_page_id, target_revision_id)
+values
+  ('00000000-0000-0000-000a-000000000014', '00000000-0000-0000-0008-000000000001', 'guest', 'Guest 14c', false, 'waiting', 'Stale guest target', 'v2-middle', '200'),
+  ('00000000-0000-0000-000a-000000000014', '00000000-0000-0000-0008-000000000003', 'guest', 'Extra 14c', false, 'waiting', null, null, null);
+set local role authenticated;
+select throws_ok($$select public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', 'v2-start', '100')$$,
+  'P0001', 'DUEL_PARTICIPANTS_REQUIRED', 'three participants cannot START');
+set local role postgres;
+delete from public.room_players where room_id = '00000000-0000-0000-000a-000000000014'
+  and user_id = '00000000-0000-0000-0008-000000000003';
+set local role authenticated;
+select is((select status from public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', 'v2-start', '100')),
+  'starting', 'different stale guest target cannot block the host target');
+select is((select count(*)::integer from public.room_players where room_id = '00000000-0000-0000-000a-000000000014'
+  and target_title = 'V2 Target' and target_page_id = 'v2-target' and target_revision_id = '300'),
+  2, 'host identity wins over user sort order and stale guest identity');
+
+-- Restore the original actor for the remaining movement/XP regression cases.
+set local request.jwt.claim.sub = '00000000-0000-0000-0008-000000000001';
 
 set local role postgres;
 update public.room_players
