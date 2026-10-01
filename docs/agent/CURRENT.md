@@ -1,10 +1,36 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-10-01**
-기준 커밋: **`b99b066`** (`docs: record main push #10 — 17b deployed, production 20 = repo 20`) — 이번 17b 완료·계약 반영 문서 커밋의 부모. **`origin/main = bc2b46f`, `origin/feat/group-final-gaps = b99b066`** (2026-10-01, 이번 커밋 전 `git ls-remote`)
-마지막 **앱 코드** 커밋: **`bc2b46f`** (17b-2c, **운영 배포됨 — `main` push #10**) · 마지막 **migration** 커밋: **`dc388d9`** (17b-1, `20261001090000_c1_reward_tables_v1.sql`) — **운영 적용됨 (2026-10-01, 백업 `20261001-1555` 뒤)** `[사용자 실행·검증: migrations 20 · catalog 6 · inventory 858 = 143×6]`. **운영 migration 20 = 저장소 20, 차이 0.** 이번 갱신은 **17b 운영 확인 기록 + `docs/contracts` C1·C5 반영**이며 앱 코드·migration·운영 변경은 없다.
-이전 기준: `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
-브랜치: `feat/group-final-gaps` — **`origin/main = dee9497`, `origin/feat/group-final-gaps = 29eb3e6`** (2026-10-01, 이번 문서 커밋 전 `git ls-remote`). 원격 feature는 이 기록 이후 이번 문서 커밋을 push하면 갱신된다. 문서 전용 변경은 feature에만 백업한다 (`AGENTS.md` §1.1).
+기준 커밋: **`21c2afb`** (`fix: 14c-3 recover lobby subscription gaps and verify duel flow`) — 이번 14c 통합 기록 문서 커밋의 부모.
+마지막 **앱 코드** 커밋: **`21c2afb`** (14c-3, **로컬 구현 완료·운영 미배포**) · 마지막 **migration** 커밋: **`3d027ba`** (14c-1, `20261001100000_duel_host_target_v2.sql`) — **운영 미적용**. **저장소/로컬 migration 21 ↔ 운영 20, 차이 1** (기준 `21c2afb`, 2026-10-01; 운영 수치는 17b 사용자 검증값이며 이번 세션은 운영 DB 미접근). 마지막 운영 배포는 `bc2b46f`(17b, `main` push #10), 마지막 운영 migration은 `20261001090000`이다. 이번 갱신은 **14c 통합 기록**이며 코드·migration·`docs/contracts` 추가 변경은 없다.
+이전 기준: `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+브랜치: `feat/group-final-gaps` — **`origin/main = bc2b46f`, `origin/feat/group-final-gaps = 42a3df3`** (2026-10-01, 이번 통합 기록 커밋 전 `git ls-remote` `[산출물]`). 사용자 지시로 이번 커밋 후 feature만 push한다. **main은 사용자가 운영 DB 적용 직후 직접 올린다** `[사용자 지시, 2026-10-01; 아직 실행 확인 전]`. 이번 세션은 main push·운영 DB 적용을 실행하지 않는다.
+
+> # ⚑ 2026-10-01 (11) — **14c 로컬 구현 완료 · 통합 기록 · 운영 미적용/미배포**
+>
+> **구현:** `3d027ba`(서버) → `f3ab081`(클라이언트) → `21c2afb`(구독 연결 보정·스모크).
+> 방장 `room_players.target_*`를 공통 목표로 공개하고 READY를 제거했다. START는 방장 목표 + 2명,
+> 랜덤 → 본문 → `ensureWikiSnapshot` **반환 identity**를 전달한다. 새 4인자 START는 정확한 스냅샷의 canonical 시작 제목을 사용하고 목표를 양쪽에 복사한다.
+> 근거: `docs/agent/14C-HANDOFF.md` · `TRACKS.md` §8-14c · `supabase/migrations/20261001100000_duel_host_target_v2.sql` `[코드·산출물]`.
+>
+> | 검증 | 결과·측정 기준 (모두 2026-10-01) |
+> |---|---|
+> | pgTAP | **771/771**, `server_authority_v2` **129/129** — `42a3df3` + 14c-1 미커밋 작업 트리(→ `3d027ba`). TAP 없는 기존 hardening preflight 파일은 분리해 10개 스위트를 실행 |
+> | Node·빌드 | **422/422** · `npm run build` exit 0 — 구현 시 `f3ab081` + 14c-3 작업 트리(→ `21c2afb`); **통합 기록 세션에서 `21c2afb` + 문서 전용 작업 트리로 재실행하여 동일 결과 확인**. 기존 500 kB 번들 경고 유지 |
+> | 로컬 2계정 UI | **30/30** — `f3ab081` + 14c-3 미커밋 작업 트리(→ `21c2afb`). 비아이템/아이템 · 목표 변경/Realtime · 저장 실패/퇴장 START 차단 · 정확한 공통 시작/목표 · F5/새 로그인 · 실제 링크 이동/완주/양쪽 결과 |
+> | 로컬 DB·불변식 | migration **21**, 최대 `20261001100000`, 구 START 없음·새 START 1개 — `f3ab081` + 14c-3 작업 트리. 그룹 함수/공유 helper/기존 그룹 테스트·기존 migration·그룹/싱글/아이템/XP 소스 불변 |
+>
+> **배포 중단 창 — 운영 DB 적용 완료부터 새 프론트 배포 완료까지:**
+> migration은 **`start_duel_room_v2(uuid)`를 삭제**하고 `start_duel_room_v2(uuid,text,text,text)`로 교체한다.
+> **이 구간에는 옛 프론트의 1인자 START 호출이 실패한다.** 옛 guest READY도 host-only setter에서 `DUEL_HOST_ONLY`로 거부된다.
+> 호환 overload·md5 fallback은 없다. **main push 직후가 아니라 Vercel의 새 번들 배포 완료까지가 중단 창**이며,
+> 배포 완료 후에도 이미 열린 탭의 옛 번들은 남을 수 있으므로 **기존 대기실은 새로고침하여 새 프론트로 다시 진입**해야 한다.
+> 이미 starting/playing인 방의 공통 시작·초기화 RPC 계약은 유지한다 `[코드: 위 migration, 기존 initialize_duel_player_v2]`.
+>
+> **실행 분담:** 이번 기록 커밋은 feature로만 push한다. 사용자가 운영 migration `20261001100000` 적용 직후 main을 직접 올린다
+> `[사용자 지시, 2026-10-01]`. **적용·배포·운영 확인은 아직 미실행/미확인으로 기록한다.** main push 이력은 #10 그대로이며 #11을 미리 만들지 않는다.
+> **미검증:** 스모크의 Wikipedia/snapshot 응답은 고정 픽스처이며 실제 Wikipedia 랜덤·Edge 외부 호출은 미검증.
+> **남은 구현 트랙: 16.** 14c는 로컬 구현 완료이며 운영 적용/프론트 배포/운영 확인이 남는다.
 
 > # ⚑ 2026-10-01 (10) — **17b 완료 · 운영 배포 — 백업 → migration `20261001090000` → `main` push #10 (`dee9497..bc2b46f`). 운영 20 = 저장소 20** `[사용자 실행·확인]`
 >
@@ -43,7 +69,7 @@
 >
 > **운영 DB 미접근.** 17b 구현·운영 반영은 아직 완료로 표시하지 않는다.
 
-> # ⚑ 2026-10-01 (8) — **14c 준비 완료 · 구현 대기 — 방장 목표 선택, READY 없음**
+> # ⚑ 2026-10-01 (8) — **당시 14c 준비 기록 — 위 (11)에서 로컬 구현 완료, 운영은 미적용**
 >
 > **결정** `[사용자 결정, 2026-10-01]`: (a) 방장이 목표 검색·선택 → 상대에게 즉시 공개 → 방장 START.
 > 참가자 2명 + 방장 목표 존재만 요구하며 READY·각자 목표 일치 검사는 폐기한다. 시작은 **START 직전 가져와 스냅샷한 랜덤 identity**를 시작 RPC에 전달한다. 숨김·동시 공개는 (b) 후보 풀 서버 선택 재검토 때의 보류 항목이다.
@@ -564,6 +590,8 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 
 ## 2. 검증 수치
 
+**최신 14c 검증은 상단 ⚑ (11)·`docs/agent/14C-HANDOFF.md`를 따른다.** Node/빌드는 통합 시 `21c2afb` + 문서 전용 작업 트리에서 재확인했고, UI는 `f3ab081` + 14c-3 작업 트리(→ `21c2afb`), pgTAP은 `42a3df3` + 14c-1 작업 트리(→ `3d027ba`), 모두 2026-10-01 실측이다. 저장소/로컬 migration 21 ↔ 운영 20(운영은 사용자 보고, 미재조회). 아래 표는 이전 실행 이력으로 보존한다.
+
 **실행 시점이 기재된 기준 커밋과 다른 항목은 그 사실을 명시한다** — 일부 수치는 동일 변경이
 미커밋 작업 트리에 있던 시점에 측정됐다.
 
@@ -748,6 +776,8 @@ Edge Function을 배포하기 전까지 실제로 재현됐다.
 ---
 
 ## 3. 원격 상태
+
+**최신 재측정 (2026-10-01, 기준 `21c2afb`, 통합 기록 커밋 전):** `git ls-remote origin` → **main `bc2b46f` · feature `42a3df3`** `[산출물]`. 이번 문서 커밋 후 `origin/feat/group-final-gaps`만 push한다 `[사용자 지시]`. 운영 migration 적용·직후 main push는 사용자가 직접 실행할 예정이며, 아직 실행 확인 전이다. 아래 원격 측정은 당시 이력이고 현재 값으로 재사용하지 않는다. **main push 이력 #10 이후 신규 실행 기록 없음.**
 
 **2026-09-29 재측정:** `git ls-remote origin` → `main = 7e90b7a` · `feat/group-final-gaps = f8e8fc5` `[산출물]`. 로컬 `feat`는 그 위에 **4커밋**(`777ecdf` 15b-1 · `fd6f916` 15b-2 · `518654c` 문서 · 이 문서 갱신)이 더 있었고, **2026-09-30 사용자 승인으로 `origin/feat/group-final-gaps`에 백업 push했다.** `main`은 건드리지 않았다. 저장소 migration **17** ↔ 운영 **16**, 차이 **1** (`20260929090000`). `main` push·운영 적용은 15c와 묶어 건별 승인한다 (`AGENTS.md` §1·§1.1).
 

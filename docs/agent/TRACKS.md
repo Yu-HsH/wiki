@@ -1,13 +1,15 @@
 # 병렬 트랙 파일 소유권 — 단일 기준
 
-갱신 날짜: 2026-10-01 (9차) — 이전 2026-09-30 (8차) · 2026-09-28 (7차) · 2026-09-03 (6차)
-기준 커밋: `29eb3e6` (`docs: record main push #9 — 14b deployed, production 19 = repo 19`)
-— **원격 재조회 (2026-10-01): `origin/main = dee9497`, `origin/feat/group-final-gaps = 29eb3e6`.** 아래 A~D 표는 당시 웨이브 기록이며 현재 판정은 `CURRENT.md`와 §1.1-c다. 8차 이전 헤더 기준은 `a784d2e`였다.
+갱신 날짜: 2026-10-01 (11차) — 이전 2026-10-01 (10차·9차) · 2026-09-30 (8차) · 2026-09-28 (7차) · 2026-09-03 (6차)
+기준 커밋: `21c2afb` (`fix: 14c-3 recover lobby subscription gaps and verify duel flow`) — 이번 통합 기록 커밋의 부모.
+— **원격 재조회 (2026-10-01, 통합 기록 커밋 전): `origin/main = bc2b46f`, `origin/feat/group-final-gaps = 42a3df3`.** 이번 커밋 후 feature만 push한다. 아래 A~D 표는 당시 웨이브 기록이며 현재 판정은 `CURRENT.md`와 §1.1-c다. 이전 헤더 기준은 `29eb3e6`이었다.
 트랙 커밋: `e70c541`(A) · `7a7197e`(B) · `a784d2e`(N2) · 분기점 `ad569f2`
 이전 기준: `eeb7a16` · `527f896` · `b281e01`
 브랜치: `feat/group-final-gaps`
 
-> **10차 갱신 (2026-10-01) — 17b 완료·운영 배포 (push #10). 남은 순서 14c → 16.** C1·C5 계약에 17b 판정을 반영했다 (C1 §4·§5, C5 §2·§6).
+> **11차 갱신 (2026-10-01) — 14c 로컬 구현 완료·통합 기록. 남은 구현 트랙은 16.** 구현 `3d027ba` → `f3ab081` → `21c2afb`, 운영 migration `20261001100000` 미적용·프론트 미배포. 구 START 삭제에 따른 **DB 적용~새 프론트 배포 완료 중단 창**은 `CURRENT.md` ⚑ (11)에 명시했다. 사용자 운영 DB 적용 직후 사용자 main push 예정이며 이 문서 커밋은 feature에만 push한다. 상세 §8-14c·`14C-HANDOFF.md`.
+>
+> **10차 갱신 (2026-10-01 당시) — 17b 완료·운영 배포 (push #10). 당시 남은 순서 14c → 16.** C1·C5 계약에 17b 판정을 반영했다 (C1 §4·§5, C5 §2·§6).
 >
 > **9차 갱신 (2026-10-01) — 14c 준비. 남은 순서 17b → 14c → 16.**
 > **방장만 목표 검색·선택 → 상대에게 즉시 공개 → 방장 START, READY 없음** `[사용자 결정, 2026-10-01]`.
@@ -155,7 +157,7 @@
 > **둘을 동시에 열 수도 있다.** C는 프론트+RPC 파일, 15a는 전부 신규 파일이라 **교집합이 0**이다
 > (§2.0). **다만 C는 G7 답이 있어야 시작하므로, 답이 없는 동안은 15a가 유일한 열린 트랙이다.**
 
-#### 1.1-c 다음 트랙 순서 — ~~**15b → 15c → 17b → 16**~~ → ~~**14b → 17b → 16**~~ → ~~**17b → 16**~~ → ~~**17b → 14c → 16**~~ → **남은 순서 14c → 16** `[2026-09-28 정리 · 2026-09-30 14b 추가 · 2026-10-01 14b 완료·14c 추가·17b 완료]`
+#### 1.1-c 다음 트랙 순서 — ~~**15b → 15c → 17b → 16**~~ → ~~**14b → 17b → 16**~~ → ~~**17b → 16**~~ → ~~**17b → 14c → 16**~~ → ~~**14c → 16**~~ → **남은 구현 트랙 16** `[2026-09-28 정리 · 2026-09-30 14b 추가 · 2026-10-01 14b·17b 배포·14c 로컬 완료]`
 
 | 순서 | 트랙 | 선행 조건 | 상태 |
 |:-:|---|---|---|
@@ -163,11 +165,11 @@
 | **2** | **15c** — 결과 화면 XP 지급 (finalizer 연결) | **15b** | **15c-1(서버) 완료 (2026-09-30, `d12ce5e`)** — 트리거 3개, finalizer 본문 무편집, 그룹은 **런타임 예외** `[사용자 승인]`. **15c-2(싱글·1:1 결과 화면 표시) 완료 (`47577ae`)** — migration 없음. 그룹 표시는 동결로 제외(부채 X2), 1:1 기권·이탈 결과 화면 부재(부채 X3). **운영 배포 완료 (2026-09-30, `main` push #7, 15b와 함께).** 배포 시 `20260929090000` → `20260930090000` 순서. 상세 `CURRENT.md` 상단 상자 |
 | **2.5** | **14b** — 빠른 링크 아이템화 (`link_index` 추가 · 링크 검열 (가) · 빠른 링크 블록 제거) `[사용자 결정, 2026-09-30]` | **없다.** 1:1 카탈로그 migration 1개. **16이 최종 카탈로그를 소비하므로 16 앞이고, 17b와는 파일 교집합이 없다** | **완료 · 운영 배포 (2026-10-01).** 구현 `4dba85e`~`50485ef` (§8-14b 완료 실측) → 운영 migration `20260930100000` 적용·검증 → `main` push #9 (`4719100..dee9497`) `[사용자 실행·확인]` (`CURRENT.md` ⚑ (7)) |
 | **3** | **17b** — 프로필 카드 장착 UI | **C1 보상 3테이블.** ⚠ **15a와 함께 적용되지 않았다** — 저장소 migration 16개 어디에도 `reward_catalog`·`user_reward_inventory`·`user_profile_equipment`가 없다 (2026-09-28 검색) `[코드]`. **17b는 C1 migration을 새로 만든다 — DB 변경 1건이 추가된다** `[사용자 확정, 2026-09-28]` | **완료 · 운영 배포 (2026-10-01).** 구현 `dc388d9`(17b-1 migration `20261001090000`) · `7f748e6` · `afd0e7b` · `bc2b46f` → 백업 `20261001-1555` → 운영 migration 적용·검증(migrations 20 · catalog 6 · inventory 858 = 143×6) → `main` push #10 (`dee9497..bc2b46f`). 운영 확인: 프로필 꾸미기 아이콘 6종 · 장착 · 랭킹 행 반영 `[사용자 실행·확인]` (`CURRENT.md` ⚑ (10)) |
-| **3.5** | **14c** — 1:1 방장 목표 선택 · READY 제거 · START 직전 랜덤 시작 identity 사용 `[사용자 결정, 2026-10-01]` | **순서상 17b 다음.** 14b는 완료. 새 라이프사이클 migration은 17b 반영 후 최대 버전 뒤에 생성한다. 16은 최종 1:1 계약을 소비한다 | **준비 완료 · 구현 대기** — §8-14c |
+| **3.5** | **14c** — 1:1 방장 목표 선택 · READY 제거 · START 직전 랜덤 시작 identity 사용 `[사용자 결정, 2026-10-01]` | **17b 다음으로 구현 완료.** 신규 migration `20261001100000`은 `20261001090000` 뒤다. 16은 최종 1:1 계약을 소비한다 | **로컬 구현 완료 · 운영 미적용/미배포** — `3d027ba`·`f3ab081`·`21c2afb`, §8-14c |
 | **4** | **16** — 업적·보상 | 14·15·17 전부 소비 (W3) | 마지막 |
 
 ~~**티켓은 아직 쓰지 않는다.** 순서만 고정한다.~~ → **14b·14c는 티켓을 썼다 (§8-14b, 2026-09-30 · §8-14c, 2026-10-01).** 17b·16은 아직 순서만 고정한다.
-남은 순서: **14c → 16.** 15b·15c·14b·17b는 완료·배포됐다 (14b: push #9 · 17b: push #10, 둘 다 2026-10-01). 14c 신규 migration은 **`20261001090000` 뒤 버전**으로 만든다.
+남은 구현 트랙: **16.** 15b·15c·14b·17b는 완료·배포됐다 (14b: push #9 · 17b: push #10, 둘 다 2026-10-01). **14c는 로컬 완료이며 운영 migration `20261001100000` 적용·프론트 배포·운영 확인이 남는다.** DB 적용 직후 main은 사용자가 직접 올릴 예정이고, 현재 완료로 표시하지 않는다.
 
 #### 1.1-d 15b 파일 소유권 예외 — **A·B 소유 파일을 15b가 직접 고쳤다** `[사용자 결정 6, 2026-09-29]`
 
@@ -373,9 +375,8 @@
 | `20260904 0*` | **창 (§7)** | `20260904010000_profiles_grant_narrow.sql` → `…020000_profiles_total_xp.sql` → `…030000_daily_challenges_course_slot.sql` → `…040000_game_records_result_status_check.sql` |
 
 **파일명은 제안이다. 순서 관계만 계약이다** — 창 블록의 4개는 **적은 순서대로 적용돼야 한다** (§7.2).
-**14c 예약 (2026-10-01):** 17b 반영 후 `supabase migration new duel_host_target_v2`로 신규 파일을 생성하고,
-그 시점 저장소 최대 migration 버전보다 뒤인지 확인한다. 준비 기준 `29eb3e6`의 최대 버전은 `20260930100000`이나,
-**14c 파일명을 이 값만 보고 미리 고정하지 않는다** (§8-14c). 이번 준비 작업은 migration 파일을 만들지 않는다.
+**14c 생성 완료 (2026-10-01, `3d027ba`):** `supabase migration new duel_host_target_v2`로 생성한 신규 파일을
+**`20261001100000_duel_host_target_v2.sql`**로 확정했다. CLI 생성 값 `20261001072901`이 당시 최대 `20261001090000`보다 작아서 사용자 순서 요구대로 조정했다. 기존 migration 수정 없음. 운영 미적용 (§8-14c·`14C-HANDOFF.md`).
 `supabase:preflight`는 고정된 3개 버전만 조회하므로 새 migration이 늘어도 깨지지 않는다
 (`scripts/supabase-runtime-preflight.mjs:136-138`) `[코드]`. **통합 시점(2026-09-04)에 실측으로
 확인했다** — 13번째 migration이 붙은 뒤에도 `migration-history`는 `count=3`으로 PASS했다.
@@ -1156,12 +1157,22 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 
 ---
 
-### 8-14c. 1:1 방장 목표 선택 · READY 없음 · START 직전 랜덤 시작 identity — **준비 완료 · 구현 대기 (2026-10-01)**
+### 8-14c. 1:1 방장 목표 선택 · READY 없음 · START 직전 랜덤 시작 identity — **로컬 구현 완료 · 운영 미적용/미배포 (2026-10-01)**
 
 **결정** `[사용자 결정, 2026-10-01]` — (a) 방장이 대기실에서 목표 검색·선택 → 상대에게 바로 표시 → 방장 START.
 상대는 방에 있으면 되고 READY는 없다. 시작은 랜덤 유지하며 START 직전 스냅샷한 identity를 서버가 사용한다.
 근거: `01-CONFIRMED-SPEC.md` §0·§4.1·§4.3, `MOBILE-VALIDATION-CORRECTIONS.md` §8.
-**이번 산출물은 문서뿐이다.** 아래 변경·수용조건은 향후 14c 구현 범위이며 아직 실행·완료되지 않았다.
+**구현·로컬 수용조건 검증 완료:** `3d027ba`(migration·pgTAP) → `f3ab081`(클라이언트·복구) → `21c2afb`(구독 연결 누락 보정·두 계정 스모크). 상세 `docs/agent/14C-HANDOFF.md`.
+
+| 검증 (2026-10-01) | 결과·실측 기준 |
+|---|---|
+| pgTAP | 전체 **771/771**, server_authority_v2 **129/129** — `42a3df3` + 14c-1 작업 트리(→ `3d027ba`). 기존 #30·#34·#35 교체, #29·#36 유지·정규화 확인 및 권한/원자성/초기화/ACL 추가 |
+| Node·빌드 | **422/422** · build exit 0 — 구현 시 `f3ab081` + 14c-3 작업 트리(→ `21c2afb`), **통합 기록에서 `21c2afb` + 문서 전용 작업 트리로 재실행·동일 결과 확인** |
+| 2계정 UI | **30/30** — `f3ab081` + 14c-3 작업 트리(→ `21c2afb`). 비아이템/아이템·목표 Realtime·실패/퇴장 차단·정확한 시작·F5/새 로그인·이동/완주 |
+| 로컬 DB | migration **21**, 최대 `20261001100000` — `f3ab081` + 14c-3 작업 트리. 운영 **20**은 사용자 보고, 이번 세션 재조회 없음 |
+
+**배포 잔여:** 운영 DB 적용~새 프론트 배포 완료까지 구 1인자 START가 실패하고 옛 guest READY는 `DUEL_HOST_ONLY`로 거부된다. 이미 열린 대기실의 구 번들은 배포 후에도 새로고침이 필요하다. 사용자 DB 적용 직후 사용자 main push 예정이며 **현재는 계획**이다 (`CURRENT.md` ⚑ (11)). 실제 Wikipedia/Edge 외부 호출은 픽스처 스모크 범위 밖·미검증.
+재실행 도구 `scripts/duel-host-target-smoke.mjs`도 구현 산출물이다. 아래는 구현에 사용한 티켓·수용조건이며, 과거 소스 감사 표는 착수 전 기준으로 보존한다.
 
 | | |
 |---|---|
@@ -1173,7 +1184,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | **수용조건 — 서버** | ① waiting 방의 **비방장 `set_duel_target_v2` → `DUEL_HOST_ONLY`**, 목표 미기입 파라미터여도 권한 검사가 먼저이며 저장·버전 변경 없음 ② 방장 목표 없이 START 거부(`DUEL_HOST_TARGET_REQUIRED`) ③ 참가자 수가 2가 아니면 START 거부(`DUEL_PARTICIPANTS_REQUIRED`), 비방장 START는 기존 `HOST_REQUIRED` 유지 ④ 양쪽 `is_ready=false`·상대 목표 NULL이어도 방장 목표 + 2명이면 시작 가능 ⑤ `DUEL_PLAYERS_NOT_READY`·`DUEL_TARGETS_MUST_MATCH`는 **신규 유효 시작 RPC에서 제거**(과거 migration 텍스트는 보존) ⑥ 방장 목표를 **`user_id = game_rooms.host_user_id`**로 읽고 양쪽 `target_title/page_id/revision_id`에 복사·revision 정규화 ⑦ 전달한 시작 `page_id/revision_id`의 정확한 스냅샷을 쓰며 다른 과거 스냅샷으로 대체하지 않음 ⑧ 입력 시작 identity 누락·스냅샷 없음·목표와 같은 page ID는 거부, 실패 시 방/양쪽 행 변경 없음 ⑨ 시작·초기화의 room 잠금·공통 시작 복사·두 명 초기화 뒤 playing 전환·재접속 불변 ⑩ 직접 table 쓰기 권한을 되살리지 않고 변경 시그니처의 PUBLIC/anon EXECUTE 차단 유지 |
 | **수용조건 — 화면** | ① 방장만 검색·선택 UI, 후보 선택 시 summary·snapshot 확보 후 setter를 호출해 **별도 READY 없이 저장** ② 상대에게 **"방장이 고른 목표: X"** 표시(서버에 저장된 방장 행), 초기 진입·재접속·Realtime 목표 변경 반영 ③ 양쪽 READY 버튼/배지·각자 목표 선택·"상대가 풀 목표 문서" 라벨 제거 ④ START는 방장만, **2명 + 저장된 방장 목표**일 때 가능; 목표/시작 문서 로딩·저장 실패·상대 퇴장 시 시작 불가 ⑤ START 직전 `fetchDistinctRandomTitle` → `fetchPageData` → `ensureWikiSnapshot` **반환 identity** → `startRoomGame` → RPC가 이어짐 ⑥ 게임 HUD·VS 소개가 공통 목표를 표시하고 상대 행을 반대로 읽는 관례 제거 ⑦ starting에서 상대 행 목표가 아직 NULL인 조회 조합은 방장 공통 목표로 복원 가능, 실제 공통 목표 누락은 `MISSING_TARGET` 유지 ⑧ 기존 이동·아이템·완주·재접속 흐름 회귀 없음 |
 | **수용조건 — 불변식** | 기존 migration/baseline diff 없음. `GamePage.jsx`·`GroupGamePage.jsx`·`GroupRoomPage.jsx`·`groupMultiplayerService.js`·`wikiService.js`·`wikiSnapshotService.js`·아이템/XP 소스 무편집. `onlineGameSession.js`의 그룹 함수·공유 helper와 그룹 테스트는 바이트 불변. `is_ready/submitted_target_*` 스키마 유지. CSS 기존 `mp-*` 규칙 삭제·개명 없음. `navigate("/multiplayer", { replace: true })` 계약 유지 (§2.2) |
-| **수용조건 — 테스트** | 아래 pgTAP 교체 목록 + 신규 권한/목표 누락/준비 없음/시작 identity/정규화/거부 원자성/초기화 사례. `npm test` 전량 · `npm run build` · 로컬 pgTAP 전 스위트 · 2세션 UI 스모크(목표 변경, 미선택 START, 비아이템/아이템, 랜덤 시작과 공통 목표, F5/재접속, 완주). 결과 수는 실측 커밋·날짜와 함께 기록하고 **97건 유지를 합격조건으로 삼지 않는다**(추가·교체 후 개수 기록). 이번 준비에서는 실행하지 않았다 |
+| **수용조건 — 테스트** | 아래 pgTAP 교체 목록 + 신규 권한/목표 누락/준비 없음/시작 identity/정규화/거부 원자성/초기화 사례. `npm test` 전량 · `npm run build` · 로컬 pgTAP 전 스위트 · 2세션 UI 스모크(목표 변경, 미선택 START, 비아이템/아이템, 랜덤 시작과 공통 목표, F5/재접속, 완주). 결과 수는 실측 커밋·날짜와 함께 기록하고 **97건 유지를 합격조건으로 삼지 않는다**(추가·교체 후 개수 기록). 실행 결과는 위 로컬 완료 표에 기록했다 |
 | **의존** | **17b → 14c → 16** `[사용자 결정, 2026-10-01]`. 17b 반영 후 HEAD·파일 소유·migration 최대 버전을 다시 확인한다. 신규 시작 시그니처는 프론트 계약 변경이므로 **migration 승인과 배포 승인 시 구프론트/기존 대기실 세션 영향·적용 순서를 확인**한다. 문서 준비 commit/push는 feat에만 |
 
 #### 8-14c 설계 판정 — 목표 저장 위치와 RPC 계약
@@ -1187,7 +1198,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 - **setter:** 기존 `set_duel_target_v2(uuid,text,text,text,boolean)` 시그니처를 유지하고 host 체크를 추가한다.
   마지막 `p_is_ready`는 **호환 인자일 뿐 1:1 준비·시작 조건에 쓰지 않는다**. 클라이언트 setter는 고정 호환값을 넘기고 READY 상태를 조작하지 않는다.
   waiting 방·인증 검사 후 host 권한을 확인하고 목표 검증/저장을 한다. `DUEL_HOST_ONLY` 실패는 무변경이어야 한다.
-- **start:** 현 함수는 **`start_duel_room_v2(p_room_id uuid)` 하나뿐이며 `p_start_*` 인자가 없다**.
+- **start:** 14c 전 함수는 **`start_duel_room_v2(p_room_id uuid)` 하나뿐이며 `p_start_*` 인자가 없었다**. 새 migration의 로컬 적용 후에는 4인자 함수만 존재한다.
   지금 무시되는 `p_start_*`는 **`initialize_duel_player_v2`의 인자**다 (`20260814091000:830,884-908`).
   14c는 시작 RPC를 **`start_duel_room_v2(p_room_id uuid, p_start_title text, p_start_page_id text, p_start_revision_id text)`**로 교체한다.
   시작 인자에 default를 주지 않는다. 새 migration에서 **구 1인자 함수만 명시적으로 교체(drop, CASCADE 금지)**하고,
@@ -1195,7 +1206,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 - **시작 검증:** 전달된 ID·revision이 있는 정확한 스냅샷을 조회한다. 실제 저장 제목은 스냅샷의 canonical 제목으로 정규화하고,
   클라이언트 제목 위조가 공통 시작 제목을 바꾸지 못하게 한다. 누락은 `DUEL_START_IDENTITY_REQUIRED`,
   캐시 미존재는 기존 `DUEL_START_SNAPSHOT_REQUIRED`, 시작=목표는 `DUEL_START_EQUALS_TARGET`으로 거부한다.
-  이 오류명은 **14c 티켓 계약이며 현재 구현된 오류명이라고 읽지 않는다**. 목표 스냅샷 검증(`DUEL_TARGET_SNAPSHOT_REQUIRED`)은 유지한다.
+  이 오류명은 **신규 migration `20261001100000`에 구현됐으며 운영은 미적용**이다. 목표 스냅샷 검증(`DUEL_TARGET_SNAPSHOT_REQUIRED`)은 유지한다.
 - **초기화:** 공통 시작을 `game_rooms.duel_start_*`에서 복사하는 현 계약을 유지한다. 초기화 RPC에 시작 결정 권한을 다시 주지 않는다.
 - **프론트 공통 목표:** 대기/starting에서는 `host_user_id`의 저장된 목표를 기준으로 읽고, playing의 양쪽 목표는 서버 복사 결과다.
   `MultiplayerGamePage.jsx:282`와 `validateDuelGameSession:219`의 **"상대 행 필수"** 전제만 걷어 내고 목표 누락·참가자·활성 상태 검사는 유지한다.
