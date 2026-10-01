@@ -6,6 +6,11 @@
 **근거 문서:** `16-ACHIEVEMENTS-REWARDS.md` §5.3(필드 목록) · §1(공통 규칙) ·
 `17-EXPLORATION-PROFILE-GUEST.md` §5 · `01-CONFIRMED-SPEC.md` §10.
 
+> **구현·운영 상태 (2026-10-01).** 이 계약은 17b가 **`supabase/migrations/20261001090000_c1_reward_tables_v1.sql`**
+> 하나로 구현했고 운영에 적용됐다 — migrations 20 · `reward_catalog` 6 · `user_reward_inventory` 858(=프로필 143 × 기본 아이콘 6)
+> `[사용자 실행·검증]`. pgTAP `supabase/tests/c1_reward_tables_v1.sql` 96건 `[산출물, 기준 dc388d9]`.
+> **§5의 확인 필요 ①~④는 17b 착수 판정으로 전부 해소됐다** `[사용자 결정, 2026-10-01]`. §1~§3의 DDL·RLS는 계약 원문 그대로 적용됐다.
+
 ---
 
 ## 0. 왜 공통인가
@@ -29,7 +34,8 @@
 **번들은 지급 주체의 것이고 지급은 16만 한다.** 17은 번들을 읽지 않고 카탈로그·보유·장착만 쓴다.
 
 → **번들은 패킷 16이 소유한다.** 이 계약의 `user_reward_inventory.grant_source_id`가
-번들 지급 기록을 가리킬 수 있게만 열어 둔다 (§2). `확인 필요` — 16 착수 시 재확인한다.
+번들 지급 기록을 가리킬 수 있게만 열어 둔다 (§2). ~~`확인 필요` — 16 착수 시 재확인한다.~~
+→ **확정 (①)** `[사용자 결정, 2026-10-01]` — 17b migration은 `reward_bundles`·`reward_bundle_items`를 만들지 않았다. 16이 만든다.
 
 ---
 
@@ -83,9 +89,12 @@ using (retired = false);
 | `retired` 노출 | **막는다.** 은퇴 보상은 카탈로그에 안 보인다. **단 보유·장착한 사용자에게는 §2·§3으로 계속 보인다** |
 | 쓰기 | **없다.** 카탈로그는 migration/seed로만 채운다 |
 
-> **`retired` 보상을 이미 장착한 사용자는 어떻게 되나 — `확인 필요`.**
-> 16 §1이 "기록을 보존한다"고만 하고 장착 해제 여부를 규정하지 않는다.
-> **이 계약은 강제 해제하지 않는 쪽으로 열어 둔다**(§3의 FK가 inventory만 보므로 자동 유지된다).
+> **`retired` 보상을 이미 장착한 사용자는 어떻게 되나 — 확정 (②)** `[사용자 결정, 2026-10-01]`.
+> **강제 해제하지 않는다.** 이미 장착된 은퇴 보상은 장착 상태로 남고 **남의 카드에도 계속 보인다** —
+> 카드 조회 RPC(§4)가 `security definer`라 위 `retired = false` 정책에 가려지지 않는다.
+> **새로 장착하는 것만** `REWARD_RETIRED`로 거부한다. 해제한 뒤에는 다시 장착할 수 없다.
+> 카드의 RewardRef는 `retired: true` 표식을 실어 편집 UI가 구분하게 한다 (§4).
+> 보유 목록 select(본인 RLS + 카탈로그 embed)에서는 은퇴 보상의 카탈로그가 `null`로 오므로 편집 후보에서 빠진다 `[코드]`.
 
 ---
 
@@ -181,7 +190,9 @@ create unique index if not exists user_profile_equipment_unique_reward_idx
 > 프레임 보상을 `badge` 슬롯에 넣는 것은 이 DDL이 막지 못한다
 > (`reward_catalog.kind`가 이 테이블에 없기 때문이다).
 > **RPC가 검증한다**(§4). 대안은 `kind`를 비정규화해 FK에 포함하는 것인데,
-> **카탈로그의 `kind`가 바뀌면 장착이 깨지므로 채택하지 않았다.** `확인 필요` — 16 착수 시 재검토.
+> **카탈로그의 `kind`가 바뀌면 장착이 깨지므로 채택하지 않았다.** ~~`확인 필요` — 16 착수 시 재검토.~~
+> → **확정 (③)** `[사용자 결정, 2026-10-01]` — CHECK는 다른 테이블을 볼 수 없고, 세 테이블 모두 쓰기 grant가 없어
+> **장착 RPC가 유일한 쓰기 경로**이므로 RPC 검증으로 충분하다. 알 수 없는 slot도 어떤 kind와도 맞지 않아 `SLOT_KIND_MISMATCH`가 된다 `[코드]`.
 
 ### 3.2 RLS — **여기만 공개 읽기다**
 
@@ -225,6 +236,11 @@ create or replace function public.unequip_profile_reward_v1(
 create or replace function public.get_profile_card_v1(
   p_user_id uuid
 ) returns jsonb
+
+-- 카드 배치 조회 (2026-10-01 추가). 랭킹 50행·그룹 대기실이 행마다 단건을 부르지 않게 한다.
+create or replace function public.get_profile_cards_v1(
+  p_user_ids uuid[]
+) returns jsonb
 ```
 
 | 함수 | 반환 | 실패 코드 |
@@ -232,11 +248,25 @@ create or replace function public.get_profile_card_v1(
 | `equip_profile_reward_v1` | `{ok:true, equipment:[...]}` — **갱신 후 전체 장착 상태** | `AUTH_REQUIRED` · `REWARD_NOT_OWNED` · `SLOT_KIND_MISMATCH` · `SLOT_INDEX_INVALID` · `REWARD_RETIRED` |
 | `unequip_profile_reward_v1` | 동일 | `AUTH_REQUIRED` · `SLOT_EMPTY` |
 | `get_profile_card_v1` | `{ok:true, card:{...}}` — [C5](C5-PROFILE-CARD.md) §2의 형식 | `PROFILE_NOT_FOUND` |
+| **`get_profile_cards_v1`** | `{ok:true, cards:{ "<user_id>": card, ... }}` — 카드 형식은 단건과 같다. **중복·`null` ID는 제거하고, 프로필이 없는 ID는 결과에서 빠진다.** 빈 입력·`null`은 `cards:{}` | `TOO_MANY_USERS` (중복 제거 후 100개 초과) |
 
 - **전부 `security definer` + `set search_path = ''`**, `authenticated`에만 `execute`.
 - **원자성:** 16 §5.3의 "원자적으로 갱신"은 단일 `insert ... on conflict (user_id, slot, slot_index) do update`로 충족된다. 별도 트랜잭션 제어가 필요 없다.
 - **`REWARD_NOT_OWNED`는 FK 위반을 잡아 옮긴 것이다.** 함수가 미리 확인해도 되지만
-  **최종 방어는 FK다.**
+  **최종 방어는 FK다.** 구현은 미리 확인하고(카탈로그에 없는 ID도 `REWARD_NOT_OWNED`), 그 사이 보유가 취소되면 FK 위반을 같은 코드로 바꾼다 `[코드]`.
+
+### 4.1 구현에서 정해진 것 `[코드, 20261001090000]`
+
+| 항목 | 값 |
+|---|---|
+| **배치 RPC** | `get_profile_cards_v1`은 이 계약 원문(RPC 3개)에 없던 **네 번째 RPC**다 `[사용자 결정, 2026-10-01]`. 단건 `get_profile_card_v1`은 **같은 내부 빌더**(`private.profile_cards_v1`)의 1개짜리 호출이라 카드 형태의 출처가 하나다. 상한 100 |
+| **판정 순서** (`equip`) | `AUTH_REQUIRED` → `SLOT_INDEX_INVALID` → `REWARD_NOT_OWNED` → `REWARD_RETIRED` → `SLOT_KIND_MISMATCH`. `p_slot_index`가 `null`이면 1 |
+| **이동** | 이미 다른 자리에 장착된 보상을 장착하면 **옮긴다**(원래 자리는 비고, 대상 자리의 기존 보상은 교체된다). `unique (user_id, reward_id)`를 지키는 방식이며 배지 순서 변경이 이것이다 |
+| **반환 `equipment[]`** | `{slot, slotIndex, rewardId, equippedAt, reward: RewardRef}` — 경기 표현 4종 슬롯 포함 전체 |
+| **RewardRef** | C5 §2의 `{rewardId, displayName, assetRef}`에 **`kind`·`slotIndex`·`retired`가 덧붙는다** |
+| **카드에 들어가는 슬롯** | `profile_icon`·`title`·`badge`·`frame`·`background` 5종만. `path_color`·`path_effect`·`finish_effect`·`spectator_emoji`는 장착은 되지만 카드 키가 아니다 |
+| **`active=false`** | 보유한 비활성 보상의 장착은 **막지 않는다** — 이 계약에 해당 실패 코드가 없다. 필요하면 16이 정한다 `확인 필요` |
+| **실행 권한** | 4개 모두 `authenticated`·`service_role`. `anon`·`public`은 회수 |
 
 ---
 
@@ -244,8 +274,24 @@ create or replace function public.get_profile_card_v1(
 
 | 상태 | 항목 |
 |---|---|
-| **확정** | 3테이블 DDL · `kind`/`slot` 9종 · 배지 3개 제한 · 보유 검증(FK) · RLS 3종 · RPC 3개 시그니처 · 멱등 지급 방식 |
-| **확인 필요** | ① `reward_bundles` 소유가 16이라는 판단(§0.1) ② `retired` 보상의 장착 유지 여부(§1) ③ `kind`↔`slot` 검증을 RPC에 두는 선택(§3.1) ④ **시스템 기본 프로필 아이콘 4~6종의 `reward_id`와 지급 방식** — `01-CONFIRMED-SPEC.md` §10이 "시스템 제공 4~6종"이라고만 하고 **개수도 ID도 정하지 않았다** `[문서]` |
+| **확정** | 3테이블 DDL · `kind`/`slot` 9종 · 배지 3개 제한 · 보유 검증(FK) · RLS 3종 · RPC 3개 시그니처 · 멱등 지급 방식 · **배치 RPC `get_profile_cards_v1` (§4)** · **아래 ①~④** |
+| ~~확인 필요~~ → **확정** `[사용자 결정, 2026-10-01 — 17b 착수 판정]` | ① **`reward_bundles`는 16 소유** (§0.1) ② **`retired` 장착은 유지, 신규 장착만 `REWARD_RETIRED`** (§1) ③ **`kind`↔`slot` 검증은 RPC** (§3.1) ④ **기본 프로필 아이콘 6종** — 아래 |
+| **확인 필요 (남은 것)** | `active=false` 보유 보상의 장착 차단 여부 (§4.1) — 16이 정한다 |
 
-> **④가 가장 크다.** 기본 아이콘을 `system_default`로 전원에게 지급할지, 카탈로그에만 두고
-> 장착 시 보유를 생성할지가 정해지지 않았다. **17 착수 시 결정한다.**
+> **④ — 기본 프로필 아이콘 6종** `[사용자 결정, 2026-10-01]` `[코드, 20261001090000]`
+>
+> | `reward_id` | `display_name` | `asset_ref` |
+> |---|---|---|
+> | `icon_default_compass` | 나침반 | `/profile-icons/compass.svg` |
+> | `icon_default_book` | 펼친 책 | `/profile-icons/book.svg` |
+> | `icon_default_globe` | 지구본 | `/profile-icons/globe.svg` |
+> | `icon_default_lantern` | 등불 | `/profile-icons/lantern.svg` |
+> | `icon_default_map` | 지도 | `/profile-icons/map.svg` |
+> | `icon_default_quill` | 깃펜 | `/profile-icons/quill.svg` |
+>
+> - **지급 방식:** `system_default`로 **전원 보유.** migration이 기존 프로필 전원에 backfill하고, `profiles` **AFTER INSERT 트리거**
+>   (`profiles_grant_default_profile_icons` → `private.grant_default_profile_icons_v1`)가 신규 가입자에게 준다.
+>   가입은 Edge Function `username-signup`이 `profiles`에 insert하므로 **함수 재배포 없이** 덮인다. 지급은 PK 위 `on conflict do nothing`이라 멱등이다.
+> - ID 목록의 단일 정의는 `private.default_profile_icon_ids_v1()`이다.
+> - **아트는 임시 SVG다** (`public/profile-icons/*.svg`). ID는 바꾸지 않고(16 §1) 최종 아트는 `asset_ref`만 갱신해 교체한다.
+>   정확한 아트 수량·외형은 디자인 단계에서 정한다 (`01-CONFIRMED-SPEC.md` §10).
