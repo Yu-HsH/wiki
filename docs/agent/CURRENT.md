@@ -1,10 +1,32 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-01**
-기준 커밋: **`34af554`** (`docs: integrate 14c and record START deployment interruption window`) — 이번 14c 배포 기록 문서 커밋의 부모.
-마지막 **앱 코드** 커밋: **`21c2afb`** (14c-3, **운영 배포 완료**) · 마지막 **migration** 커밋: **`3d027ba`** (14c-1, `20261001100000_duel_host_target_v2.sql`) — **운영 적용 완료** `[사용자 실행·확인, 2026-10-01]`. **저장소/로컬 migration 21 = 운영 21, 차이 0** (기준 `34af554`, 2026-10-01; 운영 적용은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포는 `34af554`(14c, `main` push #11), 마지막 운영 migration은 `20261001100000`이다. 이번 갱신은 **14c 배포 기록**이며 코드·migration 변경은 없다.
-이전 기준: `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
-브랜치: `feat/group-final-gaps` — **`origin/main = origin/feat/group-final-gaps = 34af554`** (2026-10-01, 이번 기록 커밋 전 `git ls-remote origin refs/heads/main refs/heads/feat/group-final-gaps` `[산출물]`). 이번 문서 커밋은 feature로만 push한다 `[사용자 지시]`.
+갱신 날짜: **2026-10-02**
+기준 커밋: **`b1950d5`** (`docs: 16a-3 C1 listed amendment, reward assignment draft and 16a interfaces`) — 이번 16a 기록 문서 커밋의 부모.
+마지막 **앱 코드** 커밋: **`21c2afb`** (14c-3, **운영 배포 완료**) · 마지막 **migration** 커밋: **`a8eda5a`** (16a-1, `20261002090000_achievements_rewards_v1.sql`) — **운영 미적용** · 그 앞 `3d027ba`(14c-1, `20261001100000`)는 운영 적용 완료 `[사용자 실행·확인, 2026-10-01]`. **저장소/로컬 migration 22 ↔ 운영 21, 차이 1 (`20261002090000`)** (기준 `b1950d5`, 2026-10-02; 운영 21은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포는 `34af554`(14c, `main` push #11), 마지막 운영 migration은 `20261001100000`이다. 이번 갱신은 **16a 완료(로컬) 기록**이다 — 앱 코드 변경 없음.
+이전 기준: `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+브랜치: `feat/group-final-gaps` — **`origin/main = 34af554` · `origin/feat/group-final-gaps = 819617a`** (2026-10-02, 이번 기록 커밋 전 `git ls-remote origin refs/heads/main refs/heads/feat/group-final-gaps` `[산출물]`). 16a 커밋 5개(`bae36ac`~이번 기록 커밋)는 **로컬에만 있다 — push하지 않았다** (요청 없음, `AGENTS.md` §2).
+
+> # ⚑ 2026-10-02 (12) — **16a 완료 (로컬) — 업적·보상 서버 기반. 트리거 없음(inert). 운영 미적용**
+>
+> **판정** `[사용자 결정, 2026-10-01 — 16 계획 판정]` 전문은 **`docs/agent/16-HANDOFF.md` §1**. 범위: 31개 중 **시드 23(일반 13 · 히든 10) · 보류 6 · 제외 2** (§2).
+> C1 개정(`reward_catalog.listed`) 승인 · X1 3개·튜토리얼·`hidden_redirect`·`hidden_swap_win` 보류 · 히든 표시 `발견 n / ??` · 단일 단계 XP 30 · 소급은 누적형만(16b-r 건별 승인) · `active=false` 장착은 막지 않음.
+>
+> | 커밋 | 내용 |
+> |---|---|
+> | `bae36ac` | `TRACKS.md` §1.1-e(16 소유권 예외) · §2.4(파일명 예약) · §8-16(티켓) 등재 (R10) + `16-HANDOFF.md` 판정 |
+> | `a8eda5a` 16a-1 | migration **`20261002090000_achievements_rewards_v1.sql`** — `reward_catalog.listed` + 정책 교체 · 신규 8테이블(RPC 전용, 권한 0) · 시드 23 업적 / 39 단계 / 39 번들 / 44 보상(히든 15 비공개) · 지급 파이프라인 `private.apply_achievement_value_v1`·`private.unlock_achievement_v1` · 읽기 RPC `get_my_achievements_v1`·`get_result_achievements_v1`·`mark_achievements_seen_v1` |
+> | `c6172fd` 16a-2 | pgTAP `supabase/tests/achievements_rewards_v1.sql` **145건** — §6이 G5 음성 스위트 |
+> | `b1950d5` 16a-3 | `C1-REWARD-TABLES.md` §1.1 개정 · §4.1/§5 `active=false` 확정 · `16-HANDOFF.md` §3 **보상 할당표 초안** · §4 G5 구조 · §5 16b/16c 인터페이스 |
+>
+> | 검증 (로컬 스택 `wiki-packet13-r2-clean158`, 2026-10-02) | 결과 |
+> |---|---|
+> | migration | `migration up --local` 적용 — 로컬 이력 **22** (기준 `a8eda5a`) |
+> | pgTAP | 신규 **145/145** · 전체 **916/916** (기존 771 불변 + 145), `not ok` 0 (기준 `c6172fd`) |
+> | G5 음성 대조 | 누출 2건 주입한 사본에서 **3건 실패** — 테스트가 누출을 잡는다 |
+> | `npm test` | **422/422** (기준 `c6172fd`, JS 변경 없음) · build는 JS 변경이 없어 재실행하지 않았다 |
+>
+> **대기:** ① **보상 할당표 검토** (`16-HANDOFF.md` §3) — 검토 결과는 운영 적용 전이라 migration 파일에 직접 반영 ② 16b 착수.
+> **운영 적용은 16b와 묶을지 별도로 할지 미정** — 16a 단독 적용은 inert라 사용자 영향이 없다(카탈로그 공개 보상 29개가 편집기 후보에 늘지 않는다 — 보유자만 편집기에 뜬다). 적용은 건별 승인 (`AGENTS.md` §1).
 
 > # ⚑ 2026-10-01 (11) — **14c 완료 · 운영 배포 · main push #11 (`bc2b46f..34af554`)**
 >
