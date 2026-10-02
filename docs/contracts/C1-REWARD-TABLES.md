@@ -10,6 +10,10 @@
 > 하나로 구현했고 운영에 적용됐다 — migrations 20 · `reward_catalog` 6 · `user_reward_inventory` 858(=프로필 143 × 기본 아이콘 6)
 > `[사용자 실행·검증]`. pgTAP `supabase/tests/c1_reward_tables_v1.sql` 96건 `[산출물, 기준 dc388d9]`.
 > **§5의 확인 필요 ①~④는 17b 착수 판정으로 전부 해소됐다** `[사용자 결정, 2026-10-01]`. §1~§3의 DDL·RLS는 계약 원문 그대로 적용됐다.
+>
+> **16a 개정 (2026-10-02) — `reward_catalog.listed` + 읽기 정책 교체** `[사용자 승인, 16 계획 판정 1]`.
+> `supabase/migrations/20261002090000_achievements_rewards_v1.sql`이 적용한다 — **로컬 적용·pgTAP만, 운영 미적용** `[산출물, 기준 c6172fd]`.
+> 상세는 **§1.1**. §4.1의 마지막 `확인 필요`(`active=false` 장착)도 16 계획 판정으로 닫혔다 — **막지 않는다**.
 
 ---
 
@@ -95,6 +99,42 @@ using (retired = false);
 > **새로 장착하는 것만** `REWARD_RETIRED`로 거부한다. 해제한 뒤에는 다시 장착할 수 없다.
 > 카드의 RewardRef는 `retired: true` 표식을 실어 편집 UI가 구분하게 한다 (§4).
 > 보유 목록 select(본인 RLS + 카탈로그 embed)에서는 은퇴 보상의 카탈로그가 `null`로 오므로 편집 후보에서 빠진다 `[코드]`.
+
+### 1.1 개정 — `listed` (16a, 2026-10-02) `[사용자 승인]`
+
+**왜.** 히든 업적 보상(예: 칭호 이름)이 카탈로그에 공개되면 **업적 이름이 달성 전에 드러난다** — 16 §1 "히든 업적은 달성 전 모든 정보를 숨긴다",
+spec §9.2, 공백 **G5**. 위 정책 `using (retired = false)`로는 막을 방법이 없다.
+
+```sql
+alter table public.reward_catalog
+  add column if not exists listed boolean not null default true;
+
+drop policy if exists "Authenticated users can read live rewards" on public.reward_catalog;
+create policy "Authenticated users can read live rewards"
+on public.reward_catalog for select to authenticated
+using (
+  retired = false
+  and (
+    listed
+    or exists (
+      select 1 from public.user_reward_inventory owned
+       where owned.reward_id = reward_catalog.reward_id
+         and owned.user_id = (select auth.uid())
+    )
+  )
+);
+```
+
+| 축 | 값 |
+|---|---|
+| `listed = true` (기본) | 지금까지와 같다 — 로그인 사용자 전체에 공개. **기존 6행(기본 아이콘)은 `true`** |
+| `listed = false` | **보유자에게만 보인다.** 16a는 히든 업적 보상 15행을 `false`로 시드한다 |
+| 본인 보유 예외가 필요한 이유 | 17b 편집기의 보유 목록 select(inventory → catalog embed)가 보유한 히든 보상에서 `null`이 되지 않게 하기 위해서다 |
+| 장착 후 | **공개된다.** 카드 조회 RPC(§4)는 `security definer`라 이 정책과 무관하다 — 무엇을 **걸었는지**는 표시 정보다 (§3.2) |
+| 테이블 ACL·RPC | **불변.** `authenticated` SELECT만, 쓰기 없음. §2·§3 DDL·§4 시그니처도 그대로다 |
+
+**검증:** `supabase/tests/achievements_rewards_v1.sql` §1·§6 — 미보유자에게 비공개 0행 · 보유자에게 보유분만 · 미보유 히든 보상 장착 응답이
+**존재하지 않는 ID와 같은 `REWARD_NOT_OWNED`**(존재 여부를 알려 주지 않는다). 기존 `c1_reward_tables_v1` 96건 회귀 0 `[산출물, 로컬, 기준 c6172fd, 2026-10-02]`.
 
 ---
 
@@ -265,7 +305,7 @@ create or replace function public.get_profile_cards_v1(
 | **반환 `equipment[]`** | `{slot, slotIndex, rewardId, equippedAt, reward: RewardRef}` — 경기 표현 4종 슬롯 포함 전체 |
 | **RewardRef** | C5 §2의 `{rewardId, displayName, assetRef}`에 **`kind`·`slotIndex`·`retired`가 덧붙는다** |
 | **카드에 들어가는 슬롯** | `profile_icon`·`title`·`badge`·`frame`·`background` 5종만. `path_color`·`path_effect`·`finish_effect`·`spectator_emoji`는 장착은 되지만 카드 키가 아니다 |
-| **`active=false`** | 보유한 비활성 보상의 장착은 **막지 않는다** — 이 계약에 해당 실패 코드가 없다. 필요하면 16이 정한다 `확인 필요` |
+| **`active=false`** | 보유한 비활성 보상의 장착은 **막지 않는다** — 이 계약에 해당 실패 코드가 없다. ~~필요하면 16이 정한다 `확인 필요`~~ → **확정: 막지 않는다** `[사용자 결정, 2026-10-01 — 16 계획 판정]`. `active`는 **신규 지급**(16 지급 파이프라인이 `active=false` 보상을 건너뛴다) 여부이지 보유 무효가 아니다. RPC 무변경 |
 | **실행 권한** | 4개 모두 `authenticated`·`service_role`. `anon`·`public`은 회수 |
 
 ---
@@ -276,7 +316,7 @@ create or replace function public.get_profile_cards_v1(
 |---|---|
 | **확정** | 3테이블 DDL · `kind`/`slot` 9종 · 배지 3개 제한 · 보유 검증(FK) · RLS 3종 · RPC 3개 시그니처 · 멱등 지급 방식 · **배치 RPC `get_profile_cards_v1` (§4)** · **아래 ①~④** |
 | ~~확인 필요~~ → **확정** `[사용자 결정, 2026-10-01 — 17b 착수 판정]` | ① **`reward_bundles`는 16 소유** (§0.1) ② **`retired` 장착은 유지, 신규 장착만 `REWARD_RETIRED`** (§1) ③ **`kind`↔`slot` 검증은 RPC** (§3.1) ④ **기본 프로필 아이콘 6종** — 아래 |
-| **확인 필요 (남은 것)** | `active=false` 보유 보상의 장착 차단 여부 (§4.1) — 16이 정한다 |
+| ~~**확인 필요 (남은 것)**~~ → **확정** | ~~`active=false` 보유 보상의 장착 차단 여부 (§4.1) — 16이 정한다~~ → **막지 않는다** (§4.1) · **`listed` 개정** (§1.1) `[사용자 결정, 2026-10-01]`. **이 계약에 남은 `확인 필요`는 없다** |
 
 > **④ — 기본 프로필 아이콘 6종** `[사용자 결정, 2026-10-01]` `[코드, 20261001090000]`
 >
