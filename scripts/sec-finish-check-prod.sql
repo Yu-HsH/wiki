@@ -15,9 +15,10 @@ from pg_publication_tables
 where pubname = 'supabase_realtime'
 order by tablename;
 
--- Q3. 1:1 RPC가 상대 행을 통째로 돌려주는가 (부채 ④-B)
+-- Q3. 1:1 RPC가 상대 행을 통째로 돌려주는가 (부채 ④-B) — SF-M1 전: masked f, 후: masked t
 select p.proname,
-       p.prosrc ~ $re$'opponent',\s*to_jsonb\(v_opponent\)$re$ as returns_full_opponent,
+       p.prosrc ~ $re$'opponent',\s*to_jsonb\(v_opponent\)$re$ as returns_opponent,
+       p.prosrc ~ $re$'opponent',\s*to_jsonb\(v_opponent\) - array\['path_titles', 'path_page_ids', 'path_revision_ids'\]$re$ as opponent_path_masked,
        p.prosecdef
 from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace

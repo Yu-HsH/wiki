@@ -1341,6 +1341,31 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | **SF-A2** 프론트 | `multiplayerService.js` `fetchRoomPlayers` → RPC · `MultiplayerGamePage.jsx` 신호 구독 → 재조회 · `syncAfterItemUse` 병합 | **프론트, C 소유 파일만.** 그룹 동결 파일 무편집 | `npm test` · build · 2세션 스모크(상대 현재 문서·이동 횟수 갱신, RESULT에서 경로 공개) · `main` push 후 `git ls-remote`로 반영 확인 |
 | **SF-A3** `duel_players_rls_v1` | `room_players` SELECT 정책 — 1:1 진행 중 상대 행 숨김, 그룹은 모드 조건으로 제외 | DB | **A2 `main` push 후 하루 간격 권장** (열린 옛 탭) `[사용자 결정]`. 일찍 적용하면 진행 중 경기의 상대 표시가 멈춘다(데이터 손실 아님). 롤백 = 정책 복원 · pgTAP: 진행 중 상대 0행, 종료 후 공개, 그룹 불변 |
 
+#### 8-SEC-⑥ SF-M1 완료 (로컬) — `4fe80c5` · **운영 미적용** `[산출물, 2026-10-03]`
+
+| 항목 | 결과 |
+|---|---|
+| migration | `20261004090000_sec_finish_db_v1.sql` — 섹션 5개. 두 RPC 본문은 원본 migration 텍스트 그대로 + `'opponent'` 식 하나만 변경 (라이브 `prosrc` = 원본 텍스트 사전 확인). ACL 불변(`create or replace`) |
+| 로컬 적용 | `supabase migration up --local` — 26번째로 적용, 오류 0 |
+| pgTAP 신규 | `supabase/tests/sec_finish_db_v1.sql` **29/29** — 섹션별 (B 9 · C 6 · G2-② 8 · O2 잔재 3 · 기본 권한 3) |
+| pgTAP 전체 | **1115/1115** · `not ok` 0 — TAP 없는 `group_final_gaps_v13_hardening_preflight.sql` 제외(16-HANDOFF §182와 같은 기준). 적용 전 1086 중 실패 2건이 예상대로 났고 둘 다 기존 테스트 정정으로 닫았다 ↓ |
+| 기존 테스트 정정 2건 | `group_security_phase2c.sql:356` 기대 메시지 → `permission denied for table room_events` · `server_authority_v2.sql:727` 그룹 이동 행 8개 집계를 **서버 역할(postgres)로** — authenticated(4번 참가자)로 세고 있었고 이제 본인 2행만 보인다. 의도(서버가 8행을 썼다)는 그대로 |
+| 음성 대조 | 같은 트랜잭션에서 두 RPC 원본과 옛 정책을 복원하고 신규 파일 실행 → **6건 `not ok`** (2·7 경로 키 · 10·11·12 이동 행 · 14 정책) 후 롤백 — 테스트가 변경을 실제로 잡는다 |
+| 정적 | `tests/secFinishDbV1.test.js` 4건 — 본문 = 원본 + 마스크 식 1개 · 함수 2개만 교체·ACL 문장 없음 · 섹션 5개. `npm test` **465/465** |
+| 16b 판정기 | `achievement_*` pgTAP 3파일 전부 통과 — (C)가 판정기에 닿지 않는다 |
+| 확인 쿼리 Q3 정정 | 옛 정규식이 마스크 뒤에도 참이라 `opponent_path_masked` 열을 추가했다 |
+
+**남는 것:** `supabase_admin` 역할의 `public` 기본 권한은 여전히 anon·authenticated에 `arwdDxtm`이다 — 운영에서 `postgres`가 바꿀 수 없다. migration이 만드는 테이블의 소유자는 `postgres`라 영향이 없다. 함수 기본 `EXECUTE`(anon 포함)는 범위 밖 — SF-M2 표에서 다룬다.
+`game_mutation_requests`의 기존 응답 행에는 마스크 전 상대 경로가 남아 있다 — 같은 `request_id` 재전송 시 재생된다. 클라이언트 읽기 권한은 없고(테이블 grant 0), 재생은 요청자 본인에게만 간다. **적용 시점에 진행 중인 경기에서만 의미가 있다.**
+
+**운영 적용 절차 (건별 승인 — `AGENTS.md` §1):**
+1. 백업
+2. `scripts/sec-finish-check-prod.sql` 실행 — **적용 전** 값 기록
+3. `supabase db push --linked` → migrations **26**
+4. 같은 쿼리 재실행 — 기대값: Q1 `game_move_events`는 `Players can read their own move events` 하나 · `room_events`는 SELECT 정책 하나 / Q3 `opponent_path_masked = t` 두 행 / Q5 전부 `t` / Q7 `has_residue` 전부 `f`, `room_events`는 authenticated `SELECT`만·anon 행 없음 / Q8 REFERENCES 0행 / Q9 `postgres`의 `r`·`S`에 anon·authenticated 없음
+5. 운영 확인 — 1:1 아이템전 한 판(이동·아이템 정상) · 그룹 관전 이모지 한 번
+6. **프론트 배포 없음.** 순서 제약 없음 (DB 먼저여도 옛 프론트 무해 — §8-SEC-① (B))
+
 **순서:** SF-M1 → SF-A1 → SF-A2(`main` push) → **하루** → SF-A3. SF-M2는 표 확정 후. **운영 적용·`main` push는 단계마다 건별 승인** (`AGENTS.md` §1·§1.1).
 
 **A1 발화 조건의 근거 — 하트비트가 이동 없이 `progress_version`을 올린다** `[코드, 로컬 실측]`. `heartbeat_duel_v2`가 `heartbeat_at`·`last_seen_at` 갱신과 함께 `progress_version = progress_version + 1` (로컬 함수 본문; 정의 `20260814091000` → `20260904090000`). `initialize_duel_player_v2`·`finalize_duel_if_expired`도 같은 증가를 가진다. **이미 등재된 부채다 — D3** (`CURRENT.md` §5 D3 `:1584`·`:1632-1650` · `TRACK-C-HANDOFF.md` §후속 3 `:1171`·`:1220-1236`, 트랙 C 2026-09-06 판정): `progress_version`이 OCC 토큰과 liveness 카운터를 겸한다. 오늘 실측은 그 재확인이다. ~~원문을 찾지 못했다 — 확인 필요~~ → 해소 (2026-10-03). **A1에 주는 제약:** D3 원문대로 "그 bump가 `room_players` realtime 이벤트를 만들고 **상대 생존 표시**를 굴린다". A3 이후 상대 행 이벤트가 사라지므로, 상대 생존 표시가 `heartbeat_at` 신선도를 읽는지 A1 착수 시 확인하고 — 읽는다면 `player_status` 변화 신호만으로 충분한지 A1 보고에 적는다. D3 자체(liveness 분리)는 이 트랙 범위 밖이다.
