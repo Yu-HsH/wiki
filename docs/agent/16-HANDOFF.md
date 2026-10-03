@@ -487,3 +487,34 @@ select c.reward_id, c.listed,
 | `scripts/16d-check-badge-holders.sql` | 배지 보유자·장착 행 (읽기 전용) — 16d-2 직전 |
 
 **구현은 아직 없다** — 코드·DB는 옛 규칙 그대로다. 다음: 16d-1(프론트).
+
+### 10.6 16d-1 — 프론트 (로컬 완료, 2026-10-03) `[산출물]`
+
+**옛 DB(지금 운영)와 16d-2 이후 DB 양쪽에서 동작한다** — migration보다 먼저 배포한다.
+
+| 영역 | 바뀐 것 |
+|---|---|
+| 카드 | `utils/profileCard.js` — 카드 4요소(배지 키 없음) · `PROFILE_CARD_SLOTS` 4종 · `MATCH_EXPRESSION_SLOTS`(완주 효과·경로 색상) · 옛 DB의 `badge` 장착 행과 카드 `badges`는 읽지 않는다. `components/ProfileCard.jsx` 배지 렌더 제거 · 프레임 단계 클래스 · special은 아바타 바깥 회전 링 |
+| 토큰 | 신규 `utils/rewardTokens.js` — 팔레트 5색 · `frameTier`·`finishTier`·`pathColor`. 토큰 없음(옛 DB) → 기본 모양 |
+| 편집기 | `components/ProfileRewardEditor.jsx` — 카드 4행 + "경기 표현" 2행. 경기 표현은 `fetchOwnMatchExpression`(신규, `services/profileRewardService.js`)로 읽고 장착 응답으로 갱신. 경로 색상 견본은 노드 테두리만 |
+| 결과 | 신규 `hooks/useMatchExpression.js` · `components/FinishEffect.jsx` · `css/matchExpression.css`(`fx-`). 싱글(`SuccessOverlay`) = 경로 노드·선 색 + 마지막 노드 완주 효과 · 1:1(`MultiplayerGamePage`) = **승자 카드에만** 완주 효과, 경로 줄 없음 (판정 4). 모션 감소 시 정적 |
+| CSS | `css/profileCard.css` — `.pcard-badge*` 제거 · `.pcard--frame-tier-1·2·3·special` · 편집기 묶음·견본. `appStyles.js` import 1줄 |
+| 라벨 | `utils/achievementDisplay.js` `REWARD_KIND_LABELS`에서 `badge` 제거 — 옛 DB의 배지 보상은 「이름」만 |
+| SVG 9 | 공개: `public/profile-icons/first-arrival.svg` · `shield.svg` · `group-together.svg` · `daily-explorer.svg`. 히든(판정 5): `public/profile-icons/x/<8자리 hex>.svg` 5개, `<title>획득 아이콘</title>` |
+
+**16d-2가 넣을 `asset_ref` (아이콘)** — 히든 이름이 이 표와 migration에 남는 것은 §4 "남은 노출"과 같은 수준이다(번들·공개 파일 경로가 아니다):
+
+| 보상 | `asset_ref` |
+|---|---|
+| `badge_first_arrival` | `/profile-icons/first-arrival.svg` |
+| `badge_duel_defense` | `/profile-icons/shield.svg` |
+| `badge_group_together_2` | `/profile-icons/group-together.svg` |
+| `icon_daily_explorer` | `/profile-icons/daily-explorer.svg` |
+| `badge_one_step_enough` | `/profile-icons/x/620733c9.svg` |
+| `badge_signpost` | `/profile-icons/x/48fa697d.svg` |
+| `badge_shared_document` | `/profile-icons/x/3036149e.svg` |
+| `badge_simultaneous_arrival` | `/profile-icons/x/2a70eb1b.svg` |
+| `icon_dice_globe` | `/profile-icons/x/4285e53f.svg` |
+
+**검증 (로컬 스택, 2026-10-03, 커밋 직전 작업 트리):** `npm test` **456/456** (449 + 7 — 배지 단언 정정 · 신규 `tests/matchExpression.test.js` 6 · 편집기·서비스 1) · build 통과 · **G5 스캔에 16d 파일·SVG 전부 추가** — 공개 SVG 제목 「함께 걷는 발자국」이 히든 보상명 「발자국」을 포함해 스캔이 잡았고 「함께하는 탐험」으로 고쳤다.
+로컬 UI `scripts/badge-retirement-ui-smoke.mjs` **9/9** — **A 옛 DB**: 편집기 6행(배지 행 없음) · 장착된 배지 무시 · 프레임/완주/경로 장착 · 토큰 없음 → 기본 링·기본 완주 효과 / **B 16d-2 모양**(카탈로그 행을 임시로 바꾸고 원복): 금 링(tier-3) · 전환된 「첫 도착」이 아이콘 SVG로 장착 · 싱글 결과 보라 경로 + tier-3 완주 / **C 1:1**: 승자 카드에만 완주 효과(모션 감소 → 정적) · special 링 회전 / 모션 감소 정적 · 페이지 오류 0 · 카탈로그 원복 확인. 16c `achievement-display-smoke` **15/15** 회귀 없음.
