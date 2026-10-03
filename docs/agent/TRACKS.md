@@ -1425,10 +1425,12 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | 14c 스모크 `duel-host-target-smoke.mjs` | **30/30 × 3회** (RoomPage 수정 후) |
 
 **배포 절차 (건별 승인 — `AGENTS.md` §1.1):**
-1. **SF-A1 운영 적용 확인이 먼저다** — A2가 `get_duel_room_players_v1`을 부른다. 없으면 1:1 화면 전부가 참가자 읽기에서 실패한다 (기록: 사용자 `db push` 진행 중 — 결과 미기록)
+1. **SF-A1 운영 적용 확인이 먼저다** — A2가 `get_duel_room_players_v1`을 부른다. 없으면 1:1 화면 전부가 참가자 읽기에서 실패한다 → **확인됨: `migration list`에서 `20261004090000`·`20261004100000` Remote** `[사용자, 2026-10-03]`
 2. 배포 전 검증 재실행 → `main` push → **`git ls-remote origin refs/heads/main`으로 반영 확인** (14c 교훈)
 3. 운영 확인 — 1:1 한 판(상대 현재 문서·이동 횟수 갱신, 결과 화면) · 대기실 이탈/재입장
 4. **SF-A3는 push 확인 후 하루 뒤** — 옛 탭은 테이블을 직접 읽는다. A3 뒤의 옛 탭은 상대 패널이 멈추고 F5 복구가 `OPPONENT_LEFT`로 끝난다 (§8-SEC-⑦ ⓑ)
+
+**SF-A2 배포 (2026-10-03)** — RoomPage 경합 수정 **승인** `[사용자]` · **main push #14 `912d241..fadc81d`** `[사용자 실행]` · 원격 main = `fadc81d` 실측 `[산출물]` · 운영 확인 미수신. **SF-A3 운영 적용은 2026-10-04 이후** `[사용자 결정]`.
 
 **순서:** SF-M1 → SF-A1 → SF-A2(`main` push) → **하루** → SF-A3. SF-M2는 표 확정 후. **운영 적용·`main` push는 단계마다 건별 승인** (`AGENTS.md` §1·§1.1).
 
