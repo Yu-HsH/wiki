@@ -15,7 +15,19 @@
 > `supabase/migrations/20261002090000_achievements_rewards_v1.sql`이 적용한다 — **로컬 적용·pgTAP만, 운영 미적용** `[산출물, 기준 c6172fd]`.
 > 상세는 **§1.1**. §4.1의 마지막 `확인 필요`(`active=false` 장착)도 16 계획 판정으로 닫혔다 — **막지 않는다**.
 
+> **16d 개정 (2026-10-03) — 배지 kind 폐지** `[사용자 결정, 2026-10-03 — 16-HANDOFF §10]`. 아래 §0.-1 정정 이력. **계약만 고쳤다 — 구현은 16d-2 forward migration(운영 미적용).**
+
 ---
+
+## 0.-1 ⚠ 정정 이력 — 동결 계약을 고칠 때의 기록
+
+형식은 [C3](C3-LEVEL-STORAGE.md) §0 — ① 이 표에 남기고 ② 본문의 옛 값은 취소선 ③ 근거를 적는다.
+
+| 날짜 | 무엇을 | 어떻게 | 왜 |
+|---|---|---|---|
+| **2026-10-03** | **`kind`·`slot` 9종의 `badge`** · §3 `slot_index` 규칙 · §3.1 "대표 배지 최대 3개" · §4.1 카드 슬롯 5종·이동(배지 순서) · §5 "배지 3개 제한" | **배지 kind 폐지 — 8종.** `slot_index`는 모든 slot에서 1. 카드 슬롯은 `profile_icon`·`title`·`frame`·`background` 4종. 카드 응답의 `badges` 키는 옛 프론트 호환을 위해 **`[]` 상수로 남긴다**. RPC 시그니처(`p_slot_index`)는 무변경 | **사용자 결정** — 칭호와 배지가 같은 의미를 중복하고 그림 배지는 아이콘과 겹친다 (`docs/agent/16-HANDOFF.md` §10). 기존 배지 보상 11개는 **`kind` 갱신**으로 아이콘 7·칭호 4가 된다 — `reward_id` 불변, 보유 행 그대로. **구현: 16d-2 forward migration** (`20261002090000`·`20261001090000` 무편집, R5) |
+
+> 이 정정의 근거는 코드 실측이 아니라 **사용자 결정**이다 — C3 §0 규칙 ③이 막는 "문서 대 문서의 취향 차이"가 아니다 (spec §0 2026-10-03과 같은 성격).
 
 ## 0. 왜 공통인가
 
@@ -28,7 +40,7 @@
 |---|---|---|---|
 | 카탈로그·보유·장착 3분리 | 정의 | 요구 | **§1·§2·§3** |
 | 보유하지 않은 보상 장착 차단 | "서버가 보유 여부를 검증" | "서버 차단" | **§3의 FK가 구조로 막는다** |
-| 배지 최대 3 | §5.3 | §5 | **§3의 `slot_index` CHECK** |
+| ~~배지 최대 3~~ → **배지 폐지 (2026-10-03, §0.-1)** | §5.3 | §5 | ~~**§3의 `slot_index` CHECK**~~ → `slot_index`는 항상 1 |
 | 게스트 차단 | §8 테스트 | §6 | **§4 RPC가 `AUTH_REQUIRED`** |
 | legacy `profile_image_url` 보존 | §5.3 말미 | §5 | **삭제하지 않는다 — [C5](C5-PROFILE-CARD.md)** |
 
@@ -71,7 +83,7 @@ create index if not exists reward_catalog_kind_active_idx
 | 컬럼 | 결정 근거 |
 |---|---|
 | `reward_id text` (uuid 아님) | **16 §1: "업적 ID는 출시 후 바꾸지 않는다".** 보상도 같은 성질이며, 사람이 읽는 안정 ID여야 카탈로그를 코드 재배포 없이 다룰 수 있다 |
-| `kind` **9종** | `01-CONFIRMED-SPEC.md` §10이 정확히 이 9종을 열거한다 — 프로필 아이콘 / 칭호 / 배지 / 프레임 / 배경 / 경로 색상 / 경로 효과 / 완주 효과 / 관전 이모티콘 `[문서]` |
+| `kind` ~~**9종**~~ → **8종 (2026-10-03, §0.-1)** | `01-CONFIRMED-SPEC.md` §10이 ~~정확히 이 9종을 열거한다 — 프로필 아이콘 / 칭호 / 배지 / 프레임 / 배경 / 경로 색상 / 경로 효과 / 완주 효과 / 관전 이모티콘~~ → **배지를 뺀 8종 — 프로필 아이콘 / 칭호 / 프레임 / 배경 / 경로 색상 / 경로 효과 / 완주 효과 / 관전 이모티콘** (spec §0 2026-10-03). 위 DDL은 17b 원문이고, 16d-2 forward migration이 CHECK에서 `badge`를 뺀다 `[문서]` |
 | `asset_ref` **nullable** | 16 §2: "profile cosmetic asset ID는 제작 단계에서 연결하되 안정적인 reward ID는 유지한다". **아트가 없어도 보상을 정의할 수 있어야 한다** |
 | `active` / `retired` **분리** | 16 §1: "삭제 대신 `active=false` 또는 `retired=true`로 기록을 보존한다". **둘은 다른 뜻이다** — `active=false`는 일시 비활성, `retired=true`는 영구 은퇴 |
 
@@ -217,12 +229,16 @@ create unique index if not exists user_profile_equipment_unique_reward_idx
   on public.user_profile_equipment (user_id, reward_id);
 ```
 
+> **2026-10-03 정정 (§0.-1):** 위는 17b 원문이다. 16d-2 forward migration이 `slot` CHECK에서 `badge`를 빼고(8종),
+> `slot_index` CHECK를 **`slot_index = 1`** 로 바꾼다. 그 전에 `slot = 'badge'` 장착 행을 지운다(자동 재장착 없음).
+> `slot_index` 컬럼과 PK는 호환을 위해 남긴다.
+
 ### 3.1 이 설계가 규칙 두 개를 구조로 강제한다
 
 | 규칙 | 어떻게 강제되나 |
 |---|---|
 | **"보유하지 않은 보상은 장착할 수 없다"** (`01-CONFIRMED-SPEC.md` §10) | **복합 FK `(user_id, reward_id) → user_reward_inventory`.** RPC 로직이 아니라 **DB가 거부한다.** 보유가 취소되면 `on delete cascade`로 장착도 사라진다 |
-| **"대표 배지 최대 3개, 나머지는 1개"** (§10) | `slot_index` CHECK + PK. **4번째 배지를 넣을 자리가 없다** |
+| ~~**"대표 배지 최대 3개, 나머지는 1개"** (§10)~~ → **배지 폐지, 모든 slot 1개 (2026-10-03, §0.-1)** | ~~`slot_index` CHECK + PK. **4번째 배지를 넣을 자리가 없다**~~ → `slot_index = 1` CHECK + PK |
 
 **추가 유니크 인덱스**는 같은 보상을 두 슬롯에 겹쳐 장착하는 것을 막는다.
 
@@ -301,10 +317,10 @@ create or replace function public.get_profile_cards_v1(
 |---|---|
 | **배치 RPC** | `get_profile_cards_v1`은 이 계약 원문(RPC 3개)에 없던 **네 번째 RPC**다 `[사용자 결정, 2026-10-01]`. 단건 `get_profile_card_v1`은 **같은 내부 빌더**(`private.profile_cards_v1`)의 1개짜리 호출이라 카드 형태의 출처가 하나다. 상한 100 |
 | **판정 순서** (`equip`) | `AUTH_REQUIRED` → `SLOT_INDEX_INVALID` → `REWARD_NOT_OWNED` → `REWARD_RETIRED` → `SLOT_KIND_MISMATCH`. `p_slot_index`가 `null`이면 1 |
-| **이동** | 이미 다른 자리에 장착된 보상을 장착하면 **옮긴다**(원래 자리는 비고, 대상 자리의 기존 보상은 교체된다). `unique (user_id, reward_id)`를 지키는 방식이며 배지 순서 변경이 이것이다 |
+| **이동** | 이미 다른 자리에 장착된 보상을 장착하면 **옮긴다**(원래 자리는 비고, 대상 자리의 기존 보상은 교체된다). `unique (user_id, reward_id)`를 지키는 방식이며 ~~배지 순서 변경이 이것이다~~ (배지 폐지 후 slot마다 자리가 1개라 순서 변경은 없다 — §0.-1) |
 | **반환 `equipment[]`** | `{slot, slotIndex, rewardId, equippedAt, reward: RewardRef}` — 경기 표현 4종 슬롯 포함 전체 |
 | **RewardRef** | C5 §2의 `{rewardId, displayName, assetRef}`에 **`kind`·`slotIndex`·`retired`가 덧붙는다** |
-| **카드에 들어가는 슬롯** | `profile_icon`·`title`·`badge`·`frame`·`background` 5종만. `path_color`·`path_effect`·`finish_effect`·`spectator_emoji`는 장착은 되지만 카드 키가 아니다 |
+| **카드에 들어가는 슬롯** | ~~`profile_icon`·`title`·`badge`·`frame`·`background` 5종만.~~ → **`profile_icon`·`title`·`frame`·`background` 4종** — `badges` 키는 `[]` 상수로 남는다 (§0.-1, 16d-2). `path_color`·`path_effect`·`finish_effect`·`spectator_emoji`는 장착은 되지만 카드 키가 아니다 |
 | **`active=false`** | 보유한 비활성 보상의 장착은 **막지 않는다** — 이 계약에 해당 실패 코드가 없다. ~~필요하면 16이 정한다 `확인 필요`~~ → **확정: 막지 않는다** `[사용자 결정, 2026-10-01 — 16 계획 판정]`. `active`는 **신규 지급**(16 지급 파이프라인이 `active=false` 보상을 건너뛴다) 여부이지 보유 무효가 아니다. RPC 무변경 |
 | **실행 권한** | 4개 모두 `authenticated`·`service_role`. `anon`·`public`은 회수 |
 
@@ -314,7 +330,7 @@ create or replace function public.get_profile_cards_v1(
 
 | 상태 | 항목 |
 |---|---|
-| **확정** | 3테이블 DDL · `kind`/`slot` 9종 · 배지 3개 제한 · 보유 검증(FK) · RLS 3종 · RPC 3개 시그니처 · 멱등 지급 방식 · **배치 RPC `get_profile_cards_v1` (§4)** · **아래 ①~④** |
+| **확정** | 3테이블 DDL · `kind`/`slot` ~~9종~~ → **8종** · ~~배지 3개 제한~~ → **배지 폐지 (2026-10-03, §0.-1)** · 보유 검증(FK) · RLS 3종 · RPC 3개 시그니처 · 멱등 지급 방식 · **배치 RPC `get_profile_cards_v1` (§4)** · **아래 ①~④** |
 | ~~확인 필요~~ → **확정** `[사용자 결정, 2026-10-01 — 17b 착수 판정]` | ① **`reward_bundles`는 16 소유** (§0.1) ② **`retired` 장착은 유지, 신규 장착만 `REWARD_RETIRED`** (§1) ③ **`kind`↔`slot` 검증은 RPC** (§3.1) ④ **기본 프로필 아이콘 6종** — 아래 |
 | ~~**확인 필요 (남은 것)**~~ → **확정** | ~~`active=false` 보유 보상의 장착 차단 여부 (§4.1) — 16이 정한다~~ → **막지 않는다** (§4.1) · **`listed` 개정** (§1.1) `[사용자 결정, 2026-10-01]`. **이 계약에 남은 `확인 필요`는 없다** |
 

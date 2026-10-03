@@ -1,9 +1,9 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-03** (16b-f 운영 적용 완료 — 상자 (17))
-기준 커밋: **`2a676da`** (`docs(16b-f-1): record the authority filter verification and the production apply steps`) — 이번 16b-f 운영 기록 커밋의 부모.
+갱신 날짜: **2026-10-03** (16d-0 문서 완료 — 상자 (17))
+기준 커밋: **`648d1df`** (`docs(16b-f): record the production apply — 24 = 24, evaluator matches clean, 0 opened`) — 이번 16d-0 커밋의 부모.
 마지막 **앱 코드** 커밋: **`ecbf727`** (16c, **미배포 — `main` push는 사용자**) · 그 앞 운영 배포된 앱 코드 `21c2afb` (14c-3) · 마지막 **migration** 커밋: **`8eadaac`** (16b-f, `20261003090000_achievement_authority_filter_v1.sql`) — **운영 적용 완료** `[사용자 실행·확인, 2026-10-03]` · 그 앞 **`e122bfd`** (16b-2, `20261002100000_achievement_triggers_v1.sql`) — **운영 적용 완료** `[사용자 실행·확인, 2026-10-03]` · 그 앞 `a8eda5a`(16a-1, `20261002090000`)도 같은 적용에서 **운영 적용 완료**. **저장소/로컬 migration 24 = 운영 24, 차이 0** (운영 23은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포(`main` push)는 `34af554`(14c, #11) — 16a·16b는 DB 전용이라 main push가 없었다. 마지막 운영 migration은 `20261003090000`(16b-f)이다. 이번 갱신은 **16a·16b 운영 적용 기록**이다 — 앱 코드 변경 없음.
-이전 기준: `8eadaac` · `abe459e` · `545cc14` · `8160f2b` · `275a693` · `301c1db` · `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+이전 기준: `2a676da` · `8eadaac` · `abe459e` · `545cc14` · `8160f2b` · `275a693` · `301c1db` · `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main = 34af554` · `origin/feat/group-final-gaps = 1ff6a24`** (2026-10-03, 이번 커밋들 전 `git ls-remote` `[산출물]`). 16c `ecbf727` · 16b-r `301c1db` · 이번 문서 커밋을 feat에 push한다 `[사용자 승인]`. **`main` push는 사용자가 한다** (16c는 DB 변경 없음).
 
 > # ⚑ 2026-10-03 (17) — **16b-f 운영 적용 완료 · 16d-0 착수** `[사용자 실행·확인]`
@@ -15,6 +15,8 @@
 > | `16b-f-check-opened.sql` | **0행** — legacy로 열린 해금 없음, 회수 대상 없음 (`16-HANDOFF.md` §11.3·§11.5) |
 >
 > **16b-f 완료.** **다음:** 16d-0(문서) → 16d-1(프론트, 옛·새 DB 양쪽 동작) → `main` push(사용자) → 배지 보유자 쿼리 → 16d-2(migration, 건별 승인). 판정 `16-HANDOFF.md` §10.
+>
+> **16d-0 완료 (문서만)** — spec §0·§9.2·§10 · C1 §0.-1 · C5 §0·§3.6 · contracts README · `docs/design/DESIGN-SYSTEM.md`(신규 최소판) · GAPS §4.5.1 · TRACKS §1.1-e 16d 행·§2.4 `20261003100000` 예약 · `16-HANDOFF.md` 12 → 11 정정·§10.4 토큰 할당·§10.5 · `scripts/16d-check-badge-holders.sql`. **코드·DB는 아직 옛 규칙.** 다음: 16d-1.
 
 > # ⚑ 2026-10-03 (16) — **16b-r 운영 apply 완료 · 16b-f(1:1·그룹 누적 판정기 권위 필터) 착수** `[사용자 실행·확인]`
 >

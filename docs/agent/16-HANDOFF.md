@@ -117,7 +117,7 @@
 |:-:|---|
 | ① | **16·spec에 없는 표시명은 발명이다** (C4 §3.1 시안 > 코드 > 발명). 16이 이름을 준 보상은 `한 칸이면 충분해`·`한 칸의 차이`·`원정대원` 셋뿐이고, 나머지(`멈추지 않는 발걸음`·`노련한 승부사`·`발자국 탐험가` 등)는 자리표시자다 |
 | ② | **경기 표현용 4종 14개**(경로 색상 1·경로 효과 1·완주 효과 6·관전 이모티콘 6)는 지급·보유·장착까지만 된다. **경기 화면에 그리는 곳은 없다** (판정 7) |
-| ③ | **배지가 12개다.** 대표 배지는 최대 3개만 걸린다 (C1 §3). 단계 I·II를 같은 배지의 등급으로 둘지, 단계마다 다른 배지로 둘지는 아트 결정이다 |
+| ③ | ~~**배지가 12개다.** 대표 배지는 최대 3개만 걸린다 (C1 §3). 단계 I·II를 같은 배지의 등급으로 둘지, 단계마다 다른 배지로 둘지는 아트 결정이다~~ → **정정 (2026-10-03): 시드의 배지는 11개(공개 7 · 히든 4)였다. 배지 kind는 폐지 — 11개는 아이콘 7 · 칭호 4로 전환 (§10)** |
 | ④ | **프로필 아이콘 보상 2개**(`icon_daily_explorer`·`icon_dice_globe`)는 아트가 없으면 기본 이미지로 보인다 — 장착해도 달라진 것이 안 보인다 |
 | ⑤ | 단계마다 보상 1개가 원칙이고 히든 5개만 2개짜리 번들이다. 16의 유일한 "프레임+배경" 번들(오늘의 올클리어)은 범위 제외로 사라졌다 |
 
@@ -378,6 +378,24 @@ G5: 히든 이름·조건·보상명은 JS에 없다 — `tests/achievementDispl
 규칙: 상징 그림 → 아이콘, 이름을 부르는 것 → 칭호, 같은 번들 안 같은 이름은 아이콘. 획득형 아이콘은 이 7개 + 기존 `icon_daily_explorer`·`icon_dice_globe`(아트 없음) = **임시 SVG 9개** (기본 6종과 같은 형식 — `viewBox 0 0 64 64`, 판정 5).
 `reward_id` 접두사 `badge_`와 kind가 어긋나는 것은 (a)의 알려진 비용이다 — 사용자에게는 보이지 않는다.
 
+### 10.4 `asset_ref` 토큰 할당 (16d-0, 16d-2 migration이 적용)
+
+토큰 문법은 `docs/design/DESIGN-SYSTEM.md` §4 · C5 §3.6. **프론트는 `reward_id`로 모양을 정하지 않는다** (G5).
+
+| 보상 | kind | `asset_ref` |
+|---|---|---|
+| `frame_ready_explorer` | 프레임 | `frame:tier-1` |
+| `frame_wide_world_1·2·3` | 프레임 | `frame:tier-1` · `frame:tier-2` · `frame:tier-3` |
+| `frame_duel_rival_1·2·3` | 프레임 | `frame:tier-1` · `frame:tier-2` · `frame:tier-3` |
+| `frame_backlink_return` (히든) | 프레임 | `frame:special` |
+| `finish_better_path_1·2·3` | 완주 효과 | `finish:tier-1` · `finish:tier-2` · `finish:tier-3` |
+| `finish_daily_steps` (이어지는 발걸음 2단계) | 완주 효과 | `finish:tier-2` |
+| `finish_duel_victor` (승부사 2단계) | 완주 효과 | `finish:tier-2` |
+| `path_color_one_step` (히든, 한 칸의 차이) | 경로 색상 | `path:purple` (방문·기록) |
+| 전환 아이콘 7 + `icon_daily_explorer` · `icon_dice_globe` | 프로필 아이콘 | 임시 SVG 9개 — 공개 4개는 `/profile-icons/<이름>.svg`, **히든 5개는 불투명 파일명** (판정 5). 파일명은 16d-1이 정하고 16d-2가 같은 값을 넣는다 |
+
+`finish:special`은 지금 할당 대상이 없다 (히든 완주 효과 없음). 2단계 완주 효과 2개를 `tier-2`로 둔 것은 단계 위치(2단계 보상)를 따른 것이다 — 디자인 세션이 바꿀 수 있다.
+
 ### 10.3 구현 계획 (16b-r apply 후)
 
 | 단계 | 내용 | 배포 |
@@ -388,7 +406,7 @@ G5: 히든 이름·조건·보상명은 JS에 없다 — `tests/achievementDispl
 
 **G5:** 프레임·효과 단계는 서버 `asset_ref` 토큰으로 구분한다 — 프론트가 `reward_id`로 단계를 정하면 히든 ID(`frame_backlink_return` 등)가 JS에 들어간다.
 
-**운영 배지 보유 현황 (읽기 전용, SQL Editor — 16b-r apply 전·후 1회씩):**
+**운영 배지 보유 현황 (읽기 전용, SQL Editor) — `scripts/16d-check-badge-holders.sql`. 16d-2 migration 직전에 사용자가 실행해 해제될 장착 행 수를 확인한다:**
 ```sql
 select c.reward_id, c.listed,
        count(distinct i.user_id) as holders,
@@ -453,3 +471,19 @@ select c.reward_id, c.listed,
 | `16b-f-check-opened.sql` | **0행** (§11.3) |
 
 **16b-f 완료.** 소급(16b-r)과 실시간 판정이 같은 근거 규칙을 쓴다.
+
+### 10.5 16d-0 완료 (2026-10-03) `[산출물]`
+
+| 문서 | 바뀐 것 |
+|---|---|
+| `01-CONFIRMED-SPEC.md` §0 · §9.2 · §10 | 정정 이력 2026-10-03 — 대표 배지 3 → 폐지 · 우연형 보상 · legacy 대응 · `준비된 탐험가` 조건 (옛 문장 취소선) |
+| `docs/contracts/C1-REWARD-TABLES.md` §0.-1 | 정정 이력 신설 — `kind`/`slot` 9 → 8 · `slot_index` 항상 1 · 카드 슬롯 4 · `badges` `[]` 상수 |
+| `docs/contracts/C5-PROFILE-CARD.md` §0 · §3.6 | 정정 이력 신설 — `badges` 폐지 · §3.5 폐지 · §6-③ 대상 소멸 · `asset_ref` 토큰 §3.6 신설 |
+| `docs/contracts/README.md` | 정정 이력 행 추가 |
+| `docs/design/DESIGN-SYSTEM.md` | **신규 최소판** — 팔레트 5색 · 색 허용 위치 · 프레임 I/II/III/special · 경로 색상·완주 효과 토큰 · `asset_ref` 문법 · 임시 SVG 형식 |
+| `PACKET-CONTRACT-GAPS.md` §4.5.1 | 발명 표시명 「매일의 탐험가」「함께하는 탐험가」 · 전환된 보상 표시명 |
+| `TRACKS.md` §1.1-e · §2.4 | 16d 행 · `20261003100000_badge_retirement_v1.sql` 예약 |
+| 이 문서 | §3.3 ③ 12 → 11 정정 · §10.4 토큰 할당 |
+| `scripts/16d-check-badge-holders.sql` | 배지 보유자·장착 행 (읽기 전용) — 16d-2 직전 |
+
+**구현은 아직 없다** — 코드·DB는 옛 규칙 그대로다. 다음: 16d-1(프론트).

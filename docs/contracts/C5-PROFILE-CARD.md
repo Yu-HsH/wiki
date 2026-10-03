@@ -8,6 +8,16 @@
 
 > **이 계약에는 DDL이 없다.** 전부 프론트 규칙이므로 **다른 계약을 기다리지 않고 착수할 수 있다.**
 
+## 0. ⚠ 정정 이력 — 동결 계약을 고칠 때의 기록
+
+형식은 [C3](C3-LEVEL-STORAGE.md) §0 — ① 이 표에 남기고 ② 본문의 옛 값은 취소선 ③ 근거를 적는다.
+
+| 날짜 | 무엇을 | 어떻게 | 왜 |
+|---|---|---|---|
+| **2026-10-03** | §2 카드 형태 `badges` · RewardRef `slotIndex` · §2.2 병합 키 · §3.4 screen reader 이름 · **§3.5 배지 0/1/3** · §4 프로필 표시 요소 · §6 확인 필요 ③ · **§3.6 신설(`asset_ref` 토큰)** | **배지 폐지.** 카드 요소 = 아이콘 · 칭호 · 프레임 · 배경. 렌더는 `badges`를 읽지 않는다(서버는 `[]`를 계속 싣는다). §3.5는 폐지, §6-③은 대상 소멸. 프레임·완주 효과·경로 색상의 모양은 **`asset_ref` 토큰**으로 정한다(§3.6) | **사용자 결정** `[2026-10-03 — docs/agent/16-HANDOFF.md §10]`. 토큰 문법은 `docs/design/DESIGN-SYSTEM.md` §4. **구현: 16d-1 프론트** — 그 전까지 코드는 옛 규칙 그대로다 |
+
+> 이 정정의 근거는 **사용자 결정**이다 (spec §0 2026-10-03 · [C1](C1-REWARD-TABLES.md) §0.-1과 같은 건).
+
 ---
 
 ## 1. 문제 — 4곳이 서로 다르게 그린다 `[코드, 2026-09-02 실측]`
@@ -42,7 +52,7 @@ ProfileCard {
   nickname: string | null      // 없을 수 있다
   level: integer | null        // C3의 level_from_total_xp
   title: RewardRef | null      // 대표 칭호 1
-  badges: RewardRef[]          // 최대 3. 없으면 []
+  badges: RewardRef[]          // ~~최대 3. 없으면 []~~ → 폐지 (2026-10-03, §0) — 서버는 [] 상수, 렌더는 읽지 않는다
   icon: RewardRef | null       // 시스템 프로필 아이콘
   frame: RewardRef | null
   background: RewardRef | null
@@ -54,7 +64,7 @@ RewardRef { rewardId: string, displayName: string, assetRef: string | null }
 ```
 
 > **RewardRef 덧붙은 필드 (2026-10-01, 17b)** `[코드]` — 서버(C1 §4.1)는 위 세 필드에 더해
-> **`kind`** · **`slotIndex`**(배지 순서, §3.5) · **`retired`**(C1-② 은퇴 장착 표식)를 싣는다.
+> **`kind`** · **`slotIndex`**(~~배지 순서, §3.5~~ → 배지 폐지 후 항상 1, §0) · **`retired`**(C1-② 은퇴 장착 표식)를 싣는다.
 > 렌더 규칙은 이 셋에 의존하지 않고, 편집 UI가 `retired`로 "은퇴" 표식을 붙인다.
 > 정규화는 `utils/profileCard.js`의 `normalizeRewardRef` · `cardFromServer`가 한다.
 
@@ -79,7 +89,7 @@ RewardRef { rewardId: string, displayName: string, assetRef: string | null }
 
 | 함수 | 역할 |
 |---|---|
-| `mergeRewardSlots(rowCard, serverCard)` | `icon`·`title`·`badges`·`frame`·`background`만 서버 카드에서 가져온다. 닉네임·레벨·`legacyImageUrl`·`source`는 행 값을 유지한다. 서버 카드가 없거나 조회가 실패하면 **행 그대로** 그린다 |
+| `mergeRewardSlots(rowCard, serverCard)` | `icon`·`title`·~~`badges`·~~`frame`·`background`만 서버 카드에서 가져온다 (배지 폐지, §0). 닉네임·레벨·`legacyImageUrl`·`source`는 행 값을 유지한다. 서버 카드가 없거나 조회가 실패하면 **행 그대로** 그린다 |
 | `applyEquipment(card, equipment[])` | 장착·해제 응답(전체 장착 상태)으로 슬롯을 다시 만든다. **서버가 확정한 상태만 표시한다** (spec §10) |
 
 **N+1 금지.** 행 목록 화면(랭킹·대기실)은 행마다 단건을 부르지 않고 배치 1회를 쓴다. 단건 `get_profile_card_v1`은 프로필·공개 프로필 모달만 쓴다.
@@ -127,13 +137,13 @@ Freeze v1 `07-12 ProfileIconFallback`이 같은 화면이다.
 | 규칙 | 근거 |
 |---|---|
 | 아바타 `alt`는 **`"{이름}의 프로필 이미지"`**. **빈 `alt` 금지** | `21-SCREEN-MATRIX.md` §11 "아이콘에 accessible name", "프로필 아이콘 대체 텍스트" |
-| 장착 보상은 **screen reader 이름**을 갖는다 — 배지·칭호·프레임 | §11 "보상 장착 상태의 screen reader 이름" |
+| 장착 보상은 **screen reader 이름**을 갖는다 — ~~배지·~~칭호·프레임 (§0) | §11 "보상 장착 상태의 screen reader 이름" |
 | **색상만으로 상태를 구분하지 않는다** | §11 |
 | 터치 대상 **44×44px 이상** | §11 |
 
-### 3.5 배지 0/1/3
+### 3.5 ~~배지 0/1/3~~ → **폐지 (2026-10-03, §0)**
 
-Freeze v1 `07-13 Badge-0-1-3`이 세 상태를 다룬다.
+~~Freeze v1 `07-13 Badge-0-1-3`이 세 상태를 다룬다.~~ 배지 kind가 없어졌으므로 아래 표는 기록으로만 남는다. Freeze v1의 `07-13 Badge-0-1-3`·`07-17 BadgeEquipFlow`는 대응 화면이 없다.
 
 | 개수 | 규칙 |
 |---|---|
@@ -141,13 +151,24 @@ Freeze v1 `07-13 Badge-0-1-3`이 세 상태를 다룬다.
 | 1~3 | 순서대로. **[C1](C1-REWARD-TABLES.md) §3의 `slot_index` 순** |
 | 4+ | **발생할 수 없다** — `slot_index` CHECK가 막는다 |
 
+### 3.6 `asset_ref` 토큰 — 프레임 · 완주 효과 · 경로 색상 (2026-10-03, §0)
+
+| kind | `asset_ref` | 렌더 |
+|---|---|---|
+| `profile_icon` | 루트 상대 URL (`/profile-icons/…svg`) | 그대로 `<img src>` (§3.1 1단계) |
+| `frame` | `frame:tier-1` · `frame:tier-2` · `frame:tier-3` · `frame:special` | 단계별 링. 알 수 없거나 `null`이면 기본 링 |
+| `finish_effect` | `finish:tier-1..3` · `finish:special` | 결과 화면 완주 연출 (카드 요소 아님) |
+| `path_color` | `path:blue` · `path:purple` · `path:gold` · `path:teal` · `path:coral` | 결과 화면 경로 선·노드 색 (카드 요소 아님) |
+
+**모양은 `reward_id`로 정하지 않는다** — 히든 보상 ID가 프론트에 들어가면 G5를 깬다. 색·모양의 정의는 `docs/design/DESIGN-SYSTEM.md`. 모션은 `prefers-reduced-motion: reduce`에서 정적.
+
 ---
 
 ## 4. 4개 지점별 적용 범위
 
 | 지점 | source | 표시 요소 | 비고 |
 |---|---|---|---|
-| **프로필** (`ProfilePage`) | `live` | 전부 — 아이콘·칭호·배지 3·프레임·배경·레벨 | 장착 편집 진입점 |
+| **프로필** (`ProfilePage`) | `live` | 전부 — 아이콘·칭호·~~배지 3·~~프레임·배경·레벨 (§0) | 장착 편집 진입점 |
 | **공개 프로필** | `live` | 전부. **편집 없음** | Freeze v1 `02-03` |
 | **랭킹** (`RankingPage`) | `live` | 아이콘·닉네임·레벨·**칭호** | `21-SCREEN-MATRIX.md` §1 "닉네임·레벨·대표 칭호". 보상 슬롯은 배치 1회 (§2.2) |
 | **그룹 참가자 행** | `snapshot` + live 보상 병합 | 아이콘·닉네임·**칭호** | §5. ~~칭호는 §2.1의 `확인 필요`에 걸린다~~ → **§2.1 확정 — 대기실(`GroupRoomPage`)에서 배치 병합** (2026-10-01) |
@@ -183,6 +204,6 @@ components/ProfileAvatar.jsx    ← 신규. §3.1~§3.4의 이미지·이니셜�
 | **확정** | **불일치 4축 실측** · 카드 데이터 형태 · **두 출처 한 형태(`live`/`snapshot`)** · 이미지 우선순위 4단계 · legacy 보존 · 에셋 실패 시 동작 · 접근성 4규칙(**빈 `alt` 금지 포함**) · 공통 컴포넌트 2개 · **적용 지점이 4곳이 아니라 5곳** |
 | **확정 (2026-10-01, 17b)** `[사용자 결정]` | ② **스냅샷 확장 없음 — 대기실은 live 배치 병합** (§2.1·§2.2). DDL 0 · RewardRef 덧붙은 필드 `kind`·`slotIndex`·`retired` (§2) |
 | **부분 해소** | ④ **시스템 제공 프로필 아이콘 6종은 임시 SVG로 존재한다** ([C1](C1-REWARD-TABLES.md) §5-④, `public/profile-icons/*.svg`) — §3.1의 **1단계(`icon.assetRef`)** 에 쓰인다. **§3.1 4단계 "시스템 기본 이미지"(닉네임도 없을 때)의 실물은 여전히 중립 도형이다** `확인 필요`. 최종 아트는 디자인 단계 |
-| **확인 필요 (남은 것)** | ① **이름 fallback `"탐험가"`** — 근거 문자열이 스펙에 없다 ③ 배지 0개일 때 영역을 숨길지 자리를 남길지 (현재 구현: 숨김) ④의 남은 부분(위) |
+| **확인 필요 (남은 것)** | ① **이름 fallback `"탐험가"`** — 근거 문자열이 스펙에 없다 ~~③ 배지 0개일 때 영역을 숨길지 자리를 남길지 (현재 구현: 숨김)~~ → **대상 소멸 — 배지 폐지 (§0)** ④의 남은 부분(위) |
 
 > ~~**②가 이 계약에서 유일하게 DDL로 번질 수 있는 항목이다.**~~ → **②는 DDL 없이 닫혔다.** 남은 항목은 전부 프론트에서 닫힌다.
