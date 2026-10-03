@@ -970,4 +970,74 @@ revoke all on function public.evaluate_result_achievements_v1(text, uuid)
 grant execute on function public.evaluate_result_achievements_v1(text, uuid)
   to service_role;
 
+-- ---------------------------------------------------------------------------
+-- 9. Triggers — the outer isolation layer.
+-- ---------------------------------------------------------------------------
+-- Even a bug in sections 2~7 cannot fail a finish or an equip: the whole
+-- evaluation is one subtransaction, rolled back with a WARNING on any error.
+create or replace function private.record_result_achievements_on_write_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_scope text := tg_argv[0];
+  v_id uuid;
+begin
+  -- game_records.id / match_history.id / game_rooms.id; equipment is per player.
+  if v_scope = 'equipment' then
+    v_id := new.user_id;
+  else
+    v_id := new.id;
+  end if;
+
+  begin
+    perform private.record_result_achievements_v1(v_scope, v_id);
+  exception when others then
+    raise warning 'ACHIEVEMENT_RESULT_FAILED scope=% id=% sqlstate=% message=%',
+      v_scope, v_id, sqlstate, sqlerrm;
+  end;
+  return null;
+end;
+$$;
+
+revoke all on function private.record_result_achievements_on_write_v1()
+  from public, anon, authenticated;
+
+-- Same WHEN clauses as 15c, plus run_id: only server-authoritative single runs.
+drop trigger if exists trg_record_single_result_achievements on public.game_records;
+create trigger trg_record_single_result_achievements
+after insert on public.game_records
+for each row
+when (new.user_id is not null
+      and new.result_status = 'completed'
+      and new.run_id is not null)
+execute function private.record_result_achievements_on_write_v1('single');
+
+drop trigger if exists trg_record_duel_result_achievements on public.match_history;
+create trigger trg_record_duel_result_achievements
+after insert on public.match_history
+for each row
+when (new.result_status is distinct from 'cancelled')
+execute function private.record_result_achievements_on_write_v1('duel');
+
+-- Sorts after trg_finalize_group_records and trg_grant_group_result_xp.
+drop trigger if exists trg_record_group_result_achievements on public.game_rooms;
+create trigger trg_record_group_result_achievements
+after update of status on public.game_rooms
+for each row
+when (new.mode = 'group'
+      and new.status = 'finished'
+      and old.status is distinct from 'finished')
+execute function private.record_result_achievements_on_write_v1('group');
+
+-- equip_profile_reward_v1 writes with insert ... on conflict do update, which
+-- fires either event. Unequip only deletes and can never complete a card.
+drop trigger if exists trg_record_equipment_achievements on public.user_profile_equipment;
+create trigger trg_record_equipment_achievements
+after insert or update on public.user_profile_equipment
+for each row
+execute function private.record_result_achievements_on_write_v1('equipment');
+
 commit;

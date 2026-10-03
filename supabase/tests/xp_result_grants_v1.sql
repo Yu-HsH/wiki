@@ -197,8 +197,14 @@ language sql as $$
   select * from public.xp_ledger where user_id = p_user and source_id = p_source
 $$;
 
+-- Result XP on the total. Since 16b the same finishes also unlock achievements,
+-- whose XP (source_type achievement_unlock) lands on the same total_xp.
 create function pg_temp.total(p_user uuid) returns bigint language sql
-as $$ select total_xp from public.profiles where id = p_user $$;
+as $$
+  select total_xp - coalesce((select sum(amount) from public.xp_ledger
+                               where user_id = p_user and source_type = 'achievement_unlock'), 0)
+    from public.profiles where id = p_user
+$$;
 
 create temp table xr (key text primary key, id uuid, response jsonb);
 

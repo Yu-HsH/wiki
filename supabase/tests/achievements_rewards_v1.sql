@@ -114,11 +114,14 @@ select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.
               and (has_function_privilege('authenticated', p.oid, 'execute')
                    or has_function_privilege('anon', p.oid, 'execute'))),
           0, 'private pipeline functions are not executable by authenticated or anon');
+-- 16a itself is inert; since 16b the only callers are its four trg_record_* triggers.
 select is((select count(*)::int from pg_trigger t
              join pg_proc p on p.oid = t.tgfoid
             where not t.tgisinternal
-              and p.proname ~ 'achievement'),
-          0, '16a is inert — no trigger calls an achievement function');
+              and p.proname ~ 'achievement'
+              and not (t.tgname like 'trg\_record\_%'
+                       and p.proname = 'record_result_achievements_on_write_v1')),
+          0, '16a is inert — no trigger other than 16b''s trg_record_* calls an achievement function');
 
 -- ---------------------------------------------------------------------------
 -- 2. Seed (16-HANDOFF.md §2·§3).
