@@ -1,6 +1,6 @@
 # 16 업적·보상 — 판정과 인계
 
-작성: 2026-10-02 · 16b 추가 2026-10-03 (§7) · 16c·16b-r 준비 추가 2026-10-03 (§8·§9) · 16d 판정 2026-10-03 (§10) · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
+작성: 2026-10-02 · 16b 추가 2026-10-03 (§7) · 16c·16b-r 준비 추가 2026-10-03 (§8·§9) · 16d 판정 2026-10-03 (§10) · 16b-f 2026-10-03 (§11) · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
 **이 문서는 패킷 16의 판정·범위·보상 할당표의 단일 기준이다.** 트랙 경계와 수용조건은 `TRACKS.md` §8-16,
 소유권 예외는 `TRACKS.md` §1.1-e. 근거 문서는 `wiki-race-2.0-handoff/code/16-ACHIEVEMENTS-REWARDS.md`(이하 16) ·
 `01-CONFIRMED-SPEC.md` §9·§10 · `docs/contracts/C1-REWARD-TABLES.md` · `C2-XP-LEDGER.md`.
@@ -401,3 +401,32 @@ select c.reward_id, c.listed,
  group by c.reward_id, c.listed
  order by c.reward_id;
 ```
+
+---
+
+## 11. 16b-f — 1:1·그룹 누적 판정기 권위 필터 `[사용자 결정, 2026-10-03]`
+
+**문제:** 16b 싱글 판정기는 `run_id is not null`로 legacy를 뺀다(`achievement_single_records_v1`). 1:1·그룹 누적 판정기는 `match_history`·`group_match_results`를 **조건 없이** 센다. 운영에 이동 이벤트 없는 1:1이 76건(판정기가 세는 것 75건, §9.5) — 그 사용자가 다음 1:1을 하면 legacy까지 세어 해금이 열리고, **해금은 되돌릴 수 없다.** 로컬 재현: legacy 9승 + 실제 1승 → 한 판에 맞수·승부사·순수한 승부 4단계(두 사람).
+
+### 11.1 판정
+
+| # | 항목 | 판정 |
+|:-:|---|---|
+| 1 | 기준 | 1:1·그룹 누적 판정기는 **이동 이벤트(`game_move_events`)가 있는 결과만** 센다 — 16b-r 소급과 같은 기준. §9.4의 제외 규칙은 이것으로 확정 |
+| 2 | 범위 | 맞수와의 만남 · 승부사 · 순수한 승부(`duel_normal_matches`·`duel_normal_wins`) · **완벽한 대응**(`duel_defense_successes`, 규칙을 하나로) · 함께하는 탐험(`group_normal_finishes`). 감쇠 순번(`achievement_duel_ordinal_v1`, 15c와 같은 규칙) · 상황형·once 판정기(이번 결과만 본다) · 트리거는 무변경 |
+| 3 | 이미 열린 해금 | **목록만 이 절(§11.3)에 기록, 회수 없음** (16 §1) |
+| 4 | 배포 | 16d를 기다리지 않는 별도 migration `20261003090000_achievement_authority_filter_v1.sql` → 사용자 `db push` → `scripts/16b-f-check-applied.sql`로 **판정기 값 = clean 전부 일치** 확인 → 16d |
+
+### 11.2 확인 쿼리 (읽기 전용, SQL Editor — `545cc14`)
+
+| 파일 | 보는 것 |
+|---|---|
+| `scripts/16b-f-check-opened.sql` | 이미 열린 누적 해금 중, 이동 이벤트 없는 결과를 빼면 기준값 미달인 것 |
+| `scripts/16b-f-check-exposure.sql` | 사용자·업적별 clean / legacy 수 · `tiers_opened_by_legacy_next_game`(1 이상 = 16b-f 전 판정기로 다음 한 판에 열릴 위험). **이 열은 테이블에서 직접 계산한 가정값이라 판정기와 무관하다 — 적용 후에도 0이 되지 않는다.** 적용 전 노출 규모를 보는 용도 |
+| `scripts/16b-f-check-applied.sql` (16b-f-1에서 추가) | **적용 확인용.** legacy가 있는 사용자·업적마다 실제 `private.achievement_value_v1`을 불러 그 값이 `clean`과 같은지 본다. 적용 전 = legacy 포함 값, **적용 후 = 모든 행 `clean`과 일치**. 이 5개 분기는 select만 한다 |
+
+로컬 fixture(legacy 9 + 실제 1)에서 두 쿼리가 열린 4단계와 위험 사용자를 모두 잡는다 `[산출물]`. 완벽한 대응 분기는 fixture에 아이템 이벤트가 없어 구문만 확인 — pgTAP 신규 스위트가 덮는다.
+
+### 11.3 이미 열린 해금 (운영)
+
+`확인 필요` — 사용자가 `16b-f-check-opened.sql`을 운영에서 실행한 결과를 여기에 적는다. 회수하지 않는다.
