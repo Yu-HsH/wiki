@@ -225,7 +225,7 @@ select throws_ok(
 );
 select is(
   (select count(*)::integer from public.room_events
-   where room_id = '00000000-0000-0000-05f3-000000000001'),
+   where room_id = '00000000-0000-0000-05f3-000000000001' and event_type = 'duel_item_event'),
   1, 'room members still read room events'
 );
 
