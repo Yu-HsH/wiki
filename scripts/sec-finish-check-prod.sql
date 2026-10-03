@@ -90,3 +90,16 @@ join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public'
   and has_function_privilege('anon', p.oid, 'EXECUTE')
 order by 1;
+
+-- Q11. SF-A3 (부채 ④-A) — room_players 읽기 정책과 헬퍼. 적용 전: qual = is_room_member(room_id), helper 없음.
+--      적용 후: qual = can_view_room_player_v1(room_id, user_id), helper security definer, anon 실행 불가.
+select policyname, qual
+from pg_policies
+where schemaname = 'public' and tablename = 'room_players' and cmd = 'SELECT';
+
+select p.proname, p.prosecdef,
+       has_function_privilege('authenticated', p.oid, 'EXECUTE') as authenticated_exec,
+       has_function_privilege('anon', p.oid, 'EXECUTE') as anon_exec
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.proname = 'can_view_room_player_v1';

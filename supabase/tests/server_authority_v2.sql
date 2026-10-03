@@ -296,11 +296,14 @@ select is(
   'starting',
   'duel starts with only the host target and both readiness flags false'
 );
+-- Server-side count: since SF-A3 a 1:1 player reads only their own row while starting/playing (20261004110000).
+set local role postgres;
 select is(
   (select count(*)::integer from public.room_players where room_id = '00000000-0000-0000-000a-000000000002' and target_page_id = 'v2-middle' and target_revision_id = '200'),
   2,
   'server resolves the host revision and copies the target to both participants'
 );
+set local role authenticated;
 
 -- 14c lifecycle coverage (the preceding assertions replace old #30/#34/#35).
 select is(to_regprocedure('public.start_duel_room_v2(uuid)')::text, null::text,
@@ -318,8 +321,11 @@ select is((select duel_start_title from public.game_rooms where room_code = 'V2D
   'V2 Start', 'forged START title is normalized to the exact snapshot canonical title');
 select is((select duel_start_page_id || '/' || duel_start_revision_id from public.game_rooms where room_code = 'V2DUEL2'),
   'v2-start/100', 'requested start identity wins over other cached documents');
+-- Server-side count: since SF-A3 a 1:1 player reads only their own row while starting/playing (20261004110000).
+set local role postgres;
 select is((select count(*)::integer from public.room_players where room_id = '00000000-0000-0000-000a-000000000002' and not is_ready),
   2, 'START does not set readiness');
+set local role authenticated;
 select is((select start_page_id || '/' || start_revision_id from public.initialize_duel_player_v2(
   '00000000-0000-0000-000a-000000000002', 'Ignored', 'v2-target', '300')),
   'v2-start/100', 'host initialization copies the room identity, ignoring supplied identity');
@@ -421,9 +427,12 @@ delete from public.room_players where room_id = '00000000-0000-0000-000a-0000000
 set local role authenticated;
 select is((select status from public.start_duel_room_v2('00000000-0000-0000-000a-000000000014', 'V2 Start', 'v2-start', '100')),
   'starting', 'different stale guest target cannot block the host target');
+-- Server-side count: since SF-A3 a 1:1 player reads only their own row while starting/playing (20261004110000).
+set local role postgres;
 select is((select count(*)::integer from public.room_players where room_id = '00000000-0000-0000-000a-000000000014'
   and target_title = 'V2 Target' and target_page_id = 'v2-target' and target_revision_id = '300'),
   2, 'host identity wins over user sort order and stale guest identity');
+set local role authenticated;
 
 -- Restore the original actor for the remaining movement/XP regression cases.
 set local request.jwt.claim.sub = '00000000-0000-0000-0008-000000000001';

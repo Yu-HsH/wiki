@@ -1,6 +1,6 @@
 // SF-A2: real local Auth/RPC/Realtime, deterministic Wikipedia + snapshot transport.
-// Two matches: (1) today's room_players policy, (2) a temporary local copy of the SF-A3
-// policy (opponent row hidden while starting/playing), restored in finally.
+// Two matches: (1) the room_players policy before SF-A3, (2) the SF-A3 policy (opponent row
+// hidden while starting/playing). The policy found at the start is restored in finally.
 // No remote Supabase, no stored keys/sessions. All fixtures are removed in finally.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -28,18 +28,22 @@ const pages = names.map((title, i) => ({ title, pageId: `sa2-${token}-${i}`, rev
 const [START, MIDDLE, TARGET] = pages;
 const PATH_KEYS = ['path_titles', 'path_page_ids', 'path_revision_ids'];
 const POLICY = '"Players can view players in their room"';
-const TODAY_POLICY = `drop policy ${POLICY} on public.room_players;
-  create policy ${POLICY} on public.room_players for select to authenticated using (public.is_room_member(room_id));`;
-const A3_POLICY = `drop policy ${POLICY} on public.room_players;
-  create policy ${POLICY} on public.room_players for select to authenticated using (
-    public.is_room_member(room_id) and (
+// Two policies: before SF-A3 (member-wide) and SF-A3. The real SF-A3 helper is used once
+// 20261004110000 is applied; before that an inline copy stands in. Whatever policy the
+// database had at the start is put back in finally.
+const policyQual = () => sql(`select qual from pg_policies where tablename = 'room_players' and policyname = 'Players can view players in their room';`);
+const setPolicy = (using) => sql(`drop policy ${POLICY} on public.room_players;
+  create policy ${POLICY} on public.room_players for select to authenticated using (${using});`);
+const hasHelper = () => sql(`select to_regprocedure('public.can_view_room_player_v1(uuid,uuid)') is not null;`) === 't';
+const A3_INLINE = `public.is_room_member(room_id) and (
       user_id = (select auth.uid())
       or not exists (select 1 from public.game_rooms room where room.id = room_players.room_id
-                     and room.mode = 'duel' and room.status in ('starting', 'playing'))));`;
+                     and room.mode = 'duel' and room.status in ('starting', 'playing')))`;
+const originalQual = policyQual();
 const users = [], rooms = [], contexts = [], checks = [], errors = [];
 const playerReads = [], tableReads = [], progressFrames = [];
 const admin = createClient(apiUrl, config.SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-let browser, server, completed = false, policySwapped = false;
+let browser, server, completed = false;
 const artifactDir = '.temp/sa2-ui';
 fs.mkdirSync(artifactDir, { recursive: true });
 function pass(name) { checks.push(name); console.log(`PASS ${name}`); }
@@ -134,8 +138,13 @@ try {
   const guest = await makeContext(users[1], 'guest');
   const base = 'http://127.0.0.1:5187';
 
-  for (const mode of ['today', 'a3']) {
-    if (mode === 'a3') { sql(A3_POLICY); policySwapped = true; }
+  for (const mode of ['before-a3', 'a3']) {
+    const wanted = mode === 'a3' ? (hasHelper() ? 'can_view_room_player_v1(room_id, user_id)' : A3_INLINE) : 'is_room_member(room_id)';
+    if (policyQual() !== wanted) {
+      setPolicy(wanted);
+      // Policy DDL right before a match made local Realtime miss the first events (2 of 4 runs).
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
     const room = await rpc(users[0].client, 'create_duel_room_v2', { p_use_items: false }); rooms.push(room.id);
     await host.goto(`${base}/multiplayer/room/${room.id}`);
     await guest.goto(`${base}/multiplayer/room/${room.id}`);
@@ -203,7 +212,7 @@ try {
   assert.deepEqual(errors, []); pass('browser page errors: zero');
   completed = true;
 } finally {
-  if (policySwapped) sql(TODAY_POLICY);
+  if (policyQual() !== originalQual) setPolicy(originalQual);
   for (const context of contexts) await context.close();
   await browser?.close(); await server?.close();
   if (rooms.length) sql(`delete from public.game_rooms where id in (${rooms.map(q).join(',')});`);
@@ -211,7 +220,7 @@ try {
     const result = await admin.auth.admin.deleteUser(user.id); assert.equal(result.error, null, result.error?.message);
   }
   sql(`delete from public.wiki_pages where page_id in (${pages.map((p) => q(p.pageId)).join(',')});`);
-  assert.equal(sql(`select qual from pg_policies where tablename = 'room_players' and policyname = 'Players can view players in their room';`), 'is_room_member(room_id)');
+  assert.equal(policyQual(), originalQual);
   assert.equal(Number(sql(`select count(*) from auth.users where id in (${[...users.map((u) => u.id), randomUUID()].map(q).join(',')});`)), 0);
   pass('cleanup: policy restored; rooms/accounts/pages removed; sessions/keys never saved');
   fs.writeFileSync(`${artifactDir}/summary.json`, JSON.stringify({ date: '2026-10-03', completed, checks, errors }, null, 2));
