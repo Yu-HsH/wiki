@@ -1,9 +1,9 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-03** (16b-r 운영 apply 완료 · 16b-f 확인 쿼리 — 상자 (16))
-기준 커밋: **`545cc14`** (`chore(16b-f): read-only check queries for legacy 1:1/group results; record the 16b-r production apply`) — 이번 16b-f-0 커밋의 부모.
-마지막 **앱 코드** 커밋: **`ecbf727`** (16c, **미배포 — `main` push는 사용자**) · 그 앞 운영 배포된 앱 코드 `21c2afb` (14c-3) · 마지막 **migration** 커밋: **`e122bfd`** (16b-2, `20261002100000_achievement_triggers_v1.sql`) — **운영 적용 완료** `[사용자 실행·확인, 2026-10-03]` · 그 앞 `a8eda5a`(16a-1, `20261002090000`)도 같은 적용에서 **운영 적용 완료**. **저장소/로컬 migration 23 = 운영 23, 차이 0** (운영 23은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포(`main` push)는 `34af554`(14c, #11) — 16a·16b는 DB 전용이라 main push가 없었다. 마지막 운영 migration은 `20261002100000`이다. 이번 갱신은 **16a·16b 운영 적용 기록**이다 — 앱 코드 변경 없음.
-이전 기준: `8160f2b` · `275a693` · `301c1db` · `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+갱신 날짜: **2026-10-03** (16b-f 로컬 완료 — 운영 `db push` 대기 · 상자 (16))
+기준 커밋: **`8eadaac`** (`fix(16b-f): count only server-authoritative 1:1 and group results in cumulative evaluators`) — 이번 16b-f 기록 커밋의 부모.
+마지막 **앱 코드** 커밋: **`ecbf727`** (16c, **미배포 — `main` push는 사용자**) · 그 앞 운영 배포된 앱 코드 `21c2afb` (14c-3) · 마지막 **migration** 커밋: **`8eadaac`** (16b-f, `20261003090000_achievement_authority_filter_v1.sql`) — **운영 미적용** · 그 앞 **`e122bfd`** (16b-2, `20261002100000_achievement_triggers_v1.sql`) — **운영 적용 완료** `[사용자 실행·확인, 2026-10-03]` · 그 앞 `a8eda5a`(16a-1, `20261002090000`)도 같은 적용에서 **운영 적용 완료**. ~~저장소/로컬 migration 23 = 운영 23, 차이 0~~ → **저장소/로컬 migration 24 · 운영 23, 차이 1 (`20261003090000` 16b-f 미적용)** (운영 23은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포(`main` push)는 `34af554`(14c, #11) — 16a·16b는 DB 전용이라 main push가 없었다. 마지막 운영 migration은 `20261002100000`이다. 이번 갱신은 **16a·16b 운영 적용 기록**이다 — 앱 코드 변경 없음.
+이전 기준: `abe459e` · `545cc14` · `8160f2b` · `275a693` · `301c1db` · `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main = 34af554` · `origin/feat/group-final-gaps = 1ff6a24`** (2026-10-03, 이번 커밋들 전 `git ls-remote` `[산출물]`). 16c `ecbf727` · 16b-r `301c1db` · 이번 문서 커밋을 feat에 push한다 `[사용자 승인]`. **`main` push는 사용자가 한다** (16c는 DB 변경 없음).
 
 > # ⚑ 2026-10-03 (16) — **16b-r 운영 apply 완료 · 16b-f(1:1·그룹 누적 판정기 권위 필터) 착수** `[사용자 실행·확인]`
@@ -15,7 +15,9 @@
 > | 16b-f 판정 `[사용자 결정, 2026-10-03]` | 16b 1:1·그룹 누적 판정기(맞수 · 승부사 · 순수한 승부 · **완벽한 대응** · 함께하는 탐험)에 "이동 이벤트 있는 결과만" — 소급과 같은 기준. 이미 열린 해금은 **목록만, 회수 없음** |
 > | 확인 쿼리 (읽기 전용, SQL Editor) | `scripts/16b-f-check-opened.sql`(②) · `scripts/16b-f-check-exposure.sql`(③). 로컬 fixture에서 legacy 9 + 실제 1판 → 4단계가 열리는 사례를 둘 다 잡는 것 확인 |
 >
-> **다음:** 16b-f-1(migration · pgTAP · 적용 확인 쿼리 `16b-f-check-applied.sql`) → 사용자 `db push` → 적용 확인(판정기 값 = clean 전부 일치 — ③ exposure의 위험 열은 테이블 가정값이라 적용 후에도 0이 되지 않는다) → 16d-0. 16b-f-0(TRACKS §1.1-e·§2.4 등재 · `16-HANDOFF.md` §11) 완료.
+> | 16b-f-1 (로컬, `8eadaac`) | migration `20261003090000` — `achievement_value_v1`에 이동 이벤트 조건 4곳 · `db reset` 24개 · pgTAP **1061/1061** · `npm test` **449/449** · 동시성 3종 PASS · 신규 스위트 migration 전 10/17 실패 → 후 17/17 (`16-HANDOFF.md` §11.4) |
+>
+> **다음:** 사용자 백업 → `db push`(1개, 운영 24) → `scripts/16b-f-check-applied.sql` **모든 행 `matches = true`** → `16b-f-check-opened.sql` 결과를 §11.3에 기록 → 16d-0.
 
 > # ⚑ 2026-10-03 (15) — **16c 완료 (feat, 미배포) · 16b-r 소급 스크립트 (SQL Editor용, 운영 미실행)** `[산출물]`
 >

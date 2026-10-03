@@ -427,6 +427,19 @@ select c.reward_id, c.listed,
 
 로컬 fixture(legacy 9 + 실제 1)에서 두 쿼리가 열린 4단계와 위험 사용자를 모두 잡는다 `[산출물]`. 완벽한 대응 분기는 fixture에 아이템 이벤트가 없어 구문만 확인 — pgTAP 신규 스위트가 덮는다.
 
+### 11.4 16b-f-1 — migration · 검증 (로컬 스택 `wiki-packet13-r2-clean158`, 2026-10-03, `8eadaac`) `[산출물]`
+
+| 항목 | 결과 |
+|---|---|
+| migration | **`20261003090000_achievement_authority_filter_v1.sql`** — `private.achievement_value_v1` create or replace 1개. 16b 본문 + 조건 4곳(맞수·승부사·순수한 승부 1 · 완벽한 대응 2 · 함께하는 탐험 1). 데이터·트리거·다른 함수 무변경 |
+| 본문 고정 | `tests/achievementAuthorityFilter.test.js` 4건 — 조건 4곳을 빼면 16b 본문과 같다. 음성 대조: 본문 1글자 변경 → 실패 |
+| pgTAP 신규 | `achievement_authority_filter_v1` **17/17**. **migration 전 10/17 실패**(필터에 의존하는 단언 전부 — 경계·감쇠·회수 없음·트리거 단언은 전후 모두 통과) |
+| pgTAP 16b 정정 | `achievement_triggers_v1`의 `pg_temp.prior_room()`이 방마다 이동 이벤트 1개를 쓴다. **단언 무편집.** 정정 전 파일은 새 함수에서 §4가 실패 — 정정이 필요했음을 확인 |
+| 전체 | **`db reset --local` 24개 재생** · pgTAP **1061/1061** (1044 + 17) · `npm test` **449/449** · 16b-r 로컬 실행기 기대값 불변 · `duel_item_concurrency_v3` 3×5 PASS · deadlock 0 · `server_authority_concurrency_v2` PASS(컨테이너명 임시 사본) · `group_final_gaps_v13_hardening_concurrency` **8/8** |
+| 적용 확인 쿼리 | `scripts/16b-f-check-applied.sql` — 로컬 fixture에서 16b 본문이면 모든 행 `matches = f`, 16b-f 본문이면 모든 행 `t` |
+
+**운영 적용 (사용자):** 백업 → `db push`(이 migration 1개, 운영 24 = 저장소 24) → `16b-f-check-applied.sql` 실행 → **모든 행 `matches = true`** → `16b-f-check-opened.sql` 결과를 §11.3에 기록 → 16d-0.
+
 ### 11.3 이미 열린 해금 (운영)
 
 `확인 필요` — 사용자가 `16b-f-check-opened.sql`을 운영에서 실행한 결과를 여기에 적는다. 회수하지 않는다.
