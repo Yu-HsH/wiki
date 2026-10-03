@@ -360,7 +360,7 @@ select throws_ok(
     '{}'
   ),
   '42501',
-  'new row violates row-level security policy for table "room_events"',
+  'permission denied for table room_events',  -- SF-M1 revoked client writes (20261004090000 §3)
   'group participant cannot insert arbitrary room events directly'
 );
 

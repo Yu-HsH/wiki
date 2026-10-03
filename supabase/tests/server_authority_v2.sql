@@ -724,7 +724,10 @@ select ok(
   ),
   'group_match_results winner flags match winner_user_ids ranks'
 );
+-- Server-side count: since SF-M1 a client reads only its own move rows (20261004090000 §1).
+set local role postgres;
 select is((select count(*)::integer from public.game_move_events where game_id = '00000000-0000-0000-0018-000000000001'), 8, 'completion event count matches the eight accepted moves');
+set local role authenticated;
 select is((public.apply_group_move_v2('00000000-0000-0000-0018-000000000001', '00000000-0000-0000-0020-000000000011', '00000000-0000-0000-0021-000000000011', 2, 'v2-middle', null, null, 'V2 Middle', 'NORMAL_LINK', null, null)->>'code'), 'GAME_NOT_ACTIVE', 'completed group room rejects additional movement');
 
 -- Legacy lifecycle compatibility: RETIRE, grace timeout, and time limit remain server-only.
