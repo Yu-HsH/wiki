@@ -1329,7 +1329,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 | `profiles` anon·authenticated `INSERT,DELETE` (+ authenticated 컬럼 UPDATE 3) | INSERT·DELETE 정책 없음 · UPDATE 정책 `{public}`·`{authenticated}` 중복 | `ProfilePage.jsx:150` 닉네임 갱신 경로 |
 | 죽은 정책 | `room_players` INSERT·UPDATE·DELETE(1:1) · `match_history` INSERT · `game_records` INSERT 2개 — 테이블 권한이 없어 발동 불가 | 삭제는 §4 감사 원칙 대상 — 근거 기록 후 |
 | `target_candidates_id_seq` anon·authenticated `rwU` | — | 테이블 INSERT 회수와 함께 |
-| anon 실행 가능 함수 4개 | `ensure_today_daily_challenge` · `level_from_total_xp` · `profile_level` · `xp_to_next_level` | §7.9 ACL 절차와의 관계 |
+| anon 실행 가능 함수 4개 | `ensure_today_daily_challenge` · `level_from_total_xp` · `profile_level` · `xp_to_next_level` — **운영 Q10(SF-M1 적용 전) = 로컬과 같은 4개, 차이 0** `[사용자 실행, 2026-10-03]` | §7.9 ACL 절차와의 관계 |
 
 #### 8-SEC-⑤ 티켓
 
@@ -1365,6 +1365,42 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 4. 같은 쿼리 재실행 — 기대값: Q1 `game_move_events`는 `Players can read their own move events` 하나 · `room_events`는 SELECT 정책 하나 / Q3 `opponent_path_masked = t` 두 행 / Q5 전부 `t` / Q7 `has_residue` 전부 `f`, `room_events`는 authenticated `SELECT`만·anon 행 없음 / Q8 REFERENCES 0행 / Q9 `postgres`의 `r`·`S`에 anon·authenticated 없음
 5. 운영 확인 — 1:1 아이템전 한 판(이동·아이템 정상) · 그룹 관전 이모지 한 번
 6. **프론트 배포 없음.** 순서 제약 없음 (DB 먼저여도 옛 프론트 무해 — §8-SEC-① (B))
+
+#### 8-SEC-⑦ SF-A1 — 착수 확인 3건과 구현 (로컬) — `cb0cf0b` · **운영 미적용** `[코드·산출물, 2026-10-03]`
+
+**확인 ⓐ 1:1 진행 중 `game_rooms.status`** — CHECK는 `waiting · starting · playing · grace_period · finished` 5값이지만 **1:1은 `waiting → starting → playing → finished`** 만 지난다.
+`start_duel_room_v2`가 `starting`, `initialize_duel_player_v2`가 두 번째 참가자에서 `playing`, `apply_duel_move_v2`(완주)·`leave_duel_room_v2`(기권)·`finalize_duel_if_expired`(시간 초과)가 `finished`. **`grace_period`는 그룹 전용**이다 (`leave_duel_room_v2`가 허용 목록에서 뺀다).
+→ **진행 중 = `starting`·`playing`.** RPC 마스크와 A3 정책을 같은 집합으로 둔다. `starting`의 경로는 공통 시작 문서 하나라 공개 정보지만, 두 곳의 조건을 같게 두는 쪽이 단순하다.
+
+**확인 ⓑ 복구가 `fetchRoomPlayers`를 타는가 — 탄다.** `recoverGame`(`MultiplayerGamePage.jsx:444-`)이 `fetchRoom` + `fetchRoomPlayers` → `validateDuelGameSession`이고, 그 검사기는 **상대 행이 없으면 `OPPONENT_LEFT` 치명 오류**를 던진다 (`utils/onlineGameSession.js:197·215`).
+`fetchRoomPlayers` 호출처는 6곳 — `MultiplayerGamePage.jsx:401·463·487·1011` · `RoomPage.jsx:84·135·148·296` · `multiplayerService.js:126`(`initializeMyGameProgress` fallback). **전부 이 한 함수를 거친다.**
+→ **A2는 `fetchRoomPlayers` 본문만 RPC로 바꾼다** (호출처 무편집). 반환 형태가 같은 행 배열이라 검사기·화면이 그대로 돈다. **A2 없이 A3를 적용하면 복구가 `OPPONENT_LEFT`로 끝난다** — 하루 간격의 이유가 하나 더 생겼다.
+
+**확인 ⓒ liveness 표시가 `heartbeat_at` 최신성을 읽는가 — 읽지 않는다. 화면에 상대 생존 표시가 없다.**
+프론트에서 상대의 `heartbeat_at`·`last_seen_at`·`disconnected`를 읽는 코드는 **0건**이다. 상대 패널은 `has_finished`("도착 완료!"/"레이싱 중...") · `current_title` · `move_count`만 그린다 (`:1802-1837`). 연결 끊김 판정은 **서버**(`finalize_duel_if_expired`, definer — 클라이언트가 10초마다 호출)가 `heartbeat_at`으로 하고, 결과는 **`player_status = retired` + 방 `finished`** 로 나온다 — 각각 A1 신호와 `game_rooms` realtime으로 도달한다.
+→ **RPC에 상대 liveness boolean은 넣지 않는다.** `player_status` 신호로 충분하다.
+**D3 원문의 "상대 생존 표시를 굴린다"는 정확히는 이것이다:** 상대 하트비트가 만드는 `room_players` 이벤트가 **10초마다 상대 행 재조회를 일으킨다** (`:385-418`). 자기 하트비트 이벤트는 RPC 응답이 먼저 반영돼 `classifyRealtimeVersion`이 `stale`로 버린다. **즉 지금의 주기적 재조회는 상대 하트비트가 만든다.** A3 이후 그 주기가 사라지고 신호(이동·상태 변화)만 남는다 → **A2에서 자기 하트비트 주기(10초)에 `fetchRoomPlayers` 재조회를 붙인다** — realtime 신호를 하나 놓쳐도 10초 안에 회복한다. 프론트만의 추가이고 DB 변경은 없다.
+
+**구현** — `20261004100000_duel_players_view_v1.sql`, **추가만** (기존 정책·함수·권한 무변경):
+
+| 객체 | 내용 |
+|---|---|
+| `public.get_duel_room_players_v1(p_room_id)` | definer · `stable` · jsonb 배열(`created_at` 순 — `fetchRoomPlayers`와 같은 순서). 본인 행 전체, `starting`·`playing`이면 상대 행에서 `path_*` 3키 제거, 그 밖은 전체. 비참가자·없는 방 `[]`(오늘의 정책 결과와 같다) · 그룹 방 `DUEL_ROOM_REQUIRED` · 미인증 `AUTH_REQUIRED`. `authenticated`·`service_role`만 실행 (AGENTS §4 명시 grant) |
+| `trg_signal_duel_progress` → `private.signal_duel_progress_v1` | `AFTER UPDATE ... WHEN (current_page_id · move_count · player_status 중 하나라도 변화)` · 1:1 방만. `room_events` `duel_progress` 1행 — payload `userId`·`progressVersion`·`serverTimestamp`, **경로·문서 없음** |
+| ⚠ 구현 중 발견 | `room_events.user_id`는 **`profiles`** 를, `room_players.user_id`는 **`auth.users`** 를 참조한다. 프로필 없는 참가자에서 신호 INSERT가 FK로 실패하면 **이동 RPC 자체가 실패한다** (`server_authority_v2.sql` 픽스처로 재현). → 프로필이 있을 때만 `user_id`를 채우고 payload `userId`는 항상 채운다. **A2는 자기 신호 판별에 `payload.userId`를 쓴다** |
+
+**옛 프론트 영향 없음** — 배포된 1:1 핸들러는 모르는 `event_type`을 `default` 로그로 버린다 (`MultiplayerGamePage.jsx:1443-1446`). 그룹 핸들러는 `group_spectator_emoji` 외에는 즉시 반환한다.
+
+| 검증 | 결과 (기준 `cb0cf0b`, 2026-10-03) |
+|---|---|
+| pgTAP 신규 | `duel_players_view_v1.sql` **27/27** — 마스크(진행 중·`starting`·종료 공개·대기 무마스크) · 비참가자/그룹/미인증 · 하트비트 신호 0 · 이동 신호 1 · payload 키 · 상대 읽기 · 상태 변화 · 다른 컬럼 0 · 그룹 0 · 프로필 없는 참가자 |
+| 음성 대조 | `WHEN` 없는 트리거로 바꿔 실행 → 17(하트비트 신호 0)·19(이동 신호 1) `not ok` 후 롤백 |
+| pgTAP 전체 | **1142** · `not ok` 0 (preflight 제외). `sec_finish_db_v1` 20번은 아이템 행만 세도록 정정 — 이동이 신호 행을 추가하기 때문 |
+| 동시성 | `duel_item_concurrency_v3.ps1` **3시나리오 × 5회, 교착 0** — S3(아이템 vs 배포된 이동 RPC) 포함. `server_authority_concurrency_v2.ps1`은 옛 컨테이너명(`supabase_db_wiki`) 고정·싱글 전용이라 실행하지 않았다 |
+| `npm test` | 465/465 |
+
+**A2 범위 확정 (이 확인의 결과):** ① `multiplayerService.js` `fetchRoomPlayers` 본문 → `rpc("get_duel_room_players_v1")` ② `MultiplayerGamePage.jsx` room_events 핸들러에 `duel_progress`(상대 `payload.userId`) → 재조회 ③ 하트비트 주기 재조회 ④ `syncAfterItemUse` 병합 `{...player, ...fresh}`. **`RoomPage.jsx`·`utils/onlineGameSession.js`·그룹 파일 무편집.**
+**A1 운영 적용은 M1 뒤** (파일명 순서). A2 배포 전 적용이 필요하다 — A2가 이 RPC를 부른다.
 
 **순서:** SF-M1 → SF-A1 → SF-A2(`main` push) → **하루** → SF-A3. SF-M2는 표 확정 후. **운영 적용·`main` push는 단계마다 건별 승인** (`AGENTS.md` §1·§1.1).
 
