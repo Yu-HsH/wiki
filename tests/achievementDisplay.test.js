@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -87,7 +87,8 @@ test("labels: categories match the DB CHECK, kinds match the C1 kinds and spec �
   const c1 = read("supabase/migrations/20261001090000_c1_reward_tables_v1.sql");
   const kinds = [...c1.match(/reward_catalog_kind_check check \(kind = any \(array\[([\s\S]*?)\]/)[1].matchAll(/'([a-z_]+)'/g)]
     .map(([, value]) => value);
-  assert.deepEqual(Object.keys(REWARD_KIND_LABELS).sort(), kinds.sort());
+  // 16d: 배지 kind 폐지 — 라벨은 C1 kind에서 badge를 뺀 8종 (16d-2가 DB CHECK에서도 뺀다)
+  assert.deepEqual(Object.keys(REWARD_KIND_LABELS).sort(), kinds.filter((kind) => kind !== "badge").sort());
   assert.deepEqual({ ...HIDDEN_KIND_LABELS }, { fun: "재미", discovery: "발견", challenge: "도전" });
 });
 
@@ -214,6 +215,19 @@ const FRONT_FILES = [
   "pages/MainPage.jsx",
   "pages/ProfilePage.jsx",
   "utils/xpResultDisplay.js",
+  // 16d
+  "utils/rewardTokens.js",
+  "utils/profileCard.js",
+  "components/ProfileCard.jsx",
+  "components/ProfileRewardEditor.jsx",
+  "components/FinishEffect.jsx",
+  "hooks/useMatchExpression.js",
+  "services/profileRewardService.js",
+  "components/SuccessOverlay.jsx",
+  "css/profileCard.css",
+  "css/matchExpression.css",
+  ...readdirSync(`${root}/public/profile-icons/x`).map((name) => `public/profile-icons/x/${name}`),
+  ...readdirSync(`${root}/public/profile-icons`).filter((name) => name.endsWith(".svg")).map((name) => `public/profile-icons/${name}`),
 ];
 
 test("G5: hidden achievement IDs, names, conditions and hidden reward names are not in front code", () => {

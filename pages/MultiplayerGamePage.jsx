@@ -22,6 +22,8 @@ import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 import ResultXp from "../components/ResultXp.jsx";
+import FinishEffect from "../components/FinishEffect.jsx";
+import useMatchExpression from "../hooks/useMatchExpression.js";
 import { trackEvent } from "../services/analyticsService";
 
 import CountdownOverlay from "../components/CountdownOverlay";
@@ -119,6 +121,8 @@ export default function MultiplayerGamePage() {
   });
   const [leaving, setLeaving] = useState(false);
   const [phase, setPhase] = useState(PHASE.LOADING);
+  // 16d 판정 4 — 1:1은 승자 카드에 완주 효과만. 경로 줄은 없다
+  const matchExpression = useMatchExpression(phase === PHASE.SUCCESS ? user?.id ?? null : null);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startedAtRef = useRef(null);
@@ -1839,6 +1843,7 @@ export default function MultiplayerGamePage() {
       {phase === PHASE.SUCCESS && (
         <div className="mp-result-overlay">
           <div className="mp-result-card">
+            <FinishEffect effect={matchExpression.finish_effect} />
             <h2>🎉 승리!</h2>
             <p>목표 문서에 먼저 도착했습니다.</p>
             <ResultXp

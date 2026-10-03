@@ -40,11 +40,13 @@ export const HIDDEN_KIND_LABELS = Object.freeze({
   challenge: "도전",
 });
 
-/** `reward_catalog.kind` → `16-HANDOFF.md` §3 표의 종류 이름. */
+/**
+ * `reward_catalog.kind` → `16-HANDOFF.md` §3 표의 종류 이름. 배지는 폐지됐다 (16d) —
+ * 16d-2 전 옛 DB의 `badge` 보상은 종류 이름 없이 「이름」만 나온다.
+ */
 export const REWARD_KIND_LABELS = Object.freeze({
   profile_icon: "프로필 아이콘",
   title: "칭호",
-  badge: "배지",
   frame: "프레임",
   background: "배경",
   path_color: "경로 색상",

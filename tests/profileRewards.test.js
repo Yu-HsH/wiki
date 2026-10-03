@@ -4,6 +4,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  MATCH_EXPRESSION_SLOTS,
   PROFILE_CARD_SLOTS,
   applyEquipment,
   buildProfileCard,
@@ -17,6 +18,7 @@ import {
   PROFILE_CARDS_BATCH_LIMIT,
   cardLookupIds,
   equipProfileReward,
+  fetchOwnMatchExpression,
   fetchOwnRewardInventory,
   fetchProfileCard,
   fetchProfileCards,
@@ -74,11 +76,9 @@ function createFakeClient({ rpcData = {}, rows = [] } = {}) {
 
 /* ── 매핑 ─────────────────────────────────────────────────────── */
 
-test("PROFILE_CARD_SLOTS: 카드 요소 5종, 배지만 자리 3개 (C1 §3 slot_index CHECK)", () => {
-  assert.deepEqual(PROFILE_CARD_SLOTS.map((s) => s.slot), ["profile_icon", "title", "badge", "frame", "background"]);
-  for (const s of PROFILE_CARD_SLOTS) {
-    assert.deepEqual([...s.indexes], s.slot === "badge" ? [1, 2, 3] : [1]);
-  }
+test("PROFILE_CARD_SLOTS: 카드 요소 4종 — 배지 폐지 (16d, C1 §0.-1) · 경기 표현 2종은 따로", () => {
+  assert.deepEqual(PROFILE_CARD_SLOTS.map((s) => s.slot), ["profile_icon", "title", "frame", "background"]);
+  assert.deepEqual(MATCH_EXPRESSION_SLOTS.map((s) => s.slot), ["finish_effect", "path_color"]);
 });
 
 test("normalizeRewardRef: snake·camel 둘 다 받고, ID가 없으면 null", () => {
@@ -97,8 +97,8 @@ test("cardFromServer: 서버 카드 → C5 §2 형태, retired 표식 보존", (
   assert.equal(card.icon.assetRef, "/profile-icons/book.svg");
   assert.equal(card.title.displayName, "첫 칭호");
   assert.equal(card.frame, null);
-  assert.equal(card.badges.length, 2);
-  assert.equal(card.badges.find((b) => b.rewardId === "b3").retired, true, "C1-②: 은퇴 보상도 장착 유지·표시");
+  assert.equal(Object.hasOwn(card, "badges"), false, "배지 폐지 — 서버(옛 DB 포함)가 실어도 읽지 않는다 (16d)");
+  assert.equal(normalizeRewardRef({ rewardId: "r", retired: true }).retired, true, "C1-②: 은퇴 보상도 장착 유지·표시");
   assert.equal(card.source, "live");
   assert.deepEqual(Object.keys(card).sort(), Object.keys(buildProfileCard()).sort(), "C5 §2 키 집합 그대로");
 });
@@ -123,7 +123,7 @@ test("applyEquipment: equip 응답의 전체 장착 상태로만 카드 슬롯�
     { slot: "frame", slotIndex: 1, rewardId: "f", reward: { rewardId: "f", kind: "frame", displayName: "틀", slotIndex: 1 } },
     { slot: "path_color", slotIndex: 1, rewardId: "p", reward: { rewardId: "p", kind: "path_color", displayName: "색", slotIndex: 1 } },
   ]);
-  assert.deepEqual(next.badges.map((b) => b.rewardId), ["b1", "b2"], "slot_index 순");
+  assert.equal(Object.hasOwn(next, "badges"), false, "옛 DB의 badge 장착 행은 무시한다 (16d)");
   assert.equal(next.frame.rewardId, "f");
   assert.equal(next.title, null, "응답에 없는 슬롯은 비운다 — 추측하지 않는다");
   assert.equal(next.icon, null);
@@ -131,11 +131,9 @@ test("applyEquipment: equip 응답의 전체 장착 상태로만 카드 슬롯�
   assert.ok(!("pathColor" in next), "경기 표현 슬롯은 카드에 없다");
 });
 
-test("equippedAt: 배지는 자리별, 나머지는 슬롯 하나", () => {
+test("equippedAt: 카드 슬롯 하나씩 — badge는 슬롯이 아니다 (16d)", () => {
   const card = cardFromServer(serverCard);
-  assert.equal(equippedAt(card, "badge", 1).rewardId, "b1");
-  assert.equal(equippedAt(card, "badge", 2), null);
-  assert.equal(equippedAt(card, "badge", 3).rewardId, "b3");
+  assert.equal(equippedAt(card, "badge"), null);
   assert.equal(equippedAt(card, "title").rewardId, "t1");
   assert.equal(equippedAt(card, "frame"), null);
   assert.equal(equippedAt(card, "hat"), null);
@@ -195,8 +193,8 @@ test("equip/unequip: RPC 인자 이름과 실패 코드 전달", async () => {
   });
   assert.deepEqual(await equipProfileReward({ slot: "title", rewardId: "t1" }, { client }), equipment);
   assert.deepEqual(client.calls[0], ["rpc", "equip_profile_reward_v1", { p_slot: "title", p_slot_index: 1, p_reward_id: "t1" }]);
-  await assert.rejects(unequipProfileReward({ slot: "badge", slotIndex: 2 }, { client }), (e) => e.code === "SLOT_EMPTY");
-  assert.deepEqual(client.calls[1], ["rpc", "unequip_profile_reward_v1", { p_slot: "badge", p_slot_index: 2 }]);
+  await assert.rejects(unequipProfileReward({ slot: "frame" }, { client }), (e) => e.code === "SLOT_EMPTY");
+  assert.deepEqual(client.calls[1], ["rpc", "unequip_profile_reward_v1", { p_slot: "frame", p_slot_index: 1 }]);
 });
 
 test("fetchOwnRewardInventory: 카탈로그 embed, 은퇴·숨김(null) 보상은 뺀다", async () => {
@@ -265,6 +263,43 @@ test("ProfileRewardEditor: 서버 응답만 반영 (낙관적 갱신 없음), �
   assert.match(editor, /const equipment = await request\(\);\s*onEquipment\?\.\(equipment\);/);
   assert.doesNotMatch(editor, /alt=""/);
   assert.match(editor, /aria-pressed=\{selected\}/, "선택 상태를 색 말고도 전달");
+  // 16d: 카드 4행 + 경기 표현 2행, 경기 표현도 같은 서버 응답으로만 갱신한다
+  assert.match(editor, /PROFILE_CARD_SLOTS\.map\(/);
+  assert.match(editor, /MATCH_EXPRESSION_SLOTS\.map\(/);
+  assert.match(editor, /onEquipment\?\.\(equipment\);\s*setMatchExpression\(matchExpressionFromEquipment\(equipment\)\);/);
+  assert.match(editor, /slotIndex: 1/);
+  assert.doesNotMatch(editor, /대표 배지|indexes/);
+});
+
+test("fetchOwnMatchExpression: 본인 장착 행 → 카탈로그, 게스트·빈 ID는 조회하지 않는다", async () => {
+  const calls = [];
+  const tables = {
+    user_profile_equipment: [{ slot: "finish_effect", reward_id: "fin" }, { slot: "path_color", reward_id: "pc" }],
+    reward_catalog: [
+      { reward_id: "fin", kind: "finish_effect", display_name: "완주", asset_ref: "finish:tier-2", retired: false },
+      { reward_id: "pc", kind: "path_color", display_name: "색", asset_ref: "path:purple", retired: false },
+    ],
+  };
+  const client = {
+    from(table) {
+      const builder = {
+        select(columns) { calls.push([table, "select", columns]); return builder; },
+        eq(column, value) { calls.push([table, "eq", column, value]); return builder; },
+        in(column, values) {
+          calls.push([table, "in", column, values]);
+          return Promise.resolve({ data: tables[table], error: null });
+        },
+      };
+      return builder;
+    },
+  };
+  const result = await fetchOwnMatchExpression(U1, { client });
+  assert.equal(result.finish_effect.assetRef, "finish:tier-2");
+  assert.equal(result.path_color.assetRef, "path:purple");
+  assert.deepEqual(calls[1], ["user_profile_equipment", "eq", "user_id", U1]);
+  assert.deepEqual(calls[2], ["user_profile_equipment", "in", "slot", ["finish_effect", "path_color"]]);
+  assert.deepEqual(await fetchOwnMatchExpression("guest-1", { client }), { finish_effect: null, path_color: null });
+  assert.deepEqual(await fetchOwnMatchExpression(null, { client }), { finish_effect: null, path_color: null });
 });
 
 /* ── 17b-2c 남의 카드 — 4지점이 같은 병합을 쓴다 ─────────────── */

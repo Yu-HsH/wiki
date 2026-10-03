@@ -117,3 +117,40 @@ export async function unequipProfileReward({ slot, slotIndex = 1 }, { client } =
   if (error) throw error;
   return unwrap(data, "EQUIP_FAILED").equipment || [];
 }
+
+const MATCH_EXPRESSION_SLOT_IDS = Object.freeze(["finish_effect", "path_color"]);
+
+/**
+ * 본인이 장착한 경기 표현(완주 효과 · 경로 색상) — 결과 화면이 쓴다 (16d 판정 4).
+ *
+ * 카드 RPC는 카드 4요소만 싣는다(C1 §4.1). 장착 테이블은 authenticated 전원이 읽을 수 있어
+ * (C1 §3) 본인 행을 직접 읽고, 보상 정보는 카탈로그에서 가져온다 — 비공개(히든) 보상도
+ * 본인 보유면 카탈로그 정책이 보여 준다 (C1 §1.1). `asset_ref` 토큰은 `utils/rewardTokens.js`가 읽는다.
+ *
+ * @returns {Promise<{finish_effect: object|null, path_color: object|null}>}
+ */
+export async function fetchOwnMatchExpression(userId, { client } = {}) {
+  const empty = { finish_effect: null, path_color: null };
+  if (!userId || String(userId).startsWith("guest-")) return empty;
+  const db = resolveClient(client);
+  const { data: rows, error } = await db
+    .from("user_profile_equipment")
+    .select("slot, reward_id")
+    .eq("user_id", userId)
+    .in("slot", MATCH_EXPRESSION_SLOT_IDS);
+  if (error) throw error;
+  if (!rows || rows.length === 0) return empty;
+
+  const { data: catalog, error: catalogError } = await db
+    .from("reward_catalog")
+    .select("reward_id, kind, display_name, asset_ref, retired")
+    .in("reward_id", rows.map((row) => row.reward_id));
+  if (catalogError) throw catalogError;
+
+  const byId = new Map((catalog || []).map((entry) => [entry.reward_id, normalizeRewardRef(entry)]));
+  const result = { ...empty };
+  for (const row of rows) {
+    if (Object.hasOwn(result, row.slot)) result[row.slot] = byId.get(row.reward_id) ?? null;
+  }
+  return result;
+}

@@ -4,17 +4,18 @@ import {
   DENSITY,
   NAME_FALLBACK,
   densityShows,
-  orderedBadges,
   resolveDisplayName,
 } from "../utils/profileCard.js";
+import { frameTier } from "../utils/rewardTokens.js";
 
 /**
  * 프로필 카드 — C5 §2의 형태를 받아 §3 규칙대로 그린다.
  *
  * 크기·밀도만 prop으로 받는다 (C5 §5). fallback 규칙은 지점별로 달라지지 않는다.
  *
- * 레벨은 15b가, 아이콘·칭호·배지·프레임·배경은 17b가 C1 장착 상태로 채운다
- * (`get_profile_card(s)_v1` → `mergeRewardSlots`). 없으면 `null`/`[]`이고 렌더되지 않는다.
+ * 레벨은 15b가, 아이콘·칭호·프레임·배경은 17b가 C1 장착 상태로 채운다
+ * (`get_profile_card(s)_v1` → `mergeRewardSlots`). 없으면 `null`이고 렌더되지 않는다.
+ * 배지는 폐지됐다 (16d, C5 §0). 프레임 단계는 `asset_ref` 토큰으로 정한다 (C5 §3.6).
  *
  * @param {object} props
  * @param {object} props.card C5 §2의 카드 형태
@@ -36,17 +37,19 @@ export default function ProfileCard({
   children,
 }) {
   const displayName = resolveDisplayName(card, nameFallback);
-  const badges = densityShows(density, "badges") ? orderedBadges(card?.badges) : [];
   const title = densityShows(density, "title") ? card?.title ?? null : null;
   const level = densityShows(density, "level") ? card?.level ?? null : null;
   const frame = densityShows(density, "frame") ? card?.frame ?? null : null;
   const background = densityShows(density, "background") ? card?.background ?? null : null;
+  // null = 토큰 없음(옛 DB 포함) → 기본 링. tier-1~3 · special은 DESIGN-SYSTEM §2.
+  const tier = frame ? frameTier(frame) : null;
 
   const rootClassName = [
     "pcard",
     `pcard--${density}`,
     `pcard--size-${size}`,
     frame ? "pcard--framed" : "",
+    tier ? `pcard--frame-${tier}` : "",
     background ? "pcard--backed" : "",
     interactive ? "pcard--interactive" : "",
     className,
@@ -70,7 +73,14 @@ export default function ProfileCard({
 
   return (
     <div className={rootClassName} {...interactiveProps}>
-      <ProfileAvatar card={card} size={size} nameFallback={nameFallback} />
+      {/* special 프레임의 회전 링은 아바타(overflow: hidden) 바깥에 그려야 해서 감싼다 */}
+      {tier === "special" ? (
+        <span className="pcard-avatar-ring">
+          <ProfileAvatar card={card} size={size} nameFallback={nameFallback} />
+        </span>
+      ) : (
+        <ProfileAvatar card={card} size={size} nameFallback={nameFallback} />
+      )}
 
       <div className="pcard-body">
         <div className="pcard-name-row">
@@ -87,26 +97,6 @@ export default function ProfileCard({
           <span className="pcard-title" aria-label={`대표 칭호 ${title.displayName}`}>
             {title.displayName}
           </span>
-        )}
-
-        {/* 배지 0개면 영역 자체를 렌더하지 않는다 — C5 §3.5 */}
-        {badges.length > 0 && (
-          <ul className="pcard-badges">
-            {badges.map((badge) => (
-              <li key={badge.rewardId} className="pcard-badge">
-                {/* 장착 보상은 screen reader 이름을 갖는다 — C5 §3.4. 빈 alt는 쓰지 않는다 */}
-                {badge.assetRef ? (
-                  <img
-                    className="pcard-badge-img"
-                    src={badge.assetRef}
-                    alt={`대표 배지 ${badge.displayName}`}
-                  />
-                ) : (
-                  <span className="pcard-badge-text">{badge.displayName}</span>
-                )}
-              </li>
-            ))}
-          </ul>
         )}
 
         {/* 프레임·배경은 시각 톤뿐이라 이름을 screen reader에 따로 준다 — C5 §3.4 (17b) */}

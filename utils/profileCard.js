@@ -48,14 +48,12 @@ export const DENSITY = Object.freeze({
   MINIMAL: "minimal", // 그룹·1:1 참가자 행
 });
 
+// 배지는 폐지됐다 (16d, C5 §0 2026-10-03) — 카드 요소는 아이콘 · 칭호 · 프레임 · 배경.
 const DENSITY_ELEMENTS = Object.freeze({
-  [DENSITY.FULL]: Object.freeze(["level", "title", "badges", "frame", "background"]),
+  [DENSITY.FULL]: Object.freeze(["level", "title", "frame", "background"]),
   [DENSITY.COMPACT]: Object.freeze(["level", "title"]),
   [DENSITY.MINIMAL]: Object.freeze(["title"]),
 });
-
-/** 대표 배지 최대 개수 — C1 §3의 slot_index CHECK가 DB에서 강제하는 값. */
-export const MAX_BADGES = 3;
 
 function normalizeText(value) {
   if (typeof value !== "string") return null;
@@ -64,8 +62,8 @@ function normalizeText(value) {
 }
 
 /**
- * C5 §2의 카드 형태로 정규화한다. 없는 값은 전부 null/[]이다.
- * 레벨·칭호·배지·프레임·배경은 이 웨이브에서 슬롯만 존재한다 (C1/C3 DDL 이후에 채운다).
+ * C5 §2의 카드 형태로 정규화한다. 없는 값은 전부 null이다.
+ * 배지는 폐지돼 카드에 없다 — 서버가 `badges: []`를 싣더라도 읽지 않는다 (C5 §0, 16d).
  */
 export function buildProfileCard(input = {}) {
   return {
@@ -73,7 +71,6 @@ export function buildProfileCard(input = {}) {
     nickname: normalizeText(input.nickname),
     level: input.level ?? null,
     title: input.title ?? null,
-    badges: Array.isArray(input.badges) ? input.badges : [],
     icon: input.icon ?? null,
     frame: input.frame ?? null,
     background: input.background ?? null,
@@ -137,48 +134,35 @@ export function densityShows(density, element) {
   return elements.includes(element);
 }
 
-/**
- * 배지 정렬 — C5 §3.5 + C1 §3의 slot_index 순.
- * 0개면 빈 배열을 돌려주고, 호출자는 영역 자체를 렌더하지 않는다.
- * 4개 이상은 slot_index CHECK가 막으므로 발생할 수 없다 — 방어적으로 자른다.
- */
-export function orderedBadges(badges) {
-  if (!Array.isArray(badges)) return [];
-  return badges
-    .filter((badge) => badge && typeof badge === "object")
-    .map((badge, index) => ({ badge, index }))
-    .sort((a, b) => {
-      const left = Number.isFinite(a.badge.slotIndex) ? a.badge.slotIndex : a.index + 1;
-      const right = Number.isFinite(b.badge.slotIndex) ? b.badge.slotIndex : b.index + 1;
-      if (left !== right) return left - right;
-      return a.index - b.index;
-    })
-    .map((entry) => entry.badge)
-    .slice(0, MAX_BADGES);
-}
-
 /* ────────────────────────────────────────────────────────────────
  * 17b — C1 보상 장착 → 카드 슬롯 (서버 응답 매핑)
  * ──────────────────────────────────────────────────────────────── */
 
 /**
- * 프로필 카드에 걸리는 장착 슬롯 — C1 §3의 9종 중 카드 요소 5종 (C5 §2).
- * 경로 색상·완주 효과 등 경기 표현 4종은 DB가 받지만 카드에 없다.
- * `indexes`가 C1 §3의 `slot_index` CHECK와 같다 — 배지만 1~3이다.
+ * 프로필 카드에 걸리는 장착 슬롯 — 카드 요소 4종 (C5 §2, 16d에서 배지 폐지).
+ * 모든 slot의 `slot_index`는 1이다 (C1 §0.-1). 옛 DB의 `badge` 장착 행은 어디에도 매핑되지 않아 무시된다.
  */
 export const PROFILE_CARD_SLOTS = Object.freeze([
-  Object.freeze({ slot: "profile_icon", cardKey: "icon", label: "프로필 아이콘", indexes: Object.freeze([1]) }),
-  Object.freeze({ slot: "title", cardKey: "title", label: "대표 칭호", indexes: Object.freeze([1]) }),
-  Object.freeze({ slot: "badge", cardKey: "badges", label: "대표 배지", indexes: Object.freeze([1, 2, 3]) }),
-  Object.freeze({ slot: "frame", cardKey: "frame", label: "프로필 프레임", indexes: Object.freeze([1]) }),
-  Object.freeze({ slot: "background", cardKey: "background", label: "프로필 배경", indexes: Object.freeze([1]) }),
+  Object.freeze({ slot: "profile_icon", cardKey: "icon", label: "프로필 아이콘" }),
+  Object.freeze({ slot: "title", cardKey: "title", label: "대표 칭호" }),
+  Object.freeze({ slot: "frame", cardKey: "frame", label: "프로필 프레임" }),
+  Object.freeze({ slot: "background", cardKey: "background", label: "프로필 배경" }),
 ]);
 
-const CARD_SLOT_KEYS = Object.freeze(["icon", "title", "badges", "frame", "background"]);
+/**
+ * 경기 표현 — 카드에는 없고 결과 화면에 쓰인다 (16d 판정 4). 편집기의 "경기 표현" 묶음.
+ * 경로 효과·관전 이모티콘은 그리는 곳이 없어 편집기에 두지 않는다 (16 판정 7).
+ */
+export const MATCH_EXPRESSION_SLOTS = Object.freeze([
+  Object.freeze({ slot: "finish_effect", label: "완주 효과" }),
+  Object.freeze({ slot: "path_color", label: "경로 색상" }),
+]);
+
+const CARD_SLOT_KEYS = Object.freeze(["icon", "title", "frame", "background"]);
 
 /**
  * 서버의 RewardRef(`private.reward_ref_v1`)를 C5 §2의 형태로 정규화한다.
- * `slotIndex`(배지 순서)와 `retired`(C1-② 장착 유지 표식)는 덧붙은 필드다.
+ * `slotIndex`(배지 폐지 후 항상 1)와 `retired`(C1-② 장착 유지 표식)는 덧붙은 필드다.
  */
 export function normalizeRewardRef(raw) {
   if (!raw || typeof raw !== "object") return null;
@@ -205,7 +189,6 @@ export function cardFromServer(raw) {
     level: Number.isFinite(level) ? level : null,
     icon: normalizeRewardRef(raw.icon),
     title: normalizeRewardRef(raw.title),
-    badges: Array.isArray(raw.badges) ? raw.badges.map(normalizeRewardRef).filter(Boolean) : [],
     frame: normalizeRewardRef(raw.frame),
     background: normalizeRewardRef(raw.background),
     legacyImageUrl: raw.legacyImageUrl,
@@ -214,7 +197,7 @@ export function cardFromServer(raw) {
 }
 
 /**
- * 보상 슬롯 5개만 `serverCard`에서 가져와 `baseCard`에 얹는다.
+ * 보상 슬롯 4개만 `serverCard`에서 가져와 `baseCard`에 얹는다.
  *
  * 랭킹·그룹 행은 닉네임·레벨·이미지를 자기 조회(행 데이터·스냅샷)에서 이미 갖고 있다.
  * 그 값은 그대로 두고 장착 결과만 병합한다 — 배치 조회가 실패하거나 늦어도
@@ -235,28 +218,38 @@ export function mergeRewardSlots(baseCard, serverCard) {
  */
 export function applyEquipment(baseCard, equipment) {
   const base = buildProfileCard(baseCard ?? {});
-  const next = { ...base, icon: null, title: null, badges: [], frame: null, background: null };
+  const next = { ...base, icon: null, title: null, frame: null, background: null };
   if (!Array.isArray(equipment)) return next;
   for (const entry of equipment) {
     const definition = PROFILE_CARD_SLOTS.find((item) => item.slot === entry?.slot);
     if (!definition) continue;
     const ref = normalizeRewardRef({ ...entry.reward, slotIndex: entry.slotIndex ?? entry.reward?.slotIndex });
-    if (!ref) continue;
-    if (definition.cardKey === "badges") next.badges = [...next.badges, ref];
-    else next[definition.cardKey] = ref;
+    if (ref) next[definition.cardKey] = ref;
   }
-  next.badges = orderedBadges(next.badges);
   return next;
 }
 
-/** 슬롯 위치에 지금 장착된 보상 — 편집 UI의 "현재" 표시용. */
-export function equippedAt(card, slot, slotIndex = 1) {
+/** 슬롯에 지금 장착된 카드 보상 — 편집 UI의 "현재" 표시용. */
+export function equippedAt(card, slot) {
   const definition = PROFILE_CARD_SLOTS.find((item) => item.slot === slot);
   if (!definition || !card) return null;
-  if (definition.cardKey === "badges") {
-    return (card.badges ?? []).find((badge) => badge?.slotIndex === slotIndex) ?? null;
-  }
   return card[definition.cardKey] ?? null;
+}
+
+/**
+ * 장착 응답(`equipment[]`)에서 경기 표현 슬롯만 `{ [slot]: RewardRef }`로 꺼낸다.
+ * 옛 DB의 `badge` 행 등 다른 slot은 무시한다.
+ */
+export function matchExpressionFromEquipment(equipment) {
+  const result = {};
+  for (const definition of MATCH_EXPRESSION_SLOTS) result[definition.slot] = null;
+  if (!Array.isArray(equipment)) return result;
+  for (const entry of equipment) {
+    if (!Object.hasOwn(result, entry?.slot)) continue;
+    const ref = normalizeRewardRef(entry.reward);
+    if (ref) result[entry.slot] = ref;
+  }
+  return result;
 }
 
 const EQUIP_ERROR_TEXT = Object.freeze({

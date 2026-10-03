@@ -3,6 +3,9 @@ import { useAuth } from "../authContext";
 import { fetchRankings, fetchSingleRunResult } from "../rankingService";
 import { formatDuration } from "../services/wikiService";
 import ResultXp from "./ResultXp.jsx";
+import FinishEffect from "./FinishEffect.jsx";
+import useMatchExpression from "../hooks/useMatchExpression.js";
+import { pathColor } from "../utils/rewardTokens.js";
 
 /**
  * 게임 성공 시 표시되는 오버레이 컴포넌트
@@ -24,6 +27,9 @@ export default function SuccessOverlay({
   onReturnToLobby,
 }) {
   const { user } = useAuth();
+  // 경기 표현 (16d 판정 4) — 장착한 경로 색상은 타임라인 선·노드, 완주 효과는 도착 노드. 게스트는 없다
+  const matchExpression = useMatchExpression(user && !user.isGuest ? user.id : null);
+  const pathHex = pathColor(matchExpression.path_color);
   const [rankings, setRankings] = useState([]);
   const [serverResult, setServerResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -120,15 +126,21 @@ export default function SuccessOverlay({
           <div style={pathSectionStyle}>
             <h3 style={sectionTitleStyle}>이동 경로</h3>
             <div style={timelineStyle}>
-              {displayPathTitles.map((title, index) => (
-                <div key={`${title}-${index}`} style={timelineItemStyle}>
+              {displayPathTitles.map((title, index) => {
+                const isLast = index === displayPathTitles.length - 1;
+                const dot = (
                   <div style={dotStyle}>
-                    <div style={dotInnerStyle} />
+                    <div style={pathHex ? { ...dotInnerStyle, background: pathHex } : dotInnerStyle} />
                   </div>
-                  <div style={timelineTextStyle}>{title}</div>
-                  {index < displayPathTitles.length - 1 && <div style={lineStyle} />}
-                </div>
-              ))}
+                );
+                return (
+                  <div key={`${title}-${index}`} style={timelineItemStyle}>
+                    {isLast ? <FinishEffect effect={matchExpression.finish_effect}>{dot}</FinishEffect> : dot}
+                    <div style={timelineTextStyle}>{title}</div>
+                    {!isLast && <div style={pathHex ? { ...lineStyle, background: pathHex } : lineStyle} />}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

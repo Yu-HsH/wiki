@@ -8,14 +8,12 @@ import {
   AVATAR_STAGE,
   AVATAR_SIZES,
   DENSITY,
-  MAX_BADGES,
   NAME_FALLBACK,
   avatarAltText,
   avatarSizePx,
   buildProfileCard,
   densityShows,
   initialOf,
-  orderedBadges,
   resolveAvatarStage,
   resolveDisplayName,
 } from "../utils/profileCard.js";
@@ -180,44 +178,25 @@ test("④ 닉네임이 없으면 이미지 실패가 시스템 기본 이미지�
 });
 
 /* ────────────────────────────────────────────────────────────────
- * ⑤ 배지 0 / 1~3 — C5 §3.5 + C1 §3
+ * ⑤ 배지 폐지 — C5 §0 (2026-10-03, 16d). 카드 = 아이콘 · 칭호 · 프레임 · 배경
  * ──────────────────────────────────────────────────────────────── */
 
-test("⑤ 배지 0개면 영역을 렌더하지 않고 1~3개는 slot_index 순이다", async () => {
-  // 0개
-  assert.deepEqual(orderedBadges([]), []);
-  assert.deepEqual(orderedBadges(undefined), []);
-  assert.deepEqual(orderedBadges(buildProfileCard({}).badges), []);
+test("⑤ 배지는 카드에 없다 — 입력에 있어도 버리고, 컴포넌트·CSS에 배지 렌더가 없다", async () => {
+  const card = buildProfileCard({ badges: [{ rewardId: "b1", displayName: "하나", assetRef: null, slotIndex: 1 }] });
+  assert.equal(Object.hasOwn(card, "badges"), false);
 
-  // 1~3개 — slot_index 오름차순
-  const shuffled = [
-    { rewardId: "b3", displayName: "셋", assetRef: null, slotIndex: 3 },
-    { rewardId: "b1", displayName: "하나", assetRef: null, slotIndex: 1 },
-    { rewardId: "b2", displayName: "둘", assetRef: null, slotIndex: 2 },
-  ];
-  assert.deepEqual(
-    orderedBadges(shuffled).map((badge) => badge.rewardId),
-    ["b1", "b2", "b3"]
-  );
-
-  // 4개 이상은 slot_index CHECK가 막는다 — 방어적으로 잘린다
-  assert.equal(MAX_BADGES, 3);
-  const overflow = [
-    ...shuffled,
-    { rewardId: "b4", displayName: "넷", assetRef: null, slotIndex: 4 },
-  ];
-  assert.equal(orderedBadges(overflow).length, 3);
-
-  // 0개일 때 목록 자체가 렌더되지 않는다는 것이 컴포넌트에도 적혀 있다
   const source = await readProjectFile("components/ProfileCard.jsx");
-  assert.match(source, /badges\.length > 0 && \(\s*<ul className="pcard-badges">/);
+  assert.doesNotMatch(source, /pcard-badge|orderedBadges|badges/);
+  const css = await readProjectFile("css/profileCard.css");
+  assert.doesNotMatch(css, /\.pcard-badge/);
 });
 
 test("⑤ 밀도는 C5 §4의 지점별 표시 요소와 일치한다", () => {
-  // 프로필·공개 프로필 — 전부
-  for (const element of ["level", "title", "badges", "frame", "background"]) {
+  // 프로필·공개 프로필 — 전부 (배지는 폐지, 16d)
+  for (const element of ["level", "title", "frame", "background"]) {
     assert.ok(densityShows(DENSITY.FULL, element), `full에 ${element}가 없다`);
   }
+  assert.ok(!densityShows(DENSITY.FULL, "badges"));
   // 랭킹 — 아이콘·닉네임·레벨·칭호
   assert.ok(densityShows(DENSITY.COMPACT, "level"));
   assert.ok(densityShows(DENSITY.COMPACT, "title"));
