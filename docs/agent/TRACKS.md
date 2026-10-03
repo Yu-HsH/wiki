@@ -410,7 +410,8 @@
 | `20261003 10` | **16d-2** | `20261003100000_badge_retirement_v1.sql` — 16b-f 뒤. 배지 11행 kind·표시명·`asset_ref` · 배지 장착 해제 · CHECK 2개 · 장착 RPC · 카드 빌더 · `준비된 탐험가` params · 토큰 (2026-10-03 예약) |
 | `20261004 09` | **SF-M1** | `20261004090000_sec_finish_db_v1.sql` — 16d-2 뒤 (2026-10-03 예약) |
 | `20261004 10` | **SF-A1** | `20261004100000_duel_players_view_v1.sql` — SF-M1 뒤 (2026-10-03 예약) |
-| 생성 시 | **SF-A3 · SF-M2** | `…_duel_players_rls_v1.sql` · `…_sec_residue_v1.sql` — **생성 시점의 최대보다 큰 값.** 계약은 순서뿐: **A3은 A1 뒤.** `db push`는 적용 이력보다 작은 새 파일을 거부하므로 **파일명 순서 = 운영 적용 순서**가 되게 고른다 |
+| `20261004 11` | **SF-A3** | `20261004110000_duel_players_rls_v1.sql` — SF-A1 뒤. **생성 확정 (2026-10-03, `554b448`)** · 운영 적용은 2026-10-04 이후 |
+| 생성 시 | **SF-M2** | `…_sec_residue_v1.sql` — **생성 시점의 최대보다 큰 값.** 계약은 순서뿐: **A3은 A1 뒤.** `db push`는 적용 이력보다 작은 새 파일을 거부하므로 **파일명 순서 = 운영 적용 순서**가 되게 고른다 |
 
 **파일명은 제안이다. 순서 관계만 계약이다** — 창 블록의 4개는 **적은 순서대로 적용돼야 한다** (§7.2).
 **14c 생성 완료 (2026-10-01, `3d027ba`):** `supabase migration new duel_host_target_v2`로 생성한 신규 파일을
@@ -1431,6 +1432,28 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 4. **SF-A3는 push 확인 후 하루 뒤** — 옛 탭은 테이블을 직접 읽는다. A3 뒤의 옛 탭은 상대 패널이 멈추고 F5 복구가 `OPPONENT_LEFT`로 끝난다 (§8-SEC-⑦ ⓑ)
 
 **SF-A2 배포 (2026-10-03)** — RoomPage 경합 수정 **승인** `[사용자]` · **main push #14 `912d241..fadc81d`** `[사용자 실행]` · 원격 main = `fadc81d` 실측 `[산출물]` · 운영 확인 미수신. **SF-A3 운영 적용은 2026-10-04 이후** `[사용자 결정]`.
+
+#### 8-SEC-⑨ SF-A3 완료 (로컬) — `554b448` · **운영 미적용 (2026-10-04 이후)** `[코드·산출물, 2026-10-03]`
+
+| 항목 | 내용 |
+|---|---|
+| migration | `20261004110000_duel_players_rls_v1.sql` — `room_players` 읽기 정책 **이름 유지**, 조건만 `public.can_view_room_player_v1(room_id, user_id)`로: **참가자 AND (본인 행 OR 1:1 `starting`·`playing`이 아님)**. 헬퍼는 definer(`is_room_member` 선례 — 정책이 `game_rooms` RLS에 기대지 않는다), `authenticated`·`service_role`만 실행. **그룹은 모드 조건으로 제외** — 관전 경로 그대로 |
+| pgTAP 신규 | `duel_players_rls_v1.sql` **17/17** — 정책 4개 이름 불변 · 헬퍼 ACL · `playing`·`starting` 본인 행만(명시 필터 포함) · `waiting`·`finished` 둘 다(종료 후 경로 공개) · 그룹 진행 중 서로의 경로 읽힘 · 비참가자·anon 0 · 마스킹 RPC·이동 RPC 영향 없음 |
+| 음성 대조 | 옛 정책으로 되돌려 실행 → 2·4·5·6·7 `not ok` 후 롤백 |
+| 기존 테스트 정정 | `server_authority_v2.sql` 3건(`:299`·`:321`·`:424`) — 방장이 `starting` 방의 **두 참가자 행**을 세던 단언. 의도(서버가 둘 다 썼다)대로 **서버 역할로** 센다. M1의 `:727`과 같은 형태 |
+| pgTAP 전체 | **1159** · `not ok` 0 (preflight 제외) |
+| 스모크 | SF-A2 2세션 스모크 **16/16 × 4** (A3 판은 실제 헬퍼 정책) · 14c 스모크 **30/30** (A3 적용 상태 — 대기실은 둘 다 보이고 `starting`부터 가려진다) · 1:1 동시성 하니스 교착 0 · `npm test` 471/471 |
+| ⚠ 관찰 — 정책 DDL 직후 Realtime | 스모크가 정책을 바꾼 **직후의 첫 판**에서 4회 중 2회 실패했다(게스트가 `duel_progress`를 못 받음 / `playing` 도달 타임아웃). 변경 후 3초 대기를 넣자 4/4. **로컬 관측이고 원인은 확인하지 않았다** (Realtime이 정책 변경 직후 잠시 이벤트를 놓치는 것으로 추정). **운영 적용에도 같은 순간이 있다** — 그 순간 진행 중인 1:1은 상대 표시가 최대 10초 늦을 수 있다(A2의 하트비트 주기 재조회가 회복한다). **사용자가 적은 시간에 적용한다** |
+
+**운영 적용 절차 (건별 승인 — `AGENTS.md` §1):**
+1. **조건:** #14(`fadc81d`)가 하루 이상 운영에 있었다 (2026-10-04 이후) · #14 운영 확인 수신
+2. 백업 → `scripts/sec-finish-check-prod.sql` Q11 **적용 전** 값(`is_room_member(room_id)`, 헬퍼 없음)
+3. `supabase db push --linked` → migrations **28**
+4. Q11 재실행 — `can_view_room_player_v1(room_id, user_id)` · 헬퍼 `prosecdef = t` · `anon_exec = f`
+5. 운영 확인 — **새 탭에서** 1:1 한 판: 대기실에 상대 보임 → 경기 중 상대 현재 문서·이동 횟수 갱신 → 경기 중 F5 복구 → 결과 화면. 그룹 한 판 관전(다른 참가자 경로)
+6. **프론트 배포 없음.** 롤백은 migration 머리말의 3문장 (옛 정책 복원)
+
+**A3가 운영에 적용되면 부채 ④는 닫힌다** — (A) 테이블·Realtime · (B) RPC 반환 · (C) 이동 이벤트 세 경로가 모두 막힌다. 남는 것: `game_mutation_requests`의 M1 이전 응답 재생(§8-SEC-⑥, 요청자 본인 한정).
 
 **순서:** SF-M1 → SF-A1 → SF-A2(`main` push) → **하루** → SF-A3. SF-M2는 표 확정 후. **운영 적용·`main` push는 단계마다 건별 승인** (`AGENTS.md` §1·§1.1).
 
