@@ -5,13 +5,17 @@
  * 지급 후 요약(`fetchXpSummary`). **여기서 XP를 계산하지 않는다** — 금액·감쇠는
  * 15c-1 트리거가 원장에 적었고, 레벨은 `level_from_total_xp`가 정했다 (C3 §3·§4).
  *
- * ## 레벨업 판정에 공식이 필요 없는 이유
+ * ## 레벨업 판정 — 결과 XP + 업적 XP 합산, 다중 레벨업 (16c, 판정 9)
  *
- * 한 번의 결과가 주는 XP는 최대 70(`group_rank_1`)이고, 레벨 필요량은 최소 100이다
- * (`xp_to_next_level(1)`, C3 §4). 그래서 **한 결과는 레벨을 최대 1 올린다.**
- * 지급 후 현재 레벨 안의 XP가 이번 획득량보다 작으면 이번 지급이 경계를 넘긴 것이다 —
- * 서버가 돌려준 `currentLevelXp` 하나로 판정된다. `tests/xpResultDisplay.test.js`가
- * 이 전제(최대 지급 < 최소 필요량)를 고정한다.
+ * 15c-2는 "한 결과는 최대 70 XP < 최소 필요량 100 → 레벨은 최대 1 오른다"는 전제로
+ * `currentLevelXp` 하나로 판정했다. 16b부터 같은 결과가 업적 XP도 준다(최대 120/단계,
+ * 여러 업적·단계 동시) — **70 + 120 = 190이라 전제가 깨진다.**
+ *
+ * 그래서 이번 획득량은 이 결과의 원장 행 합 + 이 결과가 연 업적의 원장 `xp.amount` 합이고,
+ * "획득 전 레벨"은 서버의 `level_from_total_xp(totalXp - 획득량)`로 얻는다
+ * (`services/achievementService.js` `fetchLevelAtTotalXp`). **공식은 프론트에 두지 않는다.**
+ * 그 조회가 실패하면 `currentLevelXp < 획득량`으로 "올랐다"만 알고 이전 레벨은 모른다
+ * (`from: null`).
  *
  * **한계:** 결과 화면을 여는 사이 다른 지급이 끼어들면 요약이 그만큼 앞서 있어 판정이
  * 어긋날 수 있다. 결과 직후 한 번 읽는 화면이라 받아들인다.
@@ -19,7 +23,7 @@
  * ## 문구
  *
  * 사유 문구는 `01-CONFIRMED-SPEC.md` §7.1 · `15` §1 표의 이름을 **그대로 채택**했다.
- * 감쇠 안내 · 행 없음 안내 · 레벨업 3건은 시안·코드에 근거가 없어 **발명**이다 —
+ * 감쇠 안내 · 행 없음 안내 · 레벨업 · 업적 XP 줄은 시안·코드에 근거가 없어 **발명**이다 —
  * `docs/agent/PACKET-CONTRACT-GAPS.md`에 등재했고 디자인 확정 시 교체 대상이다
  * (C4 §3.1의 "시안 > 코드 > 발명").
  */
@@ -58,18 +62,38 @@ export function formatXpGain(amount) {
   return `+${value.toLocaleString("ko-KR")} XP`;
 }
 
+/** 결과 XP 줄과 나란히 놓이는 업적 XP 줄의 사유. **발명** (GAPS §4.5). */
+export const XP_ACHIEVEMENT_REASON = "업적 달성";
+
 /**
  * 지급 후 요약과 이번 획득량으로 레벨업을 판정한다.
  *
- * @returns {{from:number, to:number}|null}
+ * `levelBefore`(서버가 계산한 획득 전 레벨)가 있으면 그것과 지금 레벨을 비교한다 —
+ * 여러 레벨을 한 번에 넘을 수 있다. 없으면 `currentLevelXp < 획득량`으로 오른 것만 안다.
+ *
+ * @returns {{from:number|null, to:number, steps:number|null}|null}
  */
-export function detectLevelUp(summary, gainedAmount) {
+export function detectLevelUp(summary, gainedAmount, levelBefore = null) {
   const gained = toInteger(gainedAmount);
   const level = toInteger(summary?.level);
   const current = toInteger(summary?.currentLevelXp);
-  if (gained === null || gained <= 0 || level === null || current === null) return null;
+  if (gained === null || gained <= 0 || level === null) return null;
   if (level < 2) return null;
-  return current < gained ? { from: level - 1, to: level } : null;
+
+  const before = toInteger(levelBefore);
+  if (before !== null && before >= 1) {
+    return level > before ? { from: before, to: level, steps: level - before } : null;
+  }
+  if (current === null) return null;
+  return current < gained ? { from: null, to: level, steps: null } : null;
+}
+
+/** `레벨 업! Lv.3 → Lv.5 (+2)` · 이전 레벨을 모르면 `레벨 업! Lv.5`. **발명** (GAPS §4.5). */
+export function formatLevelUp(levelUp) {
+  if (!levelUp) return null;
+  if (levelUp.from === null || levelUp.from === undefined) return `레벨 업! Lv.${levelUp.to}`;
+  const steps = levelUp.steps > 1 ? ` (+${levelUp.steps})` : "";
+  return `레벨 업! Lv.${levelUp.from} → Lv.${levelUp.to}${steps}`;
 }
 
 /**
@@ -81,17 +105,26 @@ export function detectLevelUp(summary, gainedAmount) {
  * @param {Array<{sourceType:string, baseAmount:number, amount:number, decayReason:string|null}>|null} input.entries
  *   `null`이면 아직 모른다(조회 전·실패) — 아무것도 그리지 않는다.
  * @param {object|null} [input.summary] 지급 후 `fetchXpSummary()` 결과
+ * @param {number} [input.achievementXp] 이 결과가 연 업적의 원장 XP 합 (`get_result_achievements_v1.xpTotal`)
+ * @param {number|null} [input.levelBefore] 서버가 계산한 획득 전 레벨 (`level_from_total_xp`)
  * @returns {null | {
  *   kind: "guest"|"none"|"granted",
  *   note: string|null,
  *   lines: Array<{sourceType:string, reason:string, gain:string, amount:number,
  *                 baseAmount:number, decayNote:string|null}>,
  *   totalAmount: number,
- *   levelUp: {from:number, to:number}|null,
+ *   levelUp: {from:number|null, to:number, steps:number|null}|null,
  *   summary: object|null,
  * }}
  */
-export function buildResultXpView({ scope, isGuest = false, entries, summary = null } = {}) {
+export function buildResultXpView({
+  scope,
+  isGuest = false,
+  entries,
+  summary = null,
+  achievementXp = 0,
+  levelBefore = null,
+} = {}) {
   if (isGuest) {
     return { kind: "guest", note: XP_GUEST_NOTE, lines: [], totalAmount: 0, levelUp: null, summary: null };
   }
@@ -115,11 +148,25 @@ export function buildResultXpView({ scope, isGuest = false, entries, summary = n
       };
     });
 
+  // 싱글은 반복 완주면 결과 행이 없는 것이 정상이다 (C2 §3). 그래도 업적은 열릴 수 있다.
+  const note = lines.length === 0 && scope === "single" ? XP_NO_GRANT_NOTE : null;
+
+  const achievementAmount = toInteger(achievementXp) ?? 0;
+  if (achievementAmount > 0) {
+    lines.push({
+      sourceType: "achievement_unlock",
+      reason: XP_ACHIEVEMENT_REASON,
+      gain: formatXpGain(achievementAmount),
+      amount: achievementAmount,
+      baseAmount: achievementAmount,
+      decayNote: null,
+    });
+  }
+
   if (lines.length === 0) {
-    // 싱글은 반복 완주면 행이 없는 것이 정상이다 (C2 §3). 1:1은 cancelled가 아니면 행이
-    // 있어야 하므로 안내를 만들지 않는다 — 호출자가 재조회·경고를 맡는다.
-    if (scope === "single") {
-      return { kind: "none", note: XP_NO_GRANT_NOTE, lines: [], totalAmount: 0, levelUp: null, summary };
+    // 1:1은 cancelled가 아니면 행이 있어야 하므로 안내를 만들지 않는다 — 호출자가 재조회·경고를 맡는다.
+    if (note) {
+      return { kind: "none", note, lines: [], totalAmount: 0, levelUp: null, summary };
     }
     return null;
   }
@@ -127,10 +174,10 @@ export function buildResultXpView({ scope, isGuest = false, entries, summary = n
   const totalAmount = lines.reduce((sum, line) => sum + line.amount, 0);
   return {
     kind: "granted",
-    note: null,
+    note,
     lines,
     totalAmount,
-    levelUp: detectLevelUp(summary, totalAmount),
+    levelUp: detectLevelUp(summary, totalAmount, levelBefore),
     summary,
   };
 }

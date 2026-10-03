@@ -9,6 +9,8 @@ import ProfileCard from "../components/ProfileCard";
 import XpProgress from "../components/XpProgress";
 import ProfileRewardEditor from "../components/ProfileRewardEditor";
 import { fetchOwnRewardInventory, fetchProfileCard } from "../services/profileRewardService";
+import { fetchMyAchievements } from "../services/achievementService";
+import { buildAchievementSummary } from "../utils/achievementDisplay";
 import {
   DENSITY,
   NAME_FALLBACK,
@@ -47,6 +49,8 @@ export default function ProfilePage() {
   const [rewardSlots, setRewardSlots] = useState(null);
   const [ownedRewards, setOwnedRewards] = useState([]);
   const [rewardsLoading, setRewardsLoading] = useState(true);
+  // 본인 업적 요약 (16c) — 달성 수 + 최근 3개. 남의 프로필에는 없다 (판정 10).
+  const [achievementSummary, setAchievementSummary] = useState(null);
 
   /* ── 데이터 로딩 (프로필 + 전적) ── */
   useEffect(() => {
@@ -81,6 +85,11 @@ export default function ProfilePage() {
           })
           .catch((rewardError) => console.error("프로필 보상 로드 실패:", rewardError))
           .finally(() => setRewardsLoading(false));
+
+        // 업적 요약 — 실패하면 요약 블록만 빠진다.
+        fetchMyAchievements()
+          .then((response) => setAchievementSummary(buildAchievementSummary(response)))
+          .catch((achievementError) => console.error("업적 요약 로드 실패:", achievementError));
 
         // 2. 전체 전적 조회
         const statsData = await fetchAllProfileStats(user.id);
@@ -256,6 +265,32 @@ export default function ProfilePage() {
           {saveError && <p className="auth-error" style={{ marginTop: "0.25rem" }}>{saveError}</p>}
           {saveSuccess && <p style={{ color: "#4ade80", marginTop: "0.25rem", fontSize: "0.85rem" }}>{saveSuccess}</p>}
         </div>
+
+        {/* ── 업적 요약 (16c, 본인만) ── */}
+        {achievementSummary && (
+          <div className="ach-summary" style={{ marginBottom: "1.5rem" }} data-testid="profile-achievements">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p className="auth-label" style={{ margin: 0, fontWeight: 600 }}>업적</p>
+              <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/achievements")}>
+                전체 보기
+              </button>
+            </div>
+            <div className="ach-summary-count">{achievementSummary.achieved.toLocaleString("ko-KR")}개 달성</div>
+            {achievementSummary.recent.length > 0 ? (
+              <ul className="ach-summary-list">
+                {achievementSummary.recent.map((unlock) => (
+                  <li key={unlock.key}>
+                    {unlock.hidden ? "✦ " : "· "}
+                    {unlock.name}
+                    {unlock.tierLabel && <span className="ach-tier"> {unlock.tierLabel}</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="dashboard-muted" style={{ margin: 0 }}>아직 달성한 업적이 없습니다.</p>
+            )}
+          </div>
+        )}
 
         {/* ── 전적 섹션 ── */}
         {!user?.isGuest && (

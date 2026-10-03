@@ -6,6 +6,12 @@ import AdBanner from "../components/AdBanner";
 import { searchWikiTitleCandidates } from "../services/wikiService";
 import { fetchAllProfileStats } from "../services/profileStatsService";
 import { fetchXpSummary } from "../services/xpService";
+import { fetchMyAchievements } from "../services/achievementService";
+import {
+  ACHIEVEMENT_NOTICE_SESSION_KEY,
+  formatNewAchievementNotice,
+  shouldShowAchievementNotice,
+} from "../utils/achievementDisplay";
 import { fetchTodayDailyChallenge, getFallbackDailyChallenge } from "../services/dailyChallengeService";
 import { trackEvent } from "../services/analyticsService";
 
@@ -63,6 +69,15 @@ export default function MainPage() {
   const [rankingView, setRankingView] = useState("today");
   // 헤더의 Lv. 표시. 게스트는 XP가 없으므로 항상 null이다 (15 §2).
   const [headerLevel, setHeaderLevel] = useState(null);
+  // 결과 화면이 없는 해금(그룹·1:1 기권·장착·소급)을 묶어 알린다 (16c). 게스트는 업적이 없다.
+  const [unseenAchievements, setUnseenAchievements] = useState(0);
+  const [achievementNoticeDismissed, setAchievementNoticeDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem(ACHIEVEMENT_NOTICE_SESSION_KEY);
+    } catch {
+      return null;
+    }
+  });
 
 
   const [loading, setLoading] = useState(true);
@@ -144,6 +159,29 @@ export default function MainPage() {
       .catch(() => { if (!cancelled) setHeaderLevel(null); });
     return () => { cancelled = true; };
   }, [user.id, user.isGuest]);
+
+  useEffect(() => {
+    if (user.isGuest) {
+      setUnseenAchievements(0);
+      return;
+    }
+    let cancelled = false;
+    // 실패하면 알림만 빠진다. seen은 여기서 남기지 않는다 — 업적 화면 진입 시에만.
+    fetchMyAchievements()
+      .then((response) => { if (!cancelled) setUnseenAchievements(Number(response.unseenCount) || 0); })
+      .catch(() => { if (!cancelled) setUnseenAchievements(0); });
+    return () => { cancelled = true; };
+  }, [user.id, user.isGuest]);
+
+  const dismissAchievementNotice = () => {
+    const value = String(unseenAchievements);
+    setAchievementNoticeDismissed(value);
+    try {
+      sessionStorage.setItem(ACHIEVEMENT_NOTICE_SESSION_KEY, value);
+    } catch {
+      // 저장소가 막혀 있으면 이번 화면에서만 숨긴다.
+    }
+  };
 
   useEffect(() => {
     try {
@@ -240,6 +278,11 @@ export default function MainPage() {
           {/* 상단 액션 버튼 그룹 */}
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             {!user.isGuest && (
+              <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/achievements")}>
+                업적
+              </button>
+            )}
+            {!user.isGuest && (
               <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
                 내 정보
               </button>
@@ -249,6 +292,23 @@ export default function MainPage() {
             </button>
           </div>
         </header>
+
+        {/* ── 새 업적 알림 (16c). 닫기 = 이번 세션 동안 숨김 ── */}
+        {!user.isGuest && shouldShowAchievementNotice(unseenAchievements, achievementNoticeDismissed) && (
+          <div className="ach-notice" role="status">
+            <button type="button" className="ach-notice-link" onClick={() => navigate("/achievements")}>
+              🏅 {formatNewAchievementNotice(unseenAchievements)} — 업적 화면에서 확인하세요
+            </button>
+            <button
+              type="button"
+              className="ach-notice-close"
+              aria-label="새 업적 알림 닫기"
+              onClick={dismissAchievementNotice}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* ── 빠른 시작 카드 2개 ── */}
         <section className="quickstart-grid">

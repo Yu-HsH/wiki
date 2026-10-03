@@ -8,9 +8,11 @@ import {
   XP_DECAY_NOTES,
   XP_GUEST_NOTE,
   XP_NO_GRANT_NOTE,
+  XP_ACHIEVEMENT_REASON,
   XP_RESULT_REASON_LABELS,
   buildResultXpView,
   detectLevelUp,
+  formatLevelUp,
   formatXpGain,
 } from "../utils/xpResultDisplay.js";
 
@@ -26,26 +28,42 @@ const summary = (level, currentLevelXp, nextLevelXp = 100, totalXp = 0) => ({
   level, currentLevelXp, nextLevelXp, totalXp,
 });
 
-test("level-up premise: one result never crosses two levels (max grant < min level step)", () => {
+test("level-up premise (16c, 판정 9): result XP + achievement XP can cross several levels", () => {
   const maxGrant = Math.max(...Object.values(XP_BY_SOURCE_TYPE));
-  assert.equal(maxGrant, 70, "group_rank_1 is the largest single grant (C2 §3)");
+  assert.equal(maxGrant, 70, "group_rank_1 is the largest single result grant (C2 §3)");
 
-  // C3 §4 — the formula lives in the DB. Read the smallest step from the migration
-  // text rather than restating the formula here.
+  // C3 §4 — the formula lives in the DB. Read the smallest step from the migration text.
   const ledgerMigration = read("supabase/migrations/20260903090000_xp_ledger_v1.sql");
   const step = ledgerMigration.match(/select least\((\d+) \+ \d+ \* \(\(greatest\(p_level, 1\) - 1\) \/ 5\), \d+\);/);
   assert.ok(step, "xp_to_next_level keeps its C3 §4 shape");
-  assert.ok(maxGrant < Number(step[1]), `max grant ${maxGrant} < level 1 step ${step[1]}`);
+
+  // 16a seeds achievement tiers up to 120 XP; one result can unlock several at once.
+  const achievementMigration = read("supabase/migrations/20261002090000_achievements_rewards_v1.sql");
+  assert.match(achievementMigration, /120/);
+  assert.ok(maxGrant + 120 > Number(step[1]), "70 + 120 = 190 > the level 1 step — the old premise is gone");
 });
 
-test("detectLevelUp: current XP inside the level smaller than the gain means a level-up", () => {
-  assert.deepEqual(detectLevelUp(summary(2, 10), 15), { from: 1, to: 2 });
-  assert.deepEqual(detectLevelUp(summary(5, 0), 50), { from: 4, to: 5 });
+test("detectLevelUp: with the server's level before the gain, several levels at once", () => {
+  assert.deepEqual(detectLevelUp(summary(3, 40), 190, 1), { from: 1, to: 3, steps: 2 });
+  assert.deepEqual(detectLevelUp(summary(2, 10), 15, 1), { from: 1, to: 2, steps: 1 });
+  assert.equal(detectLevelUp(summary(2, 40), 15, 2), null, "same level before and after");
+  assert.equal(detectLevelUp(summary(3, 0), 0, 3), null, "a 0 XP result never levels up");
+});
+
+test("detectLevelUp: without the level before, only \"went up\" is known", () => {
+  assert.deepEqual(detectLevelUp(summary(2, 10), 15), { from: null, to: 2, steps: null });
+  assert.deepEqual(detectLevelUp(summary(5, 0), 50), { from: null, to: 5, steps: null });
   assert.equal(detectLevelUp(summary(2, 15), 15), null, "exactly equal: the gain did not cross");
   assert.equal(detectLevelUp(summary(1, 40), 15), null);
-  assert.equal(detectLevelUp(summary(3, 0), 0), null, "a 0 XP result never levels up");
   assert.equal(detectLevelUp(null, 15), null);
   assert.equal(detectLevelUp(summary(1, 0), 15), null, "level 1 has no level below it");
+});
+
+test("formatLevelUp: from → to, the step count only when more than one", () => {
+  assert.equal(formatLevelUp({ from: 1, to: 2, steps: 1 }), "레벨 업! Lv.1 → Lv.2");
+  assert.equal(formatLevelUp({ from: 1, to: 3, steps: 2 }), "레벨 업! Lv.1 → Lv.3 (+2)");
+  assert.equal(formatLevelUp({ from: null, to: 4, steps: null }), "레벨 업! Lv.4");
+  assert.equal(formatLevelUp(null), null);
 });
 
 test("formatXpGain uses the design's +55 XP shape", () => {
@@ -105,8 +123,35 @@ test("buildResultXpView: a level-up is reported from the post-grant summary", ()
     scope: "duel",
     entries: [entry("duel_win_normal", 50)],
     summary: summary(2, 5),
+    levelBefore: 1,
   });
-  assert.deepEqual(view.levelUp, { from: 1, to: 2 });
+  assert.deepEqual(view.levelUp, { from: 1, to: 2, steps: 1 });
+});
+
+test("buildResultXpView: achievement XP is its own line and counts toward the level-up (판정 9)", () => {
+  const view = buildResultXpView({
+    scope: "single",
+    entries: [entry("single_target_first_finish", 15)],
+    summary: summary(3, 15, 100, 215),
+    achievementXp: 180,
+    levelBefore: 1,
+  });
+  assert.equal(view.totalAmount, 195);
+  assert.deepEqual(view.lines.map((line) => line.gain), ["+15 XP", "+180 XP"]);
+  assert.equal(view.lines[1].reason, XP_ACHIEVEMENT_REASON);
+  assert.deepEqual(view.levelUp, { from: 1, to: 3, steps: 2 });
+});
+
+test("buildResultXpView: a repeat single finish with no result row can still pay achievement XP", () => {
+  const view = buildResultXpView({
+    scope: "single",
+    entries: [],
+    summary: summary(1, 60),
+    achievementXp: 30,
+  });
+  assert.equal(view.kind, "granted");
+  assert.equal(view.note, XP_NO_GRANT_NOTE, "the no-grant note still explains the missing result row");
+  assert.deepEqual(view.lines.map((line) => line.sourceType), ["achievement_unlock"]);
 });
 
 test("buildResultXpView: no row — single explains, duel stays silent", () => {
@@ -136,11 +181,20 @@ test("wiring: SuccessOverlay places XP after the record summary and before the p
   assert.match(overlay, /sourceId=\{serverRecord\?\.id \?\? null\}/);
 });
 
-test("wiring: both normal duel result cards show XP; the result stays 4000ms", () => {
+test("wiring: both normal duel result cards show XP; 4000ms, or 6000ms when the result unlocked achievements", () => {
   const page = read("pages/MultiplayerGamePage.jsx");
-  assert.equal((page.match(/<ResultXp scope="duel"/g) || []).length, 2);
-  assert.equal((page.match(/\}, 4000\);/g) || []).length, 2);
-  assert.doesNotMatch(page, /\}, 2200\);/);
+  assert.equal((page.match(/<ResultXp\s+scope="duel"/g) || []).length, 2);
+  assert.equal((page.match(/onAchievementsLoaded=\{extendResultHoldForAchievements\}/g) || []).length, 2);
+  assert.match(page, /const RESULT_HOLD_MS = 4000;/);
+  assert.match(page, /const RESULT_HOLD_WITH_ACHIEVEMENTS_MS = 6000;/);
+  assert.equal((page.match(/\}, RESULT_HOLD_MS\);/g) || []).length, 2);
+  assert.doesNotMatch(page, /\}, (2200|4000)\);/);
+
+  const extend = page.slice(page.indexOf("const extendResultHoldForAchievements"));
+  assert.match(extend, /if \(!count \|\| leaving \|\| resultHoldExtendedRef\.current \|\| !resultNavigationTimerRef\.current\) return;/,
+    "no unlocks → the 4000ms timer is untouched");
+  assert.match(extend, /RESULT_HOLD_WITH_ACHIEVEMENTS_MS - \(Date\.now\(\) - resultShownAtRef\.current\)/,
+    "6000ms counts from when the result appeared, not from when achievements loaded");
 });
 
 test("wiring: the stylesheet is registered once and uses only the rxp- prefix", () => {
@@ -155,7 +209,13 @@ test("wiring: the stylesheet is registered once and uses only the rxp- prefix", 
 });
 
 test("no level formula and no grant path on the front", () => {
-  for (const file of ["utils/xpResultDisplay.js", "components/ResultXp.jsx", "services/xpService.js"]) {
+  for (const file of [
+    "utils/xpResultDisplay.js",
+    "components/ResultXp.jsx",
+    "services/xpService.js",
+    "services/achievementService.js",
+    "utils/achievementDisplay.js",
+  ]) {
     const source = read(file).split("\n").filter((line) => !/^\s*(\*|\/\/)/.test(line)).join("\n");
     assert.doesNotMatch(source, /100\s*\+\s*25/, `${file} does not restate the level formula`);
     assert.doesNotMatch(source, /grant_xp_v1|grant_result_xp_v1/, `${file} cannot pay XP`);

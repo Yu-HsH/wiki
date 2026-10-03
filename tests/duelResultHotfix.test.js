@@ -70,7 +70,7 @@ test("① 결과 화면은 한 번만 성립하고, 복구 패널을 확실히 �
   assert.match(settle, /setPending\(false\)/, "무효화된 복구는 자기 finally에서 pending을 끄지 않는다");
 
   for (const name of ["const enterSolvedState = () => {", "function enterOpponentWinState() {"]) {
-    const body = sliceBetween(pageSource, name, "}, 4000);");
+    const body = sliceBetween(pageSource, name, "}, RESULT_HOLD_MS);"); // 16c: 4000 → 상수 (해금 시 6000)
     assert.match(body, /if \(!settleIntoResult\(PHASE\.(SUCCESS|OPPONENT_WIN)\)\) return;/, name);
   }
 });

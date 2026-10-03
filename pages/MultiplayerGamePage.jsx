@@ -66,6 +66,13 @@ import { useExitGuard } from "../components/ExitGuard";
  * 서버가 확정한 `result` 4값을 그대로 문구로 옮긴다. **클라이언트가 판정하지 않는다** —
  * 차단·반사는 상대의 방어를 서버가 소진시킨 결과이고, 이 화면은 그 결과를 읽는다.
  */
+/**
+ * 결과 화면 유지 시간. 이번 결과가 업적을 열었으면 reveal을 읽을 시간을 더 준다
+ * (16c `[사용자 결정, 2026-10-03]`) — 없으면 15c-2의 4000ms 그대로.
+ */
+const RESULT_HOLD_MS = 4000;
+const RESULT_HOLD_WITH_ACHIEVEMENTS_MS = 6000;
+
 const DUEL_ITEM_RESULT_MESSAGE = Object.freeze({
   [DUEL_ITEM_RESULT.APPLIED]: "아이템이 적용됐습니다!",
   [DUEL_ITEM_RESULT.BLOCKED]: "상대가 막았습니다.",
@@ -122,6 +129,8 @@ export default function MultiplayerGamePage() {
   const eventChannelRef = useRef(null);
   const moveInFlightRef = useRef(false);
   const resultNavigationTimerRef = useRef(null);
+  const resultShownAtRef = useRef(0);
+  const resultHoldExtendedRef = useRef(false);
 
   /**
    * 결과 화면이 이미 떴는가. **한 번 켜지면 이 경기 안에서 다시 꺼지지 않는다** —
@@ -774,9 +783,10 @@ export default function MultiplayerGamePage() {
   const enterSolvedState = () => {
     if (!settleIntoResult(PHASE.SUCCESS)) return;
 
+    resultShownAtRef.current = Date.now();
     resultNavigationTimerRef.current = setTimeout(() => {
       navigate("/multiplayer", { replace: true });
-    }, 4000);
+    }, RESULT_HOLD_MS);
   };
 
   /**
@@ -1575,10 +1585,22 @@ export default function MultiplayerGamePage() {
   function enterOpponentWinState() {
     if (!settleIntoResult(PHASE.OPPONENT_WIN)) return;
 
+    resultShownAtRef.current = Date.now();
     resultNavigationTimerRef.current = setTimeout(() => {
       navigate("/multiplayer", { replace: true });
-    }, 4000);
+    }, RESULT_HOLD_MS);
   }
+
+  // 결과 화면의 업적 조회가 끝나면 부른다. 해금이 있으면 결과가 뜬 시각부터 6000ms까지 늘린다.
+  const extendResultHoldForAchievements = (count) => {
+    if (!count || leaving || resultHoldExtendedRef.current || !resultNavigationTimerRef.current) return;
+    resultHoldExtendedRef.current = true;
+    clearTimeout(resultNavigationTimerRef.current);
+    const remaining = RESULT_HOLD_WITH_ACHIEVEMENTS_MS - (Date.now() - resultShownAtRef.current);
+    resultNavigationTimerRef.current = setTimeout(() => {
+      navigate("/multiplayer", { replace: true });
+    }, Math.max(remaining, 0));
+  };
 
   useEffect(() => {
     if (!opponentPlayer?.has_finished) return;
@@ -1819,7 +1841,13 @@ export default function MultiplayerGamePage() {
           <div className="mp-result-card">
             <h2>🎉 승리!</h2>
             <p>목표 문서에 먼저 도착했습니다.</p>
-            <ResultXp scope="duel" userId={user?.id ?? null} roomId={roomId} tone="dark" />
+            <ResultXp
+              scope="duel"
+              userId={user?.id ?? null}
+              roomId={roomId}
+              tone="dark"
+              onAchievementsLoaded={extendResultHoldForAchievements}
+            />
           </div>
         </div>
       )}
@@ -1829,7 +1857,13 @@ export default function MultiplayerGamePage() {
           <div className="mp-result-card">
             <h2>😢 패배</h2>
             <p>상대가 먼저 목표 문서에 도착했습니다.</p>
-            <ResultXp scope="duel" userId={user?.id ?? null} roomId={roomId} tone="dark" />
+            <ResultXp
+              scope="duel"
+              userId={user?.id ?? null}
+              roomId={roomId}
+              tone="dark"
+              onAchievementsLoaded={extendResultHoldForAchievements}
+            />
           </div>
         </div>
       )}

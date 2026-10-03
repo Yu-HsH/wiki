@@ -17,6 +17,7 @@ import ProfilePage from "./pages/ProfilePage";
 import MultiplayerPage from "./pages/MultiplayerPage";
 import RoomPage from "./pages/RoomPage";
 import MultiplayerGamePage from "./pages/MultiplayerGamePage";
+import AchievementsPage from "./pages/AchievementsPage";
 
 
 import IntroPage from "./pages/IntroPage";
@@ -206,6 +207,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
 
       <Route
         path="/profile"

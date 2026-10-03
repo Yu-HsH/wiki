@@ -14,3 +14,4 @@ import "./css/groupSpectator.css";
 import "./css/recovery.css";
 import "./css/profileCard.css";
 import "./css/resultXp.css";
+import "./css/achievements.css";

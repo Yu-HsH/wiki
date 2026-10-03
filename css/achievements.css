@@ -1,0 +1,258 @@
+/* 업적 화면 · 결과 reveal · 로비 알림 · 프로필 요약 (트랙 16c). `ach-` 접두만 쓴다 —
+   `mp-`·`pcard-`·`rxp-`는 건드리지 않는다 (TRACKS §2.3-⑤). */
+
+.ach-status {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.ach-page {
+  display: grid;
+  gap: 16px;
+  max-width: 960px;
+  margin: 0 auto 32px;
+  padding: 0 16px;
+}
+
+.ach-section {
+  display: grid;
+  gap: 10px;
+}
+
+.ach-section-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.ach-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--app-line, rgba(23, 36, 41, 0.12));
+  border-radius: 14px;
+}
+
+.ach-card--complete {
+  border-color: var(--brand, #00a495);
+}
+
+.ach-card--hidden,
+.ach-card--hidden-summary {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.ach-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.ach-card-name {
+  font-weight: 800;
+}
+
+.ach-tier {
+  font-weight: 700;
+  color: var(--brand-deep, #007d73);
+}
+
+.ach-kind {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.ach-new {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #fff;
+  background: #f59e0b;
+}
+
+.ach-card-condition,
+.ach-next,
+.ach-progress-label {
+  font-size: 0.85rem;
+  color: var(--app-dim, #5f6f75);
+}
+
+.ach-next--done {
+  font-weight: 700;
+  color: var(--brand-deep, #007d73);
+}
+
+.ach-hidden-count {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.ach-steps {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ach-step {
+  min-width: 28px;
+  padding: 1px 6px;
+  border: 1px solid var(--app-line, rgba(23, 36, 41, 0.12));
+  border-radius: 6px;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.ach-step--done {
+  color: #fff;
+  border-color: var(--brand, #00a495);
+  background: var(--brand, #00a495);
+}
+
+.ach-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ach-progress-bar {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(23, 36, 41, 0.1);
+}
+
+.ach-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--brand, #00a495);
+}
+
+/* 결과 화면 reveal */
+
+.ach-reveal {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  text-align: left;
+}
+
+.ach-reveal-card {
+  padding: 10px 12px;
+  border: 1px solid rgba(23, 36, 41, 0.12);
+  border-radius: 12px;
+  background: rgba(0, 164, 149, 0.06);
+}
+
+.ach-reveal-card--hidden {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.ach-reveal--dark .ach-reveal-card {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ach-reveal--dark .ach-reveal-card--hidden {
+  border-color: rgba(165, 180, 252, 0.6);
+  background: rgba(99, 102, 241, 0.22);
+}
+
+.ach-reveal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.ach-reveal-xp {
+  color: #f59e0b;
+}
+
+.ach-reveal-name {
+  font-weight: 800;
+}
+
+.ach-reveal-condition,
+.ach-reveal-rewards {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ach-reveal:not(.ach-reveal--static) .ach-reveal-card {
+    animation: ach-reveal-in 360ms ease-out both;
+  }
+}
+
+@keyframes ach-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 로비 알림 · 프로필 요약 */
+
+.ach-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.ach-notice-link {
+  flex: 1;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.ach-notice-close {
+  padding: 0 6px;
+  border: 0;
+  font-size: 1rem;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.ach-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.ach-summary-count {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.ach-summary-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
