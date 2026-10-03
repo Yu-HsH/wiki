@@ -205,7 +205,7 @@
 **판정기 → scope 지도**는 `private.achievement_evaluator_scopes_v1`에 있다. 여기 없는 evaluator를 가리키는 정의는 **돌지 않는다** — 새 판정 방식은 migration (판정 11).
 **누적형은 매번 원천에서 다시 센다** — 16b-r이 같은 함수를 부를 수 있다. 상황형은 이번 결과만 본다.
 
-### 7.2 구현 판정 — §1.1에 없던 것 `[16b 구현 판정 — 검토 필요]`
+### 7.2 구현 판정 — §1.1에 없던 것 `[16b 구현 판정 → 사용자 승인, 2026-10-03]`
 
 §1.1 기본값은 전부 `params`대로 반영했다. 아래는 원문·§1.1이 정하지 않아 **이번에 고른 것**이다. 바꾸려면 판정기 또는 `params` 수정 (운영 적용 전이면 이 파일을 고친다 — 16a와 같은 처리).
 
@@ -227,9 +227,9 @@
 
 | 항목 | 결과 · 기준 |
 |---|---|
-| migration | `migration up --local` 적용 → 트리거 추가분은 같은 파일을 `psql`로 재적용(멱등). 로컬 이력 **23**. `db reset` 전체 재생은 하지 않았다 |
-| pgTAP 신규 | `achievement_triggers_v1` **127/127** — 기준 `d2c139a` |
-| pgTAP 전체 | **1043/1043** (916 + 127), `not ok` 0. 기존 2파일 조정: 16a "inert" 단언 → `trg_record_*` 4개만 허용 · 15c `pg_temp.total`이 `achievement_unlock` XP를 뺀 결과 XP를 잰다 (`e122bfd`) |
+| migration | **`db reset --local` — 23개 전체 재생 통과** (2026-10-03, 배포 전 관문 1) |
+| pgTAP 신규 | `achievement_triggers_v1` **128/128** — reset 직후 실행에서 U5·U6 fixture가 활성 시각보다 앞서 1건 실패(시간 의존 fixture, migration 무관) → 밀리초 오프셋 + 가드 단언 1건 추가 |
+| pgTAP 전체 | **1044/1044** (916 + 128, reset 후 재실행 — 배포 전 관문 2), `not ok` 0. 기존 2파일 조정: 16a "inert" 단언 → `trg_record_*` 4개만 허용 · 15c `pg_temp.total`이 `achievement_unlock` XP를 뺀 결과 XP를 잰다 (`e122bfd`) |
 | 음성 대조 | 같은 스위트를 트리거 4개 **disable**한 사본으로 → **76/127 실패**(양성 단언 전부). 남은 51은 "해금 없음" 경계·구조 단언. 사본은 커밋하지 않았다. 스위트 안에도 트리거를 끈 1건(§8.4)이 있다 |
 | 격리 3경우 | ① 정의 1개의 `params` 파손 → 그 업적만 실패, 나머지 해금 ② 결과 판정 전체 예외 주입 → 완주·15c XP 커밋, 해금 0 ③ `grant_xp_v1` 예외 주입 → 해금·보상 유지, 업적 XP 0 → 재실행 RPC가 XP만 보충 |
 | 로컬 스모크 | 싱글 첫 완주(실제 `apply_single_move_v2`) → **첫 도착 해금 + `achievement_unlock` 30 XP + `badge_first_arrival`**, 15c 결과 XP 1행 그대로 (pgTAP §2.1) |

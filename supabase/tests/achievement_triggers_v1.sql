@@ -11,7 +11,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(127);
+select plan(128);
 
 set local role postgres;
 
@@ -466,19 +466,24 @@ select pg_temp.play_single(pg_temp.uid(4), array['b16-s', 'b16-t']);
 select is(pg_temp.unlocks(pg_temp.uid(4), 'hidden_improve_one'), 1, 'improve by one: 2 → 1 unlocks');
 
 -- 2.6 hidden_disjoint_retry against the previous completion of the same course.
-select pg_temp.add_single(pg_temp.uid(5), 'b16-t', 5, now() - interval '2 hours',
+-- The history is dated milliseconds back so it is after activation even right
+-- after a db reset (otherwise from_activation would skip it and the negatives
+-- below would pass vacuously).
+select ok((select created_at from public.achievement_definitions where achievement_id = 'hidden_disjoint_retry')
+          < now() - interval '3 millisecond', 'disjoint retry: the fixtures below are after activation');
+select pg_temp.add_single(pg_temp.uid(5), 'b16-t', 5, now() - interval '2 millisecond',
                           array['b16-s', 'b16-x', 'b16-y', 'b16-z', 'b16-d', 'b16-t']);
 select is(pg_temp.unlocks(pg_temp.uid(5), 'hidden_disjoint_retry'), 0, 'disjoint retry: no previous completion yet');
-select pg_temp.add_single(pg_temp.uid(5), 'b16-t', 5, now() - interval '1 hour',
+select pg_temp.add_single(pg_temp.uid(5), 'b16-t', 5, now() - interval '1 millisecond',
                           array['b16-s', 'b16-1', 'b16-2', 'b16-3', 'b16-4', 'b16-t']);
 select is(pg_temp.unlocks(pg_temp.uid(5), 'hidden_disjoint_retry'), 1, 'disjoint retry: 5 and 5 moves, no shared middle → unlock');
 -- U6: shares one middle document → no; four moves → no.
-select pg_temp.add_single(pg_temp.uid(6), 'b16-t', 5, now() - interval '3 hours',
+select pg_temp.add_single(pg_temp.uid(6), 'b16-t', 5, now() - interval '3 millisecond',
                           array['b16-s', 'b16-x', 'b16-y', 'b16-z', 'b16-d', 'b16-t']);
-select pg_temp.add_single(pg_temp.uid(6), 'b16-t', 5, now() - interval '2 hours',
+select pg_temp.add_single(pg_temp.uid(6), 'b16-t', 5, now() - interval '2 millisecond',
                           array['b16-s', 'b16-1', 'b16-2', 'b16-z', 'b16-4', 'b16-t']);
 select is(pg_temp.unlocks(pg_temp.uid(6), 'hidden_disjoint_retry'), 0, 'disjoint retry: one shared middle document → no');
-select pg_temp.add_single(pg_temp.uid(6), 'b16-t', 4, now() - interval '1 hour',
+select pg_temp.add_single(pg_temp.uid(6), 'b16-t', 4, now() - interval '1 millisecond',
                           array['b16-s', 'b16-x', 'b16-y', 'b16-d', 'b16-t']);
 select is(pg_temp.unlocks(pg_temp.uid(6), 'hidden_disjoint_retry'), 0, 'disjoint retry: 4 moves is under 5 → no');
 
