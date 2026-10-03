@@ -518,3 +518,31 @@ select c.reward_id, c.listed,
 
 **검증 (로컬 스택, 2026-10-03, 커밋 직전 작업 트리):** `npm test` **456/456** (449 + 7 — 배지 단언 정정 · 신규 `tests/matchExpression.test.js` 6 · 편집기·서비스 1) · build 통과 · **G5 스캔에 16d 파일·SVG 전부 추가** — 공개 SVG 제목 「함께 걷는 발자국」이 히든 보상명 「발자국」을 포함해 스캔이 잡았고 「함께하는 탐험」으로 고쳤다.
 로컬 UI `scripts/badge-retirement-ui-smoke.mjs` **9/9** — **A 옛 DB**: 편집기 6행(배지 행 없음) · 장착된 배지 무시 · 프레임/완주/경로 장착 · 토큰 없음 → 기본 링·기본 완주 효과 / **B 16d-2 모양**(카탈로그 행을 임시로 바꾸고 원복): 금 링(tier-3) · 전환된 「첫 도착」이 아이콘 SVG로 장착 · 싱글 결과 보라 경로 + tier-3 완주 / **C 1:1**: 승자 카드에만 완주 효과(모션 감소 → 정적) · special 링 회전 / 모션 감소 정적 · 페이지 오류 0 · 카탈로그 원복 확인. 16c `achievement-display-smoke` **15/15** 회귀 없음.
+
+### 10.7 16d-2 — migration (로컬 완료, 2026-10-03) `[산출물]`
+
+**`supabase/migrations/20261003100000_badge_retirement_v1.sql`** — 운영 미적용.
+
+| 절 | 하는 일 |
+|---|---|
+| 1 | 배지 11행 → kind · 표시명 · `asset_ref` (§10.2 · §10.6). 남은 `badge` 행이 있으면 `BADGE_RETIREMENT_UNMAPPED_ROWS`로 **중단** |
+| 2 | 토큰 16행 — 프레임 8 · 완주 효과 5 · 경로 색상 1 · 기존 획득 아이콘 2 SVG (§10.4) |
+| 3 | `slot = 'badge'` 장착 행 삭제 — 보상은 보유 그대로, 자동 재장착 없음 |
+| 4 | CHECK 3개 교체 — kind 8 · slot 8 · `slot_index = 1`. 행을 먼저 고친 뒤 조인다 |
+| 5 | `equip_profile_reward_v1` — 17b 본문 + index 규칙(`v_index <> 1` → `SLOT_INDEX_INVALID`) · 주석 2줄. `unequip`은 무변경 |
+| 6 | `private.profile_cards_v1` — 카드 슬롯 4 · `badges`는 `'[]'::jsonb` 상수 |
+| 7 | 「준비된 탐험가」 `any_of = ["title"]` · 조건 문구 · **`condition_version` 1 → 2**(구현 판정 — 해금·진행 행이 버전을 기록하므로 옛 조건으로 받은 해금은 1로 남는다). 정의에 `badge`가 남으면 `BADGE_RETIREMENT_DEFINITION_STILL_USES_BADGE`로 중단 |
+
+**검증 (로컬 스택, 2026-10-03, 커밋 직전 작업 트리):**
+
+| 항목 | 결과 |
+|---|---|
+| 본문 고정 | `tests/badgeRetirement.test.js` 5 — equip·카드 빌더가 17b 본문과 의도한 줄만 다르다 · SVG 경로 9개 실재(히든 5 불투명) · 토큰 문법 · 실패 시 중단 · 행 → CHECK 순서 |
+| 데이터 경로 | `scripts/16d-2-migration-local-check.mjs` **8/8** — `db reset --version 20261003090000`(16d-2 직전)에서 배지 보유·장착 fixture → **보유자 쿼리 전: 11행 · 해제 예정 3행** → migration 파일 적용 → **보유 행 불변(재지급 0) · 배지 슬롯 3행만 삭제 · 칭호·프레임 장착 유지 · 보유자 쿼리 후 0행** → 전체 reset 복귀 |
+| pgTAP 신규 | `badge_retirement_v1` **24/24** |
+| pgTAP 정정 | `c1_reward_tables_v1` 96 → **97** — 배지 fixture를 다른 kind로, 여러 자리·이동 단언을 "slot당 한 자리" 단언으로 1:1 교체 + `badge` kind 거부 1건 추가 · `achievement_triggers_v1` §6 「준비된 탐험가」를 아이콘 + 배지 → **아이콘 + 칭호**(두 순서 모두) |
+| 전체 | migration **25**(`db reset`) · pgTAP **1086/1086** · `npm test` **461/461** · build · 16b-r 실행기 5/5 · UI `badge-retirement-ui-smoke` **8/8 (실제 migration 상태)** · 16c 스모크 15/15 |
+
+UI 스모크는 DB 상태를 감지한다 — 옛 DB면 16d-2를 카탈로그에서 흉내 내고 원복, 16d-2 DB면 실제 행을 본다. **1:1 START 버튼 대기(5초)가 1/3회 시간 초과** — 목표 저장 지연으로 보이며 같은 패턴의 16c 스모크에도 있다. 이 스크립트만 15초로 늘렸다.
+
+**운영 적용 (사용자):** `scripts/16d-check-badge-holders.sql`(해제될 행 수 확인) → 백업 → `db push`(1개, 운영 25) → 같은 쿼리 **0행** → 프로필 편집기·랭킹 아이콘 확인.

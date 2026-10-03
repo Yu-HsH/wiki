@@ -230,7 +230,8 @@
 `scripts/achievement-display-smoke.mjs` (16c 로컬 UI) · `scripts/16b-r-retro-dryrun.sql` · `scripts/16b-r-retro-apply.sql` · `tests/retroScripts.test.js` · `scripts/16b-r-retro-local-fixture.sql` · `scripts/16b-r-retro-local-run.mjs` (16b-r — 작성·로컬 검증만, 운영 실행은 16c 배포 후 건별 승인, SQL Editor용). ·
 `scripts/16b-f-check-opened.sql` · `scripts/16b-f-check-exposure.sql` · `scripts/16b-f-check-applied.sql` · `supabase/migrations/20261003090000_achievement_authority_filter_v1.sql` · `supabase/tests/achievement_authority_filter_v1.sql` · `tests/achievementAuthorityFilter.test.js` (16b-f) ·
 `docs/design/DESIGN-SYSTEM.md` · `scripts/16d-check-badge-holders.sql` (16d-0) ·
-`utils/rewardTokens.js` · `hooks/useMatchExpression.js` · `components/FinishEffect.jsx` · `css/matchExpression.css` · `tests/matchExpression.test.js` · `scripts/badge-retirement-ui-smoke.mjs` · `public/profile-icons/{first-arrival,shield,group-together,daily-explorer}.svg` · `public/profile-icons/x/*.svg` 5개 (16d-1) · 16d-2 신규 파일은 착수 시 추가.
+`utils/rewardTokens.js` · `hooks/useMatchExpression.js` · `components/FinishEffect.jsx` · `css/matchExpression.css` · `tests/matchExpression.test.js` · `scripts/badge-retirement-ui-smoke.mjs` · `public/profile-icons/{first-arrival,shield,group-together,daily-explorer}.svg` · `public/profile-icons/x/*.svg` 5개 (16d-1) ·
+`supabase/migrations/20261003100000_badge_retirement_v1.sql` · `supabase/tests/badge_retirement_v1.sql` · `tests/badgeRetirement.test.js` · `scripts/16d-2-migration-local-check.mjs` (16d-2).
 
 ---
 
