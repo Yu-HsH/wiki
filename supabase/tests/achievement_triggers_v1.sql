@@ -769,27 +769,30 @@ select is((select count(*)::int from public.user_achievement_unlocks
 select is(pg_temp.unlocks(pg_temp.uid(12), 'hidden_three_close'), 0, 'top3 close: the forfeiter is not paid');
 
 /* ──────────────────────────────────────────────────────────────
- * 6. Equipment — 준비된 탐험가.
+ * 6. Equipment — 준비된 탐험가. 16d (2026-10-03): icon + title (badges retired).
  * ────────────────────────────────────────────────────────────── */
+insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
+values (pg_temp.uid(1), 'title_daily_steps_1', 'admin'), (pg_temp.uid(2), 'title_daily_steps_1', 'admin')
+on conflict do nothing;
 set local role authenticated;
 select pg_temp.act_as(pg_temp.uid(1));
 insert into t_out values ('e1', public.equip_profile_reward_v1('profile_icon', 1::smallint, 'icon_default_compass'));
 set local role postgres;
 select is(pg_temp.unlocks(pg_temp.uid(1), 'onboarding_profile_complete'), 0, 'profile: an icon alone is not enough');
 set local role authenticated;
-insert into t_out values ('e2', public.equip_profile_reward_v1('badge', 1::smallint, 'badge_first_arrival'));
+insert into t_out values ('e2', public.equip_profile_reward_v1('title', 1::smallint, 'title_daily_steps_1'));
 set local role postgres;
 select is((select body->>'ok' from t_out where key = 'e2'), 'true', 'profile: the equip itself succeeds');
-select is(pg_temp.unlocks(pg_temp.uid(1), 'onboarding_profile_complete'), 1, 'profile: icon + badge unlocks');
+select is(pg_temp.unlocks(pg_temp.uid(1), 'onboarding_profile_complete'), 1, 'profile: icon + title unlocks');
 select is((pg_temp.unlock_of(pg_temp.uid(1), 'onboarding_profile_complete')).source_type, 'equipment', 'profile: source_type equipment');
 select ok((pg_temp.unlock_of(pg_temp.uid(1), 'onboarding_profile_complete')).source_id is null, 'profile: no source_id');
 select ok(pg_temp.owns(pg_temp.uid(1), 'frame_ready_explorer'), 'profile: the frame is granted');
--- U2 in the other order: badge first, then the icon.
+-- U2 in the other order: title first, then the icon.
 set local role authenticated;
 select pg_temp.act_as(pg_temp.uid(2));
-select public.equip_profile_reward_v1('badge', 1::smallint, 'badge_first_arrival');
+select public.equip_profile_reward_v1('title', 1::smallint, 'title_daily_steps_1');
 set local role postgres;
-select is(pg_temp.unlocks(pg_temp.uid(2), 'onboarding_profile_complete'), 0, 'profile: a badge alone is not enough');
+select is(pg_temp.unlocks(pg_temp.uid(2), 'onboarding_profile_complete'), 0, 'profile: a title alone is not enough');
 set local role authenticated;
 select public.equip_profile_reward_v1('profile_icon', 1::smallint, 'icon_default_book');
 select public.equip_profile_reward_v1('profile_icon', 1::smallint, 'icon_default_compass');

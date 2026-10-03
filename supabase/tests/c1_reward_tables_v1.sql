@@ -1,5 +1,7 @@
 -- Wiki Race 2.0 Track 17b-1 contract tests: C1 reward tables.
--- Run after 20261001090000_c1_reward_tables_v1.sql on a local Supabase database:
+-- 16d-2 (2026-10-03): the badge kind is retired (C1 §0.-1) — 8 kinds/slots, slot_index always 1,
+-- card 'badges' is a constant []. Badge fixtures became other kinds; the multi-place assertions became
+-- one-place ones. Run after 20261003100000_badge_retirement_v1.sql (and everything before it):
 --   docker exec -i <db container> psql -U postgres -d postgres \
 --     -v ON_ERROR_STOP=1 -f - < supabase/tests/c1_reward_tables_v1.sql
 --
@@ -7,7 +9,7 @@
 
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(96);
+select plan(97);
 
 set local role postgres;
 
@@ -31,16 +33,16 @@ as $$ select ('00000000-0000-0000-017b-00000000000' || n)::uuid $$;
 create function pg_temp.act_as(p_user uuid) returns void language sql
 as $$ select set_config('request.jwt.claim.sub', coalesce(p_user::text, ''), true); select null::void $$;
 
--- Fixture rewards — one of each card kind, four badges, a retired badge and a
--- path_color. Granted to U1 as admin (grant_source_id may be null for admin).
+-- Fixture rewards — two of most card kinds, a retired title and a path_color.
+-- Granted to U1 as admin (grant_source_id may be null for admin).
 insert into public.reward_catalog (reward_id, kind, display_name, asset_ref, retired)
 values
   ('c1t_title_a', 'title', '테스트 칭호', null, false),
-  ('c1t_badge_a', 'badge', '배지 A', '/b/a.svg', false),
-  ('c1t_badge_b', 'badge', '배지 B', null, false),
-  ('c1t_badge_c', 'badge', '배지 C', null, false),
-  ('c1t_badge_d', 'badge', '배지 D', null, false),
-  ('c1t_badge_old', 'badge', '은퇴 배지', null, true),
+  ('c1t_icon_a', 'profile_icon', '테스트 아이콘', '/b/a.svg', false),
+  ('c1t_title_b', 'title', '두 번째 칭호', null, false),
+  ('c1t_frame_b', 'frame', '두 번째 프레임', 'frame:tier-2', false),
+  ('c1t_bg_b', 'background', '두 번째 배경', null, false),
+  ('c1t_title_old', 'title', '은퇴 칭호', null, true),
   ('c1t_frame_a', 'frame', '테스트 프레임', null, false),
   ('c1t_bg_a', 'background', '테스트 배경', null, false),
   ('c1t_path_a', 'path_color', '테스트 경로색', null, false),
@@ -48,8 +50,8 @@ values
 
 insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
 select pg_temp.uid(1), r, 'admin'
-  from unnest(array['c1t_title_a', 'c1t_badge_a', 'c1t_badge_b', 'c1t_badge_c', 'c1t_badge_d',
-                    'c1t_badge_old', 'c1t_frame_a', 'c1t_bg_a', 'c1t_path_a']) as r;
+  from unnest(array['c1t_title_a', 'c1t_icon_a', 'c1t_title_b', 'c1t_frame_b', 'c1t_bg_b',
+                    'c1t_title_old', 'c1t_frame_a', 'c1t_bg_a', 'c1t_path_a']) as r;
 
 -- ---------------------------------------------------------------------------
 -- 1. Structure — C1 §1·§2·§3.
@@ -96,26 +98,28 @@ select throws_ok($$ insert into public.user_profile_equipment (user_id, slot, sl
                     values (pg_temp.uid(2), 'title', 1, 'c1t_title_a') $$,
                  '23503', null, 'unowned reward cannot be equipped (FK)');
 select throws_ok($$ insert into public.user_profile_equipment (user_id, slot, slot_index, reward_id)
-                    values (pg_temp.uid(1), 'badge', 4, 'c1t_badge_d') $$,
-                 '23514', null, 'no 4th badge position (CHECK)');
+                    values (pg_temp.uid(1), 'badge', 1, 'c1t_title_a') $$,
+                 '23514', null, 'the badge slot no longer exists (CHECK, 16d)');
 select throws_ok($$ insert into public.user_profile_equipment (user_id, slot, slot_index, reward_id)
                     values (pg_temp.uid(1), 'title', 2, 'c1t_title_a') $$,
-                 '23514', null, 'non-badge slot_index must be 1 (CHECK)');
+                 '23514', null, 'slot_index must be 1 (CHECK)');
 select throws_ok($$ insert into public.user_profile_equipment (user_id, slot, slot_index, reward_id)
                     values (pg_temp.uid(1), 'hat', 1, 'c1t_title_a') $$,
                  '23514', null, 'unknown slot rejected (CHECK)');
 select throws_ok($$ insert into public.reward_catalog (reward_id, kind, display_name) values ('c1t_bad', 'hat', 'x') $$,
                  '23514', null, 'unknown kind rejected (CHECK)');
-select throws_ok($$ insert into public.reward_catalog (reward_id, kind, display_name) values ('Bad-Id', 'badge', 'x') $$,
+select throws_ok($$ insert into public.reward_catalog (reward_id, kind, display_name) values ('c1t_bad_badge', 'badge', 'x') $$,
+                 '23514', null, 'the badge kind is rejected (CHECK, 16d)');
+select throws_ok($$ insert into public.reward_catalog (reward_id, kind, display_name) values ('Bad-Id', 'title', 'x') $$,
                  '23514', null, 'reward_id format enforced (CHECK)');
 select throws_ok($$ insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
-                    values (pg_temp.uid(2), 'c1t_badge_a', 'reward_bundle') $$,
+                    values (pg_temp.uid(2), 'c1t_icon_a', 'reward_bundle') $$,
                  '23514', null, 'reward_bundle grant needs grant_source_id (CHECK)');
 select throws_ok($$ insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
-                    values (pg_temp.uid(4), 'c1t_badge_a', 'admin') $$,
+                    values (pg_temp.uid(4), 'c1t_icon_a', 'admin') $$,
                  '23503', null, 'no inventory without a profile (guest boundary)');
 select lives_ok($$ insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
-                   values (pg_temp.uid(1), 'c1t_badge_a', 'admin') on conflict do nothing $$,
+                   values (pg_temp.uid(1), 'c1t_icon_a', 'admin') on conflict do nothing $$,
                 'regrant is idempotent via the PK');
 
 -- ---------------------------------------------------------------------------
@@ -162,19 +166,19 @@ select is(public.equip_profile_reward_v1('title', 1::smallint, 'c1t_unowned') ->
           'REWARD_NOT_OWNED', 'unowned reward: REWARD_NOT_OWNED');
 select is(public.equip_profile_reward_v1('title', 1::smallint, 'c1t_does_not_exist') ->> 'code',
           'REWARD_NOT_OWNED', 'unknown reward: REWARD_NOT_OWNED');
-select is(public.equip_profile_reward_v1('badge', 4::smallint, 'c1t_badge_d') ->> 'code',
-          'SLOT_INDEX_INVALID', 'badge index 4: SLOT_INDEX_INVALID');
-select is(public.equip_profile_reward_v1('badge', 0::smallint, 'c1t_badge_d') ->> 'code',
-          'SLOT_INDEX_INVALID', 'badge index 0: SLOT_INDEX_INVALID');
+select is(public.equip_profile_reward_v1('frame', 2::smallint, 'c1t_frame_b') ->> 'code',
+          'SLOT_INDEX_INVALID', 'frame index 2: SLOT_INDEX_INVALID (one place per slot, 16d)');
+select is(public.equip_profile_reward_v1('title', 0::smallint, 'c1t_title_a') ->> 'code',
+          'SLOT_INDEX_INVALID', 'title index 0: SLOT_INDEX_INVALID');
 select is(public.equip_profile_reward_v1('title', 2::smallint, 'c1t_title_a') ->> 'code',
           'SLOT_INDEX_INVALID', 'title index 2: SLOT_INDEX_INVALID');
 select is(public.equip_profile_reward_v1('badge', 1::smallint, 'c1t_frame_a') ->> 'code',
-          'SLOT_KIND_MISMATCH', 'frame into badge slot: SLOT_KIND_MISMATCH');
+          'SLOT_KIND_MISMATCH', 'the retired badge slot matches no kind: SLOT_KIND_MISMATCH');
 select is(public.equip_profile_reward_v1('title', 1::smallint, 'icon_default_map') ->> 'code',
           'SLOT_KIND_MISMATCH', 'icon into title slot: SLOT_KIND_MISMATCH');
 select is(public.equip_profile_reward_v1('hat', 1::smallint, 'c1t_title_a') ->> 'code',
           'SLOT_KIND_MISMATCH', 'unknown slot: SLOT_KIND_MISMATCH');
-select is(public.equip_profile_reward_v1('badge', 1::smallint, 'c1t_badge_old') ->> 'code',
+select is(public.equip_profile_reward_v1('title', 1::smallint, 'c1t_title_old') ->> 'code',
           'REWARD_RETIRED', 'retired reward cannot be newly equipped: REWARD_RETIRED');
 
 -- ---------------------------------------------------------------------------
@@ -187,29 +191,29 @@ select is((select count(*)::int from public.user_profile_equipment where user_id
 select is((public.equip_profile_reward_v1('profile_icon', null, 'icon_default_book') -> 'equipment' -> 0 ->> 'rewardId'),
           'icon_default_book', 'equipping another icon replaces it; null index means 1');
 select is(public.equip_profile_reward_v1('title', 1::smallint, 'c1t_title_a') ->> 'ok', 'true', 'equip title');
-select is(public.equip_profile_reward_v1('badge', 1::smallint, 'c1t_badge_a') ->> 'ok', 'true', 'equip badge 1');
-select is(public.equip_profile_reward_v1('badge', 2::smallint, 'c1t_badge_b') ->> 'ok', 'true', 'equip badge 2');
-select is(public.equip_profile_reward_v1('badge', 3::smallint, 'c1t_badge_c') ->> 'ok', 'true', 'equip badge 3');
-select is(public.equip_profile_reward_v1('frame', 1::smallint, 'c1t_frame_a') ->> 'ok', 'true', 'equip frame');
+select is(public.equip_profile_reward_v1('profile_icon', 1::smallint, 'c1t_icon_a') ->> 'ok', 'true', 'equip an owned non-default icon');
+select is(public.equip_profile_reward_v1('title', 1::smallint, 'c1t_title_b') ->> 'ok', 'true', 'another title replaces the title');
+select is(public.equip_profile_reward_v1('frame', 1::smallint, 'c1t_frame_b') ->> 'ok', 'true', 'equip frame b');
+select is(public.equip_profile_reward_v1('frame', 1::smallint, 'c1t_frame_a') ->> 'ok', 'true', 'frame a replaces frame b');
 select is(public.equip_profile_reward_v1('background', 1::smallint, 'c1t_bg_a') ->> 'ok', 'true', 'equip background');
 select is(public.equip_profile_reward_v1('path_color', 1::smallint, 'c1t_path_a') ->> 'ok', 'true',
-          'a match-expression slot is accepted too (9 slots)');
+          'a match-expression slot is accepted too (8 slots)');
 
-select is(jsonb_array_length(public.equip_profile_reward_v1('badge', 3::smallint, 'c1t_badge_c') -> 'equipment'),
-          8, 'equip returns the full equipment state');
+select is(jsonb_array_length(public.equip_profile_reward_v1('frame', 1::smallint, 'c1t_frame_a') -> 'equipment'),
+          5, 'equip returns the full equipment state (icon · title · frame · background · path color)');
 
--- Moving badge A from 1 to 3 replaces C at 3 and empties 1.
-select is((select array_agg(e ->> 'rewardId' order by (e ->> 'slotIndex')::int)
-             from jsonb_array_elements(public.equip_profile_reward_v1('badge', 3::smallint, 'c1t_badge_a') -> 'equipment') e
-            where e ->> 'slot' = 'badge'),
-          array['c1t_badge_b', 'c1t_badge_a'], 'equipping an equipped badge elsewhere moves it');
-select is((select count(*)::int from public.user_profile_equipment where user_id = pg_temp.uid(1) and reward_id = 'c1t_badge_a'),
-          1, 'a reward sits in one place only');
-select is(public.equip_profile_reward_v1('badge', 1::smallint, 'c1t_badge_c') ->> 'ok', 'true', 'refill badge 1');
+-- One place per slot: equipping a default icon replaces the owned icon.
+select is((select e ->> 'rewardId'
+             from jsonb_array_elements(public.equip_profile_reward_v1('profile_icon', 1::smallint, 'icon_default_book') -> 'equipment') e
+            where e ->> 'slot' = 'profile_icon'),
+          'icon_default_book', 'the icon slot holds the new icon');
+select is((select count(*)::int from public.user_profile_equipment where user_id = pg_temp.uid(1) and reward_id = 'c1t_icon_a'),
+          0, 'the replaced icon leaves no row');
+select is(public.equip_profile_reward_v1('background', 1::smallint, 'c1t_bg_a') ->> 'ok', 'true', 're-equipping the same reward is a no-op success');
 
 -- Direct writes are not granted.
 select throws_ok($$ insert into public.user_profile_equipment (user_id, slot, slot_index, reward_id)
-                    values (pg_temp.uid(1), 'badge', 1, 'c1t_badge_d') $$,
+                    values (pg_temp.uid(1), 'background', 1, 'c1t_bg_b') $$,
                  '42501', null, 'authenticated cannot write equipment directly');
 select throws_ok($$ insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
                     values (pg_temp.uid(1), 'c1t_unowned', 'admin') $$,
@@ -224,10 +228,10 @@ select is((select count(*)::int from public.user_reward_inventory where user_id 
 select is((select count(*)::int from public.user_reward_inventory where user_id = pg_temp.uid(2)),
           6, 'I can read my own inventory');
 select is((select count(*)::int from public.user_profile_equipment where user_id = pg_temp.uid(1)),
-          8, 'another user can read my equipment');
-select is((select count(*)::int from public.reward_catalog where reward_id = 'c1t_badge_old'),
+          5, 'another user can read my equipment');
+select is((select count(*)::int from public.reward_catalog where reward_id = 'c1t_title_old'),
           0, 'retired rewards are hidden from the catalog');
-select is((select count(*)::int from public.reward_catalog where reward_id = 'c1t_badge_a'),
+select is((select count(*)::int from public.reward_catalog where reward_id = 'c1t_icon_a'),
           1, 'live rewards are readable');
 
 set local role anon;
@@ -251,10 +255,9 @@ select is(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' ->> 'legacyImageU
 select is(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'icon' ->> 'assetRef',
           '/profile-icons/book.svg', 'card icon carries its asset_ref');
 select is(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'title' ->> 'displayName',
-          '테스트 칭호', 'card title carries its display name');
-select is((select array_agg(b ->> 'rewardId' order by ord)
-             from jsonb_array_elements(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'badges') with ordinality as t(b, ord)),
-          array['c1t_badge_c', 'c1t_badge_b', 'c1t_badge_a'], 'badges come in slot_index order');
+          '두 번째 칭호', 'card title carries its display name');
+select is(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'badges', '[]'::jsonb,
+          'badges is a constant empty array (16d, kept for old fronts)');
 select is(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'frame' ->> 'rewardId', 'c1t_frame_a', 'card frame');
 select is(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'background' ->> 'rewardId', 'c1t_bg_a', 'card background');
 select ok(not (public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' ? 'pathColor'),
@@ -277,25 +280,23 @@ select is(public.get_profile_cards_v1(array[pg_temp.uid(1)]) -> 'cards' -> (pg_t
 -- 8. Retire after equip stays equipped (decision ②); unequip; cascade.
 -- ---------------------------------------------------------------------------
 set local role postgres;
-update public.reward_catalog set retired = true where reward_id = 'c1t_badge_b';
+update public.reward_catalog set retired = true where reward_id = 'c1t_title_b';
 set local role authenticated;
 select pg_temp.act_as(pg_temp.uid(2));
-select is((select b ->> 'retired'
-             from jsonb_array_elements(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'badges') b
-            where b ->> 'rewardId' = 'c1t_badge_b'),
+select is(public.get_profile_card_v1(pg_temp.uid(1)) -> 'card' -> 'title' ->> 'retired',
           'true', 'a reward retired after equip still shows on another player''s card');
 
 select pg_temp.act_as(pg_temp.uid(1));
-select is(public.unequip_profile_reward_v1('badge', 2::smallint) ->> 'ok', 'true', 'unequip badge 2');
-select is(public.unequip_profile_reward_v1('badge', 2::smallint) ->> 'code', 'SLOT_EMPTY', 'unequip empty slot: SLOT_EMPTY');
-select is(public.equip_profile_reward_v1('badge', 2::smallint, 'c1t_badge_b') ->> 'code', 'REWARD_RETIRED',
+select is(public.unequip_profile_reward_v1('title', 1::smallint) ->> 'ok', 'true', 'unequip the title');
+select is(public.unequip_profile_reward_v1('title', 1::smallint) ->> 'code', 'SLOT_EMPTY', 'unequip empty slot: SLOT_EMPTY');
+select is(public.equip_profile_reward_v1('title', 1::smallint, 'c1t_title_b') ->> 'code', 'REWARD_RETIRED',
           'once unequipped, the retired reward cannot come back');
 select pg_temp.act_as(null);
 select is(public.unequip_profile_reward_v1('title', 1::smallint) ->> 'code', 'AUTH_REQUIRED', 'unequip without a session');
 
 set local role postgres;
-delete from public.user_reward_inventory where user_id = pg_temp.uid(1) and reward_id = 'c1t_title_a';
-select is((select count(*)::int from public.user_profile_equipment where user_id = pg_temp.uid(1) and slot = 'title'),
+delete from public.user_reward_inventory where user_id = pg_temp.uid(1) and reward_id = 'c1t_frame_a';
+select is((select count(*)::int from public.user_profile_equipment where user_id = pg_temp.uid(1) and slot = 'frame'),
           0, 'revoking ownership removes the equipment (cascade)');
 
 select * from finish();

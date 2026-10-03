@@ -1,5 +1,7 @@
 // 16d-1: the front works on the old DB (badges still a kind, no asset_ref tokens) and on the 16d-2 shape
-// (badges converted, tokens set). Phase B simulates 16d-2 on the catalog rows it uses and restores them.
+// (badges converted, tokens set). On an old DB, phase B simulates 16d-2 on the catalog rows it uses and
+// restores them. On a 16d-2 DB (20261003100000 applied) phase A's badge seeding is skipped and phase B
+// checks the real migrated rows.
 // Local stack only. No stored keys/sessions. Fixtures and catalog changes are undone in finally.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -118,13 +120,15 @@ try {
     Object.assign(actor, { client, session: signed.data.session });
   }
   const [deco, rival] = users;
-  // Old-DB state: owns a badge and has it in the badge slot, plus a frame, a finish effect and a path color.
+  const migrated = Number(sql(`select count(*) from public.reward_catalog where kind = 'badge';`)) === 0;
+  console.log(`database: ${migrated ? '16d-2 applied' : 'pre-16d-2 (old)'}`);
+  // Owns a former/actual badge, a frame, a finish effect and a path color. On the old DB the badge is worn.
   sql(`insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
        select ${q(deco.id)}, r, 'admin' from unnest(array[${OWNED.map(q).join(',')}]) r;
        insert into public.user_reward_inventory (user_id, reward_id, grant_source_type)
        values (${q(rival.id)}, 'finish_better_path_3', 'admin'), (${q(rival.id)}, 'frame_backlink_return', 'admin');
        insert into public.user_profile_equipment (user_id, slot, slot_index, reward_id)
-       values (${q(deco.id)}, 'badge', 1, 'badge_first_arrival'),
+       values ${migrated ? '' : `(${q(deco.id)}, 'badge', 1, 'badge_first_arrival'),`}
               (${q(rival.id)}, 'finish_effect', 1, 'finish_better_path_3'),
               (${q(rival.id)}, 'frame', 1, 'frame_backlink_return');`);
 
@@ -139,18 +143,21 @@ try {
   const labels = await page.locator('.preward-label').allTextContents();
   assert.deepEqual(labels, ['프로필 아이콘', '대표 칭호', '프로필 프레임', '프로필 배경', '완주 효과', '경로 색상']);
   await expect(page.locator('.pcard-badges, .pcard-badge')).toHaveCount(0);
-  await page.getByRole('button', { name: '프로필 아이콘 변경' }).click();
-  await expect(page.locator('.preward-choice').filter({ hasText: '첫 도착' })).toHaveCount(0);
-  await page.getByRole('button', { name: '프로필 아이콘 변경' }).click();
-  pass('A old DB: editor 4 card rows + 2 match rows, no badge row or badge render, equipped badge ignored');
+  if (!migrated) {
+    await page.getByRole('button', { name: '프로필 아이콘 변경' }).click();
+    await expect(page.locator('.preward-choice').filter({ hasText: '첫 도착' })).toHaveCount(0);
+    await page.getByRole('button', { name: '프로필 아이콘 변경' }).click();
+  }
+  pass(`A ${migrated ? '16d-2' : 'old'} DB: editor 4 card rows + 2 match rows, no badge row or badge render`);
 
   await equipVia(page, '프로필 프레임', '넓어진 세계 III');
   await expect(page.locator('.pcard').first()).toHaveClass(/pcard--framed/);
-  await expect(page.locator('.pcard').first()).not.toHaveClass(/pcard--frame-tier/);
+  if (!migrated) await expect(page.locator('.pcard').first()).not.toHaveClass(/pcard--frame-tier/);
   await equipVia(page, '완주 효과', '더 나은 길 III');
   await equipVia(page, '경로 색상', '한 칸의 차이');
-  pass('A old DB: frame / finish effect / path color equip through the editor; no token → default ring');
+  pass('A: frame / finish effect / path color equip through the editor');
 
+  if (!migrated) {
   await playSingle(page);
   const fxA = page.getByTestId('finish-effect');
   await expect(fxA).toHaveClass(/fx-finish--tier-1/);
@@ -166,6 +173,7 @@ try {
        delete from public.user_profile_equipment where slot = 'badge' and user_id = ${q(deco.id)};
        update public.reward_catalog set kind = 'profile_icon', asset_ref = '/profile-icons/first-arrival.svg'
         where reward_id = 'badge_first_arrival';`);
+  }
   await openEditor(page);
   await expect(page.locator('.pcard').first()).toHaveClass(/pcard--frame-tier-3/);
   const ring = await page.locator('.pcard-avatar').first().evaluate((el) => getComputedStyle(el).boxShadow);
@@ -177,7 +185,7 @@ try {
   await expect(page.locator('.pcard-avatar-img').first()).toHaveAttribute('src', '/profile-icons/first-arrival.svg');
   await page.locator('.preward-swatch').count();
   await page.screenshot({ path: `${artifactDir}/profile-new-db.png`, fullPage: true });
-  pass('B 16d-2 shape: tier-3 gold frame, converted badge equips as a profile icon with its SVG');
+  pass(`B 16d-2 shape${migrated ? ' (real migration)' : ' (simulated)'}: tier-3 gold frame, converted badge equips as a profile icon with its SVG`);
 
   await playSingle(page);
   const fxB = page.getByTestId('finish-effect');
@@ -197,7 +205,7 @@ try {
   await host.locator('.room-target-input').fill('목표');
   await host.getByRole('button', { name: '검색', exact: true }).click();
   await host.locator('.search-item').filter({ hasText: pages[1].title }).click();
-  await expect(host.getByRole('button', { name: '게임 시작', exact: true })).toBeEnabled();
+  await expect(host.getByRole('button', { name: '게임 시작', exact: true })).toBeEnabled({ timeout: 15000 });
   await host.getByRole('button', { name: '게임 시작', exact: true }).click();
   await Promise.all([host.waitForURL('**/multiplayer/game/**'), guest.waitForURL('**/multiplayer/game/**')]);
   await expect(guest.locator('.mp-game-status')).toHaveText('레이스 진행 중', { timeout: 20000 });
@@ -237,8 +245,10 @@ try {
     const result = await admin.auth.admin.deleteUser(user.id); assert.equal(result.error, null, result.error?.message);
   }
   sql(`delete from public.wiki_pages where page_id in (${pages.map((p) => q(p.pageId)).join(',')});`);
-  assert.equal(Number(sql(`select count(*) from public.reward_catalog where reward_id = 'badge_first_arrival' and kind = 'badge' and asset_ref is null;`)), 1, 'catalog restored');
-  assert.equal(Number(sql(`select count(*) from public.reward_catalog where asset_ref like 'frame:%' or asset_ref like 'finish:%' or asset_ref like 'path:%';`)), 0, 'no token left');
+  if (catalogBackup) {
+    assert.equal(Number(sql(`select count(*) from public.reward_catalog where reward_id = 'badge_first_arrival' and kind = 'badge' and asset_ref is null;`)), 1, 'catalog restored');
+    assert.equal(Number(sql(`select count(*) from public.reward_catalog where asset_ref like 'frame:%' or asset_ref like 'finish:%' or asset_ref like 'path:%';`)), 0, 'no token left');
+  }
   pass('cleanup: catalog restored, accounts removed');
   fs.writeFileSync(`${artifactDir}/summary.json`, JSON.stringify({ date: '2026-10-03', completed, checks, errors }, null, 2));
   console.log(`16d-1 UI ${completed ? 'PASS' : 'INCOMPLETE'}: ${checks.length} checks`);

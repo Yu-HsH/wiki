@@ -84,11 +84,12 @@ test("labels: categories match the DB CHECK, kinds match the C1 kinds and spec �
   assert.deepEqual([...ACHIEVEMENT_CATEGORY_ORDER], dbCategories, "same set, same order");
   for (const category of dbCategories) assert.ok(ACHIEVEMENT_CATEGORY_LABELS[category], category);
 
-  const c1 = read("supabase/migrations/20261001090000_c1_reward_tables_v1.sql");
-  const kinds = [...c1.match(/reward_catalog_kind_check check \(kind = any \(array\[([\s\S]*?)\]/)[1].matchAll(/'([a-z_]+)'/g)]
+  // 16d-2가 CHECK를 다시 만들었다 — 최신 정의(배지 없는 8종)와 같아야 한다
+  const d2 = read("supabase/migrations/20261003100000_badge_retirement_v1.sql");
+  const kinds = [...d2.match(/add constraint reward_catalog_kind_check\s+check \(kind = any \(array\[([\s\S]*?)\]/)[1].matchAll(/'([a-z_]+)'/g)]
     .map(([, value]) => value);
-  // 16d: 배지 kind 폐지 — 라벨은 C1 kind에서 badge를 뺀 8종 (16d-2가 DB CHECK에서도 뺀다)
-  assert.deepEqual(Object.keys(REWARD_KIND_LABELS).sort(), kinds.filter((kind) => kind !== "badge").sort());
+  assert.equal(kinds.includes("badge"), false);
+  assert.deepEqual(Object.keys(REWARD_KIND_LABELS).sort(), kinds.sort());
   assert.deepEqual({ ...HIDDEN_KIND_LABELS }, { fun: "재미", discovery: "발견", challenge: "도전" });
 });
 
