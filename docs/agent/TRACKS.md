@@ -1343,7 +1343,7 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 
 **순서:** SF-M1 → SF-A1 → SF-A2(`main` push) → **하루** → SF-A3. SF-M2는 표 확정 후. **운영 적용·`main` push는 단계마다 건별 승인** (`AGENTS.md` §1·§1.1).
 
-**A1 발화 조건의 근거 — 하트비트가 이동 없이 `progress_version`을 올린다** `[코드, 로컬 실측]`. `heartbeat_duel_v2`가 `heartbeat_at`·`last_seen_at` 갱신과 함께 `progress_version = progress_version + 1` (로컬 함수 본문; 정의 `20260814091000` → `20260904090000`). `initialize_duel_player_v2`·`finalize_duel_if_expired`도 같은 증가를 가진다. 등재된 부채 "heartbeat OCC"의 원문은 `docs/`·`wiki-race-2.0-handoff/`에서 찾지 못했다 — **확인 필요** (§5).
+**A1 발화 조건의 근거 — 하트비트가 이동 없이 `progress_version`을 올린다** `[코드, 로컬 실측]`. `heartbeat_duel_v2`가 `heartbeat_at`·`last_seen_at` 갱신과 함께 `progress_version = progress_version + 1` (로컬 함수 본문; 정의 `20260814091000` → `20260904090000`). `initialize_duel_player_v2`·`finalize_duel_if_expired`도 같은 증가를 가진다. **이미 등재된 부채다 — D3** (`CURRENT.md` §5 D3 `:1584`·`:1632-1650` · `TRACK-C-HANDOFF.md` §후속 3 `:1171`·`:1220-1236`, 트랙 C 2026-09-06 판정): `progress_version`이 OCC 토큰과 liveness 카운터를 겸한다. 오늘 실측은 그 재확인이다. ~~원문을 찾지 못했다 — 확인 필요~~ → 해소 (2026-10-03). **A1에 주는 제약:** D3 원문대로 "그 bump가 `room_players` realtime 이벤트를 만들고 **상대 생존 표시**를 굴린다". A3 이후 상대 행 이벤트가 사라지므로, 상대 생존 표시가 `heartbeat_at` 신선도를 읽는지 A1 착수 시 확인하고 — 읽는다면 `player_status` 변화 신호만으로 충분한지 A1 보고에 적는다. D3 자체(liveness 분리)는 이 트랙 범위 밖이다.
 
 ## 9. 문서 불일치 — **5건. 3건을 고쳤다** (①은 2026-09-03에 다시 정정됐다)
 
