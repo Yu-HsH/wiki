@@ -1366,6 +1366,13 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 5. 운영 확인 — 1:1 아이템전 한 판(이동·아이템 정상) · 그룹 관전 이모지 한 번
 6. **프론트 배포 없음.** 순서 제약 없음 (DB 먼저여도 옛 프론트 무해 — §8-SEC-① (B))
 
+**SF-M1 운영 적용 · 확인 (2026-10-03)** `[사용자 실행·확인]`
+- `db push` — 사용자 실행
+- 1:1 아이템전 — **일반 문서에서 이동·아이템 정상**
+- 법 조문 문서(대한민국 민법 제816조 등)에서 강제 이동 아이템이 "이동할 링크가 없어 아이템을 쓰지 않았습니다"로 **미소비** — 해석 가능 목적지 0개. **부채 ③(강제 이동 목적지 커버리지)의 기존 동작이며 M1 회귀가 아니다** (`TRACK-C-HANDOFF.md` §부채 ③ — A안이 실패를 미소비로 바꿨다)
+- O2 잔재 쿼리 — `Success. No rows returned` (잔재 0)
+- **보고되지 않은 것:** 적용 후 migration 수 · Q1·Q3·Q5·Q9 재실행 값 · 그룹 관전 이모지 확인. 기록하지 않는다 (§5) — 필요하면 재실행 결과를 받아 채운다
+
 #### 8-SEC-⑦ SF-A1 — 착수 확인 3건과 구현 (로컬) — `cb0cf0b` · **운영 미적용** `[코드·산출물, 2026-10-03]`
 
 **확인 ⓐ 1:1 진행 중 `game_rooms.status`** — CHECK는 `waiting · starting · playing · grace_period · finished` 5값이지만 **1:1은 `waiting → starting → playing → finished`** 만 지난다.
