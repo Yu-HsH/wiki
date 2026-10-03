@@ -1,10 +1,21 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-03** (16c 완료 · 16b-r 스크립트 — 상자 (15) · 16d 판정 기록 `16-HANDOFF.md` §10)
-기준 커밋: **`275a693`** (`docs: record 16c and 16b-r prep — rulings, structure, verification, retro exclusion limits`) — 이번 16d 판정 기록 커밋의 부모.
+갱신 날짜: **2026-10-03** (16b-r 운영 apply 완료 · 16b-f 확인 쿼리 — 상자 (16))
+기준 커밋: **`8160f2b`** (`docs(16d): record the five 16d rulings — badge retirement, frames, match expression`) — 이번 16b-r 운영 기록·16b-f 확인 쿼리 커밋의 부모.
 마지막 **앱 코드** 커밋: **`ecbf727`** (16c, **미배포 — `main` push는 사용자**) · 그 앞 운영 배포된 앱 코드 `21c2afb` (14c-3) · 마지막 **migration** 커밋: **`e122bfd`** (16b-2, `20261002100000_achievement_triggers_v1.sql`) — **운영 적용 완료** `[사용자 실행·확인, 2026-10-03]` · 그 앞 `a8eda5a`(16a-1, `20261002090000`)도 같은 적용에서 **운영 적용 완료**. **저장소/로컬 migration 23 = 운영 23, 차이 0** (운영 23은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포(`main` push)는 `34af554`(14c, #11) — 16a·16b는 DB 전용이라 main push가 없었다. 마지막 운영 migration은 `20261002100000`이다. 이번 갱신은 **16a·16b 운영 적용 기록**이다 — 앱 코드 변경 없음.
-이전 기준: `301c1db` · `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+이전 기준: `275a693` · `301c1db` · `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main = 34af554` · `origin/feat/group-final-gaps = 1ff6a24`** (2026-10-03, 이번 커밋들 전 `git ls-remote` `[산출물]`). 16c `ecbf727` · 16b-r `301c1db` · 이번 문서 커밋을 feat에 push한다 `[사용자 승인]`. **`main` push는 사용자가 한다** (16c는 DB 변경 없음).
+
+> # ⚑ 2026-10-03 (16) — **16b-r 운영 apply 완료 · 16b-f(1:1·그룹 누적 판정기 권위 필터) 착수** `[사용자 실행·확인]`
+>
+> | 항목 | 결과 |
+> |---|---|
+> | 16b-r dry-run (운영) | 근거 사용자 7 · 해금 5(전부 첫 도착) · 150 XP · 레벨 변화 0 · 251 ms · 이동 이벤트 없는 1:1 76 (판정기가 세는 것 75) |
+> | 16b-r apply (운영) | **dry-run과 동일** — 5명 · 150 XP · 레벨 변화 0 · 133 ms. **16b-r 완료** (`16-HANDOFF.md` §9.5) |
+> | 16b-f 판정 `[사용자 결정, 2026-10-03]` | 16b 1:1·그룹 누적 판정기(맞수 · 승부사 · 순수한 승부 · **완벽한 대응** · 함께하는 탐험)에 "이동 이벤트 있는 결과만" — 소급과 같은 기준. 이미 열린 해금은 **목록만, 회수 없음** |
+> | 확인 쿼리 (읽기 전용, SQL Editor) | `scripts/16b-f-check-opened.sql`(②) · `scripts/16b-f-check-exposure.sql`(③). 로컬 fixture에서 legacy 9 + 실제 1판 → 4단계가 열리는 사례를 둘 다 잡는 것 확인 |
+>
+> **다음:** 16b-f-0(TRACKS 등재 · `16-HANDOFF.md` §11) → 16b-f-1(migration · pgTAP) → 사용자 `db push` → ③ 재실행으로 위험 단계 0 확인 → 16d-0.
 
 > # ⚑ 2026-10-03 (15) — **16c 완료 (feat, 미배포) · 16b-r 소급 스크립트 (SQL Editor용, 운영 미실행)** `[산출물]`
 >
