@@ -393,7 +393,7 @@ event_type으로 switch한다. **두 소비자가 서로의 이벤트를 무시�
 |:-:|---|---|---|
 | 1 | `XP_DECAY_NOTES` | `원래 {base} XP · 같은 상대와 오늘 4~5번째 경기 (50%)` · `… 6번째 이상 경기 (0%)` | 1:1 감쇠 지급 (C2 §5) |
 | 2 | `XP_NO_GRANT_NOTE` | `같은 코스는 처음 완주할 때만 XP를 받아요` `[사용자 확정 문안]` | 싱글 완주에 원장 행이 없을 때 (반복 쌍 · 오늘 코스 재완주) |
-| 3 | (컴포넌트 JSX) | `레벨 업! Lv.{n-1} → Lv.{n}` | 지급 후 `currentLevelXp < 획득량` |
+| 3 | `formatLevelUp` (`utils/xpResultDisplay.js`) | ~~`레벨 업! Lv.{n-1} → Lv.{n}`~~ → **16c:** `레벨 업! Lv.{a} → Lv.{b}` · 2레벨 이상이면 ` (+{b-a})` · 이전 레벨을 모르면 `레벨 업! Lv.{b}` | 결과 XP + 업적 XP 합산으로 레벨이 올랐을 때 (판정 9, 2026-10-03) |
 | 4 | `pages/MainPage.jsx` 오늘 코스 카드 | `오늘의 탐험을 불러오는 중…` `[사용자 확정 문안]` | 로비에서 오늘 코스 조회가 끝나기 전 (hotfix `3693dd7`, 2026-09-30) |
 
 **채택한 것(발명 아님):** 사유 문구는 `01-CONFIRMED-SPEC.md` §7.1 · `15` §1 표 이름 그대로 ·
@@ -416,6 +416,20 @@ event_type으로 switch한다. **두 소비자가 서로의 이벤트를 무시�
 | **설명 문구 (전부 발명)** | 일반 29개의 `description`(예: `처음으로 정상 완주했다` · `고유 문서 100개 방문`) · 히든 15개 공통 `숨겨진 업적 보상` |
 
 > **히든 보상 이름이 이 문서에 있다.** migration 파일과 같은 수준의 노출이며 서버·번들 경로가 아니다 (`16-HANDOFF.md` §4 "남은 노출").
+
+**16c 표시 문구 (2026-10-03, `ecbf727`)** — 업적 화면·결과 reveal·로비·프로필. 이름·조건·보상명은 서버 응답이고 아래만 JS에 있다.
+
+| 구분 | 위치 | 문구 | 근거 |
+|---|---|---|---|
+| **분류 표시명 6개 — 발명** `[사용자 결정, 2026-10-03: 이 목록에 등재]` | `utils/achievementDisplay.js` `ACHIEVEMENT_CATEGORY_LABELS` | `onboarding` 첫걸음 · `exploration` 탐험 · `daily` 오늘의 탐험 · `duel` 1:1 대결 · `group` 그룹 탐험 · `collection` 수집 | 없음. 키는 `achievement_definitions_category_check` |
+| 채택 | 같은 파일 `HIDDEN_KIND_LABELS` | 재미 · 발견 · 도전 | spec §9.2 |
+| 채택 | 같은 파일 `REWARD_KIND_LABELS` | 프로필 아이콘 · 칭호 · 배지 · 프레임 · 배경 · 경로 색상 · 경로 효과 · 완주 효과 · 관전 이모티콘 | `16-HANDOFF.md` §3 표 |
+| 채택 | 같은 파일 `formatHiddenDiscovered` | `발견 n / ??` | 판정 5 |
+| 발명 | 같은 파일 · `pages/MainPage.jsx` | `새 업적 n개 — 업적 화면에서 확인하세요` · 닫기 `aria-label` `새 업적 알림 닫기` · 헤더 버튼 `업적` | 없음 |
+| 발명 | `utils/xpResultDisplay.js` `XP_ACHIEVEMENT_REASON` | `업적 달성` (결과 XP 줄과 나란한 업적 XP 줄) | 없음 |
+| 발명 | `components/ResultAchievements.jsx` | 카드 머리 `히든 업적 · {유형}` / `업적 달성` | 없음 |
+| 발명 | `pages/AchievementsPage.jsx` | 제목 `업적` · 부제 `탐험하면서 모은 업적과 보상입니다.` · 섹션 `히든 업적` · `다음 보상 (II): +60 XP · …` · `완료` · 로딩/실패 문구 | 없음 |
+| 발명 | `pages/ProfilePage.jsx` | `업적` · `전체 보기` · `n개 달성` · `아직 달성한 업적이 없습니다.` | 없음 |
 
 
 ### 4.6 14b 링크만 보기의 발명 문구 — **디자인 확정 시 교체 대상** `[2026-09-30]`

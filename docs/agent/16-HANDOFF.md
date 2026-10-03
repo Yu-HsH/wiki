@@ -1,6 +1,6 @@
 # 16 업적·보상 — 판정과 인계
 
-작성: 2026-10-02 · 16b 추가 2026-10-03 (§7) · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
+작성: 2026-10-02 · 16b 추가 2026-10-03 (§7) · 16c·16b-r 준비 추가 2026-10-03 (§8·§9) · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
 **이 문서는 패킷 16의 판정·범위·보상 할당표의 단일 기준이다.** 트랙 경계와 수용조건은 `TRACKS.md` §8-16,
 소유권 예외는 `TRACKS.md` §1.1-e. 근거 문서는 `wiki-race-2.0-handoff/code/16-ACHIEVEMENTS-REWARDS.md`(이하 16) ·
 `01-CONFIRMED-SPEC.md` §9·§10 · `docs/contracts/C1-REWARD-TABLES.md` · `C2-XP-LEDGER.md`.
@@ -245,3 +245,89 @@
 | 재실행 RPC 응답 | 히든 `achievement_id`가 담긴다 — service_role 전용이라 G5 밖이다 |
 | 비용 | 그룹 종료 1회 = 최대 8명 × 그룹 판정기 8개. 그룹 경로 재생은 판정기마다 다시 한다(최대 8명 × 3) |
 | 운영 | **적용 완료 (2026-10-03)** `[사용자 실행·확인]` — 백업 → `db push` 2개, 검증 쿼리 기대값, 운영 23 = 저장소 23. 스모크: 싱글 1회 이동 완주 → +15 결과 · 누적 75(15 + 첫 도착 30 + 히든 30), 편집기 배지 2개. 결과 화면 표시는 16c |
+
+---
+
+## 8. 16c — 표시 (완료, 2026-10-03, 커밋 `ecbf727` — 미배포) `[산출물]`
+
+기준: `ecbf727`(코드·테스트 — 검증은 커밋 직전 같은 작업 트리). migration 없음 — 16a 읽기 RPC 3개와 `level_from_total_xp`만 부른다. 소유권은 `TRACKS.md` §1.1-e 16c 행(착수 시 실측으로 `MainPage.jsx`·15c-2 파일 추가).
+
+### 8.1 판정 `[사용자 결정, 2026-10-03]`
+
+| # | 항목 | 판정 |
+|:-:|---|---|
+| ① | 1:1 결과 유지 시간 | **이번 결과에 해금이 있으면 6000ms, 없으면 4000ms 유지.** 6000은 결과가 뜬 시각부터 잰다. `duelResultHotfix.test.js`는 기준 문자열만 `}, RESULT_HOLD_MS);`로 |
+| ② | 로비 알림 닫기 | **세션 동안 숨김.** seen은 **업적 화면 진입 시에만**. 닫은 뒤 미확인 수가 늘면 다시 보인다 |
+| ③ | 분류 표시명 6개 | 발명 — `PACKET-CONTRACT-GAPS.md` §4.5.1 (16c 표시 문구 표) |
+| ④ | 16b-r 실행 시점 | **16c 배포 후** — 소급 해금이 로비 알림으로 묶여 보인다 |
+| ⑤ | 범위 밖 수정 — 한 번 달성형(`once`) 카드의 `0 / 1` 진행 막대 숨김 | **승인** |
+| ⑥ | 16b-r 근거 — 판정 8을 1:1·그룹에도 적용 | **이동 이벤트(`game_move_events`)가 없는 1:1·그룹 결과는 소급 근거에서 제외.** 운영 dry-run 보고에 그 수를 따로 내고, 수치를 본 뒤 사용자가 최종 확정 |
+
+### 8.2 구조
+
+| 화면 | 구현 | 데이터 |
+|---|---|---|
+| 업적 화면 `/achievements` (ProtectedRoute) | `pages/AchievementsPage.jsx` — 히든 카드 1장 `발견 n / ??` + 해금한 히든 · 분류별 일반 카드(단계 점 · 진행 막대 · 다음 보상 · 완료) · NEW | `get_my_achievements_v1` 1회 → 그린 직후 `mark_achievements_seen_v1(null)` |
+| 결과 reveal (싱글 · 1:1 정상 종료) | `components/ResultXp.jsx`가 업적을 함께 조회 → `components/ResultAchievements.jsx`. 히든 먼저(서버 순서), 600ms 간격, `prefers-reduced-motion: reduce`면 처음부터 정적. **그려진 카드의 해금만** seen | `get_result_achievements_v1(single, game_records.id)` · `(duel, match_history.id)` — 결과와 같은 트랜잭션에서 열리므로 재시도 없음 |
+| XP 합산·다중 레벨업 (판정 9) | `utils/xpResultDisplay.js` — 결과 원장 행 + 업적 `xpTotal`을 한 줄씩, 합산으로 판정. 획득 전 레벨 = 서버 `level_from_total_xp(totalXp − 합산)` → `레벨 업! Lv.1 → Lv.3 (+2)`. 실패 시 `레벨 업! Lv.3` | 공식은 프론트에 없다 (C3). `authenticated` 실행 권한 실측 `t` (로컬) |
+| 로비 | `pages/MainPage.jsx` — 헤더 `업적` 버튼 · `새 업적 n개` 알림(결과 화면 없는 경로: 그룹 · 1:1 기권 · 장착 · 소급) | `unseenCount` |
+| 본인 프로필 | `pages/ProfilePage.jsx` — `n개 달성`(분모 없음) + 최근 해금 3개 + 전체 보기 | 같은 RPC |
+
+G5: 히든 이름·조건·보상명은 JS에 없다 — `tests/achievementDisplay.test.js`가 migration에서 히든 10개·비공개 보상 15개를 읽어 프론트 8파일에 없음을 단언한다 (음성 대조: 이름 1개 주입 → 실패 확인).
+
+### 8.3 검증 (로컬 스택 `wiki-packet13-r2-clean158`, 2026-10-03, `ecbf727`의 작업 트리)
+
+| 항목 | 결과 |
+|---|---|
+| `npm test` | **438/438** (422 + 신규 `achievementDisplay` 12 + `xpResultDisplay` 순증 4). 15c-2 전제 테스트("한 결과는 최대 1레벨")는 판정 9에 맞게 교체 |
+| `npm run build` | 통과 — 기존 500 kB 경고 유지 |
+| 로컬 UI `scripts/achievement-display-smoke.mjs` | **15/15** — 싱글 1이동 첫 완주(99 XP·방문 99곳 사전 세팅) → `+15`·`+90 업적 달성`·`Lv.1 → Lv.3 (+2)` · reveal 3장 히든 먼저 · seen 3 / 로비 알림 → 닫기 세션 숨김(seen 불변) → 새 세션 재표시 → 업적 화면 NEW·`발견 1 / ??`·`101 / 500`·다음 보상 → seen 0 / 프로필 `4개 달성`·최근 3 / 1:1 승자(해금 1, 모션 감소 → 정적) **5953ms**, 패자(해금 0) **3986ms** / 페이지 오류 0 / 정리 확인 |
+| DB 전제 | 로컬 migration 23 · `has_function_privilege(authenticated, level_from_total_xp)` = t · 읽기 RPC 3개 authenticated 실행 가능 |
+
+### 8.4 남은 것
+
+| 항목 | 상태 |
+|---|---|
+| 배포 | feat push까지 `[사용자 승인]`. **`main` push는 사용자가 한다** — DB 변경 없음 |
+| 그룹 reveal | 범위 밖 (X2) — 그룹 해금은 로비 알림이 받는다 |
+| 1:1 기권·이탈 | 결과 화면 없음 (X3) — 로비 알림 |
+| 남은 노출 | 해금 직후 같은 결과 화면을 다시 열 수 없으므로 reveal은 1회성이다. 다시 보기는 업적 화면 |
+
+---
+
+## 9. 16b-r — 소급 준비 (작성 · 로컬 검증만, 2026-10-03, 커밋 `301c1db`) `[산출물]`
+
+**운영 실행 안 함.** 16c 배포 후 건별 승인 (§8.1 ④). 운영에는 psql이 없고 **Supabase SQL Editor**만 쓴다 — `-v` 변수·`\` 명령 없음, 화면에는 **마지막 결과만** 보인다.
+
+### 9.1 파일
+
+| 파일 | 역할 |
+|---|---|
+| `scripts/16b-r-retro-dryrun.sql` | SQL Editor에 그대로 붙이는 판. 마지막 줄 `select * from pg_temp.retro_16b_r(false);` — **보고(ord · section · item · value)가 마지막 결과로 한 번에 나온다** |
+| `scripts/16b-r-retro-apply.sql` | 같은 본문, 마지막 인자만 `true`. 머리에 "dry-run 승인 후에만 · 백업 · 16c 배포 후" 경고 |
+| `tests/retroScripts.test.js` | **두 파일의 본문(`-- >>> 16b-r BODY` ~ `-- <<< 16b-r BODY`)이 한 글자도 다르지 않음**을 고정 · 꼬리는 인자만 다름 · `\` 명령·문장 단위 begin/commit/rollback 없음 · 마지막 문장이 보고 · 범위·보고 항목. 음성 대조: apply 본문 1글자 변경 → 실패 확인 |
+| `scripts/16b-r-retro-local-fixture.sql` · `scripts/16b-r-retro-local-run.mjs` | 로컬 전용. 실행기가 **위 두 파일 그대로**를 fixture 위에서 dry-run → apply → apply 순으로 돌리고 전체를 ROLLBACK. `--scale`은 143명 규모 시간 측정 |
+
+**dry-run이 `begin … rollback`이 아닌 이유:** SQL Editor는 마지막 문장의 결과만 보여 주므로 `rollback;`이 마지막이면 보고가 사라진다. 그래서 본문은 `pg_temp` 함수이고, dry-run은 함수 안에서 모든 쓰기 뒤에 **표식 예외(`16B_R_DRY_RUN_ROLLBACK`)로 되돌리고** 변수에 모아 둔 보고만 돌려준다. 다른 예외는 그대로 올라온다. apply는 표식 없이 끝나고 SQL Editor의 암묵 트랜잭션이 커밋한다.
+
+### 9.2 방법
+
+① 근거 결과: 싱글 = `run_id is not null` + 완료 run · **1:1·그룹 = 이동 이벤트가 있는 결과만**(§8.1 ⑥ — 없는 결과는 `제외` 행으로 보고) ② 근거 결과마다 `private.achievement_record_visits_v1` ③ `retroactive`·살아 있는 정의만, 사용자별 `profiles` 잠금(user_id 순) ④ counter = 16b 판정기가 원천에서 다시 센다(근거 결과 1개로 호출) ⑤ **소급 분기** — 첫 도착 · 여덟 명의 원정대는 근거 결과를 시간순으로 훑어 처음 만족하는 것, 준비된 탐험가는 현재 장착 ⑥ 지급 `apply_achievement_value_v1(…, 'retro', null)` → 결과 화면 없음 → 16c 로비 알림. 1:1 감쇠는 판정기가 `duel_decay_v1`로 다시 센다.
+
+**보고:** 모드 · 근거 사용자·결과 수(싱글/1:1/그룹) · **제외: 이동 이벤트 없는 1:1·그룹 결과 수와 그중 누적 판정기가 여전히 세는 수** · 방문 문서 행 · 해금 받은 사용자 · 해금 합계 · XP 합계 · 실패 · 소요 ms · 사용자별 해금 수 분포 · 업적·단계별 해금(사용자 수·XP) · 레벨 상승 분포 · 실패 상세.
+
+### 9.3 로컬 검증 (스택 `wiki-packet13-r2-clean158`, 2026-10-03, `301c1db`의 작업 트리 · `npm test` 445/445)
+
+| 항목 | 결과 |
+|---|---|
+| fixture 13명 (`node scripts/16b-r-retro-local-run.mjs`) | dry-run: 근거 싱글 119 · 1:1 12 · 그룹 1 · **제외 1:1 7 · 그룹 1 (그중 여전히 세는 결과 8)** · 해금 **26** · XP **780** · 11명 · 레벨 +1 3명 / +0 8명 · 실패 0. **dry-run 뒤 해금 0** · **apply = dry-run(모든 수·분포 일치)** · **두 번째 apply 해금 0·XP 0·방문 0 (멱등)** · ROLLBACK 후 잔여 0 |
+| 규모 (`--scale`) | 143명 · 싱글 5,720 · 1:1 1,530(제외 100) · 그룹 25 — 운영(2026-09-02 실측 users 145 · game_records 59)보다 훨씬 많게 잡았다 → **DB 안 소요 4,629 ms**. 운영 규모면 1초 안쪽으로 예상. 파일이 `statement_timeout = '5min'`을 건다. **SQL Editor 자체의 요청 시간 제한 값은 저장소에서 확인되지 않는다** `확인 필요` — 보고의 "소요 ms"로 실측한다 |
+
+### 9.4 제외 규칙의 한계 — **최종 확정 전에 볼 것** `확인 필요`
+
+16b의 누적 판정기(맞수와의 만남 · 승부사 · 순수한 승부 · 함께하는 탐험)는 `match_history`·`group_match_results`를 **이동 이벤트 조건 없이** 원천에서 센다 (`20261002100000` §4). 그래서 소급 스크립트의 제외는 다음까지만 효과가 있다:
+
+- **효과 있음:** 방문 문서 집합 · 첫 도착 · 여덟 명의 원정대(소급 분기가 근거 결과만 훑는다) · 그 scope에 근거 결과가 하나도 없는 사용자(판정기를 부르지 않는다)
+- **효과 없음:** 그 scope에 근거 결과가 하나라도 있는 사용자의 카운터 값에는 제외된 결과도 들어간다. 그리고 **소급과 무관하게, 그 사용자가 다음에 1:1·그룹을 한 판 하면 16b 트리거가 제외된 결과까지 다시 센다**
+
+보고의 `그중 16b 누적 판정기가 원천에서 여전히 세는 결과`가 그 크기다. 0이거나 작으면 그대로 확정하면 된다. 크고 완전히 배제하려면 판정기에 이동 이벤트 조건을 넣는 **forward migration**이 필요하다(판정 11 — 새 판정 방식은 migration) — 그때는 실시간 판정도 함께 바뀐다.
