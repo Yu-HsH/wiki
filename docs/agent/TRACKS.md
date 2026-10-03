@@ -1409,6 +1409,27 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 **A2 범위 확정 (이 확인의 결과):** ① `multiplayerService.js` `fetchRoomPlayers` 본문 → `rpc("get_duel_room_players_v1")` ② `MultiplayerGamePage.jsx` room_events 핸들러에 `duel_progress`(상대 `payload.userId`) → 재조회 ③ 하트비트 주기 재조회 ④ `syncAfterItemUse` 병합 `{...player, ...fresh}`. **`RoomPage.jsx`·`utils/onlineGameSession.js`·그룹 파일 무편집.**
 **A1 운영 적용은 M1 뒤** (파일명 순서). A2 배포 전 적용이 필요하다 — A2가 이 RPC를 부른다.
 
+#### 8-SEC-⑧ SF-A2 완료 (로컬) — `bfbed24` · **`main` 미배포** `[코드·산출물, 2026-10-03]`
+
+| 변경 | 내용 |
+|---|---|
+| `services/multiplayerService.js` | `fetchRoomPlayers` 본문 → `rpc("get_duel_room_players_v1")`. 같은 행 배열·같은 순서, 호출처 무편집. `DUEL_PROGRESS_EVENT_TYPE` export |
+| `pages/MultiplayerGamePage.jsx` | `refreshPlayersFromServer` — 행마다 `progress_version`을 보고 더 새 행을 덮지 않는다 · `duel_progress`(상대 `payload.userId`)에서 호출 · 하트비트 주기에서 호출 · `syncAfterItemUse` 병합 `{...player, ...fresh}` |
+| `pages/RoomPage.jsx` ⚠ **범위 조정** | §8-SEC-⑦에서 "무편집"이라 적었으나 고쳤다 (C 소유 파일). **14c 스모크가 A2로 3회 중 2회 실패했다** — 게스트 이탈 후 방장 START가 계속 켜져 있음. 기준(`HEAD` 파일 복원) 실행은 30/30. 계측 실행에서 이탈 직후 RPC는 `["host"]`를 정확히 돌려줬다 → **결과가 아니라 순서 문제**: 이벤트마다 다시 읽고 마지막 도착 응답을 쓰므로 이탈 전 읽기가 늦게 도착하면 덮는다. RPC가 그 창을 넓혔다 (원인은 추정 — 직접 관측하지는 않았다). **마지막에 시작한 읽기만 반영**하도록 고친 뒤 **3/3 통과** |
+
+| 검증 (기준 `bfbed24`, 2026-10-03) | 결과 |
+|---|---|
+| `npm test` | **471/471** (`tests/duelPlayersView.test.js` 6건 신규) |
+| `npm run build` | 통과 |
+| SF-A2 2세션 스모크 `scripts/duel-players-view-smoke.mjs` | **16/16** — **현행 정책 1판 + SF-A3 정책 임시 로컬 사본 1판**(종료 시 원복·원복 확인). 두 판 모두: RPC로 `playing` 도달 · 상대 이동 후 게스트 패널 현재 문서·이동 횟수 갱신 · **`duel_progress` 신호 실수신 612ms / 635ms**(하트비트 주기가 아니라 신호로 갱신됐다) · 진행 중 게스트 읽기에 방장 경로 0 · **진행 중 게스트 F5 복구 정상** · 완주 후 결과 수렴·경로 공개. A3 판: 테이블 직접 읽기는 본인 행만. 1:1 화면의 `room_players` 직접 요청 0 · 페이지 오류 0 |
+| 14c 스모크 `duel-host-target-smoke.mjs` | **30/30 × 3회** (RoomPage 수정 후) |
+
+**배포 절차 (건별 승인 — `AGENTS.md` §1.1):**
+1. **SF-A1 운영 적용 확인이 먼저다** — A2가 `get_duel_room_players_v1`을 부른다. 없으면 1:1 화면 전부가 참가자 읽기에서 실패한다 (기록: 사용자 `db push` 진행 중 — 결과 미기록)
+2. 배포 전 검증 재실행 → `main` push → **`git ls-remote origin refs/heads/main`으로 반영 확인** (14c 교훈)
+3. 운영 확인 — 1:1 한 판(상대 현재 문서·이동 횟수 갱신, 결과 화면) · 대기실 이탈/재입장
+4. **SF-A3는 push 확인 후 하루 뒤** — 옛 탭은 테이블을 직접 읽는다. A3 뒤의 옛 탭은 상대 패널이 멈추고 F5 복구가 `OPPONENT_LEFT`로 끝난다 (§8-SEC-⑦ ⓑ)
+
 **순서:** SF-M1 → SF-A1 → SF-A2(`main` push) → **하루** → SF-A3. SF-M2는 표 확정 후. **운영 적용·`main` push는 단계마다 건별 승인** (`AGENTS.md` §1·§1.1).
 
 **A1 발화 조건의 근거 — 하트비트가 이동 없이 `progress_version`을 올린다** `[코드, 로컬 실측]`. `heartbeat_duel_v2`가 `heartbeat_at`·`last_seen_at` 갱신과 함께 `progress_version = progress_version + 1` (로컬 함수 본문; 정의 `20260814091000` → `20260904090000`). `initialize_duel_player_v2`·`finalize_duel_if_expired`도 같은 증가를 가진다. **이미 등재된 부채다 — D3** (`CURRENT.md` §5 D3 `:1584`·`:1632-1650` · `TRACK-C-HANDOFF.md` §후속 3 `:1171`·`:1220-1236`, 트랙 C 2026-09-06 판정): `progress_version`이 OCC 토큰과 liveness 카운터를 겸한다. 오늘 실측은 그 재확인이다. ~~원문을 찾지 못했다 — 확인 필요~~ → 해소 (2026-10-03). **A1에 주는 제약:** D3 원문대로 "그 bump가 `room_players` realtime 이벤트를 만들고 **상대 생존 표시**를 굴린다". A3 이후 상대 행 이벤트가 사라지므로, 상대 생존 표시가 `heartbeat_at` 신선도를 읽는지 A1 착수 시 확인하고 — 읽는다면 `player_status` 변화 신호만으로 충분한지 A1 보고에 적는다. D3 자체(liveness 분리)는 이 트랙 범위 밖이다.
