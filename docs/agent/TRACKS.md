@@ -218,11 +218,12 @@
 | **16a** | `docs/contracts/C1-REWARD-TABLES.md` | 공통 | **`reward_catalog.listed` + 읽기 정책 교체** 반영 `[사용자 승인, 결정 1]` | §2·§3 DDL·RPC 계약 불변. 통합 성격이라 16a 커밋에 포함 |
 | **16a** | `public.reward_catalog` (DB 객체, 17b migration 소유) | 17b | **새 migration**에서 `listed` 컬럼 추가 · 정책 1개 drop+create | `20261001090000` **파일 무편집** (R5). 기존 행 값 불변(`listed` default `true`) |
 | **16a** | `docs/agent/CURRENT.md` | 통합 | 16a 완료 상자 1개 + 기준 커밋 | 이 저장소에서 직접 커밋하는 세션이라 `AGENTS.md` §7의 갱신 의무를 따른다 (worktree 트랙 아님) |
-| **16b** (예정) | `game_records` · `match_history` · `game_rooms` AFTER 트리거 추가 · `user_profile_equipment` AFTER 트리거 | 15c 선례 | **트리거 추가만.** finalizer·17b RPC 본문 무편집. 그룹은 15c와 같은 **런타임 예외** | 이름이 `trg_grant_*`보다 뒤에 정렬(`trg_record_*`) — 15c 감쇠 사유를 읽기 위해 |
+| **16b** (로컬 완료 2026-10-03) | `game_records` · `match_history` · `game_rooms` AFTER 트리거 추가 · `user_profile_equipment` AFTER 트리거 | 15c 선례 | **트리거 추가만** — 실측 그대로, 범위 확장 없음. finalizer·17b RPC 본문 무편집. 그룹은 15c와 같은 **런타임 예외** | 이름이 `trg_grant_*`보다 뒤에 정렬(`trg_record_*`, pgTAP 고정). 감쇠는 원장 대신 같은 규칙으로 재계산 (`16-HANDOFF.md` §7.2 ⑧) |
+| **16b** | `supabase/tests/xp_result_grants_v1.sql` · `supabase/tests/achievements_rewards_v1.sql` | 15c · 16a | 단언 2곳: 15c `pg_temp.total`이 업적 XP를 뺀다 · 16a inert 단언이 `trg_record_*` 4개를 허용 | 다른 단언 무편집 |
 | **16c** (예정) | `components/SuccessOverlay.jsx`(B) · `pages/MultiplayerGamePage.jsx`(C) · `pages/ProfilePage.jsx`(A) · `App.jsx`(B 라우트 1줄) · `appStyles.js`(A, import 1줄) | A·B·C | 결과 reveal 1블록 · 프로필 요약 1블록 · 업적 화면 라우트 | 결과 판정·복구 경로·기존 prop 계약 불변. **`GroupGamePage.jsx`는 동결 유지** (그룹 reveal 제외 — X2와 같은 조건) |
 
 **16 신규 파일 (16 소유):** `supabase/migrations/20261002090000_achievements_rewards_v1.sql` · `supabase/tests/achievements_rewards_v1.sql` ·
-`docs/agent/16-HANDOFF.md` (16a). 16b·16c의 신규 파일은 착수 시 여기에 추가한다.
+`docs/agent/16-HANDOFF.md` (16a) · `supabase/migrations/20261002100000_achievement_triggers_v1.sql` · `supabase/tests/achievement_triggers_v1.sql` (16b). 16c의 신규 파일은 착수 시 여기에 추가한다.
 
 ---
 
@@ -394,7 +395,7 @@
 | `20260903 10` | **C** | `20260903100000_duel_item_authority_v3.sql` |
 | `20260904 0*` | **창 (§7)** | `20260904010000_profiles_grant_narrow.sql` → `…020000_profiles_total_xp.sql` → `…030000_daily_challenges_course_slot.sql` → `…040000_game_records_result_status_check.sql` |
 | `20261002 09` | **16a** | `20261002090000_achievements_rewards_v1.sql` — 현재 최대 `20261001100000` 뒤 |
-| `20261002 10` | **16b** (예약) | `20261002100000_achievement_triggers_v1.sql` — 16a 뒤. 이름은 착수 시 확정 |
+| `20261002 10` | **16b** | `20261002100000_achievement_triggers_v1.sql` — 16a 뒤. **확정** (2026-10-03) |
 
 **파일명은 제안이다. 순서 관계만 계약이다** — 창 블록의 4개는 **적은 순서대로 적용돼야 한다** (§7.2).
 **14c 생성 완료 (2026-10-01, `3d027ba`):** `supabase migration new duel_host_target_v2`로 생성한 신규 파일을

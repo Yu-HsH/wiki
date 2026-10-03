@@ -1,10 +1,33 @@
 # 현재 상태 — Wiki Race 2.0
 
 갱신 날짜: **2026-10-03**
-기준 커밋: **`b1950d5`** (`docs: 16a-3 C1 listed amendment, reward assignment draft and 16a interfaces`) — 이번 16a 기록 문서 커밋의 부모.
-마지막 **앱 코드** 커밋: **`21c2afb`** (14c-3, **운영 배포 완료**) · 마지막 **migration** 커밋: **`a8eda5a`** (16a-1, `20261002090000_achievements_rewards_v1.sql`) — **운영 미적용** · 그 앞 `3d027ba`(14c-1, `20261001100000`)는 운영 적용 완료 `[사용자 실행·확인, 2026-10-01]`. **저장소/로컬 migration 22 ↔ 운영 21, 차이 1 (`20261002090000`)** (기준 `b1950d5`, 2026-10-02; 운영 21은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포는 `34af554`(14c, `main` push #11), 마지막 운영 migration은 `20261001100000`이다. 이번 갱신은 **16a 완료(로컬) 기록**이다 — 앱 코드 변경 없음.
-이전 기준: `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
-브랜치: `feat/group-final-gaps` — **`origin/main = 34af554` · `origin/feat/group-final-gaps = 819617a`** (2026-10-02, 이번 기록 커밋 전 `git ls-remote origin refs/heads/main refs/heads/feat/group-final-gaps` `[산출물]`). 16a 커밋 5개(`bae36ac`~이번 기록 커밋)는 **로컬에만 있다 — push하지 않았다** (요청 없음, `AGENTS.md` §2).
+기준 커밋: **`d2c139a`** (`test(16b): cover every seeded evaluator, boundaries, idempotency and isolation`) — 이번 16b 기록 문서 커밋의 부모.
+마지막 **앱 코드** 커밋: **`21c2afb`** (14c-3, **운영 배포 완료**) · 마지막 **migration** 커밋: **`e122bfd`** (16b-2, `20261002100000_achievement_triggers_v1.sql`) — **운영 미적용** · 그 앞 `a8eda5a`(16a-1, `20261002090000`)도 **운영 미적용**, `3d027ba`(14c-1, `20261001100000`)는 운영 적용 완료 `[사용자 실행·확인, 2026-10-01]`. **저장소/로컬 migration 23 ↔ 운영 21, 차이 2 (`20261002090000` · `20261002100000`)** (기준 `d2c139a`, 2026-10-03; 운영 21은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포는 `34af554`(14c, `main` push #11), 마지막 운영 migration은 `20261001100000`이다. 이번 갱신은 **16b 완료(로컬) 기록**이다 — 앱 코드 변경 없음.
+이전 기준: `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+브랜치: `feat/group-final-gaps` — **`origin/main = 34af554` · `origin/feat/group-final-gaps = 819617a`** (2026-10-03, 이번 기록 커밋 전 `git ls-remote origin refs/heads/main refs/heads/feat/group-final-gaps` `[산출물]`). 16a·16b 커밋 9개(`bae36ac`~`d2c139a`)와 이번 기록 커밋은 **로컬에만 있다 — push하지 않았다** (요청 없음, `AGENTS.md` §2).
+
+> # ⚑ 2026-10-03 (13) — **16b 완료 (로컬) — 사건 연결: 판정기 21종 + 트리거 4개. 운영 미적용 (16a와 묶어 적용 대기)**
+>
+> 범위·구조·구현 판정 전문은 **`docs/agent/16-HANDOFF.md` §7**. 시드 23개 전부가 판정된다(일반 13 · 히든 10). 결과 3테이블 + 장착 AFTER 트리거(`trg_record_*`, 15c `trg_grant_*` 뒤) · 2중 격리 · 재실행 RPC `public.evaluate_result_achievements_v1`(service_role) · 그룹 잠금 user_id 순.
+> **§1.1에 없던 기본값 11개를 이번에 골랐다 — 검토 필요** (`16-HANDOFF.md` §7.2: 되돌리기 성공 = 상대 강제 이동을 되돌린 것 · 끝까지 함께는 닫히기 전 완주 · 히든 "승리" = 정상 완주 승리 등).
+>
+> | 커밋 | 내용 |
+> |---|---|
+> | `f684a46` 16b-1 | migration **`20261002100000_achievement_triggers_v1.sql`** 판정기 — `private.achievement_value_v1`(21 evaluator) · 사용자/결과 러너 · `user_achievement_marks` · 재실행 RPC |
+> | `e122bfd` 16b-2 | 같은 파일에 트리거 4개 + 바깥 격리 · 기존 pgTAP 2파일 단언 조정(16a inert · 15c 결과 XP 합계) |
+> | `d2c139a` 16b-3 | pgTAP `supabase/tests/achievement_triggers_v1.sql` **127건** |
+>
+> | 검증 (로컬 스택 `wiki-packet13-r2-clean158`, 2026-10-03) | 결과 |
+> |---|---|
+> | migration | 로컬 이력 **23**. `db reset` 전체 재생은 하지 않았다 |
+> | pgTAP | 신규 **127/127** · 전체 **1043/1043** (916 + 127), `not ok` 0 (기준 `d2c139a`) |
+> | 음성 대조 | 트리거 4개를 끈 사본 → **76/127 실패**(양성 단언 전부). 사본은 커밋하지 않았다 |
+> | 격리 3경우 | 정의 1개 파손 · 판정 전체 예외 · XP 예외 — 셋 다 경기 커밋, 영향은 그 범위만. XP는 재실행 RPC가 보충 |
+> | 로컬 스모크 | 싱글 첫 완주 → 첫 도착 해금 + 30 XP + `badge_first_arrival` (pgTAP §2.1, 실제 `apply_single_move_v2`) |
+> | 동시성 (pwsh 7.6) | `duel_item_concurrency_v3` 3×5 PASS · deadlock 0 · `server_authority_concurrency_v2` PASS · `group_final_gaps_v13_hardening_concurrency` **8/8** |
+> | `npm test` | **422/422** (JS 변경 없음) |
+>
+> **다음:** 16a+16b 운영 적용(건별 승인) → 16b-r 소급(건별 승인, `16-HANDOFF.md` §7.4에 필요한 소급 분기 기록) → 16c 표시.
 
 > # ⚑ 2026-10-02 (12) — **16a 완료 (로컬) — 업적·보상 서버 기반. 트리거 없음(inert). 운영 미적용**
 >

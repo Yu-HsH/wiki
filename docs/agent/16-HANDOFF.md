@@ -1,6 +1,6 @@
 # 16 업적·보상 — 판정과 인계
 
-작성: 2026-10-02 · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
+작성: 2026-10-02 · 16b 추가 2026-10-03 (§7) · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
 **이 문서는 패킷 16의 판정·범위·보상 할당표의 단일 기준이다.** 트랙 경계와 수용조건은 `TRACKS.md` §8-16,
 소유권 예외는 `TRACKS.md` §1.1-e. 근거 문서는 `wiki-race-2.0-handoff/code/16-ACHIEVEMENTS-REWARDS.md`(이하 16) ·
 `01-CONFIRMED-SPEC.md` §9·§10 · `docs/contracts/C1-REWARD-TABLES.md` · `C2-XP-LEDGER.md`.
@@ -182,3 +182,66 @@
 | `npm test` | **422/422** (JS 변경 없음) — 기준 `c6172fd` |
 | inert | 비내부 트리거 중 업적 함수를 부르는 것 0 (pgTAP §1). 적용해도 지급 0 |
 | 운영 | **미적용 · 미접근.** 적용은 건별 승인 (`AGENTS.md` §1) |
+
+---
+
+## 7. 16b — 사건 연결 (로컬 완료, 2026-10-03) `[산출물]`
+
+**migration `20261002100000_achievement_triggers_v1.sql`** (TRACKS §2.4 예약 그대로) · pgTAP `supabase/tests/achievement_triggers_v1.sql`.
+커밋: `f684a46` 판정기 → `e122bfd` 트리거 → `d2c139a` pgTAP. **운영 미적용 · push 안 함.** 16a와 묶어 적용한다 (§1).
+
+### 7.1 구조
+
+| 층 | 객체 | 하는 일 |
+|---|---|---|
+| 트리거 4 | `trg_record_single_result_achievements`(game_records INSERT) · `trg_record_duel_result_achievements`(match_history INSERT) · `trg_record_group_result_achievements`(game_rooms UPDATE OF status) · `trg_record_equipment_achievements`(user_profile_equipment INSERT/UPDATE) | 15c와 같은 WHEN + 싱글은 `run_id is not null`. 이름순으로 15c `trg_grant_*` 뒤에 실행 (pgTAP §1이 고정) |
+| 바깥 격리 | `private.record_result_achievements_on_write_v1` | 전체를 예외 블록 1겹 — 실패 시 `ACHIEVEMENT_RESULT_FAILED` WARNING, 경기 커밋 |
+| 결과 1건 | `private.record_result_achievements_v1(scope, id)` | 참가자 = 싱글 1 · 1:1 승패자 · 그룹 **결과 행 전원**(떠난 완주자 포함). 프로필 **user_id 순 잠금 후** 순서대로 판정. 게스트·프로필 없음 제외 |
+| 사용자 1명 | `private.record_user_achievements_v1` | 방문 문서 기록 → 그 scope를 듣는 **살아 있는** 정의마다 예외 블록 1겹 (`ACHIEVEMENT_EVAL_FAILED` WARNING) |
+| 정의 1개 | `private.evaluate_achievement_v1` → `private.achievement_value_v1` | 값 계산 → 16a `apply_achievement_value_v1`. `once`는 값 1일 때만, `counter`는 0이어도 진행도 기록 |
+| 재실행 | `public.evaluate_result_achievements_v1(scope, id)` | **service_role 전용.** scope = `single`·`duel`·`group`·`equipment`(id = user_id). 멱등 |
+| 신규 테이블 | `user_achievement_marks` | 다시 셀 수 없는 판정(끝까지 함께)의 결과별 표식. RLS on · 권한 0 (16a 8테이블과 같은 G5 자세) |
+
+**판정기 → scope 지도**는 `private.achievement_evaluator_scopes_v1`에 있다. 여기 없는 evaluator를 가리키는 정의는 **돌지 않는다** — 새 판정 방식은 migration (판정 11).
+**누적형은 매번 원천에서 다시 센다** — 16b-r이 같은 함수를 부를 수 있다. 상황형은 이번 결과만 본다.
+
+### 7.2 구현 판정 — §1.1에 없던 것 `[16b 구현 판정 — 검토 필요]`
+
+§1.1 기본값은 전부 `params`대로 반영했다. 아래는 원문·§1.1이 정하지 않아 **이번에 고른 것**이다. 바꾸려면 판정기 또는 `params` 수정 (운영 적용 전이면 이 파일을 고친다 — 16a와 같은 처리).
+
+| # | 업적 | 고른 것 | 이유 |
+|:-:|---|---|---|
+| ① | 완벽한 대응 — 되돌리기 "성공" | **상대가 건 강제 이동(FORCED_LINK)을 되돌린 `go_back`만.** 자기 이동 되돌리기는 제외. 편집 보호·역링크는 공격을 소비한 것(`consumed_defense_event_id`) | "대응"이 성공한 경우만. 모든 `go_back`을 세면 공격 없이 쌓인다 |
+| ② | 끝까지 함께 | room_players에 finished로 남아 있고 **`finished_at < 방 finished_at`** — 방을 닫은 그 순간 완주한 사람은 관전하지 않았다 | 근사치(§2)의 하한 |
+| ③ | 반송 처리 · 특수:운 · 그 공격 길 안내 | "승리" = **정상 완주 승리**(`result_status = completed`). 기권승 제외 | 승부사 기본값(§1.1)과 같은 선 |
+| ④ | 전과 다른 길 | 이동 수 = `click_count`, 중간 문서 = `path_page_ids[2:n-1]`(싱글 path는 시작 포함 — 직전 세션 실측) | — |
+| ⑤ | 어디서들 오셨어요 | 1·2·3위 **각자 중간 문서 1개 이상** 필요 | 직행끼리는 중간이 공집합이라 "안 겹침"이 공허하게 참 |
+| ⑥ | 넓어진 세계 | 방문 = **그 경기 이동 이벤트의 양끝**(시작·되돌린 문서 포함). 1:1 패자·그룹 기권자 포함. **싱글은 완주 판만** — 포기·만료 판은 결과 행이 없어 트리거가 없다 | — |
+| ⑦ | 첫 도착 | **이번 결과**가 정상 완주일 때만(1:1 패배·그룹 기권은 해당 없음) | 기존 사용자가 16b-r 전에 진 경기로 「첫 도착」을 받지 않게 |
+| ⑧ | 맞수·승부사·순수한 승부의 0% 반복 | 15c 원장을 읽지 않고 **같은 규칙(`duel_decay_v1` + 같은 순번)으로 재계산** | 소급과 같은 코드. 트리거 순서(`trg_record_*`)는 그대로 둔다 |
+| ⑨ | 여기 제 자리인데요 | 위치는 이동 이벤트 `server_timestamp`부터 그 사람의 다음 이동까지, **겹침은 엄격(<)**. 두 목표는 room_players에서 — 행이 없으면(나중 재실행) 판정하지 않음 | — |
+| ⑩ | 그룹 경로 3종 | 경로 = 이동 이벤트 **재생**(UNDO는 pop) — 떠난 완주자는 room_players에 없다 | — |
+| ⑪ | from_activation | 결과 시각 < `coalesce(starts_at, created_at)`이면 판정 안 함 — **재실행 RPC 포함** | 활성 전 결과로 상황형이 열리지 않게 |
+
+### 7.3 검증 (로컬 스택 `wiki-packet13-r2-clean158`, 2026-10-03)
+
+| 항목 | 결과 · 기준 |
+|---|---|
+| migration | `migration up --local` 적용 → 트리거 추가분은 같은 파일을 `psql`로 재적용(멱등). 로컬 이력 **23**. `db reset` 전체 재생은 하지 않았다 |
+| pgTAP 신규 | `achievement_triggers_v1` **127/127** — 기준 `d2c139a` |
+| pgTAP 전체 | **1043/1043** (916 + 127), `not ok` 0. 기존 2파일 조정: 16a "inert" 단언 → `trg_record_*` 4개만 허용 · 15c `pg_temp.total`이 `achievement_unlock` XP를 뺀 결과 XP를 잰다 (`e122bfd`) |
+| 음성 대조 | 같은 스위트를 트리거 4개 **disable**한 사본으로 → **76/127 실패**(양성 단언 전부). 남은 51은 "해금 없음" 경계·구조 단언. 사본은 커밋하지 않았다. 스위트 안에도 트리거를 끈 1건(§8.4)이 있다 |
+| 격리 3경우 | ① 정의 1개의 `params` 파손 → 그 업적만 실패, 나머지 해금 ② 결과 판정 전체 예외 주입 → 완주·15c XP 커밋, 해금 0 ③ `grant_xp_v1` 예외 주입 → 해금·보상 유지, 업적 XP 0 → 재실행 RPC가 XP만 보충 |
+| 로컬 스모크 | 싱글 첫 완주(실제 `apply_single_move_v2`) → **첫 도착 해금 + `achievement_unlock` 30 XP + `badge_first_arrival`**, 15c 결과 XP 1행 그대로 (pgTAP §2.1) |
+| 동시성 (pwsh 7.6) | `duel_item_concurrency_v3` 3×5 PASS · deadlock 0 · `server_authority_concurrency_v2` PASS · `group_final_gaps_v13_hardening_concurrency` **8/8 PASS** (`-DbContainer` 지정. server_authority는 컨테이너명이 하드코딩이라 임시 사본으로 실행 후 삭제) |
+| `npm test` | **422/422** (JS 변경 없음) |
+
+### 7.4 남은 것
+
+| 항목 | 상태 |
+|---|---|
+| 16b 전용 경합 하니스 | **없다.** 같은 사용자의 완주와 장착이 동시에 오는 경우 등은 분석으로만 — 모든 경로가 `profiles` 행을 먼저 잠그고(15c `grant_xp_v1` · 이 파일 §7) 그룹은 user_id 순이다. 기존 하니스 3종은 16b 트리거가 켜진 채로 통과했다 |
+| 16b-r | 누적형 판정기는 그대로 재사용된다. 단일 단계 일반 2개(첫 도착 · 여덟 명의 원정대)는 **이번 결과만** 보므로 (준비된 탐험가는 현재 장착 상태를 읽어 그대로 재사용된다) 소급용 분기(`scope = 'retro'`)가 필요하다. `user_visited_documents`도 과거 경기에서 채워야 한다 |
+| 재실행 RPC 응답 | 히든 `achievement_id`가 담긴다 — service_role 전용이라 G5 밖이다 |
+| 비용 | 그룹 종료 1회 = 최대 8명 × 그룹 판정기 8개. 그룹 경로 재생은 판정기마다 다시 한다(최대 8명 × 3) |
+| 운영 | **미적용 · 미접근.** 16a+16b 묶음 적용은 건별 승인 (`AGENTS.md` §1) |
