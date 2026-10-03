@@ -218,7 +218,7 @@
 | **16a** | `docs/contracts/C1-REWARD-TABLES.md` | 공통 | **`reward_catalog.listed` + 읽기 정책 교체** 반영 `[사용자 승인, 결정 1]` | §2·§3 DDL·RPC 계약 불변. 통합 성격이라 16a 커밋에 포함 |
 | **16a** | `public.reward_catalog` (DB 객체, 17b migration 소유) | 17b | **새 migration**에서 `listed` 컬럼 추가 · 정책 1개 drop+create | `20261001090000` **파일 무편집** (R5). 기존 행 값 불변(`listed` default `true`) |
 | **16a** | `docs/agent/CURRENT.md` | 통합 | 16a 완료 상자 1개 + 기준 커밋 | 이 저장소에서 직접 커밋하는 세션이라 `AGENTS.md` §7의 갱신 의무를 따른다 (worktree 트랙 아님) |
-| **16b** (로컬 완료 2026-10-03) | `game_records` · `match_history` · `game_rooms` AFTER 트리거 추가 · `user_profile_equipment` AFTER 트리거 | 15c 선례 | **트리거 추가만** — 실측 그대로, 범위 확장 없음. finalizer·17b RPC 본문 무편집. 그룹은 15c와 같은 **런타임 예외** | 이름이 `trg_grant_*`보다 뒤에 정렬(`trg_record_*`, pgTAP 고정). 감쇠는 원장 대신 같은 규칙으로 재계산 (`16-HANDOFF.md` §7.2 ⑧) |
+| **16b** (운영 적용 2026-10-03) | `game_records` · `match_history` · `game_rooms` AFTER 트리거 추가 · `user_profile_equipment` AFTER 트리거 | 15c 선례 | **트리거 추가만** — 실측 그대로, 범위 확장 없음. finalizer·17b RPC 본문 무편집. 그룹은 15c와 같은 **런타임 예외** | 이름이 `trg_grant_*`보다 뒤에 정렬(`trg_record_*`, pgTAP 고정). 감쇠는 원장 대신 같은 규칙으로 재계산 (`16-HANDOFF.md` §7.2 ⑧) |
 | **16b** | `supabase/tests/xp_result_grants_v1.sql` · `supabase/tests/achievements_rewards_v1.sql` | 15c · 16a | 단언 2곳: 15c `pg_temp.total`이 업적 XP를 뺀다 · 16a inert 단언이 `trg_record_*` 4개를 허용 | 다른 단언 무편집 |
 | **16c** (예정) | `components/SuccessOverlay.jsx`(B) · `pages/MultiplayerGamePage.jsx`(C) · `pages/ProfilePage.jsx`(A) · `App.jsx`(B 라우트 1줄) · `appStyles.js`(A, import 1줄) | A·B·C | 결과 reveal 1블록 · 프로필 요약 1블록 · 업적 화면 라우트 | 결과 판정·복구 경로·기존 prop 계약 불변. **`GroupGamePage.jsx`는 동결 유지** (그룹 reveal 제외 — X2와 같은 조건) |
 
