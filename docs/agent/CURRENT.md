@@ -1,9 +1,9 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-03** (16c 완료 · 16b-r 스크립트 — 상자 (15))
-기준 커밋: **`301c1db`** (`feat(16b-r): retroactive achievement scripts for the Supabase SQL Editor (not run)`) — 이번 16c·16b-r 문서 커밋의 부모.
+갱신 날짜: **2026-10-03** (16c 완료 · 16b-r 스크립트 — 상자 (15) · 16d 판정 기록 `16-HANDOFF.md` §10)
+기준 커밋: **`275a693`** (`docs: record 16c and 16b-r prep — rulings, structure, verification, retro exclusion limits`) — 이번 16d 판정 기록 커밋의 부모.
 마지막 **앱 코드** 커밋: **`ecbf727`** (16c, **미배포 — `main` push는 사용자**) · 그 앞 운영 배포된 앱 코드 `21c2afb` (14c-3) · 마지막 **migration** 커밋: **`e122bfd`** (16b-2, `20261002100000_achievement_triggers_v1.sql`) — **운영 적용 완료** `[사용자 실행·확인, 2026-10-03]` · 그 앞 `a8eda5a`(16a-1, `20261002090000`)도 같은 적용에서 **운영 적용 완료**. **저장소/로컬 migration 23 = 운영 23, 차이 0** (운영 23은 사용자 보고, 이번 세션은 운영 DB 미접근). 마지막 운영 배포(`main` push)는 `34af554`(14c, #11) — 16a·16b는 DB 전용이라 main push가 없었다. 마지막 운영 migration은 `20261002100000`이다. 이번 갱신은 **16a·16b 운영 적용 기록**이다 — 앱 코드 변경 없음.
-이전 기준: `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
+이전 기준: `301c1db` · `932b46a` · `d2c139a` · `b1950d5` · `34af554` · `b99b066` · `bc2b46f` · `afd0e7b` · `7f748e6` · `ee99197` · `dc388d9` · `29eb3e6` · `dee9497` · `ffabdc0` · `50485ef` · `db33aa8` · `4719100` · `3693dd7` · `2b0ea54` · `ec7b6fa` · `47577ae` · `d12ce5e` · `518654c` · `fd6f916` · `4c35aa7` · `7e90b7a` · `09b684a`
 브랜치: `feat/group-final-gaps` — **`origin/main = 34af554` · `origin/feat/group-final-gaps = 1ff6a24`** (2026-10-03, 이번 커밋들 전 `git ls-remote` `[산출물]`). 16c `ecbf727` · 16b-r `301c1db` · 이번 문서 커밋을 feat에 push한다 `[사용자 승인]`. **`main` push는 사용자가 한다** (16c는 DB 변경 없음).
 
 > # ⚑ 2026-10-03 (15) — **16c 완료 (feat, 미배포) · 16b-r 소급 스크립트 (SQL Editor용, 운영 미실행)** `[산출물]`
@@ -19,6 +19,8 @@
 > | 16b-r | SQL Editor용 `scripts/16b-r-retro-dryrun.sql` · `-apply.sql` (본문 동일 — `tests/retroScripts.test.js`). 1:1·그룹은 이동 이벤트 있는 결과만 근거(판정 8 확장, 제외 수는 보고에 따로 — 최종 확정은 운영 수치 후). 로컬 fixture **해금 26 · XP 780 · 제외 1:1 7·그룹 1 · apply = dry-run · 재실행 0 (멱등)** · 143명 규모 4.6초. 제외 규칙의 한계 `16-HANDOFF.md` §9.4. 운영 미실행 |
 >
 > **다음:** `main` push(사용자) → 운영 확인 → 16b-r 운영 dry-run(SQL Editor) → 제외 규칙 최종 확정 → apply(건별 승인).
+>
+> **16d 판정 5건 기록 (2026-10-03)** `[사용자 결정]` — 배지 kind 폐지 ((a) kind 갱신, 11개 → 아이콘 7 · 칭호 4) · 순서 16b-r apply → 16d · 프레임 I/II/III/special과 경로 색상은 확정 팔레트 5색 기준 · 1:1은 승자 카드에 완주 효과만 · 히든 아이콘 불투명 파일명. 전문 **`16-HANDOFF.md` §10.** 나머지 16d-0(TRACKS·계약 정정·`DESIGN-SYSTEM.md`)은 16b-r apply 후.
 
 > # ⚑ 2026-10-03 (14) — **16a·16b 운영 적용 완료 — 업적 지급 시작. main push 없음 (DB 전용)** `[사용자 실행·확인]`
 >

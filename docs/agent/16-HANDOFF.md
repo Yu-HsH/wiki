@@ -1,6 +1,6 @@
 # 16 업적·보상 — 판정과 인계
 
-작성: 2026-10-02 · 16b 추가 2026-10-03 (§7) · 16c·16b-r 준비 추가 2026-10-03 (§8·§9) · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
+작성: 2026-10-02 · 16b 추가 2026-10-03 (§7) · 16c·16b-r 준비 추가 2026-10-03 (§8·§9) · 16d 판정 2026-10-03 (§10) · 브랜치 `feat/group-final-gaps` · 착수 기준 `819617a`
 **이 문서는 패킷 16의 판정·범위·보상 할당표의 단일 기준이다.** 트랙 경계와 수용조건은 `TRACKS.md` §8-16,
 소유권 예외는 `TRACKS.md` §1.1-e. 근거 문서는 `wiki-race-2.0-handoff/code/16-ACHIEVEMENTS-REWARDS.md`(이하 16) ·
 `01-CONFIRMED-SPEC.md` §9·§10 · `docs/contracts/C1-REWARD-TABLES.md` · `C2-XP-LEDGER.md`.
@@ -331,3 +331,64 @@ G5: 히든 이름·조건·보상명은 JS에 없다 — `tests/achievementDispl
 - **효과 없음:** 그 scope에 근거 결과가 하나라도 있는 사용자의 카운터 값에는 제외된 결과도 들어간다. 그리고 **소급과 무관하게, 그 사용자가 다음에 1:1·그룹을 한 판 하면 16b 트리거가 제외된 결과까지 다시 센다**
 
 보고의 `그중 16b 누적 판정기가 원천에서 여전히 세는 결과`가 그 크기다. 0이거나 작으면 그대로 확정하면 된다. 크고 완전히 배제하려면 판정기에 이동 이벤트 조건을 넣는 **forward migration**이 필요하다(판정 11 — 새 판정 방식은 migration) — 그때는 실시간 판정도 함께 바뀐다.
+
+---
+
+## 10. 16d — 배지 폐지 · 프레임 단계 · 경기 표현 판정 `[사용자 결정, 2026-10-03]`
+
+**기록만이다 — 구현·나머지 16d-0(TRACKS §1.1-e 등재 · C1·C5·spec §10 정정 · GAPS §4.5.1 등재 · `docs/design/DESIGN-SYSTEM.md`)은 16b-r apply 후.**
+배경 결정: **배지 kind를 폐지한다.** 카드 = 아이콘(그림) · 칭호(글) · 프레임(테두리) · 배경(질감). 근거 — 칭호와 배지가 같은 의미를 중복하고, 그림 배지는 아이콘과 겹친다. 아이콘은 랭킹(COMPACT)에 보이므로 업적 보상이 남에게 보이게 된다.
+"대표 배지" 수는 저장소 전 문서에서 **최대 3**이었다(1개 결정 기록은 없음) — 정정은 "3 → 폐지"로 적는다. 배경 패턴은 디자인 세션.
+
+### 10.1 판정 5건
+
+| # | 항목 | 판정 |
+|:-:|---|---|
+| 1 | 전환 방식 · 순서 | **(a) kind 갱신** — 배지 보상 행의 `kind`·`display_name`·`asset_ref`만 바꾼다. `reward_id` 불변(16 §1), 보유 인벤토리 행 그대로, 재지급 0. **순서: 16b-r apply → 16d** — (a)는 소급이 먼저 지급한 행도 같은 ID라 함께 전환되므로 순서가 정확성에 영향이 없다. 사이 기간 비용(소급 해금이 "배지 「…」"로 보임 · 그 사이 장착된 배지는 16d가 해제)은 아래 §10.3 쿼리로 센다 |
+| 2 | 전환표 | **승인 — 아이콘 7 · 칭호 4** (§10.2). 발명 표시명 2개(「매일의 탐험가」·「함께하는 탐험가」)는 GAPS §4.5.1에 등재. **§3.3 ③의 "배지가 12개다"는 틀렸다 — 시드는 11개(공개 7 · 히든 4)** |
+| 3 | 프레임 · 경로 색상 | **확정 디자인 시스템 기준** (디자인 작업에서 확정, 저장소 미등재 → 16d-0에서 `docs/design/DESIGN-SYSTEM.md` 최소 등재, 디자인 세션이 확장). 팔레트 5색 — 파랑 `#2E6DB4`(링크·현재·플레이) · 보라 `#6E56C9`(방문·기록) · 금 `#B98A12`(목표·승리) · 청록 `#1D8B81`(발견·위키) · 산호 `#DE5F49`(반응·경고). 규칙: **테두리·노드·아이콘·경로에만, 배경 채움 금지.** 종이 톤 바탕. Pretendard Variable. **프레임 I: 1px 잉크 링 · II: 이중 링 · III: 금 링 · special(히든): 청록 점선 회전, 모션 감소 시 정적.** 경로 색상 토큰 `path:<색>`은 팔레트 5색 안에서 |
+| 4 | 결과 화면 경기 표현 | **싱글:** 경로 타임라인에 경로 색상 + 완주 효과. **1:1: 승자 카드에 완주 효과만, 경로 줄 추가 안 함** (1:1 결과 카드에는 경로 목록이 없다 — `MultiplayerGamePage.jsx` 결과 카드). 그룹은 동결 — 제외. 경로 효과(갈림길)는 판정 7 그대로 범위 밖 |
+| 5 | 히든 아이콘 SVG | **불투명 파일명 + 일반 `<title>`** — `public/`은 누구나 받을 수 있으므로 히든 보상 이름이 파일 경로·SVG에 드러나지 않게. 화면 alt는 서버 표시명 |
+
+### 10.2 전환표 (판정 2)
+
+| `reward_id` (불변) | 지금 (배지) | → kind | 새 표시명 |
+|---|---|---|---|
+| `badge_first_arrival` | 첫 도착 | 프로필 아이콘 | 「첫 도착」 |
+| `badge_daily_explorer_1` | 오늘도 탐험 I | 칭호 | 「오늘도 탐험」 |
+| `badge_daily_explorer_2` | 오늘도 탐험 II | 칭호 | 「매일의 탐험가」 **발명** |
+| `badge_duel_pure` | 순수한 승부 | 칭호 | 「순수한 승부」 |
+| `badge_duel_defense` | 방패 | 프로필 아이콘 | 「방패」 |
+| `badge_group_together_1` | 함께하는 탐험 I | 칭호 | 「함께하는 탐험가」 **발명** |
+| `badge_group_together_2` | 함께하는 탐험 II | 프로필 아이콘 | 「함께하는 탐험」 |
+| `badge_one_step_enough` (히든) | 한 칸이면 충분해 | 프로필 아이콘 | 그대로 (같은 번들에 같은 이름 칭호) |
+| `badge_signpost` (히든) | 이정표 | 프로필 아이콘 | 그대로 |
+| `badge_shared_document` (히든) | 겹친 문서 | 프로필 아이콘 | 그대로 |
+| `badge_simultaneous_arrival` (히든) | 동시 도착 | 프로필 아이콘 | 그대로 |
+
+규칙: 상징 그림 → 아이콘, 이름을 부르는 것 → 칭호, 같은 번들 안 같은 이름은 아이콘. 획득형 아이콘은 이 7개 + 기존 `icon_daily_explorer`·`icon_dice_globe`(아트 없음) = **임시 SVG 9개** (기본 6종과 같은 형식 — `viewBox 0 0 64 64`, 판정 5).
+`reward_id` 접두사 `badge_`와 kind가 어긋나는 것은 (a)의 알려진 비용이다 — 사용자에게는 보이지 않는다.
+
+### 10.3 구현 계획 (16b-r apply 후)
+
+| 단계 | 내용 | 배포 |
+|---|---|---|
+| 16d-0 | TRACKS §1.1-e 16d 행(R10) · C1(§1·§3·§5) · C5(§2·§3.5·§4·열린 질문 ③) · spec §10 정정(C3 §0 방식 — 정정 표, 옛 값 취소선) · GAPS §4.5.1 · `docs/design/DESIGN-SYSTEM.md` · §3 표의 배지 행 정정 | 문서 |
+| 16d-1 | 프론트 — SVG 9 · 카드 슬롯 4(편집기 7행 → 4행) · `orderedBadges`·`MAX_BADGES`·`.pcard-badge*` 제거 · `REWARD_KIND_LABELS`에서 `badge` 제거 · 편집기 "경기 표현"(완주 효과·경로 색상) · `asset_ref` 토큰 렌더(프레임 `frame:tier-1..3`·`frame:special`, 완주 `finish:…`, 경로 `path:<색>`) · 결과 화면(판정 4). **옛 DB 상태·새 DB 상태 둘 다에서 동작** — migration이 `asset_ref`에 SVG 경로를 넣기 전에 파일이 있어야 한다 | `main` push |
+| 16d-2 | forward migration — 11행 kind·표시명·`asset_ref` · `slot = 'badge'` 장착 행 삭제(자동 재장착 없음) · `reward_catalog` kind CHECK와 장착 slot CHECK에서 `badge` 제거, `slot_index`는 항상 1(컬럼·RPC 인자는 호환용으로 유지) · `equip_profile_reward_v1` 인덱스 규칙 · `profile_cards_v1`의 `badges` 키는 `[]` 상수로 유지(옛 프론트 호환) · 「준비된 탐험가」 `params.any_of = ["title"]` + 조건 문구 "프로필 아이콘 선택 + 대표 칭호 장착"(받은 해금 유효, 판정기 함수 기본값은 params가 덮으므로 무수정) · 프레임·완주·경로 `asset_ref` 토큰 · pgTAP(`c1_reward_tables_v1`·`achievements_rewards_v1`·`achievement_triggers_v1` 배지 단언 정정 + 신규 `badge_retirement_v1`) · JS 테스트(`profileCard`·`profileRewards`, `achievementDisplay`의 kind 목록 출처를 새 migration으로) | 운영 적용 — 건별 승인 |
+
+**G5:** 프레임·효과 단계는 서버 `asset_ref` 토큰으로 구분한다 — 프론트가 `reward_id`로 단계를 정하면 히든 ID(`frame_backlink_return` 등)가 JS에 들어간다.
+
+**운영 배지 보유 현황 (읽기 전용, SQL Editor — 16b-r apply 전·후 1회씩):**
+```sql
+select c.reward_id, c.listed,
+       count(distinct i.user_id) as holders,
+       count(distinct e.user_id) filter (where e.slot = 'badge') as equipped_users,
+       (select count(*) from public.user_profile_equipment where slot = 'badge') as badge_slot_rows_total
+  from public.reward_catalog c
+  left join public.user_reward_inventory i on i.reward_id = c.reward_id
+  left join public.user_profile_equipment e on e.reward_id = c.reward_id
+ where c.kind = 'badge'
+ group by c.reward_id, c.listed
+ order by c.reward_id;
+```
