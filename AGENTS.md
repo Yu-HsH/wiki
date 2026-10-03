@@ -169,6 +169,7 @@
 기존 구현·데이터·마이그레이션·보상 ID를 명시적 근거 없이 삭제하거나 파괴적으로 변환하지 않는다.
 
 - 기존 migration은 append-only로 다룬다. 되돌려 수정하지 않고 forward-only 보정 migration을 추가한다.
+- **새 테이블·시퀀스는 `anon`·`authenticated`에 필요한 권한만 그 migration 안에서 명시 `grant`한다.** 기본 권한에 기대지 않는다 — `public`의 `postgres` 기본 권한은 지금 `arwdDxtm`(테이블)·`rwU`(시퀀스)를 주고 있고, SF-M1(`TRACKS.md` §8-SEC)이 운영에 적용되면 아무것도 주지 않는다. 어느 쪽이든 결과가 migration 본문에 보이게 쓴다 `[사용자 결정, 2026-10-03]`.
 - 확정 스펙에서 제외된 기능이라도 코드 감사 전에는 자동 삭제 대상이 아니다.
 - 운영에서 사용 여부가 확인되지 않은 컬럼·업적 ID·storage object는 삭제·rename하지 않는다.
 - 근거: `01-CONFIRMED-SPEC.md` §5.6, §10, `code/11-REPOSITORY-AUDIT.md` §2.4 보존 원칙,

@@ -1,12 +1,14 @@
 # 병렬 트랙 파일 소유권 — 단일 기준
 
-갱신 날짜: 2026-10-02 (12차) — 이전 2026-10-01 (11차·10차·9차) · 2026-09-30 (8차) · 2026-09-28 (7차) · 2026-09-03 (6차)
+갱신 날짜: 2026-10-03 (13차) — 이전 2026-10-02 (12차) · 2026-10-01 (11차·10차·9차) · 2026-09-30 (8차) · 2026-09-28 (7차) · 2026-09-03 (6차)
 기준 커밋: `34af554` — 이번 14c 배포 기록 커밋의 부모.
 — **원격 재조회 (2026-10-01, 배포 기록 커밋 전): `origin/main = origin/feat/group-final-gaps = 34af554`.** `[산출물]` 이번 문서 커밋은 feature로만 push한다. 현재 판정은 `CURRENT.md`와 §1.1-c다.
 트랙 커밋: `e70c541`(A) · `7a7197e`(B) · `a784d2e`(N2) · 분기점 `ad569f2`
 이전 기준: `eeb7a16` · `527f896` · `b281e01`
 브랜치: `feat/group-final-gaps`
 
+> **13차 갱신 (2026-10-03) — 보안 마무리 착수. 부채 ④ 등재 · 티켓 SF-M1·M2·A1~A3 (§8-SEC).** 판정 `[사용자 결정, 2026-10-03]`: M1 migration 하나 · 기본 권한 변경 포함 · DML 잔재는 M2 · (A) 지금. 이 갱신은 **등재와 로컬 실측만**이다 — 구현 0, 운영 미조회 (`scripts/sec-finish-check-prod.sql`). 위 헤더의 기준 커밋은 11차 기록이며 재측정하지 않았다 — 이 갱신의 문서 기준은 `c0595be`.
+>
 > **12차 갱신 (2026-10-02) — 16 착수, 16a(서버 기반)부터.** 판정 `[사용자 결정, 2026-10-01]`은 §8-16 · `docs/agent/16-HANDOFF.md`.
 > 이 갱신은 **16의 화이트리스트·소유권 예외 등재(R10)** 다 (§1.1-e · §2.4 · §8-16). 분할: **16a** 테이블·카탈로그·지급 파이프라인·읽기 RPC
 > (트리거 없음 — 배포해도 지급 0) → **16b** 사건 연결 → **16b-r** 소급(건별 승인) → **16c** 표시. 위 헤더의 기준 커밋은 11차 기록이며 재측정하지 않았다.
@@ -173,7 +175,7 @@
 | **4** | **16** — 업적·보상 | 14·15·17 전부 소비 (W3) | ~~**착수 (2026-10-02).** 16a → 16b → 16b-r → 16c.~~ → **완료 (2026-10-03)** — 16a · 16b · 16b-r · 16b-f · 16c(main push #12) · 16d(main push #13 + 운영 migration `20261003100000`). 운영 migration 25 = 저장소 25 `[사용자 실행·확인, 2026-10-03]`. 티켓 **§8-16**, 소유권 예외 **§1.1-e**, 기록 `16-HANDOFF.md` |
 
 ~~**티켓은 아직 쓰지 않는다.** 순서만 고정한다.~~ → **14b·14c는 티켓을 썼다 (§8-14b, 2026-09-30 · §8-14c, 2026-10-01).** ~~17b·16은 아직 순서만 고정한다.~~ → **16도 티켓을 쓴다 (§8-16, 2026-10-02).**
-~~남은 구현 트랙: **16.**~~ → **패킷 14~17 구현 트랙 전부 완료 (2026-10-03).** 16은 16a·16b·16b-r·16b-f·16c·16d 전부 운영 반영 `[사용자 실행·확인, 2026-10-03]`. **다음: 보안 마무리 — G2-②(`room_events` INSERT 회수) · 부채 ④ · O2(`game_records` 등 `anon`·`authenticated` `TRUNCATE` 잔여 권한)** `[사용자 결정, 2026-10-03]` — 착수 시 범위·티켓을 이 문서에 새로 적는다. 이하 원문 — 15b·15c·14b·17b는 완료·배포됐다 (14b: push #9 · 17b: push #10, 둘 다 2026-10-01). **14c도 완료·배포됐다 (push #11, 2026-10-01, `34af554`).** 운영 migration 적용·프론트 배포·운영 확인은 `[사용자 실행·확인]`이며 남은 것은 **16**이다.
+~~남은 구현 트랙: **16.**~~ → **패킷 14~17 구현 트랙 전부 완료 (2026-10-03).** 16은 16a·16b·16b-r·16b-f·16c·16d 전부 운영 반영 `[사용자 실행·확인, 2026-10-03]`. **다음: 보안 마무리 — G2-②(`room_events` INSERT 회수) · 부채 ④ · O2(`game_records` 등 `anon`·`authenticated` `TRUNCATE` 잔여 권한)** `[사용자 결정, 2026-10-03]` — ~~착수 시 범위·티켓을 이 문서에 새로 적는다.~~ → **착수 (2026-10-03) — 부채 ④ 정의·티켓 SF-M1·M2·A1~A3은 §8-SEC.** 이하 원문 — 15b·15c·14b·17b는 완료·배포됐다 (14b: push #9 · 17b: push #10, 둘 다 2026-10-01). **14c도 완료·배포됐다 (push #11, 2026-10-01, `34af554`).** 운영 migration 적용·프론트 배포·운영 확인은 `[사용자 실행·확인]`이며 남은 것은 **16**이다.
 
 #### 1.1-d 15b 파일 소유권 예외 — **A·B 소유 파일을 15b가 직접 고쳤다** `[사용자 결정 6, 2026-09-29]`
 
@@ -406,6 +408,9 @@
 | `20261002 10` | **16b** | `20261002100000_achievement_triggers_v1.sql` — 16a 뒤. **확정** (2026-10-03) |
 | `20261003 09` | **16b-f** | `20261003090000_achievement_authority_filter_v1.sql` — 16b 뒤. `private.achievement_value_v1` create or replace만 (2026-10-03 예약) |
 | `20261003 10` | **16d-2** | `20261003100000_badge_retirement_v1.sql` — 16b-f 뒤. 배지 11행 kind·표시명·`asset_ref` · 배지 장착 해제 · CHECK 2개 · 장착 RPC · 카드 빌더 · `준비된 탐험가` params · 토큰 (2026-10-03 예약) |
+| `20261004 09` | **SF-M1** | `20261004090000_sec_finish_db_v1.sql` — 16d-2 뒤 (2026-10-03 예약) |
+| `20261004 10` | **SF-A1** | `20261004100000_duel_players_view_v1.sql` — SF-M1 뒤 (2026-10-03 예약) |
+| 생성 시 | **SF-A3 · SF-M2** | `…_duel_players_rls_v1.sql` · `…_sec_residue_v1.sql` — **생성 시점의 최대보다 큰 값.** 계약은 순서뿐: **A3은 A1 뒤.** `db push`는 적용 이력보다 작은 새 파일을 거부하므로 **파일명 순서 = 운영 적용 순서**가 되게 고른다 |
 
 **파일명은 제안이다. 순서 관계만 계약이다** — 창 블록의 4개는 **적은 순서대로 적용돼야 한다** (§7.2).
 **14c 생성 완료 (2026-10-01, `3d027ba`):** `supabase migration new duel_host_target_v2`로 생성한 신규 파일을
@@ -1283,6 +1288,62 @@ grant execute on function public.ensure_today_daily_challenge() to service_role;
 
 **범위 밖 (16 전체):** 그룹 결과 화면 reveal(X2와 같이 동결) · 남의 프로필 업적 공개 · 경기 화면의 경로/완주/관전 보상 표시 ·
 보류 업적 8개(`16-HANDOFF.md` §2) · 운영 적용과 `main` push(별건 승인, `AGENTS.md` §1·§1.1).
+
+### 8-SEC. 보안 마무리 — 부채 ④ · G2-② · O2 — **착수 (2026-10-03). 등재·실측만, 구현 0**
+
+**판정 `[사용자 결정, 2026-10-03]`:** ① M1은 **migration 하나** — 섹션·pgTAP은 항목별 ② **기본 권한 변경 포함** + "새 테이블은 필요한 권한을 명시 grant" 규칙 등재 (`AGENTS.md` §4) ③ DML 잔재·죽은 정책은 **이 트랙 M2** — 착수 전 테이블별 유지/회수 표 ④ **(A) 지금.**
+실측 기준: 로컬 스택 `wiki-packet13-r2-clean158`, migration 25개(최대 `20261003100000`) = 저장소, 기준 커밋 `c0595be`, 2026-10-03 `[산출물]`. **운영은 미조회** — 확인 쿼리 `scripts/sec-finish-check-prod.sql`(SELECT만, Q1~Q10, 로컬 실행 오류 0).
+
+#### 8-SEC-① 부채 ④ 정의 — **1:1 상대 전체 경로가 경기 중 브라우저에 도달한다** (2026-09-30 실측, 이번에 등재)
+
+규칙: 확정 스펙 §4.1 "상대 현재 문서와 이동 횟수는 경기 중 공개한다 · **상대 전체 경로는 경기 종료 후 공개한다**". **UI만 지킨다** — 1:1 화면은 상대의 `current_title`·`move_count`·`has_finished`만 그린다 (`MultiplayerGamePage.jsx:1802-1837`) `[코드]`. 데이터는 세 경로로 샌다:
+
+| 경로 | 실측 `[코드·산출물]` | 닫는 방법 |
+|---|---|---|
+| **(A) `room_players`** | SELECT 정책 `is_room_member(room_id)`(baseline `:1105`) · publication 컬럼 목록 없음 = 37컬럼 전부(`path_titles`·`path_page_ids`·`path_revision_ids` 포함) · 프론트 `select("*")` (`multiplayerService.js:44-52`, 그룹 `groupMultiplayerService.js:73`). **Realtime은 컬럼 권한을 본다** (`realtime.apply_rls`의 `has_column_privilege`) | 1:1 진행 중 상대 행을 정책으로 숨기고 마스킹 RPC로 읽는다 — SF-A1~A3. **컬럼 권한안은 기각** — 그룹 `select("*")`와 관전(`GroupGamePage:1290`, 다른 참가자 `path_titles`)이 깨지고 둘 다 동결 파일이다 (§2.1) |
+| **(B) RPC 반환** | `apply_duel_move_v2`(유일 정의 `20260814092000:151`) · `use_duel_item_v3`(유일 정의 `20260904090000:1036`)가 `'opponent', to_jsonb(v_opponent)`. **14c 이후 변경 없음.** 다른 public RPC는 상대 행을 반환하지 않는다 (`leave_duel_room_v2`는 `room`만) | 반환에서 `path_*` 3키 제거 — SF-M1. 프론트 `syncAfterItemUse`(`MultiplayerGamePage.jsx:985-997`)는 `fresh \|\| player` **교체** → `{...player, ...fresh}` **병합** (SF-A2). 경기 중 상대 경로를 읽는 코드가 없어 **DB 먼저여도 무해** |
+| **(C) `game_move_events`** | 정책 "Members can read move events" (`20260814090000:280-291`) — 1:1은 `game_id = room_id`라 상대 이동 행 전부. **프론트는 읽지 않는다** (grep 0) | 본인 행만 (`actor_user_id = auth.uid()`) — SF-M1 |
+
+**(C) 강화의 영향 — 없다** `[산출물]`. `game_move_events`를 읽는 함수 9개(16b·16b-f 판정기 `private.achievement_game_path_v1`·`achievement_record_visits_v1`·`achievement_value_v1` 포함)가 **전부 `security definer` · 소유자 `postgres` = 테이블 소유자 · `relforcerowsecurity = f`** 라 RLS를 거치지 않는다. `scripts/16b-f-*` 확인 쿼리는 SQL editor(postgres)에서 돈다.
+**(A)를 닫기 전까지 부채 ④는 열려 있다** — (B)·(C)는 중복 경로를 닫을 뿐이고 상대는 REST 한 번으로 경로를 읽는다.
+
+#### 8-SEC-② G2-② 실측 — 회수 조건 충족 `[코드·산출물, 2026-10-03]`
+
+- **클라이언트 INSERT 0** — 프론트의 `room_events` 접근은 Realtime 구독 2곳(`MultiplayerGamePage.jsx:1466`·`GroupGamePage.jsx:752`)과 그룹 이모지 SELECT(`groupMultiplayerService.js:238`)뿐. §8-C 수용조건 ② 유지
+- **INSERT하는 함수 8개 전부 `security definer`** — `activate_group_room_game` · `apply_group_move_v2` · `leave_group_player` · `send_group_spectator_emoji_v13` · `set_group_ready` · `start_group_room_game` · `submit_group_target` · `use_duel_item_v3`. 권한 회수가 RPC를 깨지 않는다
+- 남은 것: 정책 `Duel players can insert their own room events` · **anon·authenticated 모두** `INSERT,UPDATE,DELETE` (baseline `GRANT ALL :1473-1474`)
+- **깨지는 테스트 1건:** `supabase/tests/group_security_phase2c.sql:356` — 기대 메시지가 RLS 위반 → `permission denied for table room_events`로 바뀐다
+
+#### 8-SEC-③ O2 실측 — `game_records`만이 아니다 `[산출물]`
+
+- **`TRUNCATE`·`REFERENCES`·`TRIGGER` 잔재 8테이블 × anon·authenticated:** `analytics_events` · `daily_challenge_pool` · `daily_challenges` · `game_records` · `match_history` · `picked` · `profiles` · `target_candidates`. **`TRUNCATE`는 RLS를 타지 않는다** (PostgREST로 못 쓸 뿐)
+- **원인 — 기본 권한:** `pg_default_acl`에서 `postgres` 역할의 `public` 기본값이 anon·authenticated에 테이블 `arwdDxtm` · 시퀀스 `rwU` · 함수 `X`. 최근 테이블이 SELECT만 갖는 것은 각 migration이 명시 회수했기 때문이다
+- 로컬 트랜잭션 안에서 `revoke truncate, references, trigger on all tables in schema public` 후 롤백 실측: 컬럼 단위 REFERENCES 잔재도 **0**이 된다
+
+#### 8-SEC-④ M2 후보 — **착수 전 유지/회수 표를 먼저 쓴다** (표는 M2 착수 시)
+
+| 대상 | 실측 | 판단 전에 볼 것 |
+|---|---|---|
+| `analytics_events` anon·authenticated `INSERT,UPDATE,DELETE` | INSERT 정책 `{public}` `with check true` | **게스트 이벤트 수집 의도일 수 있다** — `services/analyticsService.js:35` 호출 경로·게스트 여부. UPDATE·DELETE는 정책 없음 |
+| `picked` · `target_candidates` · `daily_challenge_pool` · `daily_challenges` DML | 쓰기 정책 없음 (`daily_challenges`·`target_candidates`는 SELECT 정책만) | `services/targetService.js:48` `.update(`가 0행 갱신 중인지 |
+| `profiles` anon·authenticated `INSERT,DELETE` (+ authenticated 컬럼 UPDATE 3) | INSERT·DELETE 정책 없음 · UPDATE 정책 `{public}`·`{authenticated}` 중복 | `ProfilePage.jsx:150` 닉네임 갱신 경로 |
+| 죽은 정책 | `room_players` INSERT·UPDATE·DELETE(1:1) · `match_history` INSERT · `game_records` INSERT 2개 — 테이블 권한이 없어 발동 불가 | 삭제는 §4 감사 원칙 대상 — 근거 기록 후 |
+| `target_candidates_id_seq` anon·authenticated `rwU` | — | 테이블 INSERT 회수와 함께 |
+| anon 실행 가능 함수 4개 | `ensure_today_daily_challenge` · `level_from_total_xp` · `profile_level` · `xp_to_next_level` | §7.9 ACL 절차와의 관계 |
+
+#### 8-SEC-⑤ 티켓
+
+| 티켓 | 범위 | 배포 단위 | 수용조건 |
+|---|---|---|---|
+| **SF-M1** `sec_finish_db_v1` | 섹션 ① (C) 정책 → `actor_user_id = auth.uid()` ② (B) 두 RPC `create or replace`(시그니처 불변, 본문 전체 복사) — `'opponent'`에서 `path_*` 3키 제거 ③ G2-② 정책 drop + `revoke insert, update, delete` (anon은 `select`까지) ④ O2 `revoke truncate, references, trigger on all tables in schema public from anon, authenticated` ⑤ `alter default privileges for role postgres in schema public revoke all on tables, sequences from anon, authenticated` | **DB 전용 · migration 1개.** 프론트 의존 없음. 백업 → 적용 → Q1~Q10 재실행. 중단 창 없음 | 항목별 pgTAP: 본인 이동 행만·상대 0행 / 반환에 `path_*` 키 없음(이동·아이템) / 클라이언트 INSERT·UPDATE·DELETE 거부 + 이모지·아이템 RPC 정상 / 잔재 권한 0 / 새 테이블 생성 시 anon·authenticated 권한 0 · `phase2c:356` 메시지 정정 · 16b 판정기 회귀 0 · 전체 pgTAP · `npm test` |
+| **SF-M2** 잔재 정리 | §8-SEC-④ | DB 전용 (예상). 표 확정 후 범위 재판정 | 표에 테이블별 유지/회수 + 근거 · 회수 대상 사용 경로 0 |
+| **SF-A1** `duel_players_view_v1` | 추가만: `get_duel_room_players_v1(p_room_id)` (definer, 진행 중이면 상대 행에서 `path_*` 제거) + `room_players` AFTER UPDATE 트리거 → `room_events` 신호 행. **발화 조건은 `current_page_id` · `move_count` · `player_status` 변화** — `progress_version`이 아니다 (아래) | DB, 추가만. 옛 프론트 무영향 | **보고에 착수 전 확인 2건:** ⓐ 1:1 진행 중 `game_rooms.status` 목록 ⓑ 복구 경로가 `fetchRoomPlayers`를 타는지 · 하트비트만으로 신호 0행 |
+| **SF-A2** 프론트 | `multiplayerService.js` `fetchRoomPlayers` → RPC · `MultiplayerGamePage.jsx` 신호 구독 → 재조회 · `syncAfterItemUse` 병합 | **프론트, C 소유 파일만.** 그룹 동결 파일 무편집 | `npm test` · build · 2세션 스모크(상대 현재 문서·이동 횟수 갱신, RESULT에서 경로 공개) · `main` push 후 `git ls-remote`로 반영 확인 |
+| **SF-A3** `duel_players_rls_v1` | `room_players` SELECT 정책 — 1:1 진행 중 상대 행 숨김, 그룹은 모드 조건으로 제외 | DB | **A2 `main` push 후 하루 간격 권장** (열린 옛 탭) `[사용자 결정]`. 일찍 적용하면 진행 중 경기의 상대 표시가 멈춘다(데이터 손실 아님). 롤백 = 정책 복원 · pgTAP: 진행 중 상대 0행, 종료 후 공개, 그룹 불변 |
+
+**순서:** SF-M1 → SF-A1 → SF-A2(`main` push) → **하루** → SF-A3. SF-M2는 표 확정 후. **운영 적용·`main` push는 단계마다 건별 승인** (`AGENTS.md` §1·§1.1).
+
+**A1 발화 조건의 근거 — 하트비트가 이동 없이 `progress_version`을 올린다** `[코드, 로컬 실측]`. `heartbeat_duel_v2`가 `heartbeat_at`·`last_seen_at` 갱신과 함께 `progress_version = progress_version + 1` (로컬 함수 본문; 정의 `20260814091000` → `20260904090000`). `initialize_duel_player_v2`·`finalize_duel_if_expired`도 같은 증가를 가진다. 등재된 부채 "heartbeat OCC"의 원문은 `docs/`·`wiki-race-2.0-handoff/`에서 찾지 못했다 — **확인 필요** (§5).
 
 ## 9. 문서 불일치 — **5건. 3건을 고쳤다** (①은 2026-09-03에 다시 정정됐다)
 
