@@ -41,16 +41,23 @@ export async function joinRoom(roomId, userId) {
     return normalizeRpcRow(data);
 }
 
+/**
+ * 1:1 참가자 행. `get_duel_room_players_v1`이 진행 중(`starting`·`playing`)이면
+ * 상대 행에서 경로(`path_titles`·`path_page_ids`·`path_revision_ids`)를 빼고 준다 —
+ * 스펙 §4.1 "상대 전체 경로는 경기 종료 후 공개한다" (부채 ④, `TRACKS.md` §8-SEC).
+ * 형태는 예전 `select("*")`와 같은 행 배열, 같은 순서다. 호출처는 그대로 둔다.
+ */
 export async function fetchRoomPlayers(roomId) {
     requireSupabase();
-    const { data, error } = await supabase
-        .from("room_players")
-        .select("*")
-        .eq("room_id", roomId)
-        .order("created_at", { ascending: true });
+    const { data, error } = await supabase.rpc("get_duel_room_players_v1", {
+        p_room_id: roomId,
+    });
     if (error) throw error;
-    return data ?? [];
+    return Array.isArray(data) ? data : [];
 }
+
+/** 상대 진행 신호 — 상대 행 realtime이 가려진 뒤의 재조회 계기 (SF-A1 트리거). */
+export const DUEL_PROGRESS_EVENT_TYPE = "duel_progress";
 
 export async function fetchRoom(roomId) {
     requireSupabase();

@@ -49,6 +49,14 @@ export default function RoomPage() {
   const [savingTarget, setSavingTarget] = useState(false);
   const [targetSaveFailed, setTargetSaveFailed] = useState(false);
   const lobbyActionRef = useRef(false);
+  // 참가자 읽기 세대. 이벤트마다 다시 읽으므로 응답이 순서를 바꿔 도착할 수 있다 —
+  // 마지막에 시작한 읽기만 화면에 쓴다 (SF-A2: RPC 읽기가 그 창을 넓혔다).
+  const playersReadRef = useRef(0);
+  const readLatestPlayers = async () => {
+    const readId = ++playersReadRef.current;
+    const rows = await fetchRoomPlayers(roomId);
+    return readId === playersReadRef.current ? rows : null;
+  };
 
   // 시작 버튼 로딩
   const [starting, setStarting] = useState(false);
@@ -132,8 +140,8 @@ export default function RoomPage() {
         },
         async () => {
           try {
-            const latestPlayers = await fetchRoomPlayers(roomId);
-            setPlayers(latestPlayers);
+            const latestPlayers = await readLatestPlayers();
+            if (latestPlayers) setPlayers(latestPlayers);
           } catch (error) {
             console.error("room_players realtime refresh failed:", error);
           }
@@ -145,10 +153,10 @@ export default function RoomPage() {
         // subscription. Refresh once when connected (also on reconnect).
         try {
           const [latestRoom, latestPlayers] = await Promise.all([
-            fetchRoom(roomId), fetchRoomPlayers(roomId),
+            fetchRoom(roomId), readLatestPlayers(),
           ]);
           setRoom(latestRoom);
-          setPlayers(latestPlayers);
+          if (latestPlayers) setPlayers(latestPlayers);
         } catch (error) {
           console.error("room subscription refresh failed:", error);
         }

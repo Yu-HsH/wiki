@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   fetchRoom,
   fetchRoomPlayers,
+  DUEL_PROGRESS_EVENT_TYPE,
   initializeMyGameProgress,
   applyDuelMoveV2,
   heartbeatDuel,
@@ -989,13 +990,37 @@ export default function MultiplayerGamePage() {
       (row) => row?.user_id
     );
     if (authoritative.length > 0) {
+      // 병합이다 — 응답의 상대 행에는 경로 키가 없다 (SF-M1, 부채 ④).
       setPlayers((prev) => prev.map((player) => {
         const fresh = authoritative.find((row) => row.user_id === player.user_id);
-        return fresh || player;
+        return fresh ? { ...player, ...fresh } : player;
       }));
     }
 
     await applyMyAuthoritativeRow(outcome.player);
+  };
+
+  /**
+   * 참가자 재조회 — 상대 진행 신호와 하트비트 주기에서 부른다.
+   *
+   * SF-A3 이후 상대 행의 `room_players` realtime은 오지 않는다. 지금까지 10초 주기의
+   * 상대 행 갱신은 **상대 하트비트가 만든 그 이벤트**였다 (부채 D3 — 하트비트가
+   * `progress_version`을 올린다). 그 자리를 신호(`duel_progress`)와 이 주기가 맡는다.
+   *
+   * 늦게 도착한 응답이 더 새로운 행을 덮지 않도록 행마다 버전을 본다.
+   */
+  const refreshPlayersFromServer = async () => {
+    if (!roomId) return;
+    try {
+      const latestPlayers = await fetchRoomPlayers(roomId);
+      setPlayers((prev) => latestPlayers.map((row) => {
+        const known = prev.find((player) => player.user_id === row.user_id);
+        if (known && Number(known.progress_version) > Number(row.progress_version)) return known;
+        return known ? { ...known, ...row } : row;
+      }));
+    } catch (error) {
+      console.warn("duel players refresh failed:", error);
+    }
   };
 
   /**
@@ -1384,6 +1409,12 @@ export default function MultiplayerGamePage() {
       return;
     }
 
+    // 행의 `user_id`는 프로필이 없으면 비어 있다 — 누구의 신호인지는 payload가 말한다.
+    if (eventType === DUEL_PROGRESS_EVENT_TYPE) {
+      if (payload.userId !== user?.id) await refreshPlayersFromServer();
+      return;
+    }
+
     /*
      * 아래 셋만 남는다. **미니게임은 이 버전에서 보내지 않지만 받기는 한다** —
      * 구버전 번들이 아직 그 이벤트를 쏠 수 있고, 받는 쪽이 없으면 상대 화면에서
@@ -1546,6 +1577,8 @@ export default function MultiplayerGamePage() {
       } catch (error) {
         console.warn("duel heartbeat failed:", error);
       }
+      // 신호를 하나 놓쳐도 10초 안에 상대 표시가 따라온다 (`refreshPlayersFromServer`).
+      await refreshPlayersFromServer();
     };
 
     void sendHeartbeat();
