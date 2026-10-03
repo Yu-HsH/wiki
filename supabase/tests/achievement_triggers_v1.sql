@@ -244,7 +244,7 @@ $$;
 create function pg_temp.match_of(p_room uuid) returns uuid language sql
 as $$ select id from public.match_history where room_id = p_room $$;
 
--- An earlier finished duel of the pair at p_at. Returns the room id.
+-- An earlier finished duel of the pair at p_at, with one move event. Returns the room id.
 create function pg_temp.prior_room(p_winner uuid, p_loser uuid, p_at timestamptz,
                                    p_status text default 'completed', p_use_items boolean default false)
 returns uuid language plpgsql as $$
@@ -259,6 +259,13 @@ begin
     p_use_items, p_at - interval '1 minute', p_at,
     case p_status when 'completed' then 'normal_finish' else p_status end
   );
+  -- 16b-f: one move event, so the room looks like a server-authoritative match
+  -- (1:1 cumulative evaluators count only rooms with move events).
+  insert into public.game_move_events (scope, game_id, actor_user_id, affected_user_id, request_id, correlation_id,
+                                       event_type, from_page_id, to_page_id, move_delta, version_before, version_after,
+                                       server_timestamp)
+  values ('duel', v_room, p_winner, p_winner, gen_random_uuid(), gen_random_uuid(),
+          'NORMAL_LINK', 'b16-f', 'b16-t', 1, 0, 1, p_at - interval '30 seconds');
   insert into public.match_history (
     room_id, winner_user_id, loser_user_id, duration_seconds, result_status, result_reason, finalized_at
   ) values (
