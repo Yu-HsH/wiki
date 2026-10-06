@@ -1,23 +1,48 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-06** (선택적 커밋 3/4)
-기준 커밋: **`7730ab5`** — 이번 상태 갱신 커밋의 부모.
+갱신 날짜: **2026-10-06** (선택적 커밋 4/4)
+기준 커밋: **`1e4cc46`** — 이번 상태 갱신 커밋의 부모.
 브랜치: `feat/group-final-gaps`. 원격 ref·운영 상태는 이번 세션에서 재조회하지 않았다.
 
 ## 최신 상태 — 선택적 커밋 정리
 
-Security/M2와 Single은 앞선 커밋에 포함됐다. 이번 커밋에는 본인 Realtime·마스킹 RPC 경계, 인증된 random_teleport와 원자적 이동/소비, FORCED_LINK 보정, 듀얼/그룹 결과 XP·업적·F5·시간 fallback·모바일 스크롤과 관련 테스트를 포함한다. 검증 문서·재현 스크립트는 다음 문서 커밋 대상이다.
+로컬 출시 판정 **A. 로컬 출시 검증 통과**. 제품 패킷 커밋 완료, 이번 문서 커밋으로 선택적 커밋 정리를 완료한다. push·운영 DB 접근/적용·Edge/Vercel 배포는 수행하지 않았다. **다음 단계: 운영 배포 준비 — feature branch 백업 push와 remote/production 상태 점검은 별도 승인 후 수행한다.**
 
-검증 기준: e4fb483 + 2026-10-06 전체 통합 작업 트리의 기존 로컬 출시 검증을 근거로 분할한다. 이 중간 커밋 자체의 전체 QA를 재실행한 것으로 표시하지 않는다. 제품 코드 수정 없이 선택적 staging을 진행하며, 최종 커밋 후 npm/build/diff 회귀를 실행한다.
+로컬 검증: clean migration **32/32**, pgTAP **21파일 1262/1262**, npm **511/511**, browser **22/22**, single **8/8**, group concurrency **8/8**, duel concurrency **15/15 · deadlock 0**, production build/diff check **PASS**. 모두 **e4fb483 + 커밋 전 통합 작업 트리, 2026-10-06**의 기존 산출물이며 개별 중간 커밋에서 측정한 수치가 아니다. 제품·테스트·스크립트 내용은 커밋 전후 해시 대조로 동일성을 확인했다. 커밋 후 npm/build/diff 최종 회귀는 실행 후 세션 최종 보고로 남긴다. [출시 검증 기록](RELEASE-VALIDATION-2026-10-06.md).
 
 main push 이력은 변하지 않았다. SF-A3 운영 적용 여부와 실제 운영 권한·환경 변수는 미확인이다. 기존 migration 수정·추가 기능 개발 없음.
 
 이 상태 갱신 이전에 생성된 커밋 [산출물, 2026-10-06]:
 
 ```text
+1e4cc46 | fix: 듀얼 랜덤 이동과 경기 결과 복구 정합성 보완
 7730ab5 | feat: 싱글 탐험 모드와 서버 XP 지급 연결
 1b8aa95 | fix: 불필요한 클라이언트 DB 쓰기 권한 회수
 ```
+
+## 배포 준비 순서와 호환성
+
+별도 승인 세션에서 백업·remote/production SHA·migration 이력·Edge 환경을 확인한다. SF-A3 20261004110000 미적용이면 선행 적용 승인 필요. 신규 DB 순서: 00302 → 00303 → 02015 → 즉시 03000. 이후 변경된 single-run Edge → 신규 duel-random-teleport Edge → frontend production 배포. main push는 건별 승인이다.
+
+02015부터 구 프론트의 teleport 직접 RPC가 RANDOM_DESTINATION_REQUIRED로 거부된다. 03000 이전에는 FORCED_LINK 필터 회귀도 있으므로 점검 창에서 연속 적용한다. 새 프론트 배포 후에도 이미 열린 구 탭은 재접속이 필요하다. 로컬 no-verify-jwt 검증은 운영 gateway 검증을 대신하지 않는다.
+
+롤백은 frontend/Edge/DB를 나누어 판단한다. 02015 이후 구 프론트 롤백은 teleport 완전 복구가 아니다. single-run 구 버전은 guest mode를 legacy로 기록할 수 있다. 신규 teleport에는 이전 버전이 없으므로 수정 배포를 우선한다. DB는 down/delete/reset 대신 승인된 append-only forward fix를 사용하고 결과·이동·소비·XP 원장을 보존한다.
+
+## 2026-10-06 과거 작업 기록 (최신 상태 아님)
+
+아래는 커밋 정리 전 시점의 원문이다. B 판정·미검증·commit 0·다음 작업 서술은 당시 기록이며 위 최신 A 판정으로 대체됐다.
+
+> **2026-10-06 출시 전 통합 검증 재개 완료 — e4fb483 + 미커밋 작업 트리. 판정 A: 로컬 출시 검증 통과.** Docker 정상 · 로컬 clean migration **32/32** · 공식 pgTAP **21파일 1262/1262** · 그룹 동시성 **8/8** · 듀얼 아이템 동시성 **15/15, 교착 0** · 실제 로컬 2세션 SELECT/Realtime/Edge/결과/F5/긴 제목·390px/그룹 스모크 **22/22** · single **8/8** · 최종 npm test **511/511** · production build/diff check exit 0 [산출물, 2026-10-06]. random/custom/daily gameplay XP **20/15/25**, custom/daily 반복 0 · duel **50/25** · group **70/55/45** 실측. FORCED_LINK 해석 가능한 링크 필터를 append-only **20261006003000**으로 복원, 결과 기록 시간 표시 보완, 권한/teleport/코스 fixture 및 TAP preflight 보정. 기존 migration 보존, local reset만 2회. 운영 접근·적용/배포/commit/push 0. target-level 로컬 소스 없음: 기존 fallback 검증, 운영 실물 미조회. **다음: 변경·검증 근거 리뷰 및 commit/배포 준비 패킷 정리**. [전체 출시 검증 기록](RELEASE-VALIDATION-2026-10-06.md). 아래 판정 B는 Docker 복구 전 최초 기록이다.
+
+> **2026-10-06 출시 전 통합 검증 — `e4fb483` + 기존 미커밋 작업 트리. 판정 B: 조건부 통과, 출시 검증 미완료.** `npm test` **509/509** · production build exit 0 · `git diff --check` exit 0 `[산출물, 2026-10-06]`. 프로젝트 CLI `2.114.0` 확인. Docker Desktop 실행 후 Inference manager의 `dockerInference` 파일 접근 오류로 엔진 초기화 실패, 공식 정지/복구 및 소켓 단일 백업 시도도 해결되지 않음. **DB reset·migration 적용·pgTAP·실제 Realtime·2세션/F5/XP 실측·모바일 모두 미실행**. 기존 migration/기능 코드 변경 0 · commit/push/운영 접근·적용 0. Docker 프로세스 정지, 볼륨/설정/소켓 삭제 없음. **다음: Docker 복구 후 로컬 통합 검증 재개**. 파일별 SQL 미실행 및 판정 근거: [출시 전 통합 검증 기록](RELEASE-VALIDATION-2026-10-06.md).
+
+> **2026-10-06 경기 종료 경험 보완 — `e4fb483` + 미커밋 작업 트리.** 그룹 개인 결과에 기존 `ResultXp`/업적 reveal 연결. XP는 `group_match_results.id` 원장, 업적은 방 ID RPC이며 70/55/45/35·미완주 0의 서버 규칙 무변경. 듀얼 정상·기권·연결 유예 만료·무효를 공통 결과 카드로 표시, F5/URL 재진입 및 retired 참가자의 서버 결과 복구 허용. 종료 후 마스킹 RPC로 상대 경로 재조회. reveal은 `seen=true` 해금을 제외하며 지급 XP 합은 서버 결과를 유지한다. 관련 **95/95**, 전체 **509/509**, production build exit 0 `[산출물, 2026-10-06, 기준 e4fb483 + 미커밋 작업 트리]`. **DB/pgTAP·실제 2세션 브라우저/F5·모바일 스모크는 미검증**, Docker 엔진 연결 실패. 이번 패킷 migration/의존성 추가 0 · commit/push/운영 적용 0. X3 결과 UI는 구현·node 검증했으나 브라우저 검증 전 완료 판정 보류. 아래 496/496은 이전 작업 기록이다.
+
+> **2026-10-06 random_teleport 후속 — e4fb483 + 미커밋 작업 트리.** 인증된 Edge의 namespace-0 canonical 임의 문서 선정·현재/목표 제외·기존 RPC 원자적 이동/소비 구현. 관련 111/111 · 전체 496/496 · build exit 0 · diff check exit 0 [산출물, 2026-10-06]. 새 migration 20261006002015/pgTAP 작성, **DB 미적용·pgTAP/브라우저 미검증**. 저장소 migration 31파일(미커밋 총 3개), 운영 개수 미조회. 이전 변경 보존·commit/push 없음. [상세 계약/한계](DUEL-RANDOM-TELEPORT-2026-10-06.md). 아래 수치는 각각 이전 작업 시점 기록이다.
+
+> **2026-10-06 후속: M2 회수 SQL + 랜덤 탐험 run_mode/XP 구현 작성 — `e4fb483` + 미커밋 작업 트리.** 새 append-only migration `20261006000302`(미사용 DML/시퀀스 회수)·`20261006000303`(random/custom/daily 저장·결과 전달·20/15/25 XP)와 pgTAP 2파일 작성. **DB 미적용·SQL 실행 검증 미완료**, Docker 미가동. 관련 node 228/228 · 전체 482/482 · build exit 0 `[산출물, 2026-10-06]`. guest Edge 모의 handler 검증 통과. 기존 mode 없는 기록/7인자 RPC 유지·소급 지급 없음. 운영 A3/M2 확인·배포는 미수행, commit/push 없음. 상세 계약·검증 한계·순서: [SEC-M2-RANDOM-XP-2026-10-06.md](SEC-M2-RANDOM-XP-2026-10-06.md). 아래 472/472와 migration 미작성 서술은 이 후속 이전 기록이다. 저장소 migration 파일 30개(새 2개 미추적·미적용); 운영/로컬 적용 개수는 이번 세션 미조회.
+
+> **2026-10-06 SF-A3/SF-M2 재검토 — `e4fb483` + 미커밋 작업 트리.** 운영 변경·배포·commit·push 없음. 경기 Realtime을 본인 행으로 축소하고 호출 없는 후보 직접 UPDATE helper를 제거했다. 관련 테스트 107/107 · 전체 472/472 · build exit 0 `[산출물, 2026-10-06]`. DB/브라우저는 Docker 미가동으로 미실행. **A3 운영 적용 여부·M2 실제 권한은 미확인, 보안 운영 완료 선언 보류.** 권한 표·RPC 전체 대조·후속 확인: [SEC-A3-M2-REVIEW-2026-10-06.md](SEC-A3-M2-REVIEW-2026-10-06.md). 기존 미추적 `scripts/sec-m2-check-prod.sql` 보존, 보완 읽기 SQL `scripts/sec-m2-verify-readonly.sql` 추가. 아래 커밋 기준 기록은 그대로 유지한다.
 
 ## 2026-10-03 이전 상태와 운영 이력 (과거 기록)
 
