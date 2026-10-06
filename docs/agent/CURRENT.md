@@ -1,10 +1,16 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-06** (선택적 커밋 4/4)
-기준 커밋: **`1e4cc46`** — 이번 상태 갱신 커밋의 부모.
-브랜치: `feat/group-final-gaps`. 원격 ref·운영 상태는 이번 세션에서 재조회하지 않았다.
+갱신 날짜: **2026-10-06** (Production 배포 #15)
+기준 커밋: **`d496ba2`** — 이번 배포 기록 커밋의 부모.
+브랜치: `feat/group-final-gaps`. 원격 main/feature 및 Production = `d496ba2` [실측, 2026-10-06].
 
-## 최신 상태 — 선택적 커밋 정리
+## 최신 운영 상태 — RELEASED WITH FOLLOW-UP
+
+사용자 건별 승인으로 백업 → migration 5개 → Edge 2개 → main fast-forward push #15 → Vercel Production Ready/alias 확인 완료. 운영/저장소 migration **32/32**, pending **0**, single-run **ACTIVE v2**, duel-random-teleport **ACTIVE v1**. wiki-snapshot v3·target-level v10 무변경. 제품 기준 **d496ba2**, 2026-10-06 재실행 npm **511/511**·build/diff exit 0 [산출물].
+
+실제 운영 random **+20**, daily **+25**, 정상 duel 생성/입장/시작/일반 이동, 정상 지급 random_teleport **이동·path +1/소비 1건**, 기권 승리 **+30**·패배 **0**, 종료 결과/F5/상대 경로 복구 확인. SF-A3/M2 운영 DDL·ACL 검증 통과. 조회 범위 Edge 로그 5xx/예상 밖 오류 0, smoke 브라우저 error/warn 0. Group은 기존 종료 결과/F5만 확인, 신규 3인 흐름은 세 번째 세션이 없어 미확인. 390px Duel/Group 결과는 확인, 긴 path/새 업적은 후속. 확인된 차단 문제 없음, rollback 없음. maintenance는 이번 세션에서 사용하지 않아 해제 변경 없음. 기존 열린 탭 새로고침 필요. **기능 개발 종료, 2.1 backlog 분리.** 상세 근거/한계: [Production 배포 기록](../ops/RELEASE-2026-10-06.md).
+
+## 과거 상태 — 선택적 커밋 정리 (배포 이전)
 
 로컬 출시 판정 **A. 로컬 출시 검증 통과**. 제품 패킷 커밋 완료, 이번 문서 커밋으로 선택적 커밋 정리를 완료한다. push·운영 DB 접근/적용·Edge/Vercel 배포는 수행하지 않았다. **다음 단계: 운영 배포 준비 — feature branch 백업 push와 remote/production 상태 점검은 별도 승인 후 수행한다.**
 
@@ -1142,7 +1148,7 @@ Vercel 프로덕션에 배포된 상태다.
 게이트 ON은 W1-b 실행 **전에** 프로덕션 URL에서 점검 화면 렌더로 확인했고
 `[사용자 확인, 2026-08-29]`, 해제 후에는 **앱 렌더로 확인했다** `[사용자 확인, 2026-09-02]`.
 
-### `main` push 이력 — **#14까지 (2026-10-03 현재)**
+### `main` push 이력 — **#15까지 (2026-10-06 현재)**
 
 | | 시점 | 대상 | 사유 | 게이트 | 기록 |
 |---|---|---|---|---|---|
@@ -1160,6 +1166,7 @@ Vercel 프로덕션에 배포된 상태다.
 | **#12** | **2026-10-03** | **`34af554..275a693`** (16커밋 — 16a~16c 코드·migration·문서) | **16c 배포 — 업적 화면 · 결과 reveal · XP 합산 다중 레벨업 · 로비 알림 · 프로필 요약.** DB 변경 0 (16a·16b·16b-f migration은 그 전에 운영 적용) | **없음** | `[사용자 실행·확인]` 업적 알림 · 로비 업적 버튼 · 업적 화면. 배포 전 검증 `16-HANDOFF.md` §8.3 |
 | **#13** | **2026-10-03** | **`275a693..912d241`** (9커밋) | **16d-1 배포 — 배지 폐지 프론트 · 프레임 단계 · 완주 효과/경로 색상 · 임시 아이콘 SVG 9.** DB 변경 0 — 옛·새 DB 양쪽 동작, 16d-2 migration 전 | **없음** | 원격 main = `912d241` 실측 `[산출물]`. `[사용자 실행·확인]` 프로필 꾸미기 카드 4행 + 경기 표현 2행 · 배지 행 없음 · 칭호 장착 · 업적 요약 "2개 달성" 정상. 배포 전 검증 `16-HANDOFF.md` §10.6 |
 | **#14** | **2026-10-03** | **`912d241..fadc81d`** (14커밋 — 문서 포함) | **SF-A2 배포 — 1:1 참가자 읽기 마스킹 RPC · `duel_progress`·하트비트 재조회 · RoomPage 최신 읽기.** DB 선행: SF-M1 `20261004090000` · SF-A1 `20261004100000` 운영 적용 `[사용자 — migration list Remote 확인]` | **없음** | 원격 main = `fadc81d` 실측 `[산출물]`. `[사용자 실행]`. 배포 전 검증 기준 `bfbed24` — `TRACKS.md` §8-SEC-⑧. **운영 확인 미수신** |
+| **#15** | **2026-10-06** | **`fadc81d..d496ba2` fast-forward** | **Wiki Race 2.0 Production frontend. 백업·운영 migration 5개/32개 일치·single-run v2/teleport v1 선행. npm 511/511·build/diff exit 0 (d496ba2, 2026-10-06).** | **없음** | **[사용자 승인 후 실행]** 원격 main/feature 및 Production d496ba2 Ready/alias 확인. 실제 random +20/daily +25/teleport 1회/기권 결과 복구. Group 신규 3인 후속. [배포 기록](../ops/RELEASE-2026-10-06.md) |
 
 **W1-a·W1-b의 전제는 같았다** — 유지보수 게이트 ON, 사용자 노출 0, 게이트 미변경, DB 영향 없음.
 W1-b는 push 전 프로덕션 URL에서 점검 화면 렌더를 확인했다 `[사용자 확인, 2026-08-29]`.
