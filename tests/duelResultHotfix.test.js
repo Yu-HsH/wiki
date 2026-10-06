@@ -52,7 +52,7 @@ test("① 방 종료 신호는 복구가 아니라 결과 판정으로 간다 (r
   assert.doesNotMatch(finalizer, /recoverGameRef/);
 });
 
-test("① 결과 판정은 서버가 확정한 승자를 읽고, 정상 완주가 아니면 예전 경로로 간다", () => {
+test("① 결과 판정은 서버가 확정한 승자를 읽고, 모르는 종료만 복구로 간다", () => {
   const handler = sliceBetween(pageSource, "const handleRoomFinished = (", "handleRoomFinishedRef.current = handleRoomFinished");
   assert.match(handler, /finished_reason === "normal_finish"/);
   assert.match(handler, /winner_user_id/);
@@ -85,11 +85,11 @@ test("① 결과가 뜬 뒤의 복구·연결 신호는 결과 화면을 덮지 
   assert.equal(subscribeGuards.length, 2, "두 채널의 상태 콜백 모두");
 });
 
-test("① 경기 중에 끝난 방은 복구에서도 결과로 간다 — 끝난 방에 새로 들어온 경우만 fatal", () => {
+test("① 경기 중에 끝난 방은 복구에서도 결과로 간다 — 새로고침에서도 서버 결과로 간다", () => {
   const finishedBranch = sliceBetween(pageSource, 'if (session.outcome === "finished") {\n', 'mode: "fatal"');
   assert.match(
     finishedBranch,
-    /reachedPlayingRef\.current && handleRoomFinishedRef\.current\?\.\(session\.room, \{ fromRecovery: true \}\)/
+    /handleRoomFinishedRef\.current\?\.\(session\.room, \{ fromRecovery: true, resultPlayers: session\.players \}\)/
   );
 
   const opponentWin = sliceBetween(pageSource, "if (!opponentPlayer?.has_finished) return;", "enterOpponentWinState();");

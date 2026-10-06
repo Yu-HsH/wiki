@@ -288,7 +288,7 @@ test("wiring: the reveal honours reduced motion and marks only what it showed", 
   assert.match(css, /@media \(prefers-reduced-motion: no-preference\)/, "animation only when motion is allowed");
 
   const xp = read("components/ResultXp.jsx");
-  assert.match(xp, /loadAchievements\("single", sourceId\)/);
+  assert.match(xp, /loadAchievements\(scope, scope === "group" \? roomId : sourceId\)/);
   assert.match(xp, /loadAchievements\("duel", result\.matchId\)/);
   assert.match(xp, /fetchLevelAtTotalXp\(summary\.totalXp - view\.totalAmount\)/);
 });

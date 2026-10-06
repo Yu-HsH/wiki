@@ -24,6 +24,8 @@ import {
 } from "../services/wikiService";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
+import ResultXp from "../components/ResultXp.jsx";
+import { getGroupResultLabel } from "../utils/resultReasonLabels.js";
 import WikiViewer from "../components/WikiViewer";
 import CountdownOverlay from "../components/CountdownOverlay";
 import FloatingHud from "../components/FloatingHud";
@@ -1448,6 +1450,8 @@ export default function GroupGamePage() {
 
     if (phase === GROUP_GAME_PHASE.ENDED) {
         const finalStandings = buildGroupFinalStandings(players, results);
+        const ownResult = finalStandings.find((entry) => entry.user_id === user?.id);
+        const ownLabel = getGroupResultLabel({ resultStatus: ownResult?.result_status, retireReason: ownResult?.retire_reason });
 
         return (
             <div className="mp-page group-result-page">
@@ -1462,6 +1466,11 @@ export default function GroupGamePage() {
                     </div>
 
                     <section className="mp-card group-result-card">
+                        {ownResult && <section className="group-personal-result" aria-label="내 경기 결과">
+                            <h2>내 결과 · {ownResult.result_status === "finished" ? `${ownResult.rank ?? "-"}위` : ownLabel?.term || "미완주"}</h2>
+                            <p>{ownLabel?.subtitle || ""} · {Number.isFinite(ownResult.elapsed_seconds) ? formatDuration(ownResult.elapsed_seconds) : "기록 확인 중"} · {Number.isFinite(ownResult.move_count) ? `${ownResult.move_count}회 이동` : "이동 기록 확인 중"}</p>
+                            <ResultXp scope="group" userId={user?.id} sourceId={results.find((entry) => entry.user_id === user?.id)?.id ?? null} roomId={roomId} tone="dark" />
+                        </section>}
                         <div className="group-final-list">
                             {finalStandings.map((player) => (
                                 <div
@@ -1472,7 +1481,7 @@ export default function GroupGamePage() {
                                 >
                                     <strong>
                                         {player.result_status === "retired"
-                                            ? "RETIRE"
+                                            ? getGroupResultLabel({ resultStatus: player.result_status, retireReason: player.retire_reason || player.leave_reason })?.term || "미완주"
                                             : `${player.rank ?? "-"}위`}
                                         {" · "}
                                         {player.nickname_snapshot || "참가자"}

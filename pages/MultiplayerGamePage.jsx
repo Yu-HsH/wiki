@@ -22,6 +22,7 @@ import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
+import { buildDuelResultPresentation, getDuelResultElapsedSeconds } from "../utils/duelResultPresentation.js";
 import ResultXp from "../components/ResultXp.jsx";
 import FinishEffect from "../components/FinishEffect.jsx";
 import useMatchExpression from "../hooks/useMatchExpression.js";
@@ -388,7 +389,8 @@ export default function MultiplayerGamePage() {
           event: "*",
           schema: "public",
           table: "room_players",
-          filter: `room_id=eq.${roomId}`,
+          // 상대 진행은 duel_progress 신호 + 마스킹 RPC로만 읽는다.
+          filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
           const incoming = payload?.new?.progress_version;
@@ -547,15 +549,8 @@ export default function MultiplayerGamePage() {
       setPlayers(authoritativePlayers);
 
       if (session.outcome === "finished") {
-        /**
-         * **경기 중에 끝났으면 결과 화면으로 간다.** 이 복구는 완주 신호와 경합할 수
-         * 있다 (alt-tab·재연결이 realtime보다 먼저 방을 읽은 경우). 그때 아래 fatal로
-         * 떨어지면 서버가 이미 확정한 승패를 화면이 버린다.
-         *
-         * 끝난 방에 **새로 들어온** 경우(새로고침·링크 재진입)는 예전 그대로 fatal이다 —
-         * 결과를 다시 보여 줄 화면이 이 페이지에는 없다.
-         */
-        if (reachedPlayingRef.current && handleRoomFinishedRef.current?.(session.room, { fromRecovery: true })) {
+        // F5/결과 재진입도 서버에 저장된 종료 사유와 참가자 기록으로 복구한다.
+        if (handleRoomFinishedRef.current?.(session.room, { fromRecovery: true, resultPlayers: session.players })) {
           return;
         }
         clearLocalGameState();
@@ -801,14 +796,19 @@ export default function MultiplayerGamePage() {
    * 예전에는 여기서 곧바로 복구를 불렀고, 복구는 끝난 방을 fatal로 그려서
    * **양쪽 모두** 결과 화면 대신 "게임을 계속할 수 없습니다"를 봤다 (2026-09-28 운영 실측).
    *
-   * 정상 완주가 아닌 종료(타임아웃·취소 등)는 예전 경로(복구 → 안내)를 그대로 탄다.
+   * 기권·연결 종료·무효도 같은 서버 결과 카드로 표시한다.
    * 복구 안에서 불렸다면 다시 복구를 부르지 않는다 — 결과로 가지 못했다는 것만 돌려준다.
    */
-  const handleRoomFinished = (finishedRoom, { fromRecovery = false } = {}) => {
+  const handleRoomFinished = (finishedRoom, { fromRecovery = false, resultPlayers = null } = {}) => {
     const winnerUserId = finishedRoom?.winner_user_id;
-    if (finishedRoom?.finished_reason === "normal_finish" && winnerUserId) {
-      if (winnerUserId === user?.id) enterSolvedState();
+    const result = buildDuelResultPresentation(finishedRoom, resultPlayers || playersRef.current || [], user?.id);
+    if (result) {
+      setRoom(finishedRoom);
+      if (finishedRoom?.finished_reason === "normal_finish" && winnerUserId === user?.id) enterSolvedState();
+      else if (result.isWinner) enterSolvedState();
       else enterOpponentWinState();
+      // 종료 후 공개되는 상대 경로도 마스킹 RPC에서 다시 읽는다.
+      fetchRoomPlayers(roomId).then(setPlayers).catch((error) => console.error("결과 경로 조회 실패", error));
       return true;
     }
     if (!fromRecovery) recoverGameRef.current?.();
@@ -1111,18 +1111,25 @@ export default function MultiplayerGamePage() {
     setItemFailure(null);
 
     try {
-      const outcome = await useDuelItem({ roomId, grantId });
+      const outcome = await useDuelItem({ roomId, grantId, itemId: item.id });
       clockSkewRef.current = outcome.clockSkewMs;
 
       if (!outcome.ok) {
         setItemFailure(outcome.failure);
+        if (outcome.code === "STATE_VERSION_CONFLICT") recoverGameRef.current?.();
+        if (outcome.code === "ITEM_STATE_UNKNOWN") {
+          await refreshDuelItemState();
+          recoverGameRef.current?.();
+        }
         return;
       }
 
       setItemCooldownUntil(outcome.cooldownUntil ?? 0);
       showItemEffect(item.name);
       showMessage(
-        DUEL_ITEM_RESULT_MESSAGE[outcome.result] ||
+        (item.id === "random_teleport" && outcome.result === DUEL_ITEM_RESULT.APPLIED
+          ? "랜덤 문서로 이동했습니다."
+          : DUEL_ITEM_RESULT_MESSAGE[outcome.result]) ||
         `${item.name} 사용`
       );
 
@@ -1675,7 +1682,15 @@ export default function MultiplayerGamePage() {
       !myPlayer.has_finished;
 
     try {
-      if (shouldNotifyServer) await leaveRoom(roomId, user.id);
+      if (shouldNotifyServer) {
+        await leaveRoom(roomId, user.id);
+        const [finishedRoom, resultPlayers] = await Promise.all([fetchRoom(roomId), fetchRoomPlayers(roomId)]);
+        setPlayers(resultPlayers);
+        if (handleRoomFinished(finishedRoom, { fromRecovery: true, resultPlayers })) {
+          setLeaving(false);
+          return;
+        }
+      }
 
       // Keep the recovery snapshot until the authoritative leave succeeds.
       clearLocalGameState();
@@ -1873,35 +1888,19 @@ export default function MultiplayerGamePage() {
         </aside>
       </div>
 
-      {phase === PHASE.SUCCESS && (
+      {(phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN) && (
         <div className="mp-result-overlay">
           <div className="mp-result-card">
-            <FinishEffect effect={matchExpression.finish_effect} />
-            <h2>🎉 승리!</h2>
-            <p>목표 문서에 먼저 도착했습니다.</p>
-            <ResultXp
-              scope="duel"
-              userId={user?.id ?? null}
-              roomId={roomId}
-              tone="dark"
-              onAchievementsLoaded={extendResultHoldForAchievements}
-            />
-          </div>
-        </div>
-      )}
-
-      {phase === PHASE.OPPONENT_WIN && (
-        <div className="mp-result-overlay">
-          <div className="mp-result-card">
-            <h2>😢 패배</h2>
-            <p>상대가 먼저 목표 문서에 도착했습니다.</p>
-            <ResultXp
-              scope="duel"
-              userId={user?.id ?? null}
-              roomId={roomId}
-              tone="dark"
-              onAchievementsLoaded={extendResultHoldForAchievements}
-            />
+            {room?.finished_reason !== "cancelled" && phase === PHASE.SUCCESS && <FinishEffect effect={matchExpression.finish_effect} />}
+            <h2>{buildDuelResultPresentation(room, players, user?.id)?.term || (phase === PHASE.SUCCESS ? "승리" : "패배")}</h2>
+            <p>{buildDuelResultPresentation(room, players, user?.id)?.description || "서버 결과를 확인하는 중입니다."}</p>
+            <ResultXp scope="duel" userId={user?.id ?? null} roomId={roomId} tone="dark" onAchievementsLoaded={extendResultHoldForAchievements} />
+            {players.map((player) => <div key={player.user_id}>
+              <strong>{player.nickname_snapshot || "참가자"}</strong>
+              <p>{getDuelResultElapsedSeconds(room, player) !== null ? `${getDuelResultElapsedSeconds(room, player)}초` : "기록 없음"} · {Number.isFinite(player.move_count) ? `${player.move_count}회 이동` : "이동 기록 없음"}</p>
+              <p>{Array.isArray(player.path_titles) ? player.path_titles.join(" → ") : "경로 확인 중"}</p>
+            </div>)}
+            <button type="button" className="mp-action-btn" onClick={handleReturnToLobby} disabled={leaving}>게임 로비로 이동</button>
           </div>
         </div>
       )}

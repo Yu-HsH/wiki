@@ -569,6 +569,11 @@ select pg_temp.arm('00000000-0000-0000-0014-00000000f009',
   '00000000-0000-0000-0014-000000000002', 'cleanse_shield', 2) as e \gset jh_
 select pg_temp.give('00000000-0000-0000-0014-00000000f009',
   '00000000-0000-0000-0014-000000000001', 3, 'joker', 'random_teleport') as g \gset jk_
+insert into public.wiki_snapshot_links(snapshot_id,target_page_id,target_revision_id,target_title_snapshot,ordinal)
+select id,'p2','r2','Page 2',0 from public.wiki_page_snapshots where page_id='p1' and revision_id='r1';
+select public.register_duel_random_destination_v1('00000000-0000-0000-0014-00000000f009',
+ '00000000-0000-0000-0014-000000000001','00000000-0000-0000-0014-00000000e010',:'jk_g',
+ (select progress_version from public.room_players where room_id='00000000-0000-0000-0014-00000000f009' and user_id='00000000-0000-0000-0014-000000000001'),'p1','r1',0);
 select pg_temp.as_user('00000000-0000-0000-0014-000000000001');
 select is(
   public.use_duel_item_v3('00000000-0000-0000-0014-00000000f009', :'jk_g',

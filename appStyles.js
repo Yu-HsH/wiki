@@ -16,3 +16,5 @@ import "./css/profileCard.css";
 import "./css/resultXp.css";
 import "./css/achievements.css";
 import "./css/matchExpression.css";
+
+import "./css/matchResult.css";

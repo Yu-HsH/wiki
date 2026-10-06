@@ -181,10 +181,10 @@ test("wiring: SuccessOverlay places XP after the record summary and before the p
   assert.match(overlay, /sourceId=\{serverRecord\?\.id \?\? null\}/);
 });
 
-test("wiring: both normal duel result cards show XP; 4000ms, or 6000ms when the result unlocked achievements", () => {
+test("wiring: one shared duel result card shows XP; 4000ms, or 6000ms when the result unlocked achievements", () => {
   const page = read("pages/MultiplayerGamePage.jsx");
-  assert.equal((page.match(/<ResultXp\s+scope="duel"/g) || []).length, 2);
-  assert.equal((page.match(/onAchievementsLoaded=\{extendResultHoldForAchievements\}/g) || []).length, 2);
+  assert.equal((page.match(/<ResultXp\s+scope="duel"/g) || []).length, 1);
+  assert.equal((page.match(/onAchievementsLoaded=\{extendResultHoldForAchievements\}/g) || []).length, 1);
   assert.match(page, /const RESULT_HOLD_MS = 4000;/);
   assert.match(page, /const RESULT_HOLD_WITH_ACHIEVEMENTS_MS = 6000;/);
   assert.equal((page.match(/\}, RESULT_HOLD_MS\);/g) || []).length, 2);

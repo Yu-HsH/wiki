@@ -18,13 +18,10 @@
  * 14b(2026-09-30)부터 서버 카탈로그의 최신본은 `20260930100000_duel_item_link_index_v3.sql`이다 —
  * 테스트는 카탈로그를 정의하는 **마지막** migration을 읽어 대조한다.
  *
- * ## 등재된 부채 1건 — `random_teleport` `[사용자 확정, 2026-09-04 / Q3]`
- * 확정 스펙 §5.5의 "특수:임의 문서"는 **이동 가능한 무작위 문서**를 요구하지만,
- * 이번 범위는 **기존 동작(현재 문서의 유효 링크 중 무작위)** 을 유지한다.
- * 서버는 `apply_duel_move_v2`와 같은 방식으로 현재 스냅샷 링크에서 고른다
- * (`20260814092000_duel_authority_v2.sql:124-130`). **표시명만 "특수:임의 문서"다.**
- * 진짜 무작위 문서 풀(`wiki_pages` 기반)과 "목표 직접 도착 제외"·"링크가 거의 없는 문서 제외"는
- * **후속 작업**이며 이 주석이 그 부채의 등재 지점이다.
+ * ## random_teleport (2026-10-06, 미커밋 구현)
+ * 인증된 Edge가 현재 링크와 무관한 canonical 문서를 선택한다.
+ * 현재/목표와 링크 없는 문서는 제외하며 기존 아이템 RPC가 이동과 소비를 원자적으로 처리한다.
+ * 새 migration/Edge 적용 전에는 운영 동작이 바뀌지 않는다. DB·브라우저 검증은 별도 필요하다.
  */
 
 /** 5슬롯의 역할 축 (`01-CONFIRMED-SPEC.md` §5.1) */
@@ -324,7 +321,6 @@ export function canUseDuelItem(item, context = {}) {
     // 서버는 링크 수를 보지 않으므로 이 검사가 유일한 방어다.
     if (
         item.id === "random_link_move" ||
-        item.id === "random_teleport" ||
         item.id === "link_index"
     ) {
         return (context.linkCount ?? 0) > 0;

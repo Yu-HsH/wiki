@@ -200,11 +200,14 @@ export function validateDuelGameSession({ room, players, userId, now = Date.now(
     throw fatalSessionError("NOT_A_PARTICIPANT", "이 게임의 참가자가 아니거나 이미 퇴장 처리되었습니다.");
   }
 
+  // 종료된 참가자(retired 포함)도 저장된 결과를 다시 볼 수 있다.
+  if (room.status === "finished") {
+    return { outcome: "finished", room, players, me, opponent };
+  }
   if (isInactivePlayer(me)) {
     throw fatalSessionError("PARTICIPANT_INACTIVE", "게임에서 나갔거나 강제 퇴장되어 다시 입장할 수 없습니다.");
   }
-
-  if (room.status === "finished" || me.has_finished) {
+  if (me.has_finished) {
     return { outcome: "finished", room, players, me, opponent };
   }
 

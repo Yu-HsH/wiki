@@ -205,8 +205,24 @@ $$;
 create function pg_temp.duel_forced(p_room uuid, p_user uuid, p_type text) returns uuid
 language plpgsql as $$
 declare
-  v_response jsonb := private.apply_duel_move_internal_v3(p_room, p_user, p_type, gen_random_uuid(), null, null);
+  v_request uuid := gen_random_uuid();
+  v_grant uuid := gen_random_uuid();
+  v_response jsonb;
 begin
+  -- The trusted random destination must exist before the item movement helper.
+  -- This achievement fixture uses the canonical first page in its test course.
+  if p_type = 'RANDOM_TELEPORT' then
+    insert into public.duel_item_grants(id, room_id, user_id, slot_index, slot_role, item_id)
+    values(v_grant, p_room, p_user,
+      (select count(*) from public.duel_item_grants where room_id=p_room and user_id=p_user),
+      (select slot_role from private.duel_item_catalog_v3() where item_id='random_teleport'),
+      'random_teleport');
+    perform public.register_duel_random_destination_v1(p_room, p_user, v_request,
+      v_grant,
+      (select progress_version from public.room_players where room_id=p_room and user_id=p_user),
+      'b16-1', '1', 0);
+  end if;
+  v_response := private.apply_duel_move_internal_v3(p_room, p_user, p_type, v_request, null, null);
   if (v_response->>'ok')::boolean is not true then
     raise exception 'duel_forced % failed: %', p_type, v_response;
   end if;
@@ -222,10 +238,19 @@ declare
   v_grant uuid := gen_random_uuid();
   v_event uuid := gen_random_uuid();
 begin
+  if p_item = 'random_teleport' and p_move is not null then
+    select destination.grant_id into v_grant
+      from private.duel_random_destinations_v1 destination
+      join public.game_move_events move on move.request_id=destination.request_id
+        and move.game_id=destination.room_id and move.actor_user_id=destination.user_id
+      where move.id=p_move;
+    v_grant := coalesce(v_grant, gen_random_uuid());
+  end if;
   insert into public.duel_item_grants (id, room_id, user_id, slot_index, slot_role, item_id)
   values (v_grant, p_room, p_actor,
           (select count(*) from public.duel_item_grants g where g.room_id = p_room and g.user_id = p_actor),
-          (select c.slot_role from private.duel_item_catalog_v3() c where c.item_id = p_item), p_item);
+          (select c.slot_role from private.duel_item_catalog_v3() c where c.item_id = p_item), p_item)
+  on conflict(id) do nothing;
   insert into public.duel_item_events (
     id, room_id, grant_id, actor_user_id, target_user_id, item_id, result,
     effect_expires_at, consumed_defense_event_id, request_id, correlation_id, move_event_id

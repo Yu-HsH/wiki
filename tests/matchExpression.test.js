@@ -65,7 +65,8 @@ test("results: single = path color on the timeline + finish effect on the last n
   const page = read("pages/MultiplayerGamePage.jsx");
   assert.match(page, /useMatchExpression\(phase === PHASE\.SUCCESS \? user\?\.id \?\? null : null\)/);
   assert.equal((page.match(/<FinishEffect /g) || []).length, 1, "winner card only");
-  const win = page.slice(page.indexOf("{phase === PHASE.SUCCESS && ("), page.indexOf("{phase === PHASE.OPPONENT_WIN && ("));
+  const win = page.slice(page.indexOf("{(phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN) && ("));
+  assert.match(win, /room\?\.finished_reason !== "cancelled" && phase === PHASE.SUCCESS/);
   assert.match(win, /<FinishEffect effect=\{matchExpression\.finish_effect\} \/>/);
   assert.doesNotMatch(page, /pathColor|path_color/, "no path line on the 1:1 card (16d 판정 4)");
 

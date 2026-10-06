@@ -13,6 +13,14 @@ const read = (relativePath) => readFileSync(`${root}/${relativePath}`, "utf8");
 const service = read("services/multiplayerService.js");
 const page = read("pages/MultiplayerGamePage.jsx");
 
+test("SF-A3: game player Realtime subscribes only to the caller and refreshes through the masked RPC", () => {
+  const realtime = page.slice(page.indexOf('table: "room_players"'), page.indexOf("gameChannelRef.current = channel"));
+  assert.match(realtime, /filter: `user_id=eq\.\$\{user\.id\}`/);
+  assert.doesNotMatch(realtime, /filter: `room_id=/);
+  assert.match(realtime, /await fetchRoomPlayers\(roomId\)/);
+  assert.doesNotMatch(realtime, /setPlayers\([^;]*payload\.(new|old)/);
+});
+
 test("SF-A2: fetchRoomPlayers reads through get_duel_room_players_v1, not the table", () => {
   const body = service.slice(
     service.indexOf("export async function fetchRoomPlayers"),

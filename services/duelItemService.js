@@ -144,6 +144,10 @@ const FAILURE_KIND_BY_CODE = Object.freeze({
     PLAYER_NOT_FOUND: FAILURE_KIND.REJECTED,
     PLAYER_NOT_PLAYING: FAILURE_KIND.REJECTED,
     UNSUPPORTED_EVENT_TYPE: FAILURE_KIND.REJECTED,
+    RANDOM_DOCUMENT_UNAVAILABLE: FAILURE_KIND.UNCONSUMED,
+    RANDOM_DESTINATION_REQUIRED: FAILURE_KIND.UNCONSUMED,
+    STATE_VERSION_CONFLICT: FAILURE_KIND.REJECTED,
+    ITEM_STATE_UNKNOWN: FAILURE_KIND.REJECTED,
 });
 
 /**
@@ -164,6 +168,10 @@ const FAILURE_MESSAGES = Object.freeze({
     REWIND_UNAVAILABLE: "되감을 이동이 없어 아이템을 쓰지 않았습니다.",
     LINK_SNAPSHOT_MISSING: "문서 정보를 읽지 못했습니다. 잠시 뒤 다시 시도해 주세요.",
     ITEM_MOVE_REJECTED: "서버가 이동을 거부했습니다.",
+    RANDOM_DOCUMENT_UNAVAILABLE: "랜덤 문서를 찾지 못해 아이템을 쓰지 않았습니다. 다시 시도해 주세요.",
+    RANDOM_DESTINATION_REQUIRED: "랜덤 문서 이동을 준비하지 못했습니다. 다시 시도해 주세요.",
+    STATE_VERSION_CONFLICT: "진행 상태가 바뀌었습니다. 다시 확인한 뒤 사용해 주세요.",
+    ITEM_STATE_UNKNOWN: "사용 결과를 확인하지 못했습니다. 서버 상태를 다시 확인합니다.",
     PLAYER_NOT_FOUND: "플레이어 정보를 찾지 못했습니다.",
     PLAYER_NOT_PLAYING: "지금은 이동시킬 수 없는 상대입니다.",
     UNSUPPORTED_EVENT_TYPE: "서버가 처리할 수 없는 이동입니다.",
@@ -175,9 +183,9 @@ const FAILURE_MESSAGES = Object.freeze({
     DUEL_ITEM_POOL_EXHAUSTED: "아이템을 지급하지 못했습니다.",
 });
 
-/** 미소비 3종인가 — HUD가 슬롯을 되살릴지 여기서 정해진다. */
+/** 기존 미소비 계약 + 서버 랜덤 조회 실패 — HUD 슬롯 복원 판단. */
 export function isUnconsumedFailure(code) {
-    return UNCONSUMED_FAILURE_CODES.includes(code);
+    return UNCONSUMED_FAILURE_CODES.includes(code) || ["RANDOM_DOCUMENT_UNAVAILABLE", "RANDOM_DESTINATION_REQUIRED"].includes(code);
 }
 
 export function getDuelItemFailureMessage(code) {
@@ -432,9 +440,14 @@ export async function useDuelItem({
     grantId,
     requestId = createRequestId(),
     correlationId = createCorrelationId(),
+    itemId = null,
 }) {
     requireSupabase();
-    const { data, error } = await supabase.rpc("use_duel_item_v3", {
+    const { data, error } = itemId === "random_teleport"
+      ? await supabase.functions.invoke("duel-random-teleport", {
+          body: { roomId, grantId, requestId, correlationId },
+        })
+      : await supabase.rpc("use_duel_item_v3", {
         p_room_id: roomId,
         p_grant_id: grantId,
         p_request_id: requestId,

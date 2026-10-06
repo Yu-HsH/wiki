@@ -256,6 +256,8 @@ export function buildResultReveal(response) {
 
   const items = achievements
     .filter((entry) => entry?.achievementId)
+    .map((entry) => ({ ...entry, xpTotal: undefined, tiers: (entry.tiers || []).filter((tier) => tier.seen !== true) }))
+    .filter((entry) => entry.tiers.length > 0)
     .map((entry) => {
       const tiers = Array.isArray(entry.tiers) ? entry.tiers : [];
       const top = tiers.reduce((best, tier) => (

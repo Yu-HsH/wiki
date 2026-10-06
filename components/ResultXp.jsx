@@ -25,11 +25,14 @@ async function loadAchievements(scope, resultId) {
   }
 }
 
-async function loadSingle({ sourceId, userId }) {
+async function loadSingle({ sourceId, userId, scope = "single", roomId }) {
   const [entries, summary, achievements] = await Promise.all([
-    fetchResultXp({ sourceId }),
-    fetchXpSummary(userId),
-    loadAchievements("single", sourceId),
+    fetchResultXp({ sourceId }).catch((error) => {
+      console.error("결과 XP 원장 조회 실패", error);
+      return null;
+    }),
+    fetchXpSummary(userId).catch(() => null),
+    loadAchievements(scope, scope === "group" ? roomId : sourceId),
   ]);
   return { entries, summary, achievements };
 }
@@ -47,7 +50,7 @@ async function loadDuel({ roomId, userId }, isCancelled) {
     console.warn("[ResultXp] duel result has no XP ledger row", { roomId, matchId: result.matchId });
   }
   const [summary, achievements] = await Promise.all([
-    fetchXpSummary(userId),
+    fetchXpSummary(userId).catch(() => null),
     loadAchievements("duel", result.matchId),
   ]);
   return { entries: result.entries, summary, achievements };
@@ -76,16 +79,16 @@ async function loadLevelBefore({ scope, entries, summary, achievements }) {
 /**
  * 결과 화면 XP 영역 (패킷 15 §6, Freeze 순서 결과 ▸ 기록 ▸ **XP** ▸ **업적** ▸ 경로 ▸ 행동).
  *
- * 스스로 조회한다. 실패하면 아무것도 그리지 않는다 — 결과 화면을 막지 않는다.
+ * 스스로 조회한다. 조회 실패는 별도 안내하며 예상 XP를 표시하지 않는다.
  * 16c부터 이 결과가 연 업적을 함께 읽는다: XP 줄에 업적 XP를 더하고, 레벨업을 합산
  * 금액으로 판정하고(판정 9), XP 아래에 업적 reveal을 그린다.
  *
  * @param {object} props
- * @param {"single"|"duel"} props.scope
+ * @param {"single"|"duel"|"group"} props.scope
  * @param {boolean} [props.isGuest]
  * @param {string|null} [props.userId]
- * @param {string|null} [props.sourceId] 싱글: `game_records.id`
- * @param {string|null} [props.roomId] 1:1: 방 ID
+ * @param {string|null} [props.sourceId] 싱글: `game_records.id`, 그룹: `group_match_results.id`
+ * @param {string|null} [props.roomId] 1:1/그룹: 방 ID
  * @param {"light"|"dark"} [props.tone]
  * @param {(count:number) => void} [props.onAchievementsLoaded] 이 결과가 연 업적 수 — 1:1 결과 유지 시간이 쓴다
  */
@@ -99,6 +102,7 @@ export default function ResultXp({
   onAchievementsLoaded = null,
 }) {
   const [data, setData] = useState(null);
+  const [failed, setFailed] = useState(false);
   const onAchievementsLoadedRef = useRef(onAchievementsLoaded);
   onAchievementsLoadedRef.current = onAchievementsLoaded;
 
@@ -107,11 +111,13 @@ export default function ResultXp({
     const key = scope === "duel" ? roomId : sourceId;
     if (!key) return undefined;
 
+    setData(null);
+    setFailed(false);
     let cancelled = false;
     const isCancelled = () => cancelled;
     const load = scope === "duel"
       ? () => loadDuel({ roomId, userId }, isCancelled)
-      : () => loadSingle({ sourceId, userId });
+      : () => loadSingle({ sourceId, userId, scope, roomId });
 
     load()
       .then(async (loaded) => {
@@ -121,10 +127,12 @@ export default function ResultXp({
       .then((loaded) => {
         if (cancelled || !loaded) return;
         setData(loaded);
-        onAchievementsLoadedRef.current?.(loaded.achievements?.achievements?.length ?? 0);
+        setFailed(!Array.isArray(loaded.entries));
+        onAchievementsLoadedRef.current?.(buildResultReveal(loaded.achievements)?.items.length ?? 0);
       })
       .catch((error) => {
         console.error("결과 XP를 불러오지 못했습니다.", error);
+        if (!cancelled) setFailed(true);
       });
 
     return () => {
@@ -144,7 +152,10 @@ export default function ResultXp({
   const revealBlock = reveal && reveal.items.length > 0
     ? <ResultAchievements reveal={reveal} tone={tone} />
     : null;
-  if (!view) return revealBlock;
+  if (!view) return <>
+    {!isGuest && <p className="rxp-note" role="status">{failed ? "XP 지급 정보를 불러오지 못했습니다." : data ? "이 결과에 기록된 XP 지급 내역이 없습니다." : "XP 지급 정보를 확인하는 중입니다."}</p>}
+    {revealBlock}
+  </>;
 
   const className = `rxp rxp--${tone}`;
 
