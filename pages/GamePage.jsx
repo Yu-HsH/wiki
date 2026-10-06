@@ -183,7 +183,7 @@ export default function GamePage({
     serverRunRef.current = run;
   }, []);
 
-  const createAuthoritativeRun = useCallback(async ({ runId, startPage, targetData, guestToken }) => {
+  const createAuthoritativeRun = useCallback(async ({ runId, startPage, targetData, guestToken, runMode }) => {
     if (!isSupabaseConfigured || !startPage?.pageId || !startPage?.revisionId || !targetData?.pageId) return null;
 
     const result = isGuestGame
@@ -191,11 +191,12 @@ export default function GamePage({
         guestToken,
         run: {
           runId,
+          runMode,
           start: startPage,
           target: targetData,
         },
       })
-      : await createAuthenticatedSingleRun({ runId, start: startPage, target: targetData });
+      : await createAuthenticatedSingleRun({ runId, start: startPage, target: targetData, runMode });
     setAuthoritativeRun(result.run);
     return result.run;
   }, [isGuestGame, setAuthoritativeRun]);
@@ -510,7 +511,7 @@ export default function GamePage({
         let start = await fetchRandomTitle();
         let targetTitle = "";
 
-        if (mode === "custom") {
+        if (mode === "custom" || mode === "daily") {
           const state = location.state || {};
           targetTitle = state.targetTitle;
 
@@ -583,9 +584,12 @@ export default function GamePage({
 
         if (isSupabaseConfigured && startPage.pageId && startPage.revisionId && targetSummaryData.pageId) {
           await ensureWikiSnapshot(startPage);
+          // daily RPC는 클라이언트 제목뿐 아니라 서버의 page identity도 검증한다.
+          if (mode === "daily") await ensureWikiSnapshot(targetSummaryData);
           const runId = initialState?.serverRunId || crypto.randomUUID();
           const run = await createAuthoritativeRun({
             runId,
+            runMode: mode,
             startPage,
             targetData: {
               title: targetSummaryData.title,

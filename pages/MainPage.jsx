@@ -460,7 +460,7 @@ export default function MainPage() {
               if (!dailyChallenge) return;
               navigate("/game", {
                 state: {
-                  mode: "custom",
+                  mode: "daily",
                   keyword: dailyChallenge.keyword,
                   targetTitle: dailyChallenge.keyword,
                 },

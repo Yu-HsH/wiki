@@ -100,7 +100,7 @@ test("SQL XP amounts equal the utils/xpRules.js catalogue (C2 §3)", () => {
   assert.equal(XP_BY_SOURCE_TYPE.group_retire, 0);
 });
 
-test("single_random_finish is not paid yet — debt until run_mode is server-decided", () => {
+test("the historical 15c migration predates random run_mode payments", () => {
   assert.doesNotMatch(migrationCode, /'single_random_finish'/);
 });
 

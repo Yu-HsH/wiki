@@ -21,9 +21,10 @@ function normalizeRpcResponse(data) {
   return response;
 }
 
-export async function createAuthenticatedSingleRun({ runId = createRequestId(), start, target }) {
+export async function createAuthenticatedSingleRun({ runId = createRequestId(), start, target, runMode = "custom" }) {
   assertServer();
   const { data, error } = await supabase.rpc("create_single_game_run", {
+    p_run_mode: runMode,
     p_run_id: runId,
     p_start_page_id: String(start.pageId),
     p_start_revision_id: String(start.revisionId),

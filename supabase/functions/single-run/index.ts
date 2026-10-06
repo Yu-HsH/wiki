@@ -40,8 +40,23 @@ Deno.serve(async (req) => {
       if (existingError) throw existingError;
       if (existing && existing.guest_token_hash !== tokenHash) return invalid("RUN_ID_IN_USE", 409);
       if (existing) return json({ ok: true, code: "ALREADY_CREATED", run: existing });
+      const runMode = run.runMode ?? "custom"; // Old guest bundles have no mode.
+      if (!["random", "custom", "daily"].includes(runMode)) return invalid("RUN_MODE_REQUIRED");
+      let dailyDate: string | null = null;
+      if (runMode === "daily") {
+        dailyDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+        const { data: challenge, error: challengeError } = await db.from("daily_challenges").select("target_title").eq("challenge_date", dailyDate).maybeSingle();
+        if (challengeError) throw challengeError;
+        const { data: page, error: pageError } = await db.from("wiki_pages").select("canonical_title").eq("page_id", String(run.target.pageId)).maybeSingle();
+        if (pageError) throw pageError;
+        const normalize = (title: string) => title.replaceAll("_", " ").trim().toLowerCase();
+        if (!challenge || !page || normalize(page.canonical_title) !== normalize(challenge.target_title)
+          || normalize(run.target.canonicalTitle || run.target.title || "") !== normalize(challenge.target_title)) return invalid("DAILY_COURSE_MISMATCH");
+      }
       const { data, error } = await db.from("single_game_runs").insert({
         id: run.runId,
+        run_mode: runMode,
+        daily_challenge_date: dailyDate,
         guest_token_hash: tokenHash,
         user_id: null,
         start_page_id: String(run.start.pageId),
