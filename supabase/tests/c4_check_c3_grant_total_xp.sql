@@ -84,8 +84,8 @@ select ok(
   'SELECT is untouched for both roles'
 );
 select ok(
-  has_table_privilege('authenticated', 'public.profiles', 'INSERT'),
-  'INSERT grant is untouched (RLS has no INSERT policy, so it stays denied)'
+  not has_table_privilege('authenticated', 'public.profiles', 'INSERT'),
+  'SF-M2 explicitly revokes unused profile INSERT (RLS also denies it)'
 );
 select is(
   (select count(*)::integer from pg_policy where polrelid = 'public.profiles'::regclass),
