@@ -33,6 +33,7 @@ import {
   LOBBY_PATH,
   LOGIN_PATH,
   getLobbyAccess,
+  getOnlineAccess,
   getSingleGameLobbyNavigation,
 } from "./utils/appRoutes";
 /**
@@ -55,6 +56,26 @@ function ProtectedRoute({ children }) {
     return <Navigate to={LOGIN_PATH} replace />;
   }
 
+  return children;
+}
+
+/**
+ * 온라인 입장·대기실 화면 — 로그인 사용자 전용 (확정 계약: 게스트는 싱글만).
+ * 로컬 게스트는 PLAY로 돌려보낸다. PLAY에서 온라인 모드는 "로그인 후 이용 가능"으로 표시된다.
+ */
+function OnlineRoute({ children }) {
+  const { user, loading } = useAuth();
+  const access = getOnlineAccess({ loading, user });
+
+  if (access === "loading") {
+    return (
+      <div className="app-center">
+        <p className="app-muted">세션 확인 중...</p>
+      </div>
+    );
+  }
+  if (access === "login") return <Navigate to={LOGIN_PATH} replace />;
+  if (access === "guest") return <Navigate to="/play" replace />;
   return children;
 }
 
@@ -224,44 +245,44 @@ function AppRoutes() {
       <Route
         path="/multiplayer"
         element={
-          <ProtectedRoute>
+          <OnlineRoute>
             <MultiplayerPage />
-          </ProtectedRoute>
+          </OnlineRoute>
         }
       />
 
       <Route
         path="/multiplayer/room/:roomId"
         element={
-          <ProtectedRoute>
+          <OnlineRoute>
             <RoomPage />
-          </ProtectedRoute>
+          </OnlineRoute>
         }
       />
 
       <Route
         path="/multiplayer/game/:roomId"
         element={
-          <ProtectedRoute>
+          <OnlineRoute>
             <MultiplayerGamePage />
-          </ProtectedRoute>
+          </OnlineRoute>
         }
       />
       <Route
         path="/multiplayer/group/room/:roomId"
         element={
-          <ProtectedRoute>
+          <OnlineRoute>
             <GroupRoomPage />
-          </ProtectedRoute>
+          </OnlineRoute>
         }
       />
 
       <Route
         path="/multiplayer/group/game/:roomId"
         element={
-          <ProtectedRoute>
+          <OnlineRoute>
             <GroupGamePage />
-          </ProtectedRoute>
+          </OnlineRoute>
         }
       />
     </Routes>

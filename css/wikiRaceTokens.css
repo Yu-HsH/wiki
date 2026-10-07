@@ -5,6 +5,11 @@
   --wr-ink: #243430; --wr-ink-2: #51625A; --wr-ink-3: #78877F;
   --wr-canvas: #E4EBDD; --wr-paper: #FCFCF7; --wr-paper-2: #F2F6EC;
   --wr-frame: #AEBBA5; --wr-divider: #D3DCCB; --wr-trail: #B9A470;
+  /* Phase 2 lobby semantic tints (Freeze design-system values; unused by HOME/PLAY). */
+  --wr-gold-bg: #F7EFD9; --wr-gold-tint: rgb(199 154 50 / 50%);
+  --wr-teal-bg: #E6F2F0; --wr-teal-tint: rgb(39 135 125 / 50%); --wr-teal-halo: rgb(39 135 125 / 18%);
+  --wr-blue-bg: #E6EEF7; --wr-blue-tint: rgb(50 104 168 / 45%);
+  --wr-purple-tint: rgb(103 87 184 / 45%); --wr-neutral-bg: #EDEFEA;
   --wr-font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
   --wr-font-heading: "Space Grotesk", var(--wr-font-body);
   --wr-radius-shell: 14px; --wr-radius-control: 8px;

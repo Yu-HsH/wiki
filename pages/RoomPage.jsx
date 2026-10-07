@@ -19,6 +19,20 @@ import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
 import UserProfileModal from "../components/UserProfileModal";
+import ProfileAvatar from "../components/ProfileAvatar.jsx";
+import useProfileCards from "../hooks/useProfileCards.js";
+import { NAME_FALLBACK, buildProfileCard, mergeRewardSlots, resolveDisplayName } from "../utils/profileCard.js";
+import {
+  CopyCodeButton,
+  HostTag,
+  LobbyHeader,
+  LobbyIcon,
+  LobbyShell,
+  LobbyStateScreen,
+  MeTag,
+  StatusMark,
+  TrailLine,
+} from "../components/wiki-race/LobbyParts";
 
 /**
  * 대전 대기실 페이지
@@ -31,7 +45,7 @@ import UserProfileModal from "../components/UserProfileModal";
 export default function RoomPage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // ----------------------------
   // 기본 상태
@@ -48,7 +62,11 @@ export default function RoomPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [savingTarget, setSavingTarget] = useState(false);
   const [targetSaveFailed, setTargetSaveFailed] = useState(false);
+  // 표시 전용: 저장된 목표가 있을 때 "변경"을 눌러 검색 입력을 다시 연 상태.
+  const [changingTarget, setChangingTarget] = useState(false);
   const lobbyActionRef = useRef(false);
+  // 초기 로드(직접 진입 시 join 포함)의 진행 중 promise. 이동/로그아웃의 leave는 이것이 끝난 뒤에 보낸다.
+  const initialLoadRef = useRef(null);
   // 참가자 읽기 세대. 이벤트마다 다시 읽으므로 응답이 순서를 바꿔 도착할 수 있다 —
   // 마지막에 시작한 읽기만 화면에 쓴다 (SF-A2: RPC 읽기가 그 창을 넓혔다).
   const playersReadRef = useRef(0);
@@ -102,7 +120,7 @@ export default function RoomPage() {
       }
     };
 
-    loadRoom();
+    initialLoadRef.current = loadRoom();
   }, [roomId, user?.id]);
 
   // ----------------------------
@@ -184,6 +202,14 @@ export default function RoomPage() {
     () => players.find((player) => player.user_id !== user?.id),
     [players, user?.id]
   );
+
+  // 참가자 칭호·레벨 — 그룹 대기실과 같은 배치 1회 조회 (17b). 실패하면 스냅샷만으로 그린다.
+  const rewardCards = useProfileCards(players.map((player) => player.user_id));
+
+  // 새 목표가 저장되면(또는 사라지면) "변경" 입력을 닫는다. 표시 상태만 바꾼다.
+  useEffect(() => {
+    setChangingTarget(false);
+  }, [hostPlayer?.target_title]);
 
   const isHost = !!user?.id && room?.host_user_id === user.id;
   const hasGuest = players.length === 2 && !!hostPlayer && !!opponentPlayer;
@@ -338,295 +364,271 @@ export default function RoomPage() {
     }
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard?.writeText(room?.room_code ?? roomId ?? "");
+  // 이동/로그아웃 전 leave 판정. 로딩 중 클릭이면 진행 중인 초기 join을 먼저 끝내고(그래야 leave가
+  // 마지막이다), 클릭 시점의 room 상태 대신 방 상태를 다시 읽는다 — 진행 중 leave는 기권이다.
+  const isStillWaiting = async () => {
+    if (!roomId || !user?.id) return false;
+    await initialLoadRef.current;
+    const current = await fetchRoom(roomId).catch(() => null);
+    return current?.status === "waiting";
+  };
+
+  // 로그아웃은 기존 대기실 나가기 RPC를 먼저 부른다 — 대기 중일 때만 (진행 중이면 기권이 된다).
+  const handleLogout = async () => {
+    try {
+      if (await isStillWaiting()) await leaveRoom(roomId, user.id);
+    } catch (error) {
+      console.error("leaveRoom before logout failed:", error);
+    }
+    await logout();
+    navigate("/");
+  };
+
+  // 헤더 이동(HOME/PLAY 등)도 "방 나가기"와 같은 기존 RPC로 먼저 방을 떠난다.
+  // 시작 이후(starting/playing)에는 부르지 않는다 — 진행 중 leave는 기권이다.
+  const handleNavigateAway = async (to) => {
+    try {
+      if (await isStillWaiting()) await leaveRoom(roomId, user.id);
+    } catch (error) {
+      console.error("leaveRoom before navigation failed:", error);
+    } finally {
+      navigate(to);
+    }
   };
 
   // ----------------------------
-  // 로딩
+  // 로딩 / 초기 로드 실패
   // ----------------------------
-  if (pending) {
+  if (pending || (submitError && !room)) {
     return (
-      <div className="mp-page">
-        <div className="mp-glow mp-glow--1" />
-        <div className="mp-glow mp-glow--2" />
-
-        <div className="mp-container">
-          <header className="mp-header">
-            <button type="button" className="mp-back-btn" onClick={handleLeaveRoom}>
-              ← 로비로
-            </button>
-          </header>
-
-          <div className="mp-title-block">
-            <span className="mp-badge">ROOM</span>
-            <h1 className="mp-title">대기실 불러오는 중...</h1>
-            <p className="mp-subtitle">
-              플레이어 정보와 방 상태를 확인하고 있습니다
-            </p>
-          </div>
-        </div>
-      </div>
+      <LobbyShell user={user} onLogout={handleLogout} onNavigate={handleNavigateAway} mode="duel">
+        <LobbyStateScreen
+          kicker={pending ? "1:1 DUEL · 대기실" : "1:1 DUEL · ERROR"}
+          title={pending ? "대기실 불러오는 중..." : "방 정보를 불러오지 못했습니다"}
+          message={pending ? "플레이어 정보와 방 상태를 확인하고 있습니다" : submitError}
+          error={!pending}
+          // 로딩 중 클릭: 같은 이동 정리 경로 — 초기 join 완료 → 방 상태 재조회 → waiting일 때만 leave.
+          onLeave={() => handleNavigateAway("/multiplayer")}
+          leaveLabel="← 온라인 플레이로"
+        />
+      </LobbyShell>
     );
   }
 
-  // ----------------------------
-  // 초기 로드 실패
-  // ----------------------------
-  if (submitError && !room) {
-    return (
-      <div className="mp-page">
-        <div className="mp-glow mp-glow--1" />
-        <div className="mp-glow mp-glow--2" />
+  const isWaiting = room?.status === "waiting";
+  const isStarting = starting || room?.status === "starting";
+  const roomCode = room?.room_code ?? roomId;
+  const targetTitle = hostPlayer?.target_title || "";
+  const nonHostPlayer = players.find((player) => player.user_id !== room?.host_user_id);
+  const showTargetSearch = isHost && isWaiting && (!hasHostTarget || changingTarget);
+  const statusText = !isHost
+    ? hostPlayer ? "두 탐험가 입장" : "상대를 기다리는 중"
+    : !hasGuest && !hasHostTarget ? "상대 대기 · 목표 문서 미선택"
+      : !hasGuest ? "상대를 기다리는 중 · 입장하면 시작할 수 있습니다"
+        : !hasHostTarget ? "상대 입장 · 목표 문서를 선택하면 시작할 수 있습니다"
+          : "상대가 입장했습니다 · 시작할 수 있습니다";
 
-        <div className="mp-container">
-          <header className="mp-header">
-            <button type="button" className="mp-back-btn" onClick={handleLeaveRoom}>
-              ← 로비로
-            </button>
-          </header>
-
-          <div className="mp-title-block">
-            <span className="mp-badge">ERROR</span>
-            <h1 className="mp-title">방 정보를 불러오지 못했습니다</h1>
-            <p className="mp-error">{submitError}</p>
-          </div>
-        </div>
-      </div>
+  const renderPlayer = (player, slot) => {
+    if (!player) {
+      return (
+        <li className="wr-duel-player wr-duel-player--empty" key={`empty-${slot}`}>
+          <span className="wr-duel-empty-ring"><LobbyIcon name="pending" size={16} /></span>
+          <span className="wr-duel-player-text">
+            <span className="wr-duel-empty-title">빈 자리</span>
+            <span className="wr-duel-empty-hint">상대를 기다리는 중 · 방 코드를 공유하세요</span>
+          </span>
+        </li>
+      );
+    }
+    const isMe = player.user_id === user?.id;
+    const playerIsHost = player.user_id === room?.host_user_id;
+    const card = mergeRewardSlots(
+      buildProfileCard({
+        userId: player.user_id,
+        nickname: player.nickname_snapshot,
+        legacyImageUrl: player.profile_image_snapshot,
+        source: "snapshot",
+      }),
+      rewardCards[player.user_id]
     );
-  }
+    const name = resolveDisplayName(card, NAME_FALLBACK.PARTICIPANT);
+    return (
+      <li className={`wr-duel-player ${isMe ? "wr-is-me" : ""}`} key={player.user_id}>
+        <span className="wr-duel-player-tags">
+          {playerIsHost && <HostTag />}
+          {isMe && <MeTag />}
+        </span>
+        <ProfileAvatar card={card} size="lg" nameFallback={NAME_FALLBACK.PARTICIPANT} className="wr-duel-avatar" />
+        <span className="wr-duel-player-text">
+          <button type="button" className="wr-name-btn" onClick={() => handlePlayerClick(player.user_id)} aria-label={`${name} 프로필 보기`}>
+            {name}
+          </button>
+          {(card.level != null || card.title) && (
+            <span className="wr-duel-player-meta">
+              {card.level != null && <span className="wr-duel-level">Lv.{card.level}</span>}
+              {card.title && <span className="wr-title-badge">{card.title.displayName}</span>}
+            </span>
+          )}
+        </span>
+        <StatusMark tone="teal">입장 완료</StatusMark>
+      </li>
+    );
+  };
 
   return (
-    <div className="mp-page">
-      <div className="mp-glow mp-glow--1" />
-      <div className="mp-glow mp-glow--2" />
+    <LobbyShell user={user} onLogout={handleLogout} onNavigate={handleNavigateAway} mode="duel">
+      <LobbyHeader kicker="1:1 DUEL · 대기실" title="1:1 대기실" onLeave={handleLeaveRoom} />
 
-      <div className="mp-container">
-        <header className="mp-header">
-          <button type="button" className="mp-back-btn" onClick={handleLeaveRoom}>
-            ← 로비로
-          </button>
-        </header>
+      <div className="wr-duel-stage">
+        <h2 className="wr-visually-hidden">참가자</h2>
+        <ul className="wr-duel-players" aria-label={`참가자 ${players.length} / 2`}>
+          {renderPlayer(hostPlayer, "a")}
+          <li className="wr-duel-center" aria-hidden="true">
+            <span className="wr-duel-center-trail"><TrailLine /></span>
+            <span key={`flag-${targetTitle}`} className={`wr-target-flag ${targetTitle ? "is-set" : ""}`}><LobbyIcon name="flag" size={18} /></span>
+            <span className="wr-duel-center-label">목표 문서</span>
+            {targetTitle
+              ? <span key={`title-${targetTitle}`} className="wr-duel-center-title">{targetTitle}</span>
+              : <span className="wr-duel-center-empty">{isHost ? "미선택" : "방장이 고르는 중"}</span>}
+          </li>
+          {renderPlayer(nonHostPlayer, "b")}
+        </ul>
+      </div>
 
-        <div className="room-code-banner">
-          <span className="room-code-label">ROOM CODE</span>
-          <button
-            type="button"
-            className="room-code-value"
-            onClick={handleCopyCode}
-            title="클릭하여 복사"
-          >
-            {room?.room_code ?? roomId}
-            <span className="room-code-copy">📋</span>
-          </button>
-        </div>
-
-        <div className="room-status">
-          {!hasGuest && (
-            <div className="room-status-pill room-status--waiting">
-              <span className="room-pulse" />
-              상대를 기다리는 중...
-            </div>
-          )}
-
-          {hasGuest && !hasHostTarget && room?.status === "waiting" && (
-            <div className="room-status-pill room-status--setting">
-              🎯 방장이 목표를 고르는 중
-            </div>
-          )}
-
-          {hasGuest && hasHostTarget && room?.status === "waiting" && !targetBusy && (
-            <div className="room-status-pill room-status--ready">
-              🎯 공통 목표가 선택되었습니다
-            </div>
-          )}
-
-          {(starting || room?.status === "starting") && (
-            <div className="room-status-pill room-status--starting">
-              🚀 게임 시작 중...
-            </div>
-          )}
-        </div>
-
-        {submitError && room && (
-          <div className="mp-error" style={{ marginBottom: "16px" }}>
-            {submitError}
+      <div className="wr-duel-target room-target-section">
+        <h2 className="wr-section-label">TARGET · 목표 문서</h2>
+        {isHost ? (
+          <div className="wr-duel-target-body">
+            {hasHostTarget && !showTargetSearch && (
+              <div className="wr-target-chosen">
+                <span key={targetTitle} className="wr-gold-pill"><LobbyIcon name="flag" size={11} />{targetTitle}</span>
+                {isWaiting && (
+                  <button type="button" className="wr-link-btn" disabled={targetBusy} onClick={() => setChangingTarget(true)} aria-label="목표 문서 변경">
+                    변경
+                  </button>
+                )}
+                <span className="wr-visually-hidden">방장이 고른 목표: {targetTitle}</span>
+              </div>
+            )}
+            {showTargetSearch && (
+              <form
+                className="wr-target-search"
+                role="search"
+                aria-label="목표 문서 검색"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSearch();
+                }}
+              >
+                <label className="wr-search-field">
+                  <LobbyIcon name="search" size={14} />
+                  <span className="wr-visually-hidden">목표 문서 검색어</span>
+                  <input
+                    className="room-target-input"
+                    type="text"
+                    placeholder="위키백과 문서 검색"
+                    value={keywordInput}
+                    disabled={targetBusy || !isWaiting}
+                    autoFocus={changingTarget}
+                    onChange={(e) => {
+                      setKeywordInput(e.target.value);
+                      setSubmitError("");
+                      setTargetSuggestions([]);
+                      setSelectedTargetTitle("");
+                    }}
+                  />
+                </label>
+                <button type="submit" className="wr-btn wr-btn--secondary" disabled={targetBusy || !isWaiting}>
+                  {isSearching ? "검색 중..." : "검색"}
+                </button>
+                {changingTarget && hasHostTarget && (
+                  <button type="button" className="wr-link-btn" onClick={() => { setChangingTarget(false); setTargetSuggestions([]); }}>
+                    취소
+                  </button>
+                )}
+                <span className="wr-target-help">이번 대전의 목표 문서를 선택하세요</span>
+              </form>
+            )}
+          </div>
+        ) : (
+          <div className="wr-duel-target-body">
+            {hostPlayer?.target_title ? (
+              <p key={hostPlayer.target_title} className="wr-target-read" role="status">
+                방장이 고른 목표: <strong className="wr-gold-pill">{hostPlayer.target_title}</strong>
+              </p>
+            ) : (
+              <p className="wr-target-pending" role="status">
+                <LobbyIcon name="pending" size={12} />방장이 목표를 고르는 중
+              </p>
+            )}
           </div>
         )}
+        <span className="wr-target-note">시작 문서는 경기 시작 시 결정됩니다</span>
 
-        <div className="room-players">
-          {/* 내 패널 */}
-          <div className="room-player-card">
-            <div className="room-player-role">
-              {isHost ? "👑 HOST" : "⚔️ GUEST"}
-            </div>
-
-            <div
-              className="room-player-avatar"
-              onClick={() => handlePlayerClick(myPlayer?.user_id)}
-              style={{ cursor: "pointer" }}
-            >
-              {(myPlayer?.nickname_snapshot || user?.displayName || "나")
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <div
-              className="room-player-name"
-              onClick={() => handlePlayerClick(myPlayer?.user_id)}
-              style={{ cursor: "pointer", textDecoration: "underline" }}
-            >
-              {myPlayer?.nickname_snapshot || user?.displayName || "나"}
-            </div>
-
-            {isHost ? (
-            <div className="room-target-section">
-              <label className="room-target-label">공통 목표 문서 (검색 후 선택)</label>
-
-              <div style={{ display: "flex", gap: "8px" }}>
-                <input
-                  className="room-target-input"
-                  style={{ flex: 1, margin: 0 }}
-                  type="text"
-                  placeholder="예: 알베르트 아인슈타인"
-                  value={keywordInput}
-                  disabled={targetBusy || room?.status !== "waiting"}
-                  onChange={(e) => {
-                    setKeywordInput(e.target.value);
-                    setSubmitError("");
-                    setTargetSuggestions([]);
-                    setSelectedTargetTitle("");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch();
-                    }
-                  }}
-                />
+        {/* 검색 결과 후보 */}
+        {showTargetSearch && targetSuggestions.length > 0 && (
+          <ul className="wr-search-results" aria-label="목표 문서 검색 결과">
+            {targetSuggestions.map((item) => (
+              <li key={item.title}>
                 <button
                   type="button"
-                  className="mp-action-btn"
-                  disabled={targetBusy || room?.status !== "waiting"}
-                  onClick={handleSearch}
+                  disabled={targetBusy || !isWaiting}
+                  onClick={() => handleSelectSuggestion(item)}
+                  className={`search-item ${selectedTargetTitle === item.title ? "selected" : ""}`}
                 >
-                  {isSearching ? "..." : "검색"}
+                  <span className="search-item-title">{item.title}</span>
+                  <span
+                    className="search-item-snippet"
+                    dangerouslySetInnerHTML={{ __html: item.snippet || "" }}
+                  />
+                  <span className="wr-search-pick" aria-hidden="true">선택</span>
                 </button>
-              </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
-              {/* 현재 선택된 문서 표시 */}
-              {selectedTargetTitle && !targetSuggestions.length && (
-                <div style={{ marginTop: "10px", fontSize: "13px", opacity: 0.85 }}>
-                  방장이 고른 목표: <strong>{selectedTargetTitle}</strong>
-                </div>
-              )}
-            </div>
-            ) : (
-              <div className="room-target-section room-target-display">
-                {hostPlayer?.target_title
-                  ? `방장이 고른 목표: ${hostPlayer.target_title}`
-                  : "방장이 목표를 고르는 중"}
-              </div>
-            )}
-
-            {/* 검색 결과 후보 */}
-            {isHost && targetSuggestions.length > 0 && (
-              <div className="search-results-list" style={{ marginTop: "12px" }}>
-                {targetSuggestions.map((item) => (
-                  <button
-                    type="button"
-                    key={item.title}
-                    disabled={targetBusy || room?.status !== "waiting"}
-                    onClick={() => handleSelectSuggestion(item)}
-                    className={`search-item ${selectedTargetTitle === item.title ? "selected" : ""}`}
-                  >
-                    <div className="search-item-title">{item.title}</div>
-                    <div
-                      className="search-item-snippet"
-                      dangerouslySetInnerHTML={{ __html: item.snippet || "" }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {savingTarget && <p role="status">목표 문서 저장 중...</p>}
-          </div>
-
-          <div className="room-vs">VS</div>
-
-          {/* 상대 패널 */}
-          <div
-            className={`room-player-card room-player--opponent ${!opponentPlayer ? "room-player--empty" : ""}`}
-          >
-            {opponentPlayer ? (
-              <>
-                <div className="room-player-role">
-                  {isHost ? "⚔️ GUEST" : "👑 HOST"}
-                </div>
-
-                <div
-                  className="room-player-avatar"
-                  onClick={() => handlePlayerClick(opponentPlayer.user_id)}
-                  style={{ cursor: "pointer" }}
-                >
-                  {(opponentPlayer.nickname_snapshot || "상대")
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
-
-                <div
-                  className="room-player-name"
-                  onClick={() => handlePlayerClick(opponentPlayer.user_id)}
-                  style={{ cursor: "pointer", textDecoration: "underline" }}
-                >
-                  {opponentPlayer.nickname_snapshot || "상대"}
-                </div>
-
-                <div className="room-target-section">
-                  <div className="room-target-display">
-                    {hostPlayer?.target_title
-                      ? `방장이 고른 목표: ${hostPlayer.target_title}`
-                      : "방장이 목표를 고르는 중"}
-                  </div>
-                </div>
-
-              </>
-            ) : (
-              <>
-                <div className="room-empty-icon">⏳</div>
-                <div className="room-empty-text">대기 중</div>
-                <div className="room-empty-hint">방 코드를 공유하세요</div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div style={{ marginTop: "24px", textAlign: "center" }}>
-          {isHost && room?.status === "waiting" && (
-            <button
-              type="button"
-              className="mp-action-btn mp-action-btn--primary"
-              onClick={handleStartGame}
-              disabled={!canStart}
-            >
-              {starting ? "시작 중..." : "게임 시작"}
-            </button>
-          )}
-
-          {!isHost && room?.status === "waiting" && (
-            <p className="mp-subtitle">
-              호스트가 게임을 시작할 때까지 기다려주세요.
-            </p>
-          )}
-
-          {/* 모달 렌더링 */}
-          <UserProfileModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            userId={selectedUserId}
-          />
-        </div>
+        {savingTarget && <p className="wr-lobby-muted" role="status">목표 문서 저장 중...</p>}
       </div>
-    </div>
+
+      <dl className="wr-duel-setup">
+        <div><dt>경기 규칙</dt><dd>{room?.use_items === false ? "아이템 없음" : "아이템전"}</dd></div>
+        <div><dt>방 코드</dt><dd><CopyCodeButton code={roomCode} /></dd></div>
+      </dl>
+
+      {submitError && room && (
+        <p className="wr-lobby-error" role="alert">{submitError}</p>
+      )}
+
+      <div className="wr-lobby-actions">
+        <span className="wr-lobby-count">{players.length} / 2</span>
+        <p className="wr-lobby-status" id="wr-duel-status" role="status">
+          {isStarting
+            ? <><LobbyIcon name="timer" size={14} />게임 시작 중...</>
+            : <><LobbyIcon name={hasGuest ? "check" : "pending"} size={13} />{statusText}</>}
+        </p>
+        {isHost && isWaiting && (
+          <button
+            type="button"
+            className="wr-btn wr-btn--primary wr-btn--lg"
+            onClick={handleStartGame}
+            disabled={!canStart}
+            aria-describedby="wr-duel-status"
+          >
+            {starting ? "시작 중..." : "게임 시작"}
+          </button>
+        )}
+        {!isHost && isWaiting && (
+          <span className="wr-wait-note"><LobbyIcon name="timer" size={14} />시작은 방장만 · 방장이 시작하기를 기다리는 중</span>
+        )}
+      </div>
+
+      {/* 모달 렌더링 */}
+      <UserProfileModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        userId={selectedUserId}
+      />
+    </LobbyShell>
   );
 }

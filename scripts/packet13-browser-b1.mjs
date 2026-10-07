@@ -1346,7 +1346,7 @@ async function runAllScenarios() {
   await runScenario(getPacket13B1Scenario("two-player-start-rejected"), async ({ actors, result, config }) => {
     const roomId = await setupRoom(config, actors, result);
     result.roomIds.push(roomId);
-    const button = actors[0].page.locator(".group-player-list-card button").filter({ hasText: /게임 시작|대기 중/ });
+    const button = actors[0].page.locator(".wr-lobby-actions button").filter({ hasText: /게임 시작/ });
     assertCondition(!(await button.isEnabled()), "2-player UI start guard was not disabled");
     await expectRpcError(actors[0].user, "start_group_room_game_v2", { p_room_id: roomId }, "GROUP_PLAYER_COUNT_INVALID");
     const row = await roomRow(roomId);

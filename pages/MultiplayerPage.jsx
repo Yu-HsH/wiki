@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../authContext";
-import { LOBBY_PATH } from "../utils/appRoutes";
+import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import {
   createRoom,
   findRoomByCode,
@@ -43,7 +43,7 @@ const DUEL_ITEM_HELP_SECTIONS = [
 
 export default function MultiplayerPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const [searchParams] = useSearchParams();
   const [selectedMode, setSelectedMode] = useState(() => {
@@ -118,9 +118,15 @@ export default function MultiplayerPage() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
+
+  // Phase 2: 기존 방 생성/코드 참가 기능은 그대로 두고 공용 Shell 안에서 가볍게 보인다.
   return (
-    <div className="mp-page">
-      <div className="mp-container">
+    <WikiRaceShell user={user} level={null} onLogout={handleLogout} view="entry">
+      <div className="mp-container wr-entry">
 
         {/* =========================
            상단 내비게이션
@@ -129,31 +135,39 @@ export default function MultiplayerPage() {
           <button
             type="button"
             className="app-btn app-btn-ghost"
-            onClick={() => navigate(LOBBY_PATH)}
+            onClick={() => navigate("/play")}
           >
-            ← 로비로
+            ← 탐험 선택
           </button>
         </header>
+        <div className="wr-entry-title">
+          <p className="wr-kicker">ONLINE · 온라인 대전</p>
+          <h1>방 만들기 · 코드로 참가</h1>
+        </div>
 
         {/* =========================
            모드 선택
         ========================= */}
-        <div className="mp-mode-grid">
-          <div
+        <div className="mp-mode-grid" role="group" aria-label="온라인 모드 선택">
+          <button
+            type="button"
             className={`mp-mode-card ${selectedMode === "duel" ? "mp-mode-card--active" : ""
               }`}
+            aria-pressed={selectedMode === "duel"}
             onClick={() => setSelectedMode("duel")}
           >
             ⚔️ 1 vs 1
-          </div>
+          </button>
 
-          <div
+          <button
+            type="button"
             className={`mp-mode-card ${selectedMode === "group" ? "mp-mode-card--active" : ""
               }`}
+            aria-pressed={selectedMode === "group"}
             onClick={() => setSelectedMode("group")}
           >
             👥 단체모드
-          </div>
+          </button>
         </div>
 
         {/* =========================
@@ -305,7 +319,7 @@ export default function MultiplayerPage() {
            에러 메시지
         ========================= */}
         {submitError && (
-          <p className="mp-error">{submitError}</p>
+          <p className="mp-error" role="alert">{submitError}</p>
         )}
 
         {/* 플로팅 도움말 버튼 */}
@@ -327,9 +341,10 @@ export default function MultiplayerPage() {
               <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px" }}>
                 <h3>1. 1vs1 모드</h3>
                 <ul>
-                  <li>두 명이 서로 다른 목표 문서를 가지고 시작합니다.</li>
-                  <li>내 목표는 상대가 설정한 목표 문서입니다.</li>
-                  <li>먼저 목표 문서에 도달한 사람이 승리합니다.</li>
+                  <li>방장이 대기실에서 두 사람이 함께 쓸 목표 문서 하나를 고릅니다.</li>
+                  <li>참가자는 방장이 고른 목표를 바로 확인할 수 있습니다.</li>
+                  <li>READY 단계는 없습니다. 상대가 입장하고 목표가 정해지면 방장이 시작합니다.</li>
+                  <li>시작 문서는 경기 시작 시 정해지며, 같은 목표에 먼저 도달한 사람이 승리합니다.</li>
                   <li>상대 현재 문서, 이동 횟수, 상태를 확인할 수 있습니다.</li>
                   <li>
                     아이템전으로 만들면 시작할 때 {DUEL_SLOT_COUNT}칸을 받습니다.
@@ -375,6 +390,6 @@ export default function MultiplayerPage() {
         )}
 
       </div>
-    </div>
+    </WikiRaceShell>
   );
 }

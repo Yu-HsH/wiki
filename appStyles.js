@@ -22,3 +22,4 @@ import "./css/matchResult.css";
 import "./css/wikiRaceTokens.css";
 import "./css/wikiRaceMotion.css";
 import "./css/wikiRaceBase.css";
+import "./css/wikiRaceLobby.css";
