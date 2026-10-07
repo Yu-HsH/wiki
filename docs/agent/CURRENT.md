@@ -1,8 +1,8 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-07** (UI Phase 4 RESULT 로컬 구현 기록 — **미커밋 작업 트리**) · 이전: 2026-10-07 (UI Phase 3 기록) · 2026-10-07 (UI Phase 1·2 로컬 커밋 기록) · 2026-10-06 (Production 배포 #15)
-기준 커밋: **`b6b6a2c`** (`feat: integrate jungle expedition race and spectator UI` — Phase 3 코드). **Phase 4 코드는 아직 커밋 전이며 `b6b6a2c` 위의 작업 트리에 있다** — 아래 Phase 4 절.
-브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-07 재측정 [산출물], 이번 세션 미재측정) — 로컬은 그 위에 미push 5커밋(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2 · `321ea27` 문서 · `b6b6a2c` Phase 3). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1·2·3·4 UI는 **운영 미배포 · 미push** (이 기록 이후의 push는 반영되어 있지 않다).
+갱신 날짜: **2026-10-08** (Phase 1–4 커밋 후 최종 릴리스 회귀 · `release-validation-local-smoke` 셀렉터 복구) · 이전: 2026-10-07 (UI Phase 4 RESULT 로컬 구현 기록) · 2026-10-07 (UI Phase 3 기록) · 2026-10-07 (UI Phase 1·2 로컬 커밋 기록) · 2026-10-06 (Production 배포 #15)
+기준 커밋: **`4818c34`** (`feat: integrate jungle expedition result UI` — Phase 4 코드). Phase 3 = `b6b6a2c`, Phase 4 = `4818c34` — **Phase 1–4 전부 로컬 커밋됨**. 작업 트리의 미커밋 변경은 `scripts/release-validation-local-smoke.mjs` 셀렉터 복구(아래 최종 회귀 절)와 이 문서뿐이다.
+브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-08 재측정 [산출물]) — 로컬은 그 위에 미push **6커밋**(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2 · `321ea27` 문서 · `b6b6a2c` Phase 3 · `4818c34` Phase 4). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1–4 UI는 **로컬 커밋 · 미push · 운영 미배포** (이 기록 이후의 push는 반영되어 있지 않다).
 
 ## 최신 운영 상태 — RELEASED WITH FOLLOW-UP
 
@@ -43,7 +43,34 @@ Phase 2 검증 **62105a3 + 미커밋 Phase 2 작업 트리, 2026-10-07 [산출�
 
 기존 운영 출시 상태는 위 2026-10-06 기록을 따른다.
 
-## 2026-10-07 Jungle Expedition UI — Phase 4 RESULT 로컬 구현 (미커밋 · 미push · 미배포)
+## 2026-10-08 Phase 1–4 커밋 후 최종 릴리스 회귀 — PASS (미push · 미배포)
+
+**기준 `4818c34` + 미커밋 `scripts/release-validation-local-smoke.mjs` 셀렉터 복구, 2026-10-08 [산출물].** 순차 실행(동시 실행 없음). 로컬 스택 `wiki-packet13-r2-clean158`(migration 32/32), 호스트·DB 시계 차 ≤1초 확인 후 실행. 제품 코드 변경 0.
+
+**`release-validation-local-smoke` 셀렉터 복구 (테스트 전용, 단언 약화 없음):**
+- 1:1 목표 저장 완료 대기: `getByRole('status')` 0개 → `.room-target-section`의 `목표 문서 저장 중...` 0개. 옛 대기실에서 `role="status"`는 저장 중 문구뿐이었고, 현재는 상시 `#wr-duel-status`가 있어 영구 실패했다. 의미(저장 완료 대기)는 같다.
+- 그룹 개인 완주 순위: `getByText('1위', {exact})` → Result A 표제 `#wr-result-a-title` = `1위 완주`(Phase 4 문구). DB `status = playing` 단언 유지.
+- `--single-only` 진입: HOME `혼자서 플레이` 버튼(Phase 1에서 제거) → `/play`의 `싱글 탐험` 카드(`achievement-display-smoke`와 같은 셀렉터). 모달·XP 단언 무변경.
+
+| 검증 | 결과 |
+|---|---|
+| `npm test` | **537/537** |
+| `npm run build` · `git diff --check` | exit 0(기존 큰 번들 경고만) · exit 0 |
+| Phase 1 / 2 / 3 / 4 browser (격리 fixture) | **42/42 · 82/82 · 84/84 · 85/85** — 출력된 console 오류는 스크립트가 의도한 주입 실패(500·`fixture failure`·강퇴 복구)뿐 |
+| `scripts/packet13-browser-b1.mjs` (실 로컬 백엔드) | **12/12** · exit 0 · contexts 53/53 · join_acks 52/52 · deliveries 90/90 · fatal 0 · fixture_remaining 0 |
+| `scripts/ui-phase3-local-smoke.mjs` | **16/16** · console/API/page 오류 0 |
+| `scripts/achievement-display-smoke.mjs` | **16/16** · page 오류 0 · cleanup PASS |
+| `scripts/release-validation-local-smoke.mjs` (기본: 1:1 A3·F5·XP·아이템 teleport·기권·그룹 3인) | **PASS 22/22** · page 오류 0 · cleanup PASS. 첫 실행은 그룹 `1위` 셀렉터(stale)에서 중단 → 복구 후 통과, 최종 파일로 재실행 통과 |
+| `scripts/release-validation-local-smoke.mjs --single-only` (custom +15/0 · random +20 · daily +25/0) | **PASS 9/9** · page 오류 0 · daily 원복 · cleanup PASS |
+| 실행 후 잔여 | sa2 문서 0 · 테스트 계정 0 · daily/후보 fixture 0 · waiting/playing 방 0 |
+| Freeze 8 HTML + manifest | SHA-256 8/8 일치 |
+| `supabase/` · `services/` · migration | `d496ba2..HEAD`·작업 트리 모두 변경 0, migration 파일 32 |
+
+`main` push(=Production 재배포)는 `AGENTS.md` §1.1 건별 승인 대상이다. 운영 DB 변경 없음.
+
+## 2026-10-07 Jungle Expedition UI — Phase 4 RESULT (커밋 `4818c34` · 미push · 미배포)
+
+> **2026-10-08 갱신:** Phase 4는 `4818c34`로 커밋됐다. 아래 본문은 커밋 전 작업 트리에서의 기록이며, 커밋 후 회귀와 `release-validation-local-smoke` 복구는 위 2026-10-08 절이 대신한다.
 
 **상태: 구현 + 로컬 검증 완료 · 커밋 전 작업 트리(`b6b6a2c` 위) · Visual 승인 대기.** Freeze `07_DUEL_RESULT_FINAL`·`08_GROUP_RESULT_FINAL` 기준. 사전 감사 후 사용자 결정 7건 `[사용자 결정, 2026-10-07]`:
 1. **1:1 결과 자동 이동(4000ms/업적 시 6000ms → `/multiplayer`) 제거.** 대체 타이머 없음. 나가기는 명시적 "게임 로비로 이동"만. `settleIntoResult`·복구·F5 결과 복원·서버 판정 무변경.

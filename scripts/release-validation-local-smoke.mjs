@@ -174,7 +174,7 @@ try {
     await host.locator('.room-target-input').fill('목표');
     await host.getByRole('button', { name: '검색', exact: true }).click();
     await host.locator('.search-item').filter({ hasText: TARGET.title }).click();
-    await expect(host.getByRole('status')).toHaveCount(0);
+    await expect(host.locator('.room-target-section').getByText('목표 문서 저장 중...')).toHaveCount(0);
     await expect(host.locator('.room-target-section').first()).toContainText(TARGET.title);
     await expect(guest.getByText(`방장이 고른 목표: ${TARGET.title}`).first()).toBeVisible({timeout:15000});
     await host.getByRole('button', { name: '게임 시작', exact: true }).click();
@@ -324,7 +324,8 @@ try {
         await expect(host.locator('.daily-keyword')).toHaveText(TARGET.title,{timeout:15000});
         await host.locator('.daily-btn').click();
       } else {
-        await host.getByRole('button',{name:/혼자서 플레이/}).click();
+        await host.goto(`${base}/play`);
+        await host.getByRole('button',{name:/^싱글 탐험 · /}).click();
         await host.locator('.qs-modal-input').fill(mode==='random'?'랜덤':'목표');
         if(mode==='custom') {
           await host.locator('.qs-modal').getByRole('button',{name:'검색',exact:true}).click();
@@ -371,7 +372,7 @@ try {
   const groupRead=await users[0].client.from('room_players').select('user_id').eq('room_id',group.id);assert.equal(groupRead.error,null);assert.equal(groupRead.data.length,3);
   pass('group: room/join/ready/start via actual RPC; A3 retains all three group rows');
   await host.locator('.article-content a').filter({hasText:groupTarget.title}).first().click();
-  await expect(host.getByText('1위',{exact:true})).toBeVisible({timeout:20000});
+  await expect(host.locator('#wr-result-a-title')).toHaveText('1위 완주',{timeout:20000});
   assert.equal((await roomRows(group.id)).room.status,'playing');
   pass('group: personal finish shows rank while remaining race continues');
   await guest.locator('.article-content a').filter({hasText:groupTarget.title}).first().click();
