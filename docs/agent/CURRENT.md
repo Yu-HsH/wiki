@@ -1,8 +1,8 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-06** (Production 배포 #15)
-기준 커밋: **`d496ba2`** — 이번 배포 기록 커밋의 부모.
-브랜치: `feat/group-final-gaps`. 원격 main/feature 및 Production = `d496ba2` [실측, 2026-10-06].
+갱신 날짜: **2026-10-07** (UI Phase 1·2 로컬 커밋 기록) · 이전: 2026-10-06 (Production 배포 #15)
+기준 커밋: **`b1dec43`** — 이번 상태 갱신 커밋의 부모.
+브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-07 [산출물]) — 로컬은 그 위에 미push 3커밋(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1·2 UI는 **운영 미배포**.
 
 ## 최신 운영 상태 — RELEASED WITH FOLLOW-UP
 
@@ -10,9 +10,38 @@
 
 실제 운영 random **+20**, daily **+25**, 정상 duel 생성/입장/시작/일반 이동, 정상 지급 random_teleport **이동·path +1/소비 1건**, 기권 승리 **+30**·패배 **0**, 종료 결과/F5/상대 경로 복구 확인. SF-A3/M2 운영 DDL·ACL 검증 통과. 조회 범위 Edge 로그 5xx/예상 밖 오류 0, smoke 브라우저 error/warn 0. Group은 기존 종료 결과/F5만 확인, 신규 3인 흐름은 세 번째 세션이 없어 미확인. 390px Duel/Group 결과는 확인, 긴 path/새 업적은 후속. 확인된 차단 문제 없음, rollback 없음. maintenance는 이번 세션에서 사용하지 않아 해제 변경 없음. 기존 열린 탭 새로고침 필요. **기능 개발 종료, 2.1 backlog 분리.** 상세 근거/한계: [Production 배포 기록](../ops/RELEASE-2026-10-06.md).
 
-## 2026-10-07 UI Phase 1 — 미커밋 로컬 통합
+## 2026-10-07 Jungle Expedition UI — Phase 1·2 로컬 통합 완료 (커밋됨, 미push·미배포)
 
-**6629445 + 미커밋 작업 트리, 2026-10-07 [산출물]**: Jungle Expedition 공용 Shell/Header·색상/모션 및 HOME·`/play` 모드 선택 통합. 기존 서비스/인증/게임/DB 계약 유지, 운영 상태 무변경. npm **511/511** · build/diff exit 0 · 격리된 API fixture 브라우저 **42/42**(PLAY 기본/hover/focus 동등성·장식 무배치 영향, desktop·390px·320px·키보드·reduced motion). 실제 계정의 방 생성/참가·싱글/오늘 코스 완주는 이번 세션 미검증. commit/push/배포/운영 적용 없음. [파일·보존 계약·시각 차이·검증 한계](../ui-freeze/PHASE1-INTEGRATION-2026-10-07.md). 기존 운영 출시 상태는 위 2026-10-06 기록을 따른다.
+**Phase 1 — HOME·PLAY, 커밋 `62105a3`** (`feat: integrate jungle expedition home and play UI`). 공용 Shell/Header·색상/모션 및 HOME·`/play` 모드 선택 통합. 검증 **6629445 + 미커밋 작업 트리, 2026-10-07 [산출물]**: npm **511/511** · build/diff exit 0 · 격리 fixture 브라우저 **42/42**. 상세: [Phase 1 통합 기록](../ui-freeze/PHASE1-INTEGRATION-2026-10-07.md).
+
+**Phase 2 — 1:1·그룹 대기실, 커밋 `b1dec43`** (`feat: integrate jungle expedition multiplayer lobbies`, 16파일). Freeze `03_DUEL_LOBBY_FINAL`·`04_GROUP_LOBBY_FINAL` 기준으로 `RoomPage`·`GroupRoomPage` 표시 재구성, `/multiplayer` 입장 화면은 Shell 래핑·가벼운 재색상만. 기존 서비스·RPC·Realtime·핸들러 유지 `[코드]`. 계약 정합 수정 포함:
+- 1:1: READY 없음 · 방장 단일 공통 목표 · 게스트 즉시 표시 · START는 방장만(상대+목표). `/multiplayer` 1:1 안내 문구를 이 계약으로 교체.
+- 그룹: START 표시는 서버 `start_group_room_game_v2` 거부 조건을 같은 순서로 비춘다(3명 이상 → 전원 READY+제출 page_id → 서로 다른 후보 2개 이상) — `utils/groupLobbyState.js`. 판정은 서버. 남의 후보 제목은 로스터에서 숨김. `createGroupRoom` 기본 `maxPlayers = 6` 무변경.
+- 이동 정리: 대기실 헤더 이동·로그아웃·로딩/오류 화면 `← 온라인 플레이로`는 같은 경로(`handleNavigateAway`) — 진행 중 초기 join 완료 → 방 상태 재조회 → `waiting`일 때만 기존 leave RPC → 이동. 시작 이후에는 leave하지 않는다.
+- 접근: 온라인 5경로(`/multiplayer`, 1:1·그룹 대기실, 1:1·그룹 경기)를 `OnlineRoute`로 — 미로그인 → `/login`, 로컬 게스트 → `/play`.
+
+Phase 2 검증 **62105a3 + 미커밋 Phase 2 작업 트리, 2026-10-07 [산출물]** — 커밋 `b1dec43`은 그 트리와 내용이 같다(커밋 후 추적 파일 diff 0 확인). **커밋 후 재실행은 하지 않았다.**
+
+| 검증 | 결과 |
+|---|---|
+| `npm test` | **521/521** |
+| `npm run build` · `git diff --check` | exit 0 · exit 0 (기존 큰 번들 경고만) |
+| Phase 1 회귀 `scripts/ui-phase1-browser.mjs` | **42/42** |
+| Phase 2 fixture `scripts/ui-phase2-browser.mjs` (격리 API/Realtime fixture) | **82/82** |
+| **실제 로컬 백엔드** `scripts/ui-phase2-local-smoke.mjs` (로컬 Auth·RPC·RLS·trigger·Realtime, migration 32/32 적용 스택) | **30/30 × 3회** — 1:1 생성/코드 참가/목표/Realtime 반영/START/양쪽 같은 경기 · 그룹 3인 참가/차단 사유 3종/READY 잠금/후보 변경/START/세 명 같은 경기 · 방장 승계(trigger → Realtime → 새 방장 START, READY 유지) · 헤더 HOME/PLAY와 로딩 중 `← 온라인 플레이로`의 실제 leave(멤버십 제거·늦은 재가입 없음). 2회차에만 `/play` XP 조회 `get_xp_summary_v1` 502 1건 — 로컬 Kong 로그상 PostgREST 연결 조기 종료, 체크는 전부 통과, 3회차 0건 |
+| Freeze 8개 HTML + manifest | SHA-256 불변 |
+| `supabase/`·migration·`services/` | 변경 0 |
+
+픽스처 조건: 로컬 스모크는 위키 문서를 로컬 snapshot 테이블에 시드하고 Wikipedia·`wiki-snapshot` Edge 호출만 브라우저에서 응답한다(오프라인) — release smoke와 같은 방식. 생성한 사용자·방·문서는 매 실행 후 삭제(잔여 0).
+
+**남은 사항 (Phase 2 범위 밖·후속):**
+- `scripts/release-validation-local-smoke.mjs`는 옛 대기실 가정(`role="status"` 0개)이라 갱신 전에는 통과하지 않는다. `scripts/packet13-browser-b1.mjs`는 START 셀렉터만 갱신, 미실행.
+- 브라우저 뒤로가기·탭 닫기는 leave를 부르지 않는다 (기존 동작, 별도 복구 과제).
+- 입장 화면(`/multiplayer`) 전용 디자인 · 공개방 탐색(제품에 없음)은 후속.
+- RACE/RESULT/관전/프로필/랭킹/업적 화면은 아직 옛 디자인 (Phase 3 이후).
+- `main` push(=Production 재배포)는 `AGENTS.md` §1.1 건별 승인 대상이다. 운영 DB 변경 없음.
+
+기존 운영 출시 상태는 위 2026-10-06 기록을 따른다.
 
 ## 과거 상태 — 선택적 커밋 정리 (배포 이전)
 
