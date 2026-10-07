@@ -15,6 +15,7 @@ import {
 import {
   fetchPageData,
   fetchPageSummary,
+  formatDuration,
   normalizeTitle,
 } from "../services/wikiService";
 import { isAbortError } from "../utils/latestRequest";
@@ -24,6 +25,18 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 import { buildDuelResultPresentation, getDuelResultElapsedSeconds } from "../utils/duelResultPresentation.js";
 import ResultXp from "../components/ResultXp.jsx";
+import {
+  ResultActions,
+  ResultCard,
+  ResultCourse,
+  ResultOutcome,
+  ResultRoute,
+  ResultScene,
+  ResultScreen,
+  ResultStats,
+  ResultXpRow,
+} from "../components/wiki-race/result/ResultParts.jsx";
+import { buildDuelOutcomeView } from "../utils/resultPresentation.js";
 import FinishEffect from "../components/FinishEffect.jsx";
 import useMatchExpression from "../hooks/useMatchExpression.js";
 import { trackEvent } from "../services/analyticsService";
@@ -66,6 +79,7 @@ import {
   Pill,
   RaceFrame,
   RaceHud,
+  RouteChain,
   RouteRail,
 } from "../components/wiki-race/race/RaceParts";
 import {
@@ -85,11 +99,10 @@ import { useExitGuard } from "../components/ExitGuard";
  * 차단·반사는 상대의 방어를 서버가 소진시킨 결과이고, 이 화면은 그 결과를 읽는다.
  */
 /**
- * 결과 화면 유지 시간. 이번 결과가 업적을 열었으면 reveal을 읽을 시간을 더 준다
- * (16c `[사용자 결정, 2026-10-03]`) — 없으면 15c-2의 4000ms 그대로.
+ * 결과 화면은 자동으로 떠나지 않는다 — Phase 4 `[사용자 결정, 2026-10-07]`.
+ * 예전의 4000ms(업적이 있으면 6000ms) 자동 로비 이동은 제거했다. XP·업적·경로를 읽고
+ * 명시적인 "게임 로비로 이동"으로만 나간다. 서버 결과 판정·복구 흐름은 그대로다.
  */
-const RESULT_HOLD_MS = 4000;
-const RESULT_HOLD_WITH_ACHIEVEMENTS_MS = 6000;
 
 const DUEL_ITEM_RESULT_MESSAGE = Object.freeze({
   [DUEL_ITEM_RESULT.APPLIED]: "아이템이 적용됐습니다!",
@@ -150,13 +163,9 @@ export default function MultiplayerGamePage() {
   const gameChannelRef = useRef(null);
   const eventChannelRef = useRef(null);
   const moveInFlightRef = useRef(false);
-  const resultNavigationTimerRef = useRef(null);
-  const resultShownAtRef = useRef(0);
-  const resultHoldExtendedRef = useRef(false);
-
   /**
    * 결과 화면이 이미 떴는가. **한 번 켜지면 이 경기 안에서 다시 꺼지지 않는다** —
-   * 경기는 끝났고 남은 일은 2.2초 뒤 로비로 가는 것뿐이다. 그 사이의 복구·연결 끊김
+   * 경기는 끝났고 남은 일은 사용자가 명시적으로 로비로 가는 것뿐이다. 그 사이의 복구·연결 끊김
    * 신호는 결과 화면을 덮지 못한다 (`recoverGame` 첫 줄과 두 채널의 상태 콜백).
    */
   const resultShownRef = useRef(false);
@@ -798,11 +807,6 @@ export default function MultiplayerGamePage() {
 
   const enterSolvedState = () => {
     if (!settleIntoResult(PHASE.SUCCESS)) return;
-
-    resultShownAtRef.current = Date.now();
-    resultNavigationTimerRef.current = setTimeout(() => {
-      navigate("/multiplayer", { replace: true });
-    }, RESULT_HOLD_MS);
   };
 
   /**
@@ -1646,23 +1650,7 @@ export default function MultiplayerGamePage() {
 
   function enterOpponentWinState() {
     if (!settleIntoResult(PHASE.OPPONENT_WIN)) return;
-
-    resultShownAtRef.current = Date.now();
-    resultNavigationTimerRef.current = setTimeout(() => {
-      navigate("/multiplayer", { replace: true });
-    }, RESULT_HOLD_MS);
   }
-
-  // 결과 화면의 업적 조회가 끝나면 부른다. 해금이 있으면 결과가 뜬 시각부터 6000ms까지 늘린다.
-  const extendResultHoldForAchievements = (count) => {
-    if (!count || leaving || resultHoldExtendedRef.current || !resultNavigationTimerRef.current) return;
-    resultHoldExtendedRef.current = true;
-    clearTimeout(resultNavigationTimerRef.current);
-    const remaining = RESULT_HOLD_WITH_ACHIEVEMENTS_MS - (Date.now() - resultShownAtRef.current);
-    resultNavigationTimerRef.current = setTimeout(() => {
-      navigate("/multiplayer", { replace: true });
-    }, Math.max(remaining, 0));
-  };
 
   useEffect(() => {
     if (!opponentPlayer?.has_finished) return;
@@ -1678,20 +1666,10 @@ export default function MultiplayerGamePage() {
     myPlayer?.has_finished,
   ]);
 
-  useEffect(() => () => {
-    if (resultNavigationTimerRef.current) {
-      clearTimeout(resultNavigationTimerRef.current);
-    }
-  }, []);
-
   const handleReturnToLobby = async () => {
     if (leaving) return;
     setLeaving(true);
     recoveryGenerationRef.current += 1;
-
-    if (resultNavigationTimerRef.current) {
-      clearTimeout(resultNavigationTimerRef.current);
-    }
 
     const shouldNotifyServer =
       room &&
@@ -1774,6 +1752,12 @@ export default function MultiplayerGamePage() {
     myBeat - opponentBeat > SERVER_HEARTBEAT_INTERVAL_MS * 2.5;
   const isPlaying = phase === PHASE.PLAYING;
   const isResult = phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN;
+  // Phase 4 결과 표시 — 승패·사유는 방이 확정한 값만 읽는다 (buildDuelResultPresentation).
+  const duelResult = isResult ? buildDuelResultPresentation(room, players, user?.id) : null;
+  const duelOutcome = isResult ? buildDuelOutcomeView({ room, presentation: duelResult, phaseWon: phase === PHASE.SUCCESS }) : null;
+  const duelElapsed = isResult ? getDuelResultElapsedSeconds(room, myPlayer) : null;
+  const pathOf = (player) => (Array.isArray(player?.path_titles) ? player.path_titles.filter(Boolean) : []);
+  const opponentReached = room?.finished_reason === "normal_finish" && Boolean(opponentPlayer?.user_id) && room?.winner_user_id === opponentPlayer.user_id;
   const currentTitle = pageData?.title || myPlayer?.current_title || "";
 
   return (
@@ -1804,7 +1788,7 @@ export default function MultiplayerGamePage() {
         />
       )}
 
-      <RaceFrame mode="duel" strip label="1:1 대전">
+      <RaceFrame mode="duel" strip label="1:1 대전" inert={isResult}>
         <RaceHud>
           <HudBrand mode="1:1" sub={useItems ? "아이템" : "일반"} />
           <HudDoc kind="current" label="현재 문서" title={currentTitle} />
@@ -1814,7 +1798,7 @@ export default function MultiplayerGamePage() {
             <span className="mp-game-status wr-sr-only">
               {phase === PHASE.PLAYING && "레이스 진행 중"}
               {phase === PHASE.SUCCESS && "승리!"}
-              {phase === PHASE.OPPONENT_WIN && "패배"}
+              {phase === PHASE.OPPONENT_WIN && (room?.finished_reason === "cancelled" ? "무효" : "패배")}
             </span>
             {isPlaying && censorEffect && (
               <Pill tone="coral" icon="link" key={`censor-${censorEffect.itemEventId}`}>
@@ -1953,22 +1937,59 @@ export default function MultiplayerGamePage() {
         </>
       )}
 
-      {/* 결과 — Phase 4 범위. 기존 흐름·마크업 그대로 */}
+      {/* 결과 — Phase 4 RESULT (Freeze 07). 자동 이동 없음 · 나가기는 "게임 로비로 이동"만 */}
       {(phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN) && (
-        <div className="mp-result-overlay">
-          <div className="mp-result-card">
-            {room?.finished_reason !== "cancelled" && phase === PHASE.SUCCESS && <FinishEffect effect={matchExpression.finish_effect} />}
-            <h2>{buildDuelResultPresentation(room, players, user?.id)?.term || (phase === PHASE.SUCCESS ? "승리" : "패배")}</h2>
-            <p>{buildDuelResultPresentation(room, players, user?.id)?.description || "서버 결과를 확인하는 중입니다."}</p>
-            <ResultXp scope="duel" userId={user?.id ?? null} roomId={roomId} tone="dark" onAchievementsLoaded={extendResultHoldForAchievements} />
-            {players.map((player) => <div key={player.user_id}>
-              <strong>{player.nickname_snapshot || "참가자"}</strong>
-              <p>{getDuelResultElapsedSeconds(room, player) !== null ? `${getDuelResultElapsedSeconds(room, player)}초` : "기록 없음"} · {Number.isFinite(player.move_count) ? `${player.move_count}회 이동` : "이동 기록 없음"}</p>
-              <p>{Array.isArray(player.path_titles) ? player.path_titles.join(" → ") : "경로 확인 중"}</p>
-            </div>)}
-            <button type="button" className="mp-action-btn" onClick={handleReturnToLobby} disabled={leaving}>게임 로비로 이동</button>
-          </div>
-        </div>
+        <ResultScreen mode="duel" tone={duelOutcome.tone} layer="overlay" titleId="wr-duel-result-title" testId="duel-result">
+          <ResultScene mascot={duelOutcome.mascot} reached={duelOutcome.reached} celebration={duelOutcome.celebration} destination={commonTargetTitle || null} />
+          <ResultCard>
+            <ResultOutcome
+              kicker={duelOutcome.kicker}
+              titleId="wr-duel-result-title"
+              title={duelOutcome.title}
+              meta={`${(typeof room?.use_items === "boolean" ? room.use_items : useItems) ? "1:1 아이템전" : "1:1 일반전"} · vs ${opponentName}`}
+              pill={duelOutcome.pill}
+              detail={duelResult?.description || "서버 결과를 확인하는 중입니다."}
+            />
+            <ResultStats
+              items={[
+                { label: duelOutcome.reached ? "시간" : "경기 시간", icon: "timer", value: duelElapsed !== null ? formatDuration(duelElapsed) : "–" },
+                { label: "이동", value: Number.isFinite(myPlayer?.move_count) ? `${myPlayer.move_count}회` : "–" },
+                { label: "코스", wide: true, value: <ResultCourse start={myPlayer?.start_title} target={commonTargetTitle} /> },
+              ]}
+            />
+            <ResultXpRow>
+              <ResultXp scope="duel" userId={user?.id ?? null} roomId={roomId} tone="light" />
+            </ResultXpRow>
+            <ResultRoute
+              title="MY ROUTE · 내 경로"
+              meta={`${pathOf(myPlayer).length}문서`}
+              path={pathOf(myPlayer)}
+              reachedTarget={duelOutcome.reached}
+              expandable={pathOf(opponentPlayer).length > 5}
+              tail={room?.finished_reason !== "cancelled" && phase === PHASE.SUCCESS
+                ? <FinishEffect effect={matchExpression.finish_effect} />
+                : duelOutcome.reached ? null : "목표 미도달"}
+              extra={(open) => (
+                <div className="wr-rroute-sub">
+                  <div className="wr-ropponent">
+                    <span className="wr-hud-label">상대 경로</span>
+                    <strong>{opponentName}</strong>
+                    <span>{Number.isFinite(opponentPlayer?.move_count) ? `${opponentPlayer.move_count}회 이동` : "이동 기록 없음"}</span>
+                    <Pill tone={opponentReached ? "gold" : "neutral"} filled>{opponentReached ? "완주" : "미완주"}</Pill>
+                  </div>
+                  {pathOf(opponentPlayer).length > 0
+                    ? <RouteChain path={pathOf(opponentPlayer)} reachedTarget={opponentReached} max={open ? 999 : 5} />
+                    : <span className="wr-chain-more">경로 확인 중</span>}
+                </div>
+              )}
+            />
+            <ResultActions>
+              <button type="button" className="wr-race-btn wr-race-btn--primary wr-race-btn--lg" onClick={handleReturnToLobby} disabled={leaving}>
+                {leaving ? "게임 정리 중..." : "게임 로비로 이동"}
+              </button>
+            </ResultActions>
+          </ResultCard>
+        </ResultScreen>
       )}
 
       {pageData && <ScrollToTopButton />}

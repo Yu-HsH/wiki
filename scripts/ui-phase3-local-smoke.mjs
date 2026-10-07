@@ -146,7 +146,7 @@ try {
     pass('S2 single movement via apply_single_move_v2 (server move_count 1, HUD updated)');
     await page.screenshot({ path: `${artifactDir}/single-desktop.png` });
     await linkTo(page, TARGET.title).click();
-    await page.getByRole('heading', { name: 'Mission Accomplished!' }).waitFor({ timeout: 20000 });
+    await page.getByTestId('single-result').waitFor({ timeout: 20000 }); // Phase 4 result (was "Mission Accomplished!")
     assert.equal(sql(`select status from public.single_game_runs where id=${q(runId)};`), 'completed');
     pass('S3 single finish → server status completed → existing SuccessOverlay');
   }
@@ -195,8 +195,8 @@ try {
     }
     await host.screenshot({ path: `${artifactDir}/duel-host.png` });
     await linkTo(guest, TARGET.title).click();
-    await guest.locator('.mp-result-card').waitFor({ timeout: 20000 });
-    await host.locator('.mp-result-card').waitFor({ timeout: 20000 });
+    await guest.getByTestId('duel-result').waitFor({ timeout: 20000 }); // Phase 4 result (was .mp-result-card)
+    await host.getByTestId('duel-result').waitFor({ timeout: 20000 });
     assert.equal(roomRow(room.id).status, 'finished');
     pass('D5 guest finishes → both transition to the existing result overlay (room finished)');
   }

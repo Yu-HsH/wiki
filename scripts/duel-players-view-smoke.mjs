@@ -197,8 +197,8 @@ try {
 
     // Host finishes; the result reveals and the path is readable again.
     await host.locator('.article-content a').filter({ hasText: TARGET.title }).click();
-    await expect(host.getByText('🎉 승리!', { exact: true })).toBeVisible();
-    await expect(guest.getByText('😢 패배', { exact: true })).toBeVisible();
+    await expect(host.getByRole('dialog', { name: '승리' })).toBeVisible(); // Phase 4 result dialog
+    await expect(guest.getByRole('dialog', { name: '패배' })).toBeVisible();
     const finishedRead = await users[1].client.rpc('get_duel_room_players_v1', { p_room_id: room.id });
     assert.equal(finishedRead.error, null);
     const hostRow = finishedRead.data.find((row) => row.user_id === users[0].id);

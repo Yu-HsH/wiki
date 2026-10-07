@@ -43,11 +43,12 @@ async function subscribeActor(actor, roomId, label) {
   subscriptions.push({client:actor.client,channel});
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Realtime subscription timeout')),15000);channel.subscribe(status=>{if(status==='SUBSCRIBED'){clearTimeout(timer);resolve();}else if(['CHANNEL_ERROR','TIMED_OUT'].includes(status)){clearTimeout(timer);reject(Error(status));}})});
 }
+const mmss=(seconds)=>`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
 async function mobileCheck(page,name){
  await page.setViewportSize({width:390,height:844});
- const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+ const overflow=await page.evaluate(()=>Math.max(document.documentElement.scrollWidth-document.documentElement.clientWidth,...[...document.querySelectorAll('.wr-result,.wr-result-card')].map(n=>n.scrollWidth-n.clientWidth)));
  assert.ok(overflow<=1,`${name} horizontal overflow ${overflow}`);
- const primary=page.locator('.mp-result-card .mp-action-btn');
+ const primary=page.locator('[data-testid="duel-result"] .wr-ractions .wr-race-btn--primary');
  if(await primary.count()){await primary.scrollIntoViewIfNeeded();await expect(primary).toBeVisible();const b=await primary.boundingBox();assert.ok(b&&b.x>=-1&&b.x+b.width<=391,`${name} primary button clipped`);}
  await page.screenshot({path:`${artifactDir}/${name}-390.png`,fullPage:true});pass(`${name}: mobile 390px no horizontal overflow and result button usable`);
  await page.setViewportSize({width:1280,height:900});
@@ -236,8 +237,8 @@ try {
 
     // Host finishes; the result reveals and the path is readable again.
     await host.locator('.article-content a').filter({ hasText: TARGET.title }).click();
-    await expect(host.locator('.mp-result-card h2')).toContainText('승리');
-    await expect(guest.locator('.mp-result-card h2')).toContainText('패배');
+    await expect(host.locator('#wr-duel-result-title')).toContainText('승리');
+    await expect(guest.locator('#wr-duel-result-title')).toContainText('패배');
     const finishedRead = await users[1].client.rpc('get_duel_room_players_v1', { p_room_id: room.id });
     assert.equal(finishedRead.error, null);
     const hostRow = finishedRead.data.find((row) => row.user_id === users[0].id);
@@ -247,13 +248,13 @@ try {
     pass('A3: after finish both direct SELECT and masked RPC reveal opponent path');
     await expect(host.getByTestId('result-xp')).toContainText('XP',{timeout:15000});
     const duration=Number(sql(`select duration_seconds from public.match_history where room_id=${q(room.id)};`));
-    await expect(host.locator('.mp-result-card')).toContainText(`${duration}초`);
+    await expect(host.locator('[data-testid="duel-result"] .wr-rstats')).toContainText(mmss(duration));
     const before=ledgerSnapshot();
     await host.reload();await guest.reload();
-    await expect(host.locator('.mp-result-card h2')).toContainText('승리',{timeout:15000});
-    await expect(guest.locator('.mp-result-card h2')).toContainText('패배',{timeout:15000});
-    await expect(host.locator('.mp-result-card')).toContainText(MIDDLE.title);
-    await expect(host.locator('.mp-result-card')).toContainText(`${duration}초`);
+    await expect(host.locator('#wr-duel-result-title')).toContainText('승리',{timeout:15000});
+    await expect(guest.locator('#wr-duel-result-title')).toContainText('패배',{timeout:15000});
+    await expect(host.getByTestId('duel-result')).toContainText(MIDDLE.title);
+    await expect(host.locator('[data-testid="duel-result"] .wr-rstats')).toContainText(mmss(duration));
     await expect(host.getByTestId('result-xp')).toContainText('XP');
     assert.equal(ledgerSnapshot(),before,'F5 must not duplicate XP or achievements');
     pass('duel result F5: verdict/path/moves/XP recovered; XP and achievement rows unchanged');
@@ -303,8 +304,8 @@ try {
   await host.screenshot({path:`${artifactDir}/teleport-desktop.png`,fullPage:true});
   const retired=await rpc(users[1].client,'leave_duel_room_v2',{p_room_id:itemRoom.id,p_request_id:randomUUID()});
   assert.equal(retired.ok,true);
-  await expect(guest.locator('.mp-result-card h2')).toContainText('패배',{timeout:15000});
-  await guest.reload();await expect(guest.locator('.mp-result-card h2')).toContainText('패배',{timeout:15000});
+  await expect(guest.locator('#wr-duel-result-title')).toContainText('패배',{timeout:15000});
+  await guest.reload();await expect(guest.locator('#wr-duel-result-title')).toContainText('패배',{timeout:15000});
   pass('duel: forfeit result and retired-player F5 restore');
   }
 
@@ -376,17 +377,19 @@ try {
   await guest.locator('.article-content a').filter({hasText:groupTarget.title}).first().click();
   const thirdRow=(await roomRows(group.id)).players.find(p=>p.user_id===third.id);
   const thirdFinish=await rpc(third.client,'apply_group_move_v2',{p_room_id:group.id,p_request_id:randomUUID(),p_correlation_id:null,p_expected_version:thirdRow.progress_version,p_to_page_id:groupTarget.pageId});assert.equal(thirdFinish.ok,true);
-  await expect(host.getByRole('heading',{name:'최종 결과',exact:true})).toBeVisible({timeout:20000});
+  await expect(host.getByTestId('group-final-result')).toBeVisible({timeout:20000});
+  await expect(host.locator('#wr-group-result-title')).toHaveText('1위 완주');
   await expect(host.getByTestId('result-xp')).toContainText('XP');
   const groupLedger=ledgerSnapshot();
-  await host.reload();await expect(host.getByRole('heading',{name:'최종 결과',exact:true})).toBeVisible({timeout:20000});
-  await expect(host.locator('.group-personal-result')).toContainText('1위');
+  await host.reload();await expect(host.getByTestId('group-final-result')).toBeVisible({timeout:20000});
+  await expect(host.locator('#wr-group-result-title')).toHaveText('1위 완주');
+  await expect(host.locator('.wr-srow.is-me .wr-srow-rank')).toContainText('1');
   await expect(host.getByTestId('result-xp')).toContainText('XP');
   assert.equal(ledgerSnapshot(),groupLedger,'group result F5 must preserve XP and achievement rows');
   fs.writeFileSync(`${artifactDir}/group-ledger.json`,groupLedger);
   await host.setViewportSize({width:390,height:844});
-  assert.ok(await host.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)<=1,'group mobile overflow');
-  const leave=host.getByRole('button',{name:'게임 로비로 이동',exact:true});await leave.scrollIntoViewIfNeeded();await expect(leave).toBeVisible();
+  assert.ok(await host.evaluate(()=>Math.max(document.documentElement.scrollWidth-document.documentElement.clientWidth,...[...document.querySelectorAll('.wr-result,.wr-result-card')].map(n=>n.scrollWidth-n.clientWidth)))<=1,'group mobile overflow');
+  const leave=host.getByRole('button',{name:'그룹 로비로',exact:true});await leave.scrollIntoViewIfNeeded();await expect(leave).toBeVisible();
   await host.screenshot({path:`${artifactDir}/group-result-390.png`,fullPage:true});
   pass('group: final result XP/achievement, F5 no duplicate grants, mobile 390px result and primary action usable');
   }

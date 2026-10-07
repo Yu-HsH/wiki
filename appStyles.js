@@ -24,3 +24,4 @@ import "./css/wikiRaceMotion.css";
 import "./css/wikiRaceBase.css";
 import "./css/wikiRaceLobby.css";
 import "./css/wikiRaceRace.css";
+import "./css/wikiRaceResult.css";

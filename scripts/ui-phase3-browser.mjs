@@ -321,8 +321,8 @@ try {
     await page.locator(".article-content a", { hasText: MIDDLE }).first().click();
     await expect(page.locator(".wr-hud-doc--current")).toContainText(MIDDLE);
     await page.locator(".article-content a", { hasText: TARGET }).first().click();
-    await page.getByRole("heading", { name: "Mission Accomplished!" }).waitFor({ timeout: 15000 });
-    check("S6 finish → existing SuccessOverlay result flow", true);
+    await page.getByTestId("single-result").waitFor({ timeout: 15000 }); // Phase 4 result (was "Mission Accomplished!")
+    check("S6 finish → existing SuccessOverlay result flow", await page.getByRole("dialog", { name: "완주" }).count() === 1);
     for (const w of [390, 320]) {
       await page.setViewportSize({ width: w, height: 844 });
       check(`S7 single no overflow at ${w}`, await noOverflow(page));
@@ -366,7 +366,7 @@ try {
     await page.mouse.move(0, 0);
     await shot(page, "duel-desktop");
     await page.locator(".article-content a", { hasText: TARGET }).first().click();
-    await page.locator(".mp-result-card").waitFor({ timeout: 15000 });
+    await page.getByTestId("duel-result").waitFor({ timeout: 15000 }); // Phase 4 result (was .mp-result-card)
     check("D5 finish → existing result overlay", (await page.locator(".mp-game-status").innerText()) === "승리!");
     await ctx.close();
   }
@@ -440,7 +440,7 @@ try {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole("button", { name: "나가기" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "이탈하기" }).click();
-    await page.locator(".mp-result-card").waitFor({ timeout: 15000 });
+    await page.getByTestId("duel-result").waitFor({ timeout: 15000 });
     check("D16 forfeit through existing exit guard → leave RPC → result", rpcCalls.includes("me:leave_duel_room_v2"));
     await ctx.close();
   }
@@ -593,8 +593,8 @@ try {
     check("R2b no completion celebration", await page.locator(".wr-result-a, .wr-done-glyph").count() === 0);
     await shot(page, "group-retired-hold");
     Object.assign(rooms.get("group-retire-03"), { status: "finished" }); notify("group-retire-03");
-    await expect(page.getByRole("heading", { name: "최종 결과" })).toBeVisible({ timeout: 15000 });
-    check("R3 finalization proceeds to existing final RESULT", true);
+    await expect(page.getByTestId("group-final-result")).toBeVisible({ timeout: 15000 }); // Phase 4: retiree lands on Result C
+    check("R3 finalization proceeds to existing final RESULT", (await page.locator("#wr-group-result-title").innerText()) === "리타이어");
     await ctx.close();
   }
 

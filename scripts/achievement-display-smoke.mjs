@@ -114,11 +114,13 @@ try {
   /* ── 1. single: 1-move first finish → hidden + 2 general, XP 15 + 90, Lv.1 → Lv.3 ── */
   let soloPage = await makeContext(solo);
   await soloPage.goto(`${base}/lobby`);
-  await expect(soloPage.getByRole('button', { name: '업적', exact: true })).toBeVisible();
+  await expect(soloPage.getByRole('link', { name: '업적 보기 →', exact: true })).toBeVisible();
   await expect(soloPage.locator('.ach-notice')).toHaveCount(0);
   pass('lobby: 업적 entry visible; no notice with 0 unseen');
 
-  await soloPage.getByRole('button', { name: /혼자서 플레이/ }).click();
+  // PLAY (Phase 1): single starts from the /play mode card; the existing target search modal opens.
+  await soloPage.goto(`${base}/play`);
+  await soloPage.getByRole('button', { name: /^싱글 탐험 · / }).click();
   await soloPage.locator('.qs-modal-input').fill('목표');
   await soloPage.locator('.qs-modal').getByRole('button', { name: '검색', exact: true }).click();
   await soloPage.locator('.search-item').filter({ hasText: pages[1].title }).click();
@@ -156,7 +158,7 @@ try {
   await soloPage.getByRole('button', { name: '새 업적 알림 닫기' }).click();
   await expect(soloPage.locator('.ach-notice')).toHaveCount(0);
   await soloPage.reload();
-  await expect(soloPage.getByRole('button', { name: '업적', exact: true })).toBeVisible();
+  await expect(soloPage.getByRole('link', { name: '업적 보기 →', exact: true })).toBeVisible();
   await expect(soloPage.locator('.ach-notice')).toHaveCount(0);
   assert.equal(unseen(solo.id), 1, 'dismiss does not mark seen');
   pass('lobby: notice bundles the unseen unlock; close hides it for the session without marking seen');
@@ -182,7 +184,7 @@ try {
   pass('achievements: NEW on the unseen card, 발견 1 / ??, progress + next reward; entering marks seen');
 
   await soloPage.goto(`${base}/lobby`);
-  await expect(soloPage.getByRole('button', { name: '업적', exact: true })).toBeVisible();
+  await expect(soloPage.getByRole('link', { name: '업적 보기 →', exact: true })).toBeVisible();
   await expect(soloPage.locator('.ach-notice')).toHaveCount(0);
   await soloPage.goto(`${base}/achievements`);
   await expect(soloPage.locator('.ach-new')).toHaveCount(0);
@@ -205,19 +207,16 @@ try {
   await host.locator('.room-target-input').fill('목표');
   await host.getByRole('button', { name: '검색', exact: true }).click();
   await host.locator('.search-item').filter({ hasText: pages[1].title }).click();
-  await expect(host.getByRole('button', { name: '게임 시작', exact: true })).toBeEnabled();
+  // Phase 2 lobby: START enables after the snapshot-backed target save and the Realtime guest join (can exceed 5s locally).
+  await expect(host.getByRole('button', { name: '게임 시작', exact: true })).toBeEnabled({ timeout: 20000 });
   await host.getByRole('button', { name: '게임 시작', exact: true }).click();
   await Promise.all([host.waitForURL('**/multiplayer/game/**'), guest.waitForURL('**/multiplayer/game/**')]);
   await expect(guest.locator('.mp-game-status')).toHaveText('레이스 진행 중', { timeout: 20000 });
   await expect(host.locator('.mp-game-status')).toHaveText('레이스 진행 중', { timeout: 20000 });
 
-  const atLobby = (page) => page.waitForURL((url) => url.pathname === '/multiplayer', { timeout: 12000 }).then(() => Date.now());
   await guest.locator('.article-content a').filter({ hasText: pages[1].title }).first().click();
-  await expect(guest.getByText('🎉 승리!', { exact: true })).toBeVisible();
-  const guestShownAt = Date.now();
-  await expect(host.getByText('😢 패배', { exact: true })).toBeVisible();
-  const hostShownAt = Date.now();
-  const guestLobby = atLobby(guest), hostLobby = atLobby(host);
+  await expect(guest.getByRole('dialog', { name: '승리' })).toBeVisible(); // Phase 4 result dialog
+  await expect(host.getByRole('dialog', { name: '패배' })).toBeVisible();
 
   const guestReveal = guest.getByTestId('result-achievements');
   await expect(guestReveal).toHaveClass(/ach-reveal--static/);
@@ -228,13 +227,25 @@ try {
   await expect(host.getByTestId('result-xp')).toContainText('1:1 정상 패배');
   await expect(host.getByTestId('result-achievements')).toHaveCount(0);
   pass('duel: loser has XP and no reveal');
+  const duelLedger = (userId) => JSON.parse(sql(`select coalesce(jsonb_agg(jsonb_build_object('type', l.source_type, 'amount', l.amount)), '[]'::jsonb)
+    from public.xp_ledger l join public.match_history m on m.id = l.source_id where m.room_id = ${q(room.id)} and l.user_id = ${q(userId)};`));
+  const winRows = duelLedger(rival.id), lossRows = duelLedger(solo.id);
+  assert.deepEqual(winRows.map((r) => r.type), ['duel_win_normal'], 'winner has exactly one server duel ledger row');
+  assert.deepEqual(lossRows.map((r) => r.type), ['duel_loss_normal'], 'loser has exactly one server duel ledger row');
+  await expect(guest.getByTestId('result-xp')).toContainText(`+${winRows[0].amount} XP`);
+  await expect(guest.getByTestId('result-xp')).toContainText('1:1 정상 승리');
+  await expect(host.getByTestId('result-xp')).toContainText(`+${lossRows[0].amount} XP`);
+  pass(`duel: result XP lines equal the server ledger (win +${winRows[0].amount}, loss +${lossRows[0].amount})`);
 
-  const [guestAt, hostAt] = await Promise.all([guestLobby, hostLobby]);
-  const guestHold = guestAt - guestShownAt, hostHold = hostAt - hostShownAt;
-  console.log(`hold: winner ${guestHold}ms · loser ${hostHold}ms`);
-  assert.ok(guestHold >= 5200 && guestHold <= 7500, `winner hold ${guestHold}`);
-  assert.ok(hostHold >= 3200 && hostHold <= 5000, `loser hold ${hostHold}`);
-  pass(`duel: hold 6000ms with an unlock (${guestHold}ms), 4000ms without (${hostHold}ms)`);
+  // Phase 4 [사용자 결정, 2026-10-07]: the 4000/6000ms auto-redirect is removed — the result stays
+  // until the explicit 게임 로비로 이동 (no longer, no replacement timer).
+  await guest.waitForTimeout(7600);
+  assert.ok(new URL(guest.url()).pathname.startsWith('/multiplayer/game/'), `winner left the result: ${guest.url()}`);
+  assert.ok(new URL(host.url()).pathname.startsWith('/multiplayer/game/'), `loser left the result: ${host.url()}`);
+  await guest.getByRole('button', { name: '게임 로비로 이동', exact: true }).click();
+  await host.getByRole('button', { name: '게임 로비로 이동', exact: true }).click();
+  await Promise.all([guest, host].map((page) => page.waitForURL((url) => url.pathname === '/multiplayer', { timeout: 12000 })));
+  pass('duel: result stays past 7.6s (no auto-redirect); explicit 게임 로비로 이동 returns to /multiplayer');
   assert.deepEqual(unlocks(rival.id).map((u) => [u.id, u.source, u.seen]), [['onboarding_first_finish', 'duel', true]]);
   pass('duel: the revealed unlock is marked seen');
 

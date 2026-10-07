@@ -1,0 +1,164 @@
+/* Phase 4 RESULT layer — Freeze 07 (1:1) · 08 (그룹). Scoped to .wr-result.
+   Intensity HIGH: stitched double frame, approved mascots, Gold completion. Defeat / retire / void
+   stay neutral (Ink-3, head-down or no mascot, no celebration). Gold = completion & XP · Blue = me ·
+   Purple/Teal = discovery · neutral = ended/retired. Entrance motion is opacity on the card and a
+   short rise on the mascot only (no transform on ancestors of the mobile fixed action bar). */
+
+.wr-page.wr-race.wr-result { padding: 24px 16px 40px; min-height: 100vh; background: var(--wr-canvas); }
+.wr-result-layer--overlay { position: fixed; inset: 0; z-index: 2000; overflow-y: auto; overscroll-behavior: contain; }
+.wr-page.wr-race.wr-result-layer--overlay { background: rgb(36 52 48 / 42%); }
+
+.wr-result-frame {
+  position: relative; width: min(920px, 100%); margin: 0 auto; padding: 0 16px 36px;
+  background: var(--wr-canvas); border: 1px solid var(--wr-frame); border-radius: var(--wr-radius-shell);
+  box-shadow: var(--wr-shadow-shell); overflow: hidden;
+  background-image: radial-gradient(120% 60% at 50% 115%, #B9CFA4 0 40%, transparent 41%), radial-gradient(90% 50% at 15% 110%, #C8D6BC 0 45%, transparent 46%), radial-gradient(90% 50% at 85% 112%, #D7E0CC 0 45%, transparent 46%);
+}
+
+/* ── Scene ───────────────────────────────────────────── */
+.wr-rscene { position: relative; height: 210px; margin: 0 -16px; }
+.wr-rscene-dest { position: absolute; top: 18px; left: 24px; z-index: 1; display: flex; flex-direction: column; gap: 4px; max-width: min(60%, 340px); padding: 8px 12px; background: var(--wr-paper); border: 1px solid var(--wr-frame); border-radius: 10px; }
+.wr-rscene-dest b { font: 600 15px/1.25 var(--wr-font-heading); color: var(--wr-gold); overflow-wrap: anywhere; }
+.wr-rscene-trail { position: absolute; left: 0; right: 0; bottom: 40px; width: 100%; height: 120px; }
+.wr-rscene-path { fill: none; stroke: #AEBBA5; stroke-width: 2; stroke-dasharray: 5 7; }
+.wr-rscene-walked { fill: none; stroke: var(--wr-trail); stroke-width: 3; stroke-dasharray: 8 6; stroke-linecap: round; }
+.wr-rscene-flag { position: absolute; right: calc(6.25% - 8px); bottom: 128px; }
+.wr-rscene-summit { fill: var(--wr-paper); stroke: var(--wr-gold); stroke-width: 2; }
+.wr-rscene.is-reached .wr-rscene-summit { fill: var(--wr-gold); }
+.wr-rscene-mascot { position: absolute; left: 50%; bottom: 40px; height: 118px; width: auto; margin-left: -59px; animation: wr-result-rise var(--wr-motion-page) var(--wr-ease-emphasized) 120ms both; }
+.wr-rscene-mascot--lose { height: 96px; margin-left: -48px; animation-name: wr-appear; }
+.wr-rscene--full::before, .wr-rscene--dots::before { content: ""; position: absolute; top: 34px; left: calc(50% - 90px); width: 180px; height: 70px; pointer-events: none; animation: wr-appear var(--wr-motion-page) var(--wr-ease-out) 260ms both; }
+.wr-rscene--dots::before { background: radial-gradient(circle 4px at 12% 50%, var(--wr-gold) 98%, transparent), radial-gradient(circle 3px at 50% 12%, var(--wr-gold) 98%, transparent), radial-gradient(circle 4px at 88% 46%, var(--wr-gold) 98%, transparent); }
+.wr-rscene--full::before { background: radial-gradient(circle 4px at 8% 52%, var(--wr-gold) 98%, transparent), radial-gradient(circle 3px at 24% 14%, var(--wr-teal) 98%, transparent), radial-gradient(circle 4px at 50% 4%, var(--wr-gold) 98%, transparent), radial-gradient(circle 3px at 70% 22%, var(--wr-purple) 98%, transparent), radial-gradient(circle 4px at 92% 48%, var(--wr-gold) 98%, transparent), linear-gradient(35deg, transparent 46%, var(--wr-teal) 46% 54%, transparent 54%) 34% 70% / 8px 8px no-repeat, linear-gradient(-30deg, transparent 46%, var(--wr-purple) 46% 54%, transparent 54%) 80% 78% / 8px 8px no-repeat; }
+
+/* ── Card (stitched frame comes from .wr-result-card) ─────────────── */
+.wr-result .wr-rcard { z-index: 1; margin-top: -44px; animation: wr-appear var(--wr-motion-page) var(--wr-ease-out) 60ms both; }
+.wr-result .wr-rcard::after { content: ""; position: absolute; top: -9px; right: 24px; width: 52px; height: 18px; border-radius: 50% 50% 0 50%; background: radial-gradient(ellipse at 30% 60%, #7FA36B 0 45%, transparent 46%), radial-gradient(ellipse at 72% 40%, #5E8A55 0 42%, transparent 43%); pointer-events: none; }
+.wr-result .wr-rhead-kicker { color: var(--wr-ink-3); letter-spacing: .14em; font-size: 11px; }
+.wr-result--win .wr-rhead-kicker { color: #8E6B1C; }
+/* The outcome heading receives programmatic focus on arrival (tabindex -1) — announce it, don't box it. */
+.wr-result .wr-result-headline h1:focus { outline: none; }
+.wr-result--lose .wr-result-headline h1, .wr-result--retire .wr-result-headline h1, .wr-result--neutral .wr-result-headline h1 { color: var(--wr-ink-3); }
+.wr-result .wr-rhead-meta { font-size: 13px; color: var(--wr-ink-2); }
+.wr-rhead-detail { margin-top: 8px !important; font-size: 13px; line-height: 1.6; color: var(--wr-ink-2); }
+
+/* Record */
+.wr-result .wr-rstats { margin: 0; background: var(--wr-paper-2); }
+.wr-rstats > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.wr-rstats dt { display: inline-flex; align-items: center; gap: 5px; }
+.wr-rstats dd { margin: 0; font: 600 30px/1 var(--wr-font-heading); font-variant-numeric: tabular-nums; color: var(--wr-ink); overflow-wrap: anywhere; }
+.wr-rstats .is-muted dd { color: var(--wr-ink-3); }
+.wr-rstats dd .wr-result-course { font-size: 15px; }
+
+/* XP + achievement reveal (existing ResultXp / ResultAchievements, restyled in place) */
+.wr-rxp-row { display: flex; flex-direction: column; gap: 6px; }
+.wr-result .rxp { margin: 0; max-width: none; text-align: left; }
+.wr-result .rxp-line { justify-content: flex-start; gap: 4px 10px; }
+.wr-result .rxp-gain { font: 600 28px/1 var(--wr-font-heading); color: var(--wr-gold); font-variant-numeric: tabular-nums; }
+.wr-result--retire .rxp-gain, .wr-result--neutral .rxp-gain { color: var(--wr-ink-3); }
+.wr-result .rxp-reason { font-size: 13px; font-weight: 600; color: var(--wr-ink-2); }
+.wr-result .rxp-decay { color: var(--wr-ink-3); opacity: 1; }
+.wr-result .rxp .rxp-note, .wr-result .rxp-note { margin: 0; font-size: 13px; color: var(--wr-ink-2); opacity: 1; }
+.wr-result .rxp .rxp-levelup { margin: 6px 0 0; display: inline-flex; align-self: flex-start; padding: 2px 10px; border-radius: 99px; background: var(--wr-gold-bg); color: #8E6B1C; font-size: 12px; }
+.wr-result .rxp-progress { margin: 10px 0 0; max-width: 360px; }
+.wr-result .pcard-xp-bar { background: var(--wr-neutral-bg); border: 1px solid var(--wr-divider); }
+.wr-result .pcard-xp-fill { background: var(--wr-gold); }
+.wr-result .pcard-xp-meta { color: var(--wr-ink-2); }
+.wr-result .ach-reveal { margin-top: 12px; gap: 8px; }
+.wr-result .ach-reveal-card { padding: 12px 14px; border: 1px solid var(--wr-frame); border-left: 4px solid var(--wr-purple); border-radius: 10px; background: var(--wr-paper); color: var(--wr-ink); }
+.wr-result .ach-reveal-card--hidden { border-left-color: var(--wr-teal); background: var(--wr-paper); }
+.wr-result .ach-reveal-tag { color: var(--wr-purple); letter-spacing: .08em; }
+.wr-result .ach-reveal-card--hidden .ach-reveal-tag { color: var(--wr-teal); }
+.wr-result .ach-reveal-xp { color: #8E6B1C; }
+.wr-result .ach-reveal-name { font: 600 16px/1.3 var(--wr-font-heading); }
+.wr-result .ach-reveal-condition, .wr-result .ach-reveal-rewards { color: var(--wr-ink-2); opacity: 1; }
+
+/* Route */
+.wr-rroute-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.wr-rroute-head small { font-size: 11px; color: var(--wr-ink-2); }
+.wr-rroute-head .wr-race-link { margin-left: auto; }
+.wr-rroute-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.wr-result .wr-chain { min-width: 0; }
+.wr-result .wr-chain-chip { max-width: min(14em, 100%); }
+.wr-rroute-tail { display: inline-flex; padding: 2px 8px; border: 1.5px dashed var(--wr-gold); border-radius: 6px; color: #8E6B1C; font-size: 11px; font-weight: 700; }
+.wr-rroute-sub { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 10px; border-top: 1px dashed var(--wr-divider); }
+
+/* Duel opponent line */
+.wr-ropponent { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: var(--wr-ink-2); }
+.wr-ropponent strong { color: var(--wr-ink); overflow-wrap: anywhere; }
+
+/* Single rank + top 3 */
+.wr-rrank { display: flex; flex-direction: column; gap: 8px; }
+.wr-rrank p { font-size: 13px; color: var(--wr-ink); font-weight: 600; }
+.wr-rrank ol { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--wr-ink-2); }
+.wr-rrank li { display: inline-flex; gap: 6px; min-width: 0; }
+.wr-rrank li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 12em; }
+
+/* Single path timeline (own path colour + finish effect on the last node) */
+.wr-tl { display: flex; flex-wrap: wrap; align-items: center; row-gap: 8px; min-width: 0; }
+.wr-tl-item { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+.wr-tl-dot { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--wr-frame); background: var(--wr-paper); flex: none; }
+.wr-tl-dot-inner { width: 6px; height: 6px; border-radius: 50%; background: var(--wr-blue); }
+.wr-tl-item.is-last .wr-tl-dot { border-color: var(--wr-gold); }
+.wr-tl-item.is-last .wr-tl-dot-inner { background: var(--wr-gold); }
+.wr-tl-title { font-size: 12px; color: var(--wr-ink); max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.wr-tl-item.is-last .wr-tl-title { color: #8E6B1C; font-weight: 700; }
+.wr-tl-line { width: 16px; height: 2px; margin: 0 6px; background: var(--wr-frame); flex: none; }
+
+/* Actions */
+.wr-result .wr-ractions { padding-top: 16px; }
+.wr-result .wr-ractions .wr-race-btn--primary:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--wr-blue-press); }
+
+/* ── Group standings ───────────────────────────────────── */
+.wr-standings { display: flex; flex-direction: column; gap: 4px; }
+.wr-standings-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 4px; }
+.wr-standings-head h2 { font-size: 11px; letter-spacing: .14em; }
+.wr-standings-head small { margin-left: auto; font-size: 11px; color: var(--wr-ink-2); }
+.wr-srow { display: grid; grid-template-columns: 44px minmax(0, 1fr) 72px 64px 150px; align-items: center; gap: 0 8px; min-height: 40px; padding: 4px 8px; border-top: 1px dashed var(--wr-divider); font-size: 13px; color: var(--wr-ink); }
+.wr-srow--head { min-height: 24px; border-top: 0; font: 600 10px/1.2 var(--wr-font-heading); letter-spacing: .1em; color: var(--wr-ink-3); }
+.wr-srow-rank { font: 600 18px/1 var(--wr-font-heading); font-variant-numeric: tabular-nums; }
+.wr-srow.is-winner .wr-srow-rank { color: var(--wr-gold); }
+.wr-srow-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.wr-srow-nick { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-weight: 600; }
+.wr-srow-time, .wr-srow-moves { font-variant-numeric: tabular-nums; color: var(--wr-ink-2); }
+.wr-srow-state { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 2px 5px; font-size: 12px; font-weight: 700; color: var(--wr-teal); min-width: 0; }
+.wr-srow-state small { flex-basis: 100%; font-size: 10px; font-weight: 500; color: var(--wr-ink-3); padding-left: 17px; }
+.wr-srow.is-retired { color: var(--wr-ink-3); }
+.wr-srow.is-retired .wr-srow-state, .wr-srow.is-retired .wr-srow-time, .wr-srow.is-retired .wr-srow-moves { color: var(--wr-ink-3); }
+.wr-srow.is-me { background: var(--wr-blue-bg); border-radius: 6px; }
+.wr-srow.is-me .wr-srow-rank, .wr-srow.is-me .wr-srow-nick { color: var(--wr-blue); }
+.wr-standings-list { display: flex; flex-direction: column; }
+
+@keyframes wr-result-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 760px) {
+  .wr-page.wr-race.wr-result { padding: 0; }
+  .wr-result-layer--overlay { background: var(--wr-canvas); }
+  .wr-result-frame { min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; padding: 0 10px 132px; }
+  .wr-rscene { height: 150px; margin: 0 -10px; }
+  .wr-rscene-dest { top: 10px; left: 12px; max-width: calc(100% - 80px); padding: 6px 10px; }
+  .wr-rscene-dest b { font-size: 13px; }
+  .wr-rscene-trail { bottom: 30px; height: 90px; }
+  .wr-rscene-flag { bottom: 92px; }
+  .wr-rscene-mascot { height: 84px; margin-left: -42px; bottom: 32px; }
+  .wr-rscene-mascot--lose { height: 70px; margin-left: -35px; }
+  .wr-result .wr-rcard { margin-top: -28px; }
+  .wr-result .wr-result-row, .wr-result .wr-result-head { padding-left: 16px; padding-right: 16px; }
+  .wr-result .wr-result-headline h1 { font-size: 40px; }
+  .wr-result .wr-result-headline .wr-pill { margin-left: 0; }
+  .wr-result .wr-rstats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wr-result .wr-rstats > div { padding: 12px 16px; border-right: 0; border-bottom: 1px dashed var(--wr-divider); }
+  .wr-result .wr-rstats > div.is-wide { grid-column: 1 / -1; border-bottom: 0; }
+  .wr-rstats dd { font-size: 24px; }
+  .wr-result .wr-ractions { padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .wr-result .wr-ractions .wr-race-btn--primary { flex-basis: 100%; }
+  .wr-srow--head { display: none; }
+  .wr-srow { grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "rank name state" "rank time moves"; gap: 2px 8px; min-height: 46px; padding: 6px; }
+  .wr-srow-rank { grid-area: rank; }
+  .wr-srow-name { grid-area: name; }
+  .wr-srow-state { grid-area: state; justify-self: end; }
+  .wr-srow-state { justify-content: flex-end; text-align: right; max-width: 11em; }
+  .wr-srow-state small { padding-left: 0; }
+  .wr-srow-time { grid-area: time; font-size: 12px; }
+  .wr-srow-moves { grid-area: moves; justify-self: end; font-size: 12px; }
+}

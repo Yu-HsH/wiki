@@ -60,7 +60,9 @@ test("results: single = path color on the timeline + finish effect on the last n
   assert.match(overlay, /useMatchExpression\(user && !user\.isGuest \? user\.id : null\)/);
   assert.match(overlay, /const pathHex = pathColor\(matchExpression\.path_color\);/);
   assert.match(overlay, /isLast \? <FinishEffect effect=\{matchExpression\.finish_effect\}>\{dot\}<\/FinishEffect> : dot/);
-  assert.match(overlay, /\{ \.\.\.lineStyle, background: pathHex \}/);
+  // Phase 4 timeline: equipped path colour on both the node and the connector line.
+  assert.match(overlay, /className="wr-tl-dot-inner" style=\{pathHex \? \{ background: pathHex \} : undefined\}/);
+  assert.match(overlay, /className="wr-tl-line" aria-hidden="true" style=\{pathHex \? \{ background: pathHex \} : undefined\}/);
 
   const page = read("pages/MultiplayerGamePage.jsx");
   assert.match(page, /useMatchExpression\(phase === PHASE\.SUCCESS \? user\?\.id \?\? null : null\)/);

@@ -90,7 +90,8 @@ async function loadLevelBefore({ scope, entries, summary, achievements }) {
  * @param {string|null} [props.sourceId] 싱글: `game_records.id`, 그룹: `group_match_results.id`
  * @param {string|null} [props.roomId] 1:1/그룹: 방 ID
  * @param {"light"|"dark"} [props.tone]
- * @param {(count:number) => void} [props.onAchievementsLoaded] 이 결과가 연 업적 수 — 1:1 결과 유지 시간이 쓴다
+ * @param {boolean} [props.unavailable] 결과 행 조회 자체가 실패했다 — 키가 없을 때 "불러오지 못했다"로 안내한다
+ * @param {(count:number) => void} [props.onAchievementsLoaded] 이 결과가 연 업적 수
  */
 export default function ResultXp({
   scope,
@@ -99,6 +100,7 @@ export default function ResultXp({
   sourceId = null,
   roomId = null,
   tone = "light",
+  unavailable = false,
   onAchievementsLoaded = null,
 }) {
   const [data, setData] = useState(null);
@@ -140,9 +142,17 @@ export default function ResultXp({
     };
   }, [scope, isGuest, userId, sourceId, roomId]);
 
+  // Phase 4 — 조회할 키가 없으면 영원히 "확인하는 중"에 머물지 않는다 (표시만, 원장·지급 경로 무변경).
+  // 로그인 사용자가 없으면 게스트 계약(XP_GUEST_NOTE)을 그대로 쓰고, 결과 행이 없으면 지급 내역이 없다고 말한다.
+  const showAsGuest = isGuest || !userId;
+  const resultKey = scope === "duel" ? roomId : sourceId;
+  if (!showAsGuest && !resultKey) {
+    return <p className="rxp-note" role="status" data-testid="result-xp">{unavailable ? "XP 지급 정보를 불러오지 못했습니다." : "이 결과에 기록된 XP 지급 내역이 없습니다."}</p>;
+  }
+
   const view = buildResultXpView({
     scope,
-    isGuest,
+    isGuest: showAsGuest,
     entries: data?.entries ?? null,
     summary: data?.summary ?? null,
     achievementXp: data?.achievements?.xpTotal ?? 0,
@@ -153,7 +163,7 @@ export default function ResultXp({
     ? <ResultAchievements reveal={reveal} tone={tone} />
     : null;
   if (!view) return <>
-    {!isGuest && <p className="rxp-note" role="status">{failed ? "XP 지급 정보를 불러오지 못했습니다." : data ? "이 결과에 기록된 XP 지급 내역이 없습니다." : "XP 지급 정보를 확인하는 중입니다."}</p>}
+    {!showAsGuest && <p className="rxp-note" role="status">{failed ? "XP 지급 정보를 불러오지 못했습니다." : data ? "이 결과에 기록된 XP 지급 내역이 없습니다." : "XP 지급 정보를 확인하는 중입니다."}</p>}
     {revealBlock}
   </>;
 

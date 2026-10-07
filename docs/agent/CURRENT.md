@@ -1,8 +1,8 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-07** (UI Phase 3 RACE·관전 로컬 완료 기록 — **미커밋 작업 트리**) · 이전: 2026-10-07 (UI Phase 1·2 로컬 커밋 기록) · 2026-10-06 (Production 배포 #15)
-기준 커밋: **`321ea27`** — 이번 상태 갱신 커밋의 부모. **Phase 3 코드는 아직 커밋 전이며 `321ea27` 위의 작업 트리에 있다** — 아래 Phase 3 절.
-브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-07 재측정 [산출물]) — 로컬은 그 위에 미push 4커밋(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2 · `321ea27` 문서). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1·2·3 UI는 **운영 미배포 · 미push** (이 기록 이후의 push는 반영되어 있지 않다).
+갱신 날짜: **2026-10-07** (UI Phase 4 RESULT 로컬 구현 기록 — **미커밋 작업 트리**) · 이전: 2026-10-07 (UI Phase 3 기록) · 2026-10-07 (UI Phase 1·2 로컬 커밋 기록) · 2026-10-06 (Production 배포 #15)
+기준 커밋: **`b6b6a2c`** (`feat: integrate jungle expedition race and spectator UI` — Phase 3 코드). **Phase 4 코드는 아직 커밋 전이며 `b6b6a2c` 위의 작업 트리에 있다** — 아래 Phase 4 절.
+브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-07 재측정 [산출물], 이번 세션 미재측정) — 로컬은 그 위에 미push 5커밋(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2 · `321ea27` 문서 · `b6b6a2c` Phase 3). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1·2·3·4 UI는 **운영 미배포 · 미push** (이 기록 이후의 push는 반영되어 있지 않다).
 
 ## 최신 운영 상태 — RELEASED WITH FOLLOW-UP
 
@@ -43,9 +43,47 @@ Phase 2 검증 **62105a3 + 미커밋 Phase 2 작업 트리, 2026-10-07 [산출�
 
 기존 운영 출시 상태는 위 2026-10-06 기록을 따른다.
 
-## 2026-10-07 Jungle Expedition UI — Phase 3 RACE · Group Spectator 로컬 완료 (미커밋 · 미push · 미배포)
+## 2026-10-07 Jungle Expedition UI — Phase 4 RESULT 로컬 구현 (미커밋 · 미push · 미배포)
 
-**상태: 구현 완료 · Visual Freeze 승인 `[사용자 결정, 2026-10-07]` · 커밋 전 작업 트리(`321ea27` 위).** Freeze `05_DUEL_RACE_FINAL`·`06_GROUP_RACE_FINAL` 기준.
+**상태: 구현 + 로컬 검증 완료 · 커밋 전 작업 트리(`b6b6a2c` 위) · Visual 승인 대기.** Freeze `07_DUEL_RESULT_FINAL`·`08_GROUP_RESULT_FINAL` 기준. 사전 감사 후 사용자 결정 7건 `[사용자 결정, 2026-10-07]`:
+1. **1:1 결과 자동 이동(4000ms/업적 시 6000ms → `/multiplayer`) 제거.** 대체 타이머 없음. 나가기는 명시적 "게임 로비로 이동"만. `settleIntoResult`·복구·F5 결과 복원·서버 판정 무변경.
+2. **그룹 미완주 표제는 언제나 "리타이어"**, 실제 사유는 C4 어휘로 보조 문구(기권 / 제한 시간 초과 / 유예 시간 초과 / 몰수 · 재접속 유예 종료). `resultReasonLabels.js` 무변경 — 표시 매핑만(`utils/resultPresentation.js`).
+3. **리타이어 Result C**: 경기 중 리타이어 → 기존 "경기 종료 · 결과 집계 중" → 서버 확정 → C(리타이어 · 순위 – · 완주 시간 – · 원장 +0 XP · 관전/축하 없음) → "최종 결과 보기 →" → B(최종 순위). **표시 단계일 뿐 서버 상태/RPC 없음.**
+4. **재대결 미구현** — 운영에 1:1·그룹 재대결 RPC/서비스 없음. Freeze의 "재대결 →"·"방장의 재대결 대기"는 제외.
+5. **Group Result A는 Phase 3 그대로** — XP·업적 없음, 명시적 "관전하기 →", 자동 관전 없음. XP·업적은 B(리타이어는 C)에서만. **결과 화면당 ResultXp 1회 마운트**(그룹 C→B는 같은 인스턴스 유지 — 재조회·재reveal 없음).
+6. **싱글 게스트/결과 행 없음 표시 버그 수정** — `ResultXp`가 사용자 없음이면 기존 게스트 안내, 결과 키가 없으면 "이 결과에 기록된 XP 지급 내역이 없습니다."(조회 실패 시 "XP 지급 정보를 불러오지 못했습니다.") — 무한 "확인하는 중" 제거. 원장·지급 경로 무변경.
+7. **싱글 행동은 실제 동작만** — "새 게임 선택"(기존 `/play`) · "로비로 이동"(기존 로비 복귀). 가짜 "다시 도전"(`location.reload`) 제거.
+
+**변경 (표시 전용).** 새 `components/wiki-race/result/ResultParts.jsx`(ResultScreen·Scene·Card·Outcome·Stats·XpRow·Route·Actions·GroupStandings), `css/wikiRaceResult.css`(스티치 이중 프레임·승인 마스코트·Gold 완주, 패배/리타이어/무효는 Ink-3 중립·축하 없음, 1위 전체/2–3위 점/4위↓ 없음, 360–390/320 대응·모바일 하단 고정 행동 바), `utils/resultPresentation.js`(순수 표시 모델). `SuccessOverlay`·1:1 결과·그룹 B/C를 이 부품으로 교체. 1:1·싱글 결과는 `role="dialog" aria-modal`, 아래 race는 `inert`(RaceFrame `inert` prop 추가), 결과 표제로 포커스 이동. 1:1 무효의 화면낭독 상태 "패배" → "무효", 1:1 모드 라벨은 방 행 `use_items` 우선(복구 시 기본값 오표시 방지). **backend · services · RPC · migration · Edge · auth · Realtime 계약 변경 0** `[코드]`. HOME/PLAY/로비/RACE/관전 화면 변경 없음(Result A 컴포넌트 무변경).
+
+**검증 — 기준 `b6b6a2c` + 미커밋 Phase 4 작업 트리, 2026-10-07 [산출물].**
+
+| 검증 | 결과 |
+|---|---|
+| `npm test` | **537/537** (신규 `tests/resultPresentation.test.js` 8 · 자동 이동 단언 → "자동 이동 없음/명시적 행동만" 단언으로 교체, 셀렉터·마크업 단언 갱신) |
+| `npm run build` · `git diff --check` | 통과(기존 큰 번들 경고만) · exit 0 |
+| Phase 4 browser (`scripts/ui-phase4-browser.mjs`, 격리 API/Realtime fixture) | **85/85** — 싱글(인증 +20·업적 1회 reveal/seen·서버 순위·행동·게스트·행 없음/조회 실패), 1:1(승리/패배/상대 연결 이탈 몰수 승리/무효/본인 기권 +0, 7.6초 후에도 결과 유지, F5 같은 결과·원장 재조회만), 그룹(A→관전→B 업적 1회·F5 재reveal 없음, 8인 B 1–5위+리타이어 3, 4위/1위 축하, 리타이어 hold→C→B 단일 ResultXp), 390/320 가로 넘침 0·주 행동 도달 |
+| Phase 1/2/3 browser 회귀 | **42/42 · 82/82 · 84/84** (Phase 3 결과 대기 셀렉터만 갱신) |
+| Phase 3 실제 로컬 백엔드 (`scripts/ui-phase3-local-smoke.mjs`) | **16/16** · console/API 오류 0 — 새 결과 화면 경유(싱글 완주, 1:1 양측 결과, 그룹 A→관전). 첫 실행은 로컬 Docker 시계 편차(`PGRST303 JWT issued at future`, 401)로 1:1 진입 전 중단 — 시계 일치 확인 후 재실행 통과 |
+| `scripts/achievement-display-smoke.mjs` (실제 로컬 백엔드) | **16/16 PASS** · exit 0 · 페이지 오류 0 · 정리 완료(방·계정·해금 삭제) — 1:1 승자/패자 결과 대화상자, 승자 업적 reveal(`첫 도착`), 패자 거짓 reveal 없음, **7.6초 후에도 결과 유지(자동 이동 없음)**, 명시적 "게임 로비로 이동" → `/multiplayer`, reveal한 해금의 DB seen 표시, 결과 XP = `xp_ledger`(정상 승리 +50 · 정상 패배 +25). 싱글 결과도 통과 — 15 + 90 XP, `Lv.1 → Lv.3 (+2)`, reveal 3장(히든 먼저) 전부 seen. 이 패스의 변경은 스모크 셀렉터뿐: Phase 1 HOME `업적 보기 →` 링크·PLAY `싱글 탐험` 카드 진입, 대기실 `게임 시작` 활성 대기 20초(스냅샷 목표 저장 + Realtime 입장), XP 줄을 원장 행과 대조하는 단언 추가(강화). 프로덕션 코드 변경 없음 |
+| `scripts/release-validation-local-smoke.mjs` | **미통과 — Phase 2부터 stale(기존 기록)**: 대기실 `getByRole('status')` 0개 가정에서 결과 이전에 중단. 결과 셀렉터(1:1 표제·서버 `duration_seconds` mm:ss·그룹 B·그룹 로비로)는 갱신해 둠 |
+| `badge-retirement-ui-smoke` · `duel-host-target-smoke` · `duel-players-view-smoke` | 실행 안 함. Phase 3부터 stale이던 이모지 결과 문구(`🎉 승리!`/`😢 패배`)를 결과 대화상자 셀렉터로 교체 |
+| Freeze 8 HTML + manifest | SHA-256 불변 |
+| `supabase/` · `services/` | 변경 0 |
+
+**알려진 한계 / 후속.**
+- 그룹 B의 "경로 비교", 1:1 "강제 이동 수"·"마지막 도달 문서", 싱글 F5 결과 복원·진짜 재도전은 운영 데이터/계약이 없어 제외(감사 보고 Freeze vs production 불일치).
+- 1:1 패자 시간은 서버 경계(`finished_at - game_starts_at`)라 "경기 시간"으로 표기 — 1:1 RPC는 `room_players.elapsed_seconds`를 쓰지 않는다(백엔드 후속).
+- Result A의 마감 표시는 Realtime 사이에 멈춰 있고, A/관전 화면은 스스로 `finalize_group_room_if_expired`를 부르지 않는다(Phase 3 이전부터, 이번 범위 밖).
+- 리타이어 C → B는 화면 상태라 B에서 F5하면 다시 C부터 보인다(Freeze 화면 선택 규칙과 같음).
+- `release-validation-local-smoke`의 Phase 2 대기실 셀렉터(`getByRole('status')` 0개 가정) 복구는 Phase 4 범위 밖 — 알려진 무관 실패로 유지.
+- Phase 1·2·3은 로컬 커밋, Phase 4는 미커밋 — 모두 미push·운영 미배포. `main` push는 `AGENTS.md` §1.1 건별 승인 대상.
+
+산출물: `test-results/packet13-b1/ui-phase4/`(fixture 스크린샷·`report.json`) · `ui-phase3-local/summary.json`(실 백엔드).
+
+## 2026-10-07 Jungle Expedition UI — Phase 3 RACE · Group Spectator 로컬 완료 (커밋 `b6b6a2c` · 미push · 미배포)
+
+**상태: 구현 완료 · Visual Freeze 승인 `[사용자 결정, 2026-10-07]` · 커밋 `b6b6a2c`** (이 절의 검증은 커밋 전 `321ea27` 위 작업 트리에서 실행했고, 커밋 후 재실행은 Phase 4 절의 회귀가 대신한다). Freeze `05_DUEL_RACE_FINAL`·`06_GROUP_RACE_FINAL` 기준.
 
 **범위 (표시 통합만).**
 - Single / Duel / Group RACE를 본문 우선 race 셸로 통합 — 56px HUD(현재 → Gold 목표 · 이동 · 시간 · 연결 · 명시적 "나가기"), 경기 중 전역 이동(HOME/PLAY/로비/랭킹) 없음. 나가기는 기존 exit guard → 기존 이탈/기권 핸들러.
@@ -75,7 +113,7 @@ Phase 2 검증 **62105a3 + 미커밋 Phase 2 작업 트리, 2026-10-07 [산출�
 - Group 연결 끊김 표시는 UI 준비만 됨 — 현재 backend는 그룹 참가자에 `disconnected` 상태를 쓰지 않으므로 실경기에서 "재연결 중"은 나타나지 않는다(fixture로만 검증).
 - 자기 리타이어 대기 화면은 기존 `recoverGame`을 5초마다 재호출해 서버의 경기 종료를 확인한다.
 - 최종 Duel/Group/Single RESULT 디자인은 Phase 4.
-- Phase 1·2는 로컬 커밋, Phase 3은 미커밋 — 모두 미push·운영 미배포. `main` push는 `AGENTS.md` §1.1 건별 승인 대상.
+- Phase 1·2·3은 로컬 커밋(Phase 3 = `b6b6a2c`) — 모두 미push·운영 미배포. `main` push는 `AGENTS.md` §1.1 건별 승인 대상.
 
 산출물: `test-results/packet13-b1/ui-phase3/`(fixture 스크린샷) · `ui-phase3-local/`(실 백엔드).
 

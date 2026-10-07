@@ -225,6 +225,12 @@ const FRONT_FILES = [
   "hooks/useMatchExpression.js",
   "services/profileRewardService.js",
   "components/SuccessOverlay.jsx",
+  // Phase 4 RESULT
+  "components/wiki-race/result/ResultParts.jsx",
+  "utils/resultPresentation.js",
+  "css/wikiRaceResult.css",
+  "pages/MultiplayerGamePage.jsx",
+  "pages/GroupGamePage.jsx",
   "css/profileCard.css",
   "css/matchExpression.css",
   ...readdirSync(`${root}/public/profile-icons/x`).map((name) => `public/profile-icons/x/${name}`),

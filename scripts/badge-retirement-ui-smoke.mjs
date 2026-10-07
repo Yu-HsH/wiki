@@ -210,8 +210,8 @@ try {
   await Promise.all([host.waitForURL('**/multiplayer/game/**'), guest.waitForURL('**/multiplayer/game/**')]);
   await expect(guest.locator('.mp-game-status')).toHaveText('레이스 진행 중', { timeout: 20000 });
   await guest.locator('.article-content a').filter({ hasText: pages[1].title }).first().click();
-  await expect(guest.getByText('🎉 승리!', { exact: true })).toBeVisible();
-  await expect(host.getByText('😢 패배', { exact: true })).toBeVisible();
+  await expect(guest.getByRole('dialog', { name: '승리' })).toBeVisible(); // Phase 4 result dialog
+  await expect(host.getByRole('dialog', { name: '패배' })).toBeVisible();
   await expect(guest.getByTestId('finish-effect')).toHaveClass(/fx-finish--tier-3/);
   await expect(host.getByTestId('finish-effect')).toHaveCount(0);
   const pulse = await guest.getByTestId('finish-effect').evaluate((el) => getComputedStyle(el, '::after').animationName);

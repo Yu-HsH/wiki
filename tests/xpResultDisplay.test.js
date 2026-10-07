@@ -173,28 +173,32 @@ test("buildResultXpView: unknown yet or guest", () => {
 
 test("wiring: SuccessOverlay places XP after the record summary and before the path", () => {
   const overlay = read("components/SuccessOverlay.jsx");
-  const stats = overlay.indexOf("statsContainerStyle}>");
+  const outcome = overlay.indexOf("<ResultOutcome");
+  const stats = overlay.indexOf("<ResultStats");
   const xp = overlay.indexOf("<ResultXp");
-  const path = overlay.indexOf("이동 경로</h3>");
-  assert.ok(stats > 0 && xp > stats && path > xp, "결과 ▸ 기록 ▸ XP ▸ 경로");
+  const path = overlay.indexOf("MY ROUTE · 이동 경로");
+  assert.ok(outcome > 0 && stats > outcome && xp > stats && path > xp, "결과 ▸ 기록 ▸ XP ▸ 경로");
+  assert.equal((overlay.match(/<ResultXp\s/g) || []).length, 1, "one ResultXp mount per result view");
   assert.match(overlay, /scope="single"/);
   assert.match(overlay, /sourceId=\{serverRecord\?\.id \?\? null\}/);
+  // Phase 4: guest (incl. guest recovery without a user) and failed record reads never spin forever.
+  assert.match(overlay, /isGuest=\{guestView\}/);
+  assert.match(overlay, /unavailable=\{serverResultFailed\}/);
 });
 
-test("wiring: one shared duel result card shows XP; 4000ms, or 6000ms when the result unlocked achievements", () => {
+test("wiring: one shared duel result shows XP and stays until the explicit lobby action (Phase 4: no auto-redirect)", () => {
   const page = read("pages/MultiplayerGamePage.jsx");
-  assert.equal((page.match(/<ResultXp\s+scope="duel"/g) || []).length, 1);
-  assert.equal((page.match(/onAchievementsLoaded=\{extendResultHoldForAchievements\}/g) || []).length, 1);
-  assert.match(page, /const RESULT_HOLD_MS = 4000;/);
-  assert.match(page, /const RESULT_HOLD_WITH_ACHIEVEMENTS_MS = 6000;/);
-  assert.equal((page.match(/\}, RESULT_HOLD_MS\);/g) || []).length, 2);
-  assert.doesNotMatch(page, /\}, (2200|4000)\);/);
-
-  const extend = page.slice(page.indexOf("const extendResultHoldForAchievements"));
-  assert.match(extend, /if \(!count \|\| leaving \|\| resultHoldExtendedRef\.current \|\| !resultNavigationTimerRef\.current\) return;/,
-    "no unlocks → the 4000ms timer is untouched");
-  assert.match(extend, /RESULT_HOLD_WITH_ACHIEVEMENTS_MS - \(Date\.now\(\) - resultShownAtRef\.current\)/,
-    "6000ms counts from when the result appeared, not from when achievements loaded");
+  assert.equal((page.match(/<ResultXp\s+scope="duel"/g) || []).length, 1, "one ResultXp mount per result view");
+  // [사용자 결정, 2026-10-07] the 4000/6000ms timers are removed — not lengthened, not replaced.
+  assert.doesNotMatch(page, /RESULT_HOLD_MS|RESULT_HOLD_WITH_ACHIEVEMENTS_MS|resultNavigationTimerRef|extendResultHoldForAchievements/);
+  assert.doesNotMatch(page, /setTimeout\(\(\) => \{\s*navigate\(/, "no timed navigation away from the result");
+  assert.equal((page.match(/navigate\("\/multiplayer", \{ replace: true \}\)/g) || []).length, 1,
+    "the only way out is handleReturnToLobby");
+  const leave = page.slice(page.indexOf("const handleReturnToLobby = async () => {"), page.indexOf("const { requestExit, dialog: exitDialog }"));
+  assert.match(leave, /navigate\("\/multiplayer", \{ replace: true \}\)/);
+  const result = page.slice(page.indexOf("{(phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN) && ("));
+  assert.match(result, /onClick=\{handleReturnToLobby\}/);
+  assert.match(result, /게임 로비로 이동/);
 });
 
 test("wiring: the stylesheet is registered once and uses only the rxp- prefix", () => {

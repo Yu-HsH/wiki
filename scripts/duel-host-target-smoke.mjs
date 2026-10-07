@@ -208,8 +208,8 @@ try {
     await host.screenshot({ path: `${artifactDir}/playing-${useItems}.png`, fullPage: true });
     // Clicking the real rendered Wikipedia link exercises snapshot -> move RPC -> result.
     await host.locator('.article-content a').filter({ hasText: pages[2].title }).click();
-    await expect(host.getByText('🎉 승리!', { exact: true })).toBeVisible();
-    await expect(guest.getByText('😢 패배', { exact: true })).toBeVisible();
+    await expect(host.getByRole('dialog', { name: '승리' })).toBeVisible(); // Phase 4 result dialog
+    await expect(guest.getByRole('dialog', { name: '패배' })).toBeVisible();
     const finished = await roomRows(room.id);
     assert.equal(finished.room.status, 'finished');
     assert.ok(finished.players.find((p) => p.user_id === users[0].id).has_finished);

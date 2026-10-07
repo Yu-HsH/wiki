@@ -31,8 +31,9 @@ export function ConnectionDot({ ok = true, halo = false, label }) {
   </span>;
 }
 
-export function RaceFrame({ mode, strip = false, tabs = false, label, children }) {
-  return <div className={`wr-page wr-race wr-race--${mode} ${strip ? "has-strip" : ""} ${tabs ? "has-tabs" : ""}`}>
+/** `inert` — Phase 4: a RESULT dialog sits above the race; the race underneath is not focusable. */
+export function RaceFrame({ mode, strip = false, tabs = false, label, inert = false, children }) {
+  return <div className={`wr-page wr-race wr-race--${mode} ${strip ? "has-strip" : ""} ${tabs ? "has-tabs" : ""}`} inert={inert ? "" : undefined} aria-hidden={inert ? "true" : undefined}>
     <div className="wr-race-shell" role="region" aria-label={label}>{children}</div>
   </div>;
 }

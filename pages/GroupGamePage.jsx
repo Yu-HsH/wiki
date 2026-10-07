@@ -25,7 +25,23 @@ import {
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
 import ResultXp from "../components/ResultXp.jsx";
-import { getGroupResultLabel } from "../utils/resultReasonLabels.js";
+import {
+    GroupStandings,
+    ResultActions,
+    ResultCard,
+    ResultCourse,
+    ResultOutcome,
+    ResultRoute,
+    ResultScene,
+    ResultScreen,
+    ResultStats,
+    ResultXpRow,
+} from "../components/wiki-race/result/ResultParts.jsx";
+import {
+    buildGroupOwnOutcome,
+    buildGroupStandingRows,
+    countGroupStandings,
+} from "../utils/resultPresentation.js";
 import WikiViewer from "../components/WikiViewer";
 import CountdownOverlay from "../components/CountdownOverlay";
 import {
@@ -97,7 +113,6 @@ import {
     getGroupRemainingSeconds,
     isGroupRoomExpired,
 } from "../utils/groupGameTimer";
-import { formatGroupRetireReason } from "../utils/groupResultFormatter";
 import { useExitGuard } from "../components/ExitGuard";
 import { classifyRealtimeVersion } from "../utils/serverAuthority";
 import {
@@ -184,6 +199,8 @@ export default function GroupGamePage() {
     const [muteMode, setMuteMode] = useState(false);
     const [reactionCooldownUntil, setReactionCooldownUntil] = useState(0);
     const [resultRouteOpen, setResultRouteOpen] = useState(false);
+    // Phase 4 — 리타이어의 Result C → "최종 결과 보기" → B. 표시 단계일 뿐 서버 상태가 아니다.
+    const [finalStandingsOpen, setFinalStandingsOpen] = useState(false);
     const [displayNow, setDisplayNow] = useState(() => Date.now());
 
     const roomRef = useRef(null);
@@ -1564,67 +1581,74 @@ export default function GroupGamePage() {
     }
 
     if (phase === GROUP_GAME_PHASE.ENDED) {
+        // Phase 4 최종 결과 (Freeze 08). 순위·상태·XP는 서버 확정값(group_match_results · xp_ledger).
+        // 리타이어는 먼저 Result C(내 리타이어 결과)를 보고 "최종 결과 보기"로 B(최종 순위)로 간다.
+        // ResultXp는 C와 B에서 **같은 자리에 한 번만** 마운트된다 — C → B 전환에서 다시 조회·reveal하지 않는다.
         const finalStandings = buildGroupFinalStandings(players, results);
-        const ownResult = finalStandings.find((entry) => entry.user_id === user?.id);
-        const ownLabel = getGroupResultLabel({ resultStatus: ownResult?.result_status, retireReason: ownResult?.retire_reason });
+        const ownResult = finalStandings.find((entry) => entry.user_id === user?.id) || null;
+        const ownRetired = ownResult?.result_status === "retired";
+        const view = ownRetired && !finalStandingsOpen ? "retired" : "standings";
+        const outcome = buildGroupOwnOutcome(ownResult, { view });
+        const standingRows = buildGroupStandingRows(finalStandings, user?.id);
+        const standingCounts = countGroupStandings(finalStandings);
+        const ownResultRowId = results.find((entry) => entry.user_id === user?.id)?.id ?? null;
+        const ownPath = Array.isArray(ownResult?.path_titles) ? ownResult.path_titles.filter(Boolean) : [];
 
         return (
-            <div className="mp-page group-result-page">
+            <>
                 {exitDialog}
-                <div className="mp-container">
-                    <div className="mp-title-block">
-                        <span className="mp-badge">FINAL RESULT</span>
-                        <h1 className="mp-title">최종 결과</h1>
-                        <p className="mp-subtitle">
-                            목표 문서: <strong>{target.title}</strong>
-                        </p>
-                    </div>
-
-                    <section className="mp-card group-result-card">
-                        {ownResult && <section className="group-personal-result" aria-label="내 경기 결과">
-                            <h2>내 결과 · {ownResult.result_status === "finished" ? `${ownResult.rank ?? "-"}위` : ownLabel?.term || "미완주"}</h2>
-                            <p>{ownLabel?.subtitle || ""} · {Number.isFinite(ownResult.elapsed_seconds) ? formatDuration(ownResult.elapsed_seconds) : "기록 확인 중"} · {Number.isFinite(ownResult.move_count) ? `${ownResult.move_count}회 이동` : "이동 기록 확인 중"}</p>
-                            <ResultXp scope="group" userId={user?.id} sourceId={results.find((entry) => entry.user_id === user?.id)?.id ?? null} roomId={roomId} tone="dark" />
-                        </section>}
-                        <div className="group-final-list">
-                            {finalStandings.map((player) => (
-                                <div
-                                    key={player.id || player.user_id}
-                                    className={`group-final-player ${
-                                        player.result_status === "retired" ? "retired" : ""
-                                    }`}
-                                >
-                                    <strong>
-                                        {player.result_status === "retired"
-                                            ? getGroupResultLabel({ resultStatus: player.result_status, retireReason: player.retire_reason || player.leave_reason })?.term || "미완주"
-                                            : `${player.rank ?? "-"}위`}
-                                        {" · "}
-                                        {player.nickname_snapshot || "참가자"}
-                                        {player.is_winner === true ? " · WINNER" : ""}
-                                    </strong>
-                                    <span>
-                                        {player.result_status === "retired"
-                                            ? formatGroupRetireReason(player.retire_reason || player.leave_reason)
-                                            : `${Number.isFinite(player.move_count) ? `${player.move_count}회` : "기록 확인 중"} · ${Number.isFinite(player.elapsed_seconds) ? formatDuration(player.elapsed_seconds) : "기록 확인 중"}`}
-                                    </span>
-                                </div>
-                            ))}
-                            {finalStandings.length === 0 && (
-                                <p className="mp-subtitle">최종 결과를 불러오는 중입니다.</p>
+                <ResultScreen mode="group" tone={outcome.tone} layer="page" titleId="wr-group-result-title" focusKey={view} testId="group-final-result">
+                    <ResultScene mascot={outcome.mascot} reached={!ownRetired && Boolean(ownResult)} celebration={outcome.celebration} destination={goalTitle || null} />
+                    <ResultCard>
+                        <ResultOutcome
+                            kicker={outcome.kicker}
+                            titleId="wr-group-result-title"
+                            title={outcome.title}
+                            meta={`그룹 레이스 · ${players.length || finalStandings.length}인 · 경기 종료`}
+                            pill={outcome.pill}
+                            detail={outcome.detail}
+                        />
+                        <ResultStats
+                            items={[
+                                ...outcome.stats,
+                                { label: "공통 코스", wide: true, value: <ResultCourse start={courseStart} target={goalTitle} /> },
+                            ]}
+                        />
+                        {ownResult ? (
+                            <ResultXpRow>
+                                <ResultXp scope="group" userId={user?.id} sourceId={ownResultRowId} roomId={roomId} tone="light" />
+                            </ResultXpRow>
+                        ) : null}
+                        {view === "retired" ? (
+                            <ResultRoute
+                                title="내 경로"
+                                meta={ownPath.length ? `마지막 도달 문서 · ${ownPath[ownPath.length - 1]}` : null}
+                                path={ownPath}
+                                tail="목표 미도달"
+                            />
+                        ) : (
+                            finalStandings.length === 0
+                                ? <p className="wr-result-row" role="status">최종 결과를 불러오는 중입니다.</p>
+                                : <GroupStandings rows={standingRows} finishedCount={standingCounts.finished} retiredCount={standingCounts.retired} />
+                        )}
+                        <ResultActions>
+                            {view === "retired" && (
+                                <button type="button" className="wr-race-btn wr-race-btn--primary wr-race-btn--lg" onClick={() => setFinalStandingsOpen(true)}>
+                                    최종 결과 보기 →
+                                </button>
                             )}
-                        </div>
-
-                        <button
-                            type="button"
-                            className="mp-action-btn mp-action-btn--primary group-final-leave"
-                            onClick={() => handleReturnToLobby("left")}
-                            disabled={leaving}
-                        >
-                            {leaving ? "게임 정리 중..." : "게임 로비로 이동"}
-                        </button>
-                    </section>
-                </div>
-            </div>
+                            <button
+                                type="button"
+                                className={`wr-race-btn ${view === "retired" ? "" : "wr-race-btn--primary wr-race-btn--lg"}`}
+                                onClick={() => handleReturnToLobby("left")}
+                                disabled={leaving}
+                            >
+                                {leaving ? "게임 정리 중..." : "그룹 로비로"}
+                            </button>
+                        </ResultActions>
+                    </ResultCard>
+                </ResultScreen>
+            </>
         );
     }
 

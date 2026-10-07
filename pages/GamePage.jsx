@@ -350,6 +350,14 @@ export default function GamePage({
     }
   }, [clearSingleGameState, isGuestGame, loadLocalGameState, onReturnLobby]);
 
+  // Phase 4 결과 행동 — 재도전 계약이 없으므로 "새 게임 선택"은 기존 /play 모드 선택으로 간다.
+  // 완료된 런이라 이탈 RPC는 없다. 로컬 진행 상태만 정리한다.
+  const handleChooseNewGame = useCallback(() => {
+    pageRequestManagerRef.current.cancel();
+    clearSingleGameState();
+    navigate("/play", { replace: true });
+  }, [clearSingleGameState, navigate]);
+
   const { requestExit, dialog: exitDialog } = useExitGuard({
     enabled: phase === PHASE.COUNTDOWN || phase === PHASE.PLAYING,
     onConfirm: handleGiveUp,
@@ -812,7 +820,7 @@ export default function GamePage({
 
       {/* 게임 진행 및 성공 화면 */}
       {showRace && (
-        <RaceFrame mode="single" label="싱글 탐험">
+        <RaceFrame mode="single" label="싱글 탐험" inert={phase === PHASE.SUCCESS}>
           <RaceHud>
             <HudBrand mode="싱글" />
             <HudDoc kind="current" label="현재 문서" title={currentTitle} />
@@ -880,14 +888,17 @@ export default function GamePage({
         <CountdownOverlay onComplete={handleCountdownComplete} />
       )}
 
-      {/* 결과 화면 — Phase 4 범위. 기존 흐름 그대로 */}
+      {/* 결과 화면 — Phase 4 RESULT. 진입 흐름(handleWin)은 기존 그대로 */}
       {phase === PHASE.SUCCESS && (
         <SuccessOverlay
           runId={serverRun?.id ?? null}
+          startTitle={startTitle}
           targetTitle={target.title}
           elapsedSeconds={elapsedSeconds}
           clickCount={clickCount}
           pathTitles={pathTitles}
+          isGuest={isGuestGame}
+          onNewGame={handleChooseNewGame}
           onReturnToLobby={handleGiveUp}
         />
       )}
