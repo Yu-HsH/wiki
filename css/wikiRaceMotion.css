@@ -1,0 +1,29 @@
+.wr-page {
+  --wr-motion-fast: 150ms; --wr-motion-ui: 220ms; --wr-motion-page: 420ms;
+  --wr-ease-standard: cubic-bezier(.2, 0, 0, 1);
+  --wr-ease-out: cubic-bezier(0, 0, .2, 1);
+  --wr-ease-emphasized: cubic-bezier(.2, .8, .2, 1);
+}
+.wr-landscape { animation: wr-appear var(--wr-motion-page) var(--wr-ease-out) both; }
+.wr-explorer { animation: wr-enter var(--wr-motion-page) var(--wr-ease-emphasized) 100ms both; }
+.wr-hero-entry { animation: wr-enter var(--wr-motion-page) var(--wr-ease-out) 160ms both; }
+.wr-expedition-trail { animation: wr-trail-reveal var(--wr-motion-page) var(--wr-ease-out) 80ms both; }
+.wr-checkpoint { animation: wr-appear var(--wr-motion-ui) var(--wr-ease-out) 160ms both; }
+.wr-checkpoint-1 { animation-delay: 230ms; } .wr-checkpoint-2 { animation-delay: 300ms; }
+.wr-home .wr-explorer-featured, .wr-home .recent-card { animation: wr-enter var(--wr-motion-page) var(--wr-ease-out) 220ms both; }
+.wr-mode { transition: background var(--wr-motion-fast) var(--wr-ease-out); }
+.wr-vignette { transition: transform var(--wr-motion-fast) var(--wr-ease-out); }
+.wr-mode-action { transition: color var(--wr-motion-fast) var(--wr-ease-out); }
+.wr-mode:not([aria-disabled="true"]):is(:hover, :focus-visible) .wr-vignette { transform: translateX(3px); }
+.wr-play-launcher { transition: transform var(--wr-motion-fast) var(--wr-ease-standard), background var(--wr-motion-fast) var(--wr-ease-standard); }
+.wr-play-launcher:hover { transform: translateX(2px); }
+.wr-page .app-btn, .wr-page .weekly-item, .wr-page .qs-modal-input { transition-duration: var(--wr-motion-fast); transition-timing-function: var(--wr-ease-standard); }
+.wr-page .qs-modal-backdrop, .wr-page .help-backdrop { animation: wr-appear var(--wr-motion-ui) var(--wr-ease-out); }
+.wr-page .ranking-rotate-list { animation: wr-appear var(--wr-motion-ui) var(--wr-ease-out); }
+@keyframes wr-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wr-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes wr-trail-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .wr-page *, .wr-page *::before, .wr-page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .wr-page .wr-vignette, .wr-page .wr-play-launcher, .wr-page .daily-btn { transform: none !important; }
+}

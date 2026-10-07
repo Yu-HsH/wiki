@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="86" viewBox="0 0 150 86" aria-hidden="true">
+                <path d="M8 76 C 44 58 80 66 126 42" stroke="#EEE7CF" stroke-width="9" fill="none" stroke-linecap="round"></path>
+                <path d="M8 76 C 44 58 80 66 126 42" stroke="#3268A8" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="6 7"></path>
+                <path d="M8 30 C 44 30 84 38 126 42" stroke="#EEE7CF" stroke-width="9" fill="none" stroke-linecap="round"></path>
+                <path d="M8 30 C 44 30 84 38 126 42" stroke="#78877F" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="6 7"></path>
+                <circle cx="8" cy="76" r="9" fill="#3268A8" opacity=".2"></circle><circle cx="8" cy="76" r="5.5" fill="#3268A8" stroke="#FCFCF7" stroke-width="2"></circle>
+                <circle cx="8" cy="30" r="5.5" fill="#FCFCF7" stroke="#78877F" stroke-width="2"></circle>
+                <g transform="translate(126 42)"><ellipse cy="3" rx="10" ry="3" fill="#243430" opacity=".1"></ellipse><circle r="6" fill="#C79A32" stroke="#FCFCF7" stroke-width="2"></circle><path d="M0 -6 V-30" stroke="#6B5238" stroke-width="2" stroke-linecap="round"></path><path d="M0 -30 h16 l-4.5 4.5 4.5 4.5 h-16z" fill="#C79A32"></path></g>
+                <path d="M136 86 C 138 72 146 66 150 66 L150 86 Z" fill="#8FAE7B"></path>
+              </svg>

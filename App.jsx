@@ -65,7 +65,7 @@ function LoginRoute() {
   return <LoginPage />;
 }
 
-function LobbyRoute() {
+function LobbyRoute({ view = "home" }) {
   const { user, loading } = useAuth();
   const access = getLobbyAccess({ loading, user });
 
@@ -81,7 +81,7 @@ function LobbyRoute() {
     return <Navigate to={LOGIN_PATH} replace />;
   }
 
-  return <MainPage />;
+  return <MainPage view={view} />;
 }
 
 function GameRoute({ isGuestRecovery = false }) {
@@ -193,6 +193,8 @@ function AppRoutes() {
         path={LOBBY_PATH}
         element={<LobbyRoute />}
       />
+
+      <Route path="/play" element={<LobbyRoute view="play" />} />
 
       <Route
         path="/game"

@@ -10,6 +10,10 @@
 
 실제 운영 random **+20**, daily **+25**, 정상 duel 생성/입장/시작/일반 이동, 정상 지급 random_teleport **이동·path +1/소비 1건**, 기권 승리 **+30**·패배 **0**, 종료 결과/F5/상대 경로 복구 확인. SF-A3/M2 운영 DDL·ACL 검증 통과. 조회 범위 Edge 로그 5xx/예상 밖 오류 0, smoke 브라우저 error/warn 0. Group은 기존 종료 결과/F5만 확인, 신규 3인 흐름은 세 번째 세션이 없어 미확인. 390px Duel/Group 결과는 확인, 긴 path/새 업적은 후속. 확인된 차단 문제 없음, rollback 없음. maintenance는 이번 세션에서 사용하지 않아 해제 변경 없음. 기존 열린 탭 새로고침 필요. **기능 개발 종료, 2.1 backlog 분리.** 상세 근거/한계: [Production 배포 기록](../ops/RELEASE-2026-10-06.md).
 
+## 2026-10-07 UI Phase 1 — 미커밋 로컬 통합
+
+**6629445 + 미커밋 작업 트리, 2026-10-07 [산출물]**: Jungle Expedition 공용 Shell/Header·색상/모션 및 HOME·`/play` 모드 선택 통합. 기존 서비스/인증/게임/DB 계약 유지, 운영 상태 무변경. npm **511/511** · build/diff exit 0 · 격리된 API fixture 브라우저 **42/42**(PLAY 기본/hover/focus 동등성·장식 무배치 영향, desktop·390px·320px·키보드·reduced motion). 실제 계정의 방 생성/참가·싱글/오늘 코스 완주는 이번 세션 미검증. commit/push/배포/운영 적용 없음. [파일·보존 계약·시각 차이·검증 한계](../ui-freeze/PHASE1-INTEGRATION-2026-10-07.md). 기존 운영 출시 상태는 위 2026-10-06 기록을 따른다.
+
 ## 과거 상태 — 선택적 커밋 정리 (배포 이전)
 
 로컬 출시 판정 **A. 로컬 출시 검증 통과**. 제품 패킷 커밋 완료, 이번 문서 커밋으로 선택적 커밋 정리를 완료한다. push·운영 DB 접근/적용·Edge/Vercel 배포는 수행하지 않았다. **다음 단계: 운영 배포 준비 — feature branch 백업 push와 remote/production 상태 점검은 별도 승인 후 수행한다.**

@@ -18,3 +18,7 @@ import "./css/achievements.css";
 import "./css/matchExpression.css";
 
 import "./css/matchResult.css";
+
+import "./css/wikiRaceTokens.css";
+import "./css/wikiRaceMotion.css";
+import "./css/wikiRaceBase.css";

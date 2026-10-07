@@ -446,12 +446,12 @@ test("(3) 결과 저장 경로가 게스트를 가장 먼저 판정한다", asyn
 });
 
 test("(3) 온라인 경로는 게스트에게 열리지 않는다", async () => {
-  const mainPageSource = await readProjectFile("pages/MainPage.jsx");
+  const playPageSource = await readProjectFile("pages/PlayPage.jsx");
 
-  assert.match(mainPageSource, /disabled=\{user\.isGuest\}/);
+  assert.match(playPageSource, /aria-disabled=\{isGuest && mode\.id !== "solo"\}/);
   assert.match(
-    mainPageSource,
-    /if \(user\.isGuest\) return;[\s\S]*?navigate\("\/multiplayer"\);/
+    playPageSource,
+    /else if \(!isGuest\) onMultiplayer\(mode\.id\);/
   );
 });
 

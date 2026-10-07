@@ -1,0 +1,16 @@
+/* Phase 1 scope: tokens never override legacy screens. World colors are decorative. */
+.wr-page {
+  --wr-blue: #3268A8; --wr-blue-press: #25508A;
+  --wr-purple: #6757B8; --wr-gold: #C79A32; --wr-teal: #27877D; --wr-coral: #D66752;
+  --wr-ink: #243430; --wr-ink-2: #51625A; --wr-ink-3: #78877F;
+  --wr-canvas: #E4EBDD; --wr-paper: #FCFCF7; --wr-paper-2: #F2F6EC;
+  --wr-frame: #AEBBA5; --wr-divider: #D3DCCB; --wr-trail: #B9A470;
+  --wr-font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --wr-font-heading: "Space Grotesk", var(--wr-font-body);
+  --wr-radius-shell: 14px; --wr-radius-control: 8px;
+  --wr-shadow-shell: 0 1px 0 var(--wr-divider), 0 18px 40px rgb(36 52 48 / 10%);
+  --text-main: var(--wr-ink); --text-muted: var(--wr-ink-2);
+  --bg-card: var(--wr-paper); --bg-input: var(--wr-paper);
+  --line-main: var(--wr-divider); --brand: var(--wr-blue); --brand-deep: var(--wr-blue-press);
+  --danger: var(--wr-coral);
+}

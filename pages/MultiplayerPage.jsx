@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
 import {
@@ -45,7 +45,11 @@ export default function MultiplayerPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [selectedMode, setSelectedMode] = useState(null);
+  const [searchParams] = useSearchParams();
+  const [selectedMode, setSelectedMode] = useState(() => {
+    const mode = searchParams.get("mode");
+    return mode === "duel" || mode === "group" ? mode : null;
+  });
   const [duelRoomCodeInput, setDuelRoomCodeInput] = useState("");
   const [groupRoomCodeInput, setGroupRoomCodeInput] = useState("");
   const [pending, setPending] = useState(false);

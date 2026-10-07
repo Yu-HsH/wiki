@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { fetchUserStats, fetchRankings } from "../rankingService";
+import WikiRaceShell, { ExplorerAvatar } from "../components/wiki-race/WikiRaceShell";
+import ExpeditionHero from "../components/wiki-race/ExpeditionHero";
+import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog";
+import PlayPage from "./PlayPage";
 import AdBanner from "../components/AdBanner";
 import { searchWikiTitleCandidates } from "../services/wikiService";
 import { fetchAllProfileStats } from "../services/profileStatsService";
@@ -55,7 +59,7 @@ function getDailyChallenge() {
   return DAILY_POOL[seed % DAILY_POOL.length];
 }
 
-export default function MainPage() {
+export default function MainPage({ view = "home" }) {
   const navigate = useNavigate();
   const { user, logout, isSupabaseConfigured } = useAuth();
   const [stats, setStats] = useState({ gamesPlayed: 0, bestTime: null, recentRecords: [] });
@@ -69,6 +73,7 @@ export default function MainPage() {
   const [rankingView, setRankingView] = useState("today");
   // 헤더의 Lv. 표시. 게스트는 XP가 없으므로 항상 null이다 (15 §2).
   const [headerLevel, setHeaderLevel] = useState(null);
+  const [xpSummary, setXpSummary] = useState(null);
   // 결과 화면이 없는 해금(그룹·1:1 기권·장착·소급)을 묶어 알린다 (16c). 게스트는 업적이 없다.
   const [unseenAchievements, setUnseenAchievements] = useState(0);
   const [achievementNoticeDismissed, setAchievementNoticeDismissed] = useState(() => {
@@ -78,7 +83,6 @@ export default function MainPage() {
       return null;
     }
   });
-
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -150,12 +154,13 @@ export default function MainPage() {
   useEffect(() => {
     if (user.isGuest) {
       setHeaderLevel(null);
+      setXpSummary(null);
       return;
     }
     let cancelled = false;
     // 레벨은 서버가 계산한다 (C3 §4). 실패하면 표시만 빠지고 로비는 그대로 뜬다.
     fetchXpSummary(user.id)
-      .then((summary) => { if (!cancelled) setHeaderLevel(summary.level); })
+      .then((summary) => { if (!cancelled) { setHeaderLevel(summary.level); setXpSummary(summary); } })
       .catch(() => { if (!cancelled) setHeaderLevel(null); });
     return () => { cancelled = true; };
   }, [user.id, user.isGuest]);
@@ -247,57 +252,15 @@ export default function MainPage() {
     navigate("/");
   };
 
-  const rankMedal = (i) => ["🥇", "🥈", "🥉"][i] ?? `${i + 1}.`;
+  const rankMedal = (i) => String(i + 1).padStart(2, "0");
 
   return (
-    <div className="dashboard-page">
-      <div className="dashboard-container">
-
-        {/* ── 헤더 ── */}
-        <header className="dashboard-header">
-          <div>
-            <p className="dashboard-badge">Wiki Race</p>
-            <h1>
-              {headerLevel !== null && (
-                <>
-                  <span className="pcard-level" aria-label={`레벨 ${headerLevel}`}>
-                    Lv.{headerLevel}
-                  </span>{" "}
-                </>
-              )}
-              {user.displayName}님, 반가워요 👋
-            </h1>
-            <p className="dashboard-muted">
-              {user.isGuest && (
-                <span className="dashboard-muted">
-                  게스트 모드로 접속 중입니다. 로그인하면 기록이 저장됩니다.
-                </span>
-              )}
-            </p>
-          </div>
-          {/* 상단 액션 버튼 그룹 */}
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            {!user.isGuest && (
-              <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/achievements")}>
-                업적
-              </button>
-            )}
-            {!user.isGuest && (
-              <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/profile")}>
-                내 정보
-              </button>
-            )}
-            <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>
-              로그아웃
-            </button>
-          </div>
-        </header>
-
+    <WikiRaceShell user={user} level={headerLevel} onLogout={handleLogout} view={view}>
         {/* ── 새 업적 알림 (16c). 닫기 = 이번 세션 동안 숨김 ── */}
         {!user.isGuest && shouldShowAchievementNotice(unseenAchievements, achievementNoticeDismissed) && (
           <div className="ach-notice" role="status">
             <button type="button" className="ach-notice-link" onClick={() => navigate("/achievements")}>
-              🏅 {formatNewAchievementNotice(unseenAchievements)} — 업적 화면에서 확인하세요
+              {formatNewAchievementNotice(unseenAchievements)} — 업적 화면에서 확인하세요
             </button>
             <button
               type="button"
@@ -310,51 +273,25 @@ export default function MainPage() {
           </div>
         )}
 
-        {/* ── 빠른 시작 카드 2개 ── */}
-        <section className="quickstart-grid">
-          <button
-            type="button"
-            className="quickstart-card quickstart-custom"
-            onClick={() => { setKeyword(""); setShowKeywordModal(true); }}
-          >
-            <span className="qs-icon">🎯</span>
-            <span className="qs-title">혼자서 플레이</span>
-            <span className="qs-desc">내가 원하는 목표 문서를 직접 찾아가기</span>
-          </button>
-          {/* 온라인 경로는 로그인 전용이다 (패킷 17 §6).
-              게이팅이 없으면 게스트가 눌러도 ProtectedRoute가 /login으로 되돌려 보낸다. */}
-          <button
-            type="button"
-            className="quickstart-card quickstart-pvp"
-            disabled={user.isGuest}
-            aria-disabled={user.isGuest}
-            onClick={() => {
-              if (user.isGuest) return;
-              navigate("/multiplayer");
-            }}
-          >
-            <span className="qs-icon">⚔️</span>
-            <span className="qs-title">온라인 플레이</span>
-            <span className="qs-desc">
-              {user.isGuest
-                ? "로그인하면 친구들과 실시간 대결을 할 수 있어요"
-                : "친구들과 실시간 위키 레이스 대결"}
-            </span>
-          </button>
-        </section>
+        {view === "play" ? (
+          <PlayPage
+            isGuest={user.isGuest}
+            onSingle={() => { setKeyword(""); setShowKeywordModal(true); }}
+            onMultiplayer={(mode) => navigate(`/multiplayer?mode=${mode}`)}
+          />
+        ) : <ExpeditionHero onPlay={() => navigate("/play")} />}
 
         {/* ── 키워드 입력 및 검색 모달 ── */}
         {showKeywordModal && (
           <div className="qs-modal-backdrop" onClick={() => setShowKeywordModal(false)}>
-            <div className="qs-modal" onClick={(e) => e.stopPropagation()}>
-              <h3 className="qs-modal-title">🎯 목표 문서 확정</h3>
+            <ExpeditionDialog className="qs-modal" titleId="wr-single-title" onClose={() => setShowKeywordModal(false)}>
+              <h3 id="wr-single-title" className="qs-modal-title">목표 문서 확정</h3>
               <p className="qs-modal-desc">위키백과에서 도달할 정확한 문서를 검색하고 선택하세요.</p>
 
               <div style={{ display: "flex", gap: "8px", marginBottom: "0.5rem" }}>
                 <input
                   className="qs-modal-input"
                   style={{ flex: 1, margin: 0 }}
-                  autoFocus
                   placeholder="예: 아인슈타인, 조선왕조..."
                   value={keyword}
                   onChange={(e) => {
@@ -386,7 +323,9 @@ export default function MainPage() {
               {searchResults.length > 0 && (
                 <div className="search-results-list">
                   {searchResults.map((item) => (
-                    <div
+                    <button
+                      type="button"
+                      aria-pressed={selectedTarget?.title === item.title}
                       key={item.title}
                       onClick={() => setSelectedTarget(item)}
                       className={`search-item ${selectedTarget?.title === item.title ? "selected" : ""}`}
@@ -398,7 +337,7 @@ export default function MainPage() {
                         className="search-item-snippet"
                         dangerouslySetInnerHTML={{ __html: item.snippet }}
                       />
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -439,15 +378,14 @@ export default function MainPage() {
                     : (selectedTarget ? `'${selectedTarget.title}' 시작` : "목표를 선택하세요")}
                 </button>
               </div>
-            </div>
+            </ExpeditionDialog>
           </div>
         )}
-
 
         {/* ── 오늘의 도전 ── */}
         <section className="dashboard-card daily-card" aria-busy={!dailyChallenge}>
           <div className="daily-head">
-            <span className="daily-badge">🗓️ TODAY’S CHALLENGE</span>
+            <span className="daily-badge">TODAY’S RACE · 오늘의 탐험</span>
             <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
           </div>
           <p className="daily-keyword">{dailyChallenge?.keyword ?? "오늘의 탐험을 불러오는 중…"}</p>
@@ -467,15 +405,21 @@ export default function MainPage() {
               });
             }}
           >
-            ★ 오늘의 도전에 참여하기
+            오늘의 탐험 시작 →
           </button>
         </section>
 
-        <section className="dashboard-card weekly-card">
+        {view === "home" && <>
+        <div className="wr-explorer-featured">
+          <section className="wr-my-explorer"><p className="wr-kicker">MY EXPLORER · 내 탐험가</p><div className="wr-explorer-identity"><ExplorerAvatar size={84} /><div><h2>{user.displayName}</h2><p>{user.isGuest ? "게스트 탐험가" : headerLevel !== null ? `Lv.${headerLevel}` : "레벨을 확인하지 못했습니다"}</p></div></div>
+          {user.isGuest ? <p>로그인하면 탐험 기록과 XP가 저장됩니다.</p> : xpSummary && <div className="wr-xp"><span>누적 {xpSummary.totalXp} XP</span><progress aria-label="현재 레벨 XP" value={xpSummary.currentLevelXp} max={xpSummary.nextLevelXp || 1} /><small>{xpSummary.currentLevelXp} / {xpSummary.nextLevelXp} XP</small></div>}
+          {!user.isGuest && <div className="wr-explorer-links"><Link to="/profile">프로필 보기 →</Link><Link to="/achievements">업적 보기 →</Link></div>}
+        </section>
+        <section className="dashboard-card weekly-card"><p className="wr-kicker">BASE CAMP RANKING</p>
           <div className="recent-head">
             <div>
               <h2>
-                🏆{" "}
+
                 {rankingView === "today"
                   ? "오늘 TOP 3"
                   : rankingView === "weekly"
@@ -546,10 +490,12 @@ export default function MainPage() {
           )}
         </section>
 
+        </div>
         {/* ── 최근 기록 (최대 3개) ── */}
         <section className="dashboard-card recent-card">
+          <img className="wr-recent-route" src="/assets/wiki-race/mini-route.png" alt="" />
           <div className="recent-head">
-            <h2>최근 플레이 기록</h2>
+            <h2>최근 탐험</h2>
             {!user.isGuest && (
               <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
                 전체 랭킹 →
@@ -579,6 +525,7 @@ export default function MainPage() {
           )}
         </section>
 
+        <section className="wr-base-board"><p className="wr-kicker">BASE CAMP BOARD · 탐험 기록판</p>
         {/* ── 통계 그리드 (종합 전적) ── */}
         <section className="dashboard-grid">
           <article className="dashboard-card">
@@ -602,17 +549,14 @@ export default function MainPage() {
           </article>
         </section>
 
-        {/* 플로팅 도움말 버튼 */}
-        <button type="button" className="help-button floating" onClick={() => setShowHelp(true)} aria-label="게임 설명">
-          ?
-        </button>
-
+<div className="wr-board-links"><Link to="/guide">플레이 가이드 →</Link><button type="button" onClick={() => setShowHelp(true)}>게임 설명 →</button><img src="/assets/wiki-race/gear-cluster.png" height="54" alt="" /></div></section>
+        </>}
         {/* ── 도움말 모달 ── */}
         {showHelp && (
           <div className="help-backdrop" onClick={() => setShowHelp(false)}>
-            <div className="help-modal" onClick={(e) => e.stopPropagation()}>
+            <ExpeditionDialog className="help-modal" titleId="wr-help-title" onClose={() => setShowHelp(false)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--app-line)", paddingBottom: "0.75rem" }}>
-                <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Wiki Race (위키 레이스)</h2>
+                <h2 id="wr-help-title" style={{ margin: 0, fontSize: "1.25rem" }}>Wiki Race (위키 레이스)</h2>
                 <button type="button" className="text-btn" onClick={() => setShowHelp(false)} style={{ fontSize: "1.5rem", lineHeight: 1 }}>
                   &times;
                 </button>
@@ -648,7 +592,7 @@ export default function MainPage() {
                   <li>기록은 도착 시간과 클릭 수를 기준으로 비교됩니다.</li>
                 </ul>
               </div>
-            </div>
+            </ExpeditionDialog>
           </div>
         )}
         {/* ⬇️ 메인 메뉴 하단 가장 아래쪽에 자연스럽게 광고 배치 */}
@@ -662,7 +606,6 @@ export default function MainPage() {
           <Link to="/privacy">개인정보처리방침</Link>
           <Link to="/terms">이용약관</Link>
         </footer>
-      </div>
-    </div>
+    </WikiRaceShell>
   );
 }
