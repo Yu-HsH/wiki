@@ -1,8 +1,8 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-07** (UI Phase 1·2 로컬 커밋 기록) · 이전: 2026-10-06 (Production 배포 #15)
-기준 커밋: **`b1dec43`** — 이번 상태 갱신 커밋의 부모.
-브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-07 [산출물]) — 로컬은 그 위에 미push 3커밋(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1·2 UI는 **운영 미배포**.
+갱신 날짜: **2026-10-07** (UI Phase 3 RACE·관전 로컬 완료 기록 — **미커밋 작업 트리**) · 이전: 2026-10-07 (UI Phase 1·2 로컬 커밋 기록) · 2026-10-06 (Production 배포 #15)
+기준 커밋: **`321ea27`** — 이번 상태 갱신 커밋의 부모. **Phase 3 코드는 아직 커밋 전이며 `321ea27` 위의 작업 트리에 있다** — 아래 Phase 3 절.
+브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-07 재측정 [산출물]) — 로컬은 그 위에 미push 4커밋(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2 · `321ea27` 문서). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1·2·3 UI는 **운영 미배포 · 미push** (이 기록 이후의 push는 반영되어 있지 않다).
 
 ## 최신 운영 상태 — RELEASED WITH FOLLOW-UP
 
@@ -42,6 +42,42 @@ Phase 2 검증 **62105a3 + 미커밋 Phase 2 작업 트리, 2026-10-07 [산출�
 - `main` push(=Production 재배포)는 `AGENTS.md` §1.1 건별 승인 대상이다. 운영 DB 변경 없음.
 
 기존 운영 출시 상태는 위 2026-10-06 기록을 따른다.
+
+## 2026-10-07 Jungle Expedition UI — Phase 3 RACE · Group Spectator 로컬 완료 (미커밋 · 미push · 미배포)
+
+**상태: 구현 완료 · Visual Freeze 승인 `[사용자 결정, 2026-10-07]` · 커밋 전 작업 트리(`321ea27` 위).** Freeze `05_DUEL_RACE_FINAL`·`06_GROUP_RACE_FINAL` 기준.
+
+**범위 (표시 통합만).**
+- Single / Duel / Group RACE를 본문 우선 race 셸로 통합 — 56px HUD(현재 → Gold 목표 · 이동 · 시간 · 연결 · 명시적 "나가기"), 경기 중 전역 이동(HOME/PLAY/로비/랭킹) 없음. 나가기는 기존 exit guard → 기존 이탈/기권 핸들러.
+- Duel: 상대 요약 스트립(상대 전체 경로 비공개 유지), 아이템전만 dock(일반전은 dock 없음). `링크만 보기` = 현재 문서 전체 링크 가나다순 overlay(필터 · 남은 시간 · 내부 스크롤 · 이동 시 닫힘). `링크 검열` = 서버 검열 집합을 본문·색인이 같은 배열로 표시 — 회색 `#78877F` · 밑줄 없음 · 클릭/키보드 불가 · **취소선 없음**(Freeze manifest; 기존 테스트 1건의 취소선 단언을 반대로 갱신).
+- Group: 참가자 목록(완주 순위 → 진행 → 리타이어), 아이템 없음, 마감 HUD = `min(20분, 3위 완주 + 2분)` 실제 남은 시간을 "마감까지"로 표시(새 2:00 재시작 없음). 자기 리타이어 = 관전·반응 없는 중립 "경기 종료 · 결과 집계 중".
+- Group Spectator: 완주자는 **Group interim Result A**(관전 진입에 필요한 범위만) → "관전하기 →"를 눌러야 관전. 기본 화면 = 관전 대상의 실제 Wikipedia 화면(읽기 전용, 링크 이동 없음), 경로 비교는 보조 탭, 프리셋 반응(서버 rate limit · 3초 대기 표시), 모바일 하단 시트(참가자/경로 비교/내 경로).
+- Single `highlight_links`는 **싱글 전용 기존 아이템 예외로 유지** `[사용자 결정, 2026-10-07]` — 아이템 효과 중에만 중립 힌트 표시(Gold 아님, 목표 보장 암시 없음).
+- **최종 RESULT 화면(Duel 결과 overlay · Group 최종 결과 B · Single SuccessOverlay · 리타이어 최종)은 Phase 4** — 진입 흐름은 기존 그대로.
+- **backend · services · RPC · migration · Edge · auth · Realtime 계약 변경 0** `[코드]`. 표시 전용 상태만 추가(Duel heartbeat 성공 여부 · 관전 문서 재조회 키 · 반응 대기 · 시트/탭 · 그룹 복구 오류 코드 보존).
+
+**검증 — 기준 `321ea27` + 미커밋 Phase 3 작업 트리, 2026-10-07 [산출물].** 커밋 후 재실행은 아직 없다.
+
+| 검증 | 결과 |
+|---|---|
+| `npm test` | **529/529** |
+| `npm run build` · `git diff --check` | 통과(기존 큰 번들 경고만) · clean |
+| Phase 1 browser (`scripts/ui-phase1-browser.mjs`) | **42/42** — 같은 날 다른 무거운 실행 중/직후 2회 일시 실패, 이후 연속 통과(원인 미포착) |
+| Phase 2 browser (`scripts/ui-phase2-browser.mjs`) | **82/82** |
+| Phase 3 browser (`scripts/ui-phase3-browser.mjs`, 격리 API/Realtime fixture) | **84/84** |
+| Phase 3 실제 로컬 백엔드 (`scripts/ui-phase3-local-smoke.mjs`) | **16/16 × 3회** · console/API/page 오류 0 · 잔여 0 — Single 서버 런 이동·완주, Duel 2계정 이동·Realtime·실제 아이템 지급·링크만 보기·결과 전환, Group 4계정 Result A→관전, 3위 완주 후 `grace_period` "마감까지", 반응 |
+| Phase 2 실제 로컬 백엔드 (`scripts/ui-phase2-local-smoke.mjs`) | **30/30** (새 race 화면 경유) |
+| `scripts/packet13-browser-b1.mjs` (실제 로컬 백엔드) | **12/12**, exit 0 — Phase 2/3 문구·관전 진입·반응 선택자만 갱신(계약 단언 유지; 반응 rate limit은 UI 대기 + 서버 `SPECTATOR_EMOJI_RATE_LIMIT` 직접 확인). 이전 실행에서 최초 로그인 1회 일시 timeout(재현 안 됨) |
+| Freeze 8 HTML + manifest | SHA-256 불변 |
+| `supabase/` · `services/` | 변경 0 |
+
+**알려진 한계.**
+- Group 연결 끊김 표시는 UI 준비만 됨 — 현재 backend는 그룹 참가자에 `disconnected` 상태를 쓰지 않으므로 실경기에서 "재연결 중"은 나타나지 않는다(fixture로만 검증).
+- 자기 리타이어 대기 화면은 기존 `recoverGame`을 5초마다 재호출해 서버의 경기 종료를 확인한다.
+- 최종 Duel/Group/Single RESULT 디자인은 Phase 4.
+- Phase 1·2는 로컬 커밋, Phase 3은 미커밋 — 모두 미push·운영 미배포. `main` push는 `AGENTS.md` §1.1 건별 승인 대상.
+
+산출물: `test-results/packet13-b1/ui-phase3/`(fixture 스크린샷) · `ui-phase3-local/`(실 백엔드).
 
 ## 과거 상태 — 선택적 커밋 정리 (배포 이전)
 

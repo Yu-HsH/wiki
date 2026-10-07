@@ -181,6 +181,17 @@ export default function DuelItemBar({
 
     const busy = pendingGrantId != null;
 
+    /**
+     * Phase 3 표시 — 소비된 슬롯 가운데 지금 효과가 살아 있는 것(열린 링크만 보기 · 방어 대기)을
+     * 활성으로 그린다. 판정은 서버 값(`used` · `pendingDefenses`)과 열린 패널 여부만 읽는다.
+     */
+    const activeItemIds = new Set([
+        ...(linkIndex ? ["link_index"] : []),
+        ...pendingDefenses
+            .filter((defense) => (defense.expiresAt ?? 0) > now)
+            .map((defense) => defense.itemId),
+    ]);
+
     return (
         <aside className="duel-item-bar" aria-label="1:1 아이템">
             <div className="duel-item-bar__head">
@@ -232,6 +243,7 @@ export default function DuelItemBar({
                         // 어차피 ITEM_COOLDOWN으로 거부된다 — 미리 막는 편이 조용하다.
                         locked={busy}
                         pending={item != null && item.grantId === pendingGrantId}
+                        active={item != null && item.used && activeItemIds.has(item.id)}
                         usable={
                             item != null &&
                             canUseDuelItem(item, {
@@ -277,7 +289,7 @@ export default function DuelItemBar({
  * 슬롯 하나
  * ──────────────────────────────────────────────────────────── */
 
-function DuelItemSlot({ item, slotIndex, locked, pending, usable, onUseItem }) {
+function DuelItemSlot({ item, slotIndex, locked, pending, usable, active = false, onUseItem }) {
     if (!item) {
         return (
             <div
@@ -294,6 +306,7 @@ function DuelItemSlot({ item, slotIndex, locked, pending, usable, onUseItem }) {
         item.used ? "duel-item-slot--used" : "",
         item.isWildcard ? "duel-item-slot--wildcard" : "",
         pending ? "duel-item-slot--pending" : "",
+        active ? "is-active" : "",
         role ? `duel-item-slot--${role}` : "",
     ]
         .filter(Boolean)
@@ -308,6 +321,9 @@ function DuelItemSlot({ item, slotIndex, locked, pending, usable, onUseItem }) {
             disabled={!usable || locked}
             onClick={() => onUseItem?.(item.grantId)}
             title={`${item.name} — ${item.description}`}
+            aria-label={`${DUEL_ROLE_LABELS[role] || "아이템"} · ${item.name} · ${
+                active ? "사용 중" : item.used ? "사용됨" : pending ? "서버 확인 중" : usable && !locked ? "사용 가능" : "지금 사용할 수 없음"
+            }`}
         >
             <span className="duel-item-slot__icon" aria-hidden="true">
                 {ROLE_ICONS[role] || "✦"}
@@ -317,7 +333,7 @@ function DuelItemSlot({ item, slotIndex, locked, pending, usable, onUseItem }) {
                 {DUEL_ROLE_LABELS[role] || "아이템"}
                 {item.isWildcard ? " · 변칙" : ""}
             </span>
-            {item.used && <span className="duel-item-slot__stamp">사용</span>}
+            {item.used && <span className="duel-item-slot__stamp">{active ? "사용 중" : "사용"}</span>}
             {pending && (
                 <span className="duel-item-slot__spinner" aria-label="서버 확인 중" />
             )}
@@ -531,7 +547,7 @@ function DuelLinkPreviewPanel({ linkPreview, now, onPreviewLink, onClosePreview 
  * 이 패널이 갖는 상태는 **필터 입력 하나뿐**이다. 닫히는 조건(20초 · 이동 · 닫기 ·
  * ESC) 가운데 앞의 둘은 부모가 판단하고, 여기서는 닫기와 ESC만 올려 보낸다.
  *
- * - **검열된 단어**는 본문과 같은 집합이다(부모가 같은 배열로 표시한다). 회색 + 취소선 +
+ * - **검열된 단어**는 본문과 같은 집합이다(부모가 같은 배열로 표시한다). 회색 + 점선 + "검열" 표시(취소선 없음) +
  *   `aria-disabled`이고 눌러도 무반응이다 (Q2).
  * - **먹물**이 걸리면 패널도 덮인다. 슬롯은 스펙 §5.2대로 쓸 수 있지만, 이 목록은 본문과
  *   같은 "읽는 영역"이라 가린다 (`14-DUEL-ITEMS.md` §4 정정 2026-09-30).
@@ -549,21 +565,57 @@ function DuelLinkIndexPanel({
     const { expiresAt = null, entries = [] } = linkIndex;
     const visible = filterLinkIndexEntries(entries, query);
     const remainingMs = expiresAt == null ? null : Math.max(0, expiresAt - now);
+    const censoredCount = entries.filter((entry) => entry.censored).length;
+
+    // Phase 3 — 열릴 때 필터로 포커스, 닫힐 때(20초·이동·닫기·ESC) 직전 포커스로 되돌린다.
+    const returnFocusRef = useRef(null);
+    useEffect(() => {
+        returnFocusRef.current = document.activeElement;
+        return () => {
+            const previous = returnFocusRef.current;
+            // 사용한 슬롯은 소비되어 비활성일 수 있다 — 그때는 본문 제목으로 보내 포커스를 잃지 않는다.
+            if (previous && typeof previous.focus === "function" && document.contains(previous) && !previous.disabled) {
+                previous.focus();
+                return;
+            }
+            const heading = document.getElementById("wr-article-title");
+            if (heading) {
+                heading.setAttribute("tabindex", "-1");
+                heading.focus();
+            }
+        };
+    }, []);
 
     return (
         <section
             className="duel-item-index"
+            role="dialog"
             aria-label="링크만 보기"
+            aria-describedby="duel-item-index-meta"
             onKeyDown={(event) => {
                 if (event.key === "Escape") onCloseLinkIndex?.();
             }}
         >
             <header className="duel-item-index__head">
                 <span className="duel-item-index__title">링크만 보기</span>
-                <span className="duel-item-index__meta">
-                    {visible.length}/{entries.length}
-                    {remainingMs != null ? ` · ${formatSeconds(remainingMs)}초` : ""}
+                <span className="duel-item-index__meta" id="duel-item-index-meta">
+                    탐색 · 가나다순 · <strong>{visible.length}</strong> / {entries.length}개
                 </span>
+                <input
+                    type="search"
+                    className="duel-item-index__filter"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="링크 단어 필터"
+                    aria-label="링크 필터"
+                    disabled={blindActive}
+                    autoFocus
+                />
+                {remainingMs != null && (
+                    <span className="duel-item-index__timer" role="timer" aria-label={`남은 시간 ${Math.ceil(remainingMs / 1000)}초`}>
+                        남은 시간 {Math.ceil(remainingMs / 1000)}s
+                    </span>
+                )}
                 {onCloseLinkIndex && (
                     <button
                         type="button"
@@ -571,23 +623,18 @@ function DuelLinkIndexPanel({
                         onClick={onCloseLinkIndex}
                         aria-label="링크만 보기 닫기"
                     >
-                        ✕
+                        닫기
                     </button>
                 )}
             </header>
 
-            <input
-                type="search"
-                className="duel-item-index__filter"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="필터"
-                aria-label="링크 필터"
-                disabled={blindActive}
-                autoFocus
-            />
+            {censoredCount > 0 && (
+                <p className="duel-item-index__censor-note" role="status">
+                    링크 검열 피격 중 · 회색 링크는 본문과 동일하게 이동 불가
+                </p>
+            )}
 
-            <ul className="duel-item-index__words">
+            <ul className="duel-item-index__words" aria-label="현재 문서의 링크">
                 {visible.map((entry) => (
                     <li key={entry.title}>
                         <button
@@ -599,6 +646,7 @@ function DuelLinkIndexPanel({
                                 .filter(Boolean)
                                 .join(" ")}
                             aria-disabled={entry.censored || undefined}
+                            tabIndex={entry.censored ? -1 : undefined}
                             disabled={navigating || blindActive}
                             onClick={() => {
                                 if (entry.censored) return;
@@ -606,9 +654,13 @@ function DuelLinkIndexPanel({
                             }}
                         >
                             {entry.title}
+                            {entry.censored && <span className="duel-item-index__tag">검열</span>}
                         </button>
                     </li>
                 ))}
+                {visible.length === 0 && (
+                    <li className="duel-item-index__empty">일치하는 링크 없음</li>
+                )}
             </ul>
 
             {blindActive && (

@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatDuration, normalizeTitle } from "../services/wikiService";
+import { normalizeTitle } from "../services/wikiService";
 import { TARGET_SUMMARY_STATUS } from "../utils/groupTargetSummary";
 
 /**
  * 14b — 링크 검열 (가)의 표시 (`01-CONFIRMED-SPEC.md` §5.2 정정 2026-09-30).
- * `censoredTitles`를 받은 본문 앵커는 회색 + 취소선 + `aria-disabled`이고 눌러도 아무 일이
+ * `censoredTitles`를 받은 본문 앵커는 회색 · 밑줄 없음 · 취소선 없음(Freeze 2026-10-06) + `aria-disabled`이고 눌러도 아무 일이
  * 없다 — 오류가 아니다. **1:1만 이 prop을 넘긴다.** 싱글·그룹은 넘기지 않으므로 기본값
  * (빈 배열)이 되고, 두 모드의 렌더는 빠른 링크 블록이 빠진 것 말고는 그대로다.
  * 서버는 검열 링크 이동을 막지 않는다 — 부채 (`TRACKS.md` §8-14b Q1).
@@ -22,17 +22,22 @@ export default function WikiViewer({
   currentDocumentHtml,
   links,
   isLoading,
-  elapsedSeconds,
-  clickCount,
-  startTitle,
+  // elapsedSeconds·clickCount·startTitle·timerLabel: Phase 3부터 각 페이지의 race HUD가 표시한다.
+  // 호출 계약을 바꾸지 않도록 받기만 한다.
+  elapsedSeconds, // eslint-disable-line no-unused-vars
+  clickCount, // eslint-disable-line no-unused-vars
+  startTitle, // eslint-disable-line no-unused-vars
   onLinkClick,
-  timerLabel = "진행 시간",
+  timerLabel = "진행 시간", // eslint-disable-line no-unused-vars
   searchAvailable = false,
   onConsumeSearch,
   highlightRequestId = 0,
   status = {},
   readOnly = false,
   censoredTitles = NO_CENSORED_TITLES,
+  // Phase 3 race presentation: the page owns the HUD; the viewer renders the article first.
+  articleTag = null,
+  showTargetBrief = true,
 }) {
   const articleRef = useRef(null);
   const censoredSet = useMemo(
@@ -232,11 +237,13 @@ export default function WikiViewer({
       a.classList.toggle(CENSORED_LINK_CLASS, censored);
       if (censored) {
         a.setAttribute("aria-disabled", "true");
+        a.setAttribute("tabindex", "-1"); // 검열 링크는 키보드로도 실행되지 않는다
       } else {
         a.removeAttribute("aria-disabled");
+        if (!readOnly) a.removeAttribute("tabindex");
       }
     });
-  }, [censoredSet, currentDocumentHtml]);
+  }, [censoredSet, currentDocumentHtml, readOnly]);
 
   const scrollToHeading = (id) => {
     const el = document.getElementById(id);
@@ -262,18 +269,16 @@ export default function WikiViewer({
     onLinkClick?.(nextTitle);
   }, [censoredSet, onLinkClick, readOnly]);
 
+  // 관전(읽기 전용) 화면: 링크는 이동하지 않는다 (Freeze 06 — "링크를 눌러도 이동하지 않습니다").
+  // 마우스·키보드 모두 실행되지 않도록 탭 순서에서도 뺀다.
   useEffect(() => {
     if (!readOnly || !articleRef.current) return undefined;
 
     articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((link) => {
-      const title = link.getAttribute("data-wiki-title");
-      if (!title) return;
-      link.setAttribute(
-        "href",
-        `https://ko.wikipedia.org/wiki/${encodeURIComponent(title).replaceAll("%20", "_")}`
-      );
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noreferrer noopener");
+      link.removeAttribute("href");
+      link.removeAttribute("target");
+      link.setAttribute("tabindex", "-1");
+      link.setAttribute("aria-disabled", "true");
     });
 
     return undefined;
@@ -398,8 +403,14 @@ export default function WikiViewer({
     setSearchMessage("");
     setArticleHighlightedLinks([]);
   }, [currentDocumentHtml]);
+  const hasTargetBrief = showTargetBrief && Boolean(
+    target?.requestedKeyword || hasCanonicalTargetTitle || target?.summaryStatus || target?.summary
+  );
+  const censoredActive = censoredSet.size > 0;
+
+  // Phase 3: article first. The page renders the compact HUD; this renders the Wikipedia body.
   return (
-    <div className="wiki-shell">
+    <div className={`wiki-shell wr-race-viewer ${readOnly ? "wr-readonly" : ""}`}>
       {
         status?.translateCurrent && (
           <div className="language-chaos">
@@ -415,14 +426,14 @@ export default function WikiViewer({
       }
       {/* 단축키 사용 시 토스트 안내 */}
       {showFindToast && (
-        <div className="wiki-find-block-toast">
-          !!!찾기 금지!!! 우측 네비게이션 바를 이용해 주세요.
+        <div className="wiki-find-block-toast" role="status">
+          찾기 기능은 사용할 수 없습니다. 오른쪽 목차 막대를 이용해 주세요.
         </div>
       )}
 
       {/* 우측 네비게이션 미니맵 */}
       {headings.length > 0 && (
-        <nav className="wiki-nav-rail">
+        <nav className="wiki-nav-rail" aria-label="문서 목차">
           {headings.map((h) => (
             <div
               key={h.id}
@@ -471,6 +482,7 @@ export default function WikiViewer({
               type="text"
               value={searchQuery}
               placeholder="현재 문서에서 찾을 단어"
+              aria-label="현재 문서에서 찾을 단어"
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleGameSearch();
@@ -484,106 +496,93 @@ export default function WikiViewer({
           </div>
 
           {searchMessage && (
-            <p className="game-search-panel__message">{searchMessage}</p>
+            <p className="game-search-panel__message" role="status">{searchMessage}</p>
           )}
         </div>
       )}
-      <section className="mission-card">
-        <div className="mission-head">
-          <span className="mission-label">목표 문서</span>
-          <span className="timer-pill">{formatDuration(elapsedSeconds)}</span>
-        </div>
-        <h2>{target.title || "목표 문서"}</h2>
-        {target.requestedKeyword && (
-          <p className="target-meta">입력 키워드: <strong>{target.requestedKeyword}</strong></p>
-        )}
-        {hasCanonicalTargetTitle && (
-          <p className="target-meta">
-            위키백과 문서: <strong>{target.canonicalTitle}</strong>
-          </p>
-        )}
-        {target.summaryStatus === TARGET_SUMMARY_STATUS.LOADING && (
-          <p className="target-summary-status" role="status">
-            설명을 불러오는 중입니다.
-          </p>
-        )}
-        {target.summaryStatus === TARGET_SUMMARY_STATUS.SUCCESS && (
-          <>
-            <p
-              ref={targetSummaryRef}
-              className={`target-summary ${
-                !targetSummaryExpanded
-                  ? "target-summary--collapsed"
-                  : ""
-              }`}
-            >
-              {target.summary}
-            </p>
-            {targetSummaryCanExpand && (
-              <button
-                type="button"
-                className="target-summary-toggle"
-                aria-expanded={targetSummaryExpanded}
-                onClick={() => setTargetSummaryExpanded((expanded) => !expanded)}
-              >
-                {targetSummaryExpanded ? "접기" : "더보기"}
-              </button>
+
+      {/* 목표 설명 — HUD에는 목표 제목만 있다. 설명은 접힌 상태로 본문 위에 둔다 */}
+      {hasTargetBrief && (
+        <details className="wr-target-brief">
+          <summary>
+            <span className="wr-hud-label">목표 설명</span>
+            <strong>{target.title || "목표 문서"}</strong>
+          </summary>
+          <div className="wr-target-brief-body">
+            {target.requestedKeyword && (
+              <p className="target-meta">입력 키워드: <strong>{target.requestedKeyword}</strong></p>
             )}
-          </>
-        )}
-        {target.summaryStatus === TARGET_SUMMARY_STATUS.EMPTY && (
-          <p className="target-summary-status">
-            목표 문서 설명을 찾을 수 없습니다.
-          </p>
-        )}
-        {target.summaryStatus === TARGET_SUMMARY_STATUS.ERROR && (
-          <div className="target-summary-error" role="status">
-            <span>목표 설명을 불러오지 못했습니다. 게임 진행에는 영향이 없습니다.</span>
-            {target.onSummaryRetry && (
-              <button
-                type="button"
-                className="target-summary-retry"
-                onClick={target.onSummaryRetry}
-              >
-                다시 시도
-              </button>
+            {hasCanonicalTargetTitle && (
+              <p className="target-meta">
+                위키백과 문서: <strong>{target.canonicalTitle}</strong>
+              </p>
             )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.LOADING && (
+              <p className="target-summary-status" role="status">
+                설명을 불러오는 중입니다.
+              </p>
+            )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.SUCCESS && (
+              <>
+                <p
+                  ref={targetSummaryRef}
+                  className={`target-summary ${
+                    !targetSummaryExpanded
+                      ? "target-summary--collapsed"
+                      : ""
+                  }`}
+                >
+                  {target.summary}
+                </p>
+                {targetSummaryCanExpand && (
+                  <button
+                    type="button"
+                    className="target-summary-toggle"
+                    aria-expanded={targetSummaryExpanded}
+                    onClick={() => setTargetSummaryExpanded((expanded) => !expanded)}
+                  >
+                    {targetSummaryExpanded ? "접기" : "더보기"}
+                  </button>
+                )}
+              </>
+            )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.EMPTY && (
+              <p className="target-summary-status">
+                목표 문서 설명을 찾을 수 없습니다.
+              </p>
+            )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.ERROR && (
+              <div className="target-summary-error" role="status">
+                <span>목표 설명을 불러오지 못했습니다. 게임 진행에는 영향이 없습니다.</span>
+                {target.onSummaryRetry && (
+                  <button
+                    type="button"
+                    className="target-summary-retry"
+                    onClick={target.onSummaryRetry}
+                  >
+                    다시 시도
+                  </button>
+                )}
+              </div>
+            )}
+            {!target.summaryStatus && target.summary && <p className="target-summary">{target.summary}</p>}
           </div>
-        )}
-        {!target.summaryStatus && target.summary && <p>{target.summary}</p>}
-      </section>
+        </details>
+      )}
 
-      <section className="stats-grid">
-        <article className="stat-card">
-          <p className="stat-label">시작 문서</p>
-          <p className="stat-value">{startTitle || "..."}</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">현재 문서</p>
-          <p className="stat-value">{currentTitle || "로딩 중..."}</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">이동 횟수</p>
-          <p className="stat-value">{clickCount}</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">{timerLabel}</p>
-          <p className="stat-value">{formatDuration(elapsedSeconds)}</p>
-        </article>
-      </section>
+      {isLoading && <p className="state-text loading" role="status">위키 문서를 불러오는 중입니다...</p>}
 
-      {isLoading && <p className="state-text loading">위키 문서를 불러오는 중입니다...</p>}
-
-      <section className="current-page-card">
-        <div className="article-head">
-          <h3>{currentTitle || "현재 문서"}</h3>
-          <span>
-            {readOnly
-              ? "읽기 전용 관전 화면입니다. 링크는 새 탭의 Wikipedia로 엽니다."
-              : "본문에서 강조된 파란색 링크를 클릭하면 다음 문서로 이동합니다."}
-          </span>
+      <section className="current-page-card" aria-labelledby="wr-article-title">
+        <div className="wr-article-head">
+          <h1 id="wr-article-title">{currentTitle || "현재 문서"}</h1>
+          <span className="wr-article-sub">위키백과, 우리 모두의 백과사전</span>
+          {(censoredActive || articleTag) && (
+            <span className="wr-article-tag">
+              {censoredActive && <span className="wr-censor-legend">회색 링크는 검열 중 · 이동 불가</span>}
+              {articleTag}
+            </span>
+          )}
         </div>
-        <div className="article-summary-preview">{currentSummary || "..."}</div>
         <article
           ref={articleRef}
           className="article-content"
@@ -594,7 +593,7 @@ export default function WikiViewer({
 
       {/* 14b — 아래 두 요소는 빠른 링크 블록 안에 있었다 (블록은 14b에서 제거됐다).
           먹물 오버레이는 position: fixed라 DOM 위치가 바뀌어도 화면을 덮는 방식은 같다. */}
-      {!isLoading && links.length === 0 && (
+      {!isLoading && !readOnly && links.length === 0 && (
         <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다.</p>
       )}
       {status?.blind && (

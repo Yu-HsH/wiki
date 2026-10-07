@@ -20,3 +20,11 @@ vignettes in the PLAY template. Only the template's `sc-camel-view-box` attribut
 normalized to `viewBox`, and the SVG namespace is added for standalone files.
 
 No prototype JavaScript, framework runtime, mock data, or interaction logic is reused.
+
+Phase 3 (Group Result A / retired holding) adds two PNGs decoded byte-for-byte from
+`08_GROUP_RESULT_FINAL.html` (`__bundler/ext_resources`):
+
+| File | Resource ID | UUID |
+|---|---|---|
+| explorer-win.png | mascotWin | b1bb3924-61b8-4662-ba64-8f3efb7b6d3a |
+| explorer-lose.png | mascotLose | b7ca38a0-7edd-4beb-93d4-1b037e9ba6f9 |

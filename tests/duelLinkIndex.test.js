@@ -163,14 +163,24 @@ test("블록에 있던 먹물 오버레이와 빈 링크 안내는 블록 밖에
     assert.match(viewerSource, /이 문서에는 이동 가능한 내부 링크가 없습니다\./);
 });
 
-test("검열 — 기본값은 빈 배열이고, 표시는 회색·취소선 클래스 + aria-disabled다 (Q2)", () => {
+test("검열 — 기본값은 빈 배열이고, 표시는 회색 클래스 + aria-disabled다. 취소선은 없다 (Freeze 2026-10-06)", () => {
     assert.match(viewerSource, /censoredTitles = NO_CENSORED_TITLES/);
     assert.match(viewerSource, /const NO_CENSORED_TITLES = Object\.freeze\(\[\]\)/);
     assert.match(viewerSource, /classList\.toggle\(CENSORED_LINK_CLASS, censored\)/);
     assert.match(viewerSource, /setAttribute\("aria-disabled", "true"\)/);
-    const css = read("css/multiplayer.css");
-    const rule = css.slice(css.indexOf(".duel-item-censored,"));
-    assert.match(rule.slice(0, rule.indexOf("}")), /line-through/);
+    // 키보드로도 실행되지 않는다
+    assert.match(viewerSource, /a\.setAttribute\("tabindex", "-1"\)/);
+    // Freeze manifest: "censored links are gray + disabled with **no strikethrough**" — 어느 CSS에도 취소선이 없다.
+    for (const file of ["css/multiplayer.css", "css/wikiRaceRace.css", "css/wiki.css", "css/app.css"]) {
+        assert.doesNotMatch(read(file), /line-through/, `${file}에 취소선이 남아 있다`);
+    }
+    const race = read("css/wikiRaceRace.css");
+    const article = race.slice(race.indexOf(".wr-race .article-content a.duel-item-censored"));
+    assert.match(article.slice(0, article.indexOf("}")), /color: var\(--wr-ink-3\)[\s\S]*text-decoration: none[\s\S]*pointer-events: none/);
+    const index = race.slice(race.indexOf(".wr-race .duel-item-index__word--censored"));
+    assert.match(index.slice(0, index.indexOf("}")), /color: var\(--wr-ink-3\)[\s\S]*dashed/);
+    // 링크만 보기 항목에는 색 외에 "검열" 표시가 붙는다
+    assert.match(barSource, /entry\.censored && <span className="duel-item-index__tag">검열<\/span>/);
 });
 
 test("검열 — 누르면 아무 일도 없다: onLinkClick 전에 돌아간다 (오류가 아니다)", () => {

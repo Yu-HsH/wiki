@@ -55,6 +55,20 @@ import {
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
 import {
+  ConnectionDot,
+  HudArrow,
+  HudBrand,
+  HudDoc,
+  HudExit,
+  HudStat,
+  HudStatus,
+  HudTimer,
+  Pill,
+  RaceFrame,
+  RaceHud,
+  RouteRail,
+} from "../components/wiki-race/race/RaceParts";
+import {
   elapsedSecondsFromServer,
   normalizeOnlineGameError,
   retryRecoverable,
@@ -127,6 +141,8 @@ export default function MultiplayerGamePage() {
   const matchExpression = useMatchExpression(phase === PHASE.SUCCESS ? user?.id ?? null : null);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  // Phase 3 표시 전용: 마지막 heartbeat RPC 성공 여부. 판정·복구는 기존 heartbeat/finalizer가 한다.
+  const [ownConnectionOk, setOwnConnectionOk] = useState(true);
   const startedAtRef = useRef(null);
   const playStartTrackedRef = useRef(false);
   const recoveryGenerationRef = useRef(0);
@@ -1581,8 +1597,10 @@ export default function MultiplayerGamePage() {
         if (player) setPlayers((previous) => previous.map((item) =>
           item.user_id === user.id ? { ...item, ...player } : item
         ));
+        setOwnConnectionOk(true); // 표시 전용 (Phase 3 HUD 연결 점)
       } catch (error) {
         console.warn("duel heartbeat failed:", error);
+        setOwnConnectionOk(false);
       }
       // 신호를 하나 놓쳐도 10초 안에 상대 표시가 따라온다 (`refreshPlayersFromServer`).
       await refreshPlayersFromServer();
@@ -1726,14 +1744,40 @@ export default function MultiplayerGamePage() {
           onRetry={recoverGame}
           onLeave={requestExit}
           leaving={leaving}
+          gameMode="duel"
+          modeLabel="1:1"
         />
         {exitDialog}
       </>
     );
   }
 
+  // ── Phase 3 표시 파생값 (전부 서버 값에서 읽는다) ─────────────────────
+  const opponentName = opponentPlayer?.nickname_snapshot || "상대";
+  const nowMs = Date.now();
+  const censorEffect = activeEffects
+    .filter((effect) => effect.itemId === "link_censorship" && (effect.expiresAt ?? 0) > nowMs)
+    .sort((a, b) => (b.expiresAt ?? 0) - (a.expiresAt ?? 0))[0];
+  const liveDefense = pendingDefenses
+    .filter((defense) => (defense.expiresAt ?? 0) > nowMs)
+    .sort((a, b) => (b.expiresAt ?? 0) - (a.expiresAt ?? 0))[0];
+  const secondsLeft = (expiresAt) => Math.max(0, Math.ceil(((expiresAt ?? nowMs) - nowMs) / 1000));
+  // 상대 연결: 두 서버 시각(내 heartbeat_at · 상대 heartbeat_at)의 차이로만 본다 — 클라이언트 시계와 무관.
+  // 서버 판정(reconnect_deadline)이 아니라 표시용이며, 끊김 판정·종료는 기존 finalizer가 한다.
+  const myBeat = Date.parse(myPlayer?.heartbeat_at || "");
+  const opponentBeat = Date.parse(opponentPlayer?.heartbeat_at || "");
+  const opponentLagging =
+    phase === PHASE.PLAYING &&
+    !opponentPlayer?.has_finished &&
+    Number.isFinite(myBeat) &&
+    Number.isFinite(opponentBeat) &&
+    myBeat - opponentBeat > SERVER_HEARTBEAT_INTERVAL_MS * 2.5;
+  const isPlaying = phase === PHASE.PLAYING;
+  const isResult = phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN;
+  const currentTitle = pageData?.title || myPlayer?.current_title || "";
+
   return (
-    <div className="mp-game-page">
+    <>
       {exitDialog}
       {isPageLoading && <PageLoadingOverlay />}
       {phase === PHASE.VS_INTRO && (
@@ -1760,44 +1804,98 @@ export default function MultiplayerGamePage() {
         />
       )}
 
-      <div className="mp-game-topbar">
-        <div className="mp-game-goal">
-          <span className="mp-game-goal-label">내 목표</span>
-          <span className="mp-game-goal-value">{myTargetTitle || "..."}</span>
+      <RaceFrame mode="duel" strip label="1:1 대전">
+        <RaceHud>
+          <HudBrand mode="1:1" sub={useItems ? "아이템" : "일반"} />
+          <HudDoc kind="current" label="현재 문서" title={currentTitle} />
+          <HudArrow />
+          <HudDoc kind="goal" label="목표 문서" title={myTargetTitle} valueClassName="mp-game-goal-value" />
+          <HudStatus>
+            <span className="mp-game-status wr-sr-only">
+              {phase === PHASE.PLAYING && "레이스 진행 중"}
+              {phase === PHASE.SUCCESS && "승리!"}
+              {phase === PHASE.OPPONENT_WIN && "패배"}
+            </span>
+            {isPlaying && censorEffect && (
+              <Pill tone="coral" icon="link" key={`censor-${censorEffect.itemEventId}`}>
+                링크 검열 피격 · {secondsLeft(censorEffect.expiresAt)}s
+              </Pill>
+            )}
+            {isPlaying && liveDefense && (
+              <Pill tone="teal" key={`guard-${liveDefense.itemEventId}`}>
+                {(getDuelItem(liveDefense.itemId)?.name || "방어")} 지속 중 · {secondsLeft(liveDefense.expiresAt)}s
+              </Pill>
+            )}
+          </HudStatus>
+          <HudStat label="이동" value={myPlayer?.move_count || 0} />
+          <HudTimer label="경과" seconds={elapsedSeconds} />
+          <div className="wr-hud-cell wr-hud-conn">
+            <ConnectionDot ok={ownConnectionOk} halo label={ownConnectionOk ? "연결" : "재연결 중"} />
+          </div>
+          <HudExit label="나가기" onClick={requestExit} disabled={leaving || isResult} />
+        </RaceHud>
+
+        <div className="wr-race-strip" role="group" aria-label="상대 상태">
+          <span className="wr-hud-label">상대</span>
+          <span className="wr-strip-name">{opponentName}</span>
+          {opponentPlayer?.has_finished
+            ? <Pill tone="gold" filled icon="flag">완주</Pill>
+            : <Pill tone="blue" filled icon="current">레이스 중</Pill>}
+          <span className="mp-opponent-box">
+            <span className="mp-opponent-label">현재 문서</span>
+            <span className="mp-opponent-value">{opponentPlayer?.current_title || "준비 중..."}</span>
+          </span>
+          <span className="mp-opponent-box">
+            <span className="mp-opponent-label">이동 횟수</span>
+            <span className="mp-opponent-value">{opponentPlayer?.move_count || 0}회</span>
+          </span>
+          {opponentPlayer?.has_finished && <span>상대 경로는 결과 화면에서 공개</span>}
+          <span className="wr-strip-end">
+            <ConnectionDot
+              ok={!opponentLagging}
+              halo={opponentLagging}
+              label={opponentLagging ? "상대 연결 확인 중" : "연결 정상"}
+            />
+          </span>
         </div>
 
-        <div className="mp-game-status">
-          {phase === PHASE.PLAYING && "레이스 진행 중"}
-          {phase === PHASE.SUCCESS && "승리!"}
-          {phase === PHASE.OPPONENT_WIN && "패배"}
+        <div className="wr-race-body">
+          <aside className="wr-race-side">
+            <RouteRail
+              path={Array.isArray(myPlayer?.path_titles) && myPlayer.path_titles.length
+                ? myPlayer.path_titles
+                : [myPlayer?.start_title, currentTitle].filter(Boolean)}
+              currentTitle={currentTitle}
+              foot="상대 전체 경로는 결과 화면에서 공개"
+            />
+          </aside>
+          <main className="wr-race-main">
+            <WikiViewer
+              target={targetForViewer}
+              currentTitle={currentTitle}
+              currentSummary={pageData?.summary || ""}
+              currentDocumentHtml={pageData?.documentHtml || ""}
+              links={pageData?.links || []}
+              quickLinks={pageData?.quickLinks || []}
+              isLoading={isLoading}
+              elapsedSeconds={elapsedSeconds}
+              clickCount={myPlayer?.move_count || 0}
+              startTitle={myPlayer?.start_title || ""}
+              onLinkClick={handleMove}
+              censoredTitles={censoredTitles}
+              blindActive={status.blind}
+              highlightRequestId={highlightRequestId}
+              searchAvailable={searchAvailable}
+              onConsumeSearch={() => setSearchAvailable(false)}
+              status={status}
+              showTargetBrief={false}
+            />
+          </main>
         </div>
-      </div>
 
-      <div className="mp-game-layout">
-        <div className="mp-game-main">
-          <WikiViewer
-            target={targetForViewer}
-            currentTitle={pageData?.title || myPlayer?.current_title || ""}
-            currentSummary={pageData?.summary || ""}
-            currentDocumentHtml={pageData?.documentHtml || ""}
-            links={pageData?.links || []}
-            quickLinks={pageData?.quickLinks || []}
-            isLoading={isLoading}
-            elapsedSeconds={elapsedSeconds}
-            clickCount={myPlayer?.move_count || 0}
-            startTitle={myPlayer?.start_title || ""}
-            onLinkClick={handleMove}
-            censoredTitles={censoredTitles}
-            blindActive={status.blind}
-            highlightRequestId={highlightRequestId}
-            searchAvailable={searchAvailable}
-            onConsumeSearch={() => setSearchAvailable(false)}
-            status={status}
-          />
-        </div>
-
-        {phase === PHASE.PLAYING && (
-          <>
+        {/* 아이템전만 dock을 둔다. 일반전은 빈 아이템 칸을 그리지 않고 높이를 본문에 돌려준다 */}
+        {isPlaying && useItems && (
+          <div className="wr-race-dock">
             <DuelItemBar
               inventory={inventory}
               useItems={useItems}
@@ -1821,73 +1919,41 @@ export default function MultiplayerGamePage() {
               onLinkIndexMove={handleLinkIndexMove}
               onCloseLinkIndex={closeLinkIndex}
             />
-
-            <EffectOverlay
-              blindActive={status.blind}
-              floatingMessage={floatingMessage}
-              immune={pendingDefenses.length > 0}
-            />
-            {itemEffect && (
-              <div className="item-effect-pop">
-                <span>{itemEffect}</span>
-              </div>
-            )}
-            {miniGame && (
-              <div className="mini-game-overlay">
-                <div className="mini-game-card">
-                  <h2>🎲 미니게임</h2>
-                  <p>
-                    미니게임은 이 버전에서 비활성입니다. 구버전 상대가 보낸
-                    진행만 표시합니다.
-                  </p>
-                  {miniGame.resultMessage && <h3>{miniGame.resultMessage}</h3>}
-                </div>
-              </div>
-            )}
-          </>
+            <span className="wr-race-dock-hint">
+              {linkIndexView ? "링크만 보기 사용 중 · 단어를 누르면 이동하며 창이 닫힙니다" : ""}
+            </span>
+          </div>
         )}
+      </RaceFrame>
 
-        <aside className="mp-opponent-panel">
-          <div className="mp-opponent-header">
-            <div className="mp-opponent-avatar">
-              {(opponentPlayer?.nickname_snapshot || "상대")
-                .charAt(0)
-                .toUpperCase()}
+      {isPlaying && (
+        <>
+          <EffectOverlay
+            blindActive={status.blind}
+            floatingMessage={floatingMessage}
+            immune={pendingDefenses.length > 0}
+          />
+          {itemEffect && (
+            <div className="item-effect-pop" role="status">
+              <span>{itemEffect}</span>
             </div>
-
-            <div>
-              <div className="mp-opponent-name">
-                {opponentPlayer?.nickname_snapshot || "상대"}
+          )}
+          {miniGame && (
+            <div className="mini-game-overlay">
+              <div className="mini-game-card">
+                <h2>🎲 미니게임</h2>
+                <p>
+                  미니게임은 이 버전에서 비활성입니다. 구버전 상대가 보낸
+                  진행만 표시합니다.
+                </p>
+                {miniGame.resultMessage && <h3>{miniGame.resultMessage}</h3>}
               </div>
-              <div className="mp-opponent-sub">
-                {opponentPlayer?.has_finished ? "도착 완료!" : "레이싱 중..."}
-              </div>
             </div>
-          </div>
+          )}
+        </>
+      )}
 
-          <div className="mp-opponent-box">
-            <div className="mp-opponent-label">상대 목표</div>
-            <div className="mp-opponent-value">
-              {opponentTargetTitle || "설정 중..."}
-            </div>
-          </div>
-
-          <div className="mp-opponent-box">
-            <div className="mp-opponent-label">현재 문서</div>
-            <div className="mp-opponent-value">
-              {opponentPlayer?.current_title || "준비 중..."}
-            </div>
-          </div>
-
-          <div className="mp-opponent-box">
-            <div className="mp-opponent-label">이동 횟수</div>
-            <div className="mp-opponent-value">
-              {opponentPlayer?.move_count || 0}회
-            </div>
-          </div>
-        </aside>
-      </div>
-
+      {/* 결과 — Phase 4 범위. 기존 흐름·마크업 그대로 */}
       {(phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN) && (
         <div className="mp-result-overlay">
           <div className="mp-result-card">
@@ -1906,6 +1972,6 @@ export default function MultiplayerGamePage() {
       )}
 
       {pageData && <ScrollToTopButton />}
-    </div>
+    </>
   );
 }

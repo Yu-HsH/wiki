@@ -1072,12 +1072,13 @@ async function waitForLocatorCount(locator, predicate, timeoutMs = 20_000) {
 
 async function enterSpectatorView(actor, roomId) {
   await actor.page.goto(`${baseUrl}/multiplayer/group/game/${roomId}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await waitBody(actor.page, (body) => body.includes("FINISHED") || body.includes("다른 참가자 관전 중"));
-  const spectatorButton = actor.page.getByRole("button", { name: "다른 참가자 관전하기", exact: true });
+  // Phase 3 (2026-10-07): 완주자는 Result A("MY RESULT")에서 "관전하기 →"를 눌러야 관전으로 들어간다.
+  await waitBody(actor.page, (body) => body.includes("MY RESULT") || body.includes("플레이 관전"));
+  const spectatorButton = actor.page.getByRole("button", { name: "관전하기 →", exact: true });
   if (await spectatorButton.isVisible().catch(() => false)) {
     await spectatorButton.click();
   }
-  await waitBody(actor.page, (body) => body.includes("다른 참가자 관전 중"));
+  await waitBody(actor.page, (body) => body.includes("플레이 관전"));
 }
 
 function recordReflection(actor, evidence) {
@@ -1336,7 +1337,8 @@ async function setupRoom(config, actors, result, { viaUi = true } = {}) {
   const code = await roomCode(roomId);
   for (const actor of actors.slice(1)) await joinRoomUi(actor, code);
   await waitForRoomPlayers(roomId, actors.length);
-  await waitBody(actors[0].page, (body) => body.includes("단체모드 대기실"));
+  // Phase 2 (2026-10-07): 대기실 제목이 "그룹 대기실"로 바뀌었다.
+  await waitBody(actors[0].page, (body) => body.includes("그룹 대기실"));
   recordScenarioRoomCardinality(config, result, roomId);
   markRealtimeRequired(actors);
   return roomId;
@@ -1382,7 +1384,8 @@ async function runAllScenarios() {
     const before = await roomRow(roomId);
     actors[0].record.rpcCalls.length = 0;
     await actors[0].page.reload({ waitUntil: "domcontentloaded" });
-    await waitBody(actors[0].page, (body) => body.includes("단체모드 대기실"));
+    // Phase 2 (2026-10-07): 대기실 제목이 "그룹 대기실"로 바뀌었다.
+    await waitBody(actors[0].page, (body) => body.includes("그룹 대기실"));
     const after = await roomRow(roomId);
     assertCondition(before.host_user_id === after.host_user_id, "waiting host changed after F5");
     assertCondition(!actors[0].record.rpcCalls.some((call) => call.rpc === "leave_group_waiting_room"), "waiting host F5 called leave RPC");
@@ -1455,6 +1458,8 @@ async function runAllScenarios() {
     await waitForRealtimeExpectation(expectRealtimeEvent({ scenario: config.name, roomId, eventId: firstEmoji?.event_id || firstEmoji?.event?.id, actors, uiObservation: "emoji reaction visible" }));
     await waitForLocatorCount(actors[0].page.locator(".group-spectator-reaction"), (count) => count >= 1);
     const firstCount = await actors[0].page.locator(".group-spectator-reaction").count();
+    // Phase 3: 사용자별 숨기기 버튼은 "사용자별 숨기기"를 연 뒤에 보인다.
+    await actors[0].page.getByRole("button", { name: /^사용자별 숨기기/ }).click();
     const muteButton = actors[0].page.locator(".group-spectator-mute-list button").filter({ hasText: "숨김" }).filter({ hasText: actors[1].user.nickname });
     await muteButton.click();
     await wait(3_100);
@@ -1463,15 +1468,16 @@ async function runAllScenarios() {
     await wait(1_000);
     const mutedReactionTexts = await actors[0].page.locator(".group-spectator-reaction").allTextContents();
     const mutedCount = mutedReactionTexts.length;
-    assertCondition(!mutedReactionTexts.some((text) => text.includes(actors[1].user.nickname)), "per-user muted emoji remained visible");
-    await actors[0].page.getByRole("button", { name: "이모티콘 전체 끄기", exact: true }).click();
+    const mutedSenderStamps = await actors[0].page.locator(".wr-race-side .wr-roster-list > li").filter({ hasText: actors[1].user.nickname }).locator(".group-spectator-reaction").count();
+    assertCondition(mutedSenderStamps === 0, "per-user muted emoji remained visible");
+    await actors[0].page.getByRole("button", { name: "반응 끄기", exact: true }).click();
     await wait(3_100);
     const allMutedEmoji = await directRpc(actors[2].user, "send_group_spectator_emoji_v13", { p_room_id: roomId, p_preset_id: "cheer" });
     await waitForRealtimeExpectation(expectRealtimeEvent({ scenario: config.name, roomId, eventId: allMutedEmoji?.event_id || allMutedEmoji?.event?.id, actors, uiObservation: "all-muted emoji event delivered but hidden" }));
     await wait(500);
     const allMutedCount = await actors[0].page.locator(".group-spectator-reaction").count();
     assertCondition(allMutedCount === 0, "all-muted spectator displayed emoji");
-    await actors[0].page.getByRole("button", { name: "이모티콘 전체 표시", exact: true }).click();
+    await actors[0].page.getByRole("button", { name: "반응 켜기", exact: true }).click();
     await wait(3_100);
     const restoredEmoji = await directRpc(actors[1].user, "send_group_spectator_emoji_v13", { p_room_id: roomId, p_preset_id: "clap" });
     await waitForRealtimeExpectation(expectRealtimeEvent({ scenario: config.name, roomId, eventId: restoredEmoji?.event_id || restoredEmoji?.event?.id, actors, uiObservation: "unmuted emoji visible exactly once" }));
@@ -1493,13 +1499,19 @@ async function runAllScenarios() {
     await moveToRoomTarget(roomId, actors[2]);
     await expectLatestRoomEvent(roomId, actors, config.name, "grace_started", "host/grace status reflected");
     await enterSpectatorView(actors[0], roomId);
-    await actors[0].page.getByRole("button", { name: "👏 응원", exact: true }).click();
-    await actors[0].page.getByRole("button", { name: "👏 응원", exact: true }).click().catch(() => {});
-    await waitBody(actors[0].page, (body) => body.includes("3초에 한 번만"));
-    await actors[0].page.getByRole("button", { name: "👏 응원", exact: true }).click().catch(() => {});
+    const emojiBefore = (await roomCounts(roomId)).emoji_events;
+    await actors[0].page.getByRole("button", { name: "반응 보내기: 응원", exact: true }).click();
+    await waitBody(actors[0].page, (body) => body.includes("초 후 다시 보낼 수 있습니다"));
+    assertCondition(await actors[0].page.getByRole("button", { name: "반응 보내기: 와우", exact: true }).isDisabled(), "reaction presets not disabled during the 3s cooldown");
+    await expectRpcError(actors[0].user, "send_group_spectator_emoji_v13", { p_room_id: roomId, p_preset_id: "wow" }, "SPECTATOR_EMOJI_RATE_LIMIT");
+    assertCondition((await roomCounts(roomId)).emoji_events === emojiBefore + 1, "rate-limited spectator emoji changed the event ledger");
+    await waitForLocatorCount(actors[0].page.locator(".group-spectator-reaction"), (count) => count >= 1);
     const beforeF5 = await actors[0].page.locator(".group-spectator-reaction").count();
+    assertCondition(beforeF5 >= 1, "accepted spectator reaction was not shown");
     await actors[0].page.reload({ waitUntil: "domcontentloaded" });
-    await waitBody(actors[0].page, (body) => body.includes("다른 참가자 관전 중"));
+    // Phase 3 (2026-10-07): 새로고침 후에도 관전 화면(탭 "플레이 관전")으로 복구된다.
+    await waitBody(actors[0].page, (body) => body.includes("플레이 관전"));
+    await waitForLocatorCount(actors[0].page.locator(".group-spectator-reaction"), (count) => count >= beforeF5, 10_000);
     const afterF5 = await actors[0].page.locator(".group-spectator-reaction").count();
     const counts = await roomCounts(roomId);
     assertCondition(counts.grace_events === 1 && counts.results === 3, `grace/results mismatch: ${JSON.stringify(counts)}`);

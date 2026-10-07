@@ -150,14 +150,7 @@ function GameRoute({ isGuestRecovery = false }) {
 
   return (
     <>
-      <div className="game-nav">
-        <button type="button" className="app-btn app-btn-ghost" onClick={handleReturnLobby}>
-          로비
-        </button>
-        <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate("/ranking")}>
-          랭킹
-        </button>
-      </div>
+      {/* Phase 3: 경기 중에는 전역 이동(로비·랭킹)을 두지 않는다. 나가기는 race HUD의 명시적 이탈(기존 exit guard)만. */}
       {saveStatus && <div className="save-status">{saveStatus}</div>}
       <GamePage
         onGameComplete={handleSaveRecord}

@@ -14,7 +14,7 @@ export default function EffectOverlay({ blindActive, floatingMessage, immune }) 
             )}
 
             {floatingMessage && (
-                <div className="floating-message">
+                <div className="floating-message" role="status" aria-live="polite">
                     {floatingMessage}
                 </div>
             )}

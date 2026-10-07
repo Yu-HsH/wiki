@@ -28,7 +28,37 @@ import ResultXp from "../components/ResultXp.jsx";
 import { getGroupResultLabel } from "../utils/resultReasonLabels.js";
 import WikiViewer from "../components/WikiViewer";
 import CountdownOverlay from "../components/CountdownOverlay";
-import FloatingHud from "../components/FloatingHud";
+import {
+    ConnectionDot,
+    HudArrow,
+    HudBrand,
+    HudDoc,
+    HudExit,
+    HudStat,
+    HudStatus,
+    HudTimer,
+    Pill,
+    RaceFrame,
+    RaceHold,
+    RaceHud,
+    RaceIcon,
+    RouteChain,
+    RouteRail,
+} from "../components/wiki-race/race/RaceParts";
+import {
+    GroupResultA,
+    GroupSheet,
+    ParticipantRoster,
+    ReactionDock,
+    RouteCompare,
+} from "../components/wiki-race/race/GroupRaceParts";
+import {
+    countGroupParticipants,
+    getGroupDeadlineView,
+    getGroupGraceCopy,
+    getWatchView,
+    orderGroupParticipants,
+} from "../utils/groupRacePresentation.js";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import GroupPickOverlay from "../components/GroupPickOverlay";
 import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
@@ -147,6 +177,15 @@ export default function GroupGamePage() {
             return false;
         }
     });
+    // Phase 3 표시 전용 상태 — 서버 계약·판정과 무관하다.
+    const [spectatorTab, setSpectatorTab] = useState("watch");
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const [sheetTab, setSheetTab] = useState("roster");
+    const [muteMode, setMuteMode] = useState(false);
+    const [reactionCooldownUntil, setReactionCooldownUntil] = useState(0);
+    const [resultRouteOpen, setResultRouteOpen] = useState(false);
+    const [displayNow, setDisplayNow] = useState(() => Date.now());
+
     const roomRef = useRef(null);
     const playersRef = useRef([]);
 
@@ -541,6 +580,8 @@ export default function GroupGamePage() {
             setRecovery({
                 mode: normalized.recoverable ? "retryable" : "fatal",
                 message: normalized.message,
+                // Phase 3 표시 전용: 리타이어(PARTICIPANT_INACTIVE)를 중립 집계 화면으로 구분한다.
+                code: normalized.code,
             });
         }
     }, [
@@ -852,21 +893,38 @@ export default function GroupGamePage() {
         }
     }, [phase, players, room?.status, selectedSpectatorId]);
 
+    // Phase 3: 관전 문서는 "보는 사람 · 그 사람의 서버 문서 식별자"가 바뀔 때만 다시 받는다.
+    // 같은 사람의 다른 열(이동 수 등) 갱신으로 화면을 비우지 않고, 연결이 끊긴 동안에는
+    // 마지막으로 받은 화면을 읽기 전용으로 유지한다(다른 참가자로 자동 전환하지 않는다).
+    const watchedUserId = selectedSpectatorPlayer?.user_id ?? null;
+    const watchedPageKey = selectedSpectatorPlayer
+        ? `${selectedSpectatorPlayer.current_page_id ?? ""}:${selectedSpectatorPlayer.current_revision_id ?? ""}`
+        : "";
+    const watchedDisconnected =
+        String(selectedSpectatorPlayer?.player_status || "").toLowerCase() === "disconnected";
+    const lastWatchedUserRef = useRef(null);
+    const selectedSpectatorPlayerRef = useRef(null);
+    selectedSpectatorPlayerRef.current = selectedSpectatorPlayer;
+
     useEffect(() => {
-        if (phase !== GROUP_GAME_PHASE.SPECTATING || !selectedSpectatorPlayer) {
+        const watchedPlayer = selectedSpectatorPlayerRef.current;
+        if (phase !== GROUP_GAME_PHASE.SPECTATING || !watchedPlayer) {
             spectatorPageRequestRef.current?.cancel();
             setSpectatorPage(null);
             setSpectatorPageError("");
             setSpectatorPageLoading(false);
+            lastWatchedUserRef.current = null;
             return undefined;
         }
+        if (watchedDisconnected && lastWatchedUserRef.current === watchedUserId) return undefined;
 
         const request = spectatorPageRequestRef.current.begin();
-        setSpectatorPage(null);
+        if (lastWatchedUserRef.current !== watchedUserId) setSpectatorPage(null);
+        lastWatchedUserRef.current = watchedUserId;
         setSpectatorPageError("");
         setSpectatorPageLoading(true);
 
-        fetchGroupSpectatorPage(selectedSpectatorPlayer)
+        fetchGroupSpectatorPage(watchedPlayer)
             .then((page) => {
                 if (!spectatorPageRequestRef.current.isCurrent(request.id)) return;
                 setSpectatorPage(page);
@@ -890,7 +948,7 @@ export default function GroupGamePage() {
                 spectatorPageRequestRef.current.cancel();
             }
         };
-    }, [phase, selectedSpectatorPlayer]);
+    }, [phase, watchedUserId, watchedPageKey, watchedDisconnected]);
 
     useEffect(() => {
         if (phase !== GROUP_GAME_PHASE.SPECTATING || !roomId) return undefined;
@@ -939,9 +997,12 @@ export default function GroupGamePage() {
             const event = response;
             if (!event) return;
             setSpectatorEmojis((current) => upsertLatestGroupSpectatorEmoji(current, event));
+            // 표시 전용 3초 대기 — 실제 제한은 서버 rate limit이다.
+            setReactionCooldownUntil(Date.now() + 3000);
         } catch (error) {
             const message = error?.message || "이모티콘을 보낼 수 없습니다.";
             if (String(message).includes("RATE_LIMIT")) {
+                setReactionCooldownUntil(Date.now() + 3000);
                 setSpectatorPageError("이모티콘은 3초에 한 번만 보낼 수 있습니다.");
             } else {
                 setSpectatorPageError(message);
@@ -956,6 +1017,41 @@ export default function GroupGamePage() {
                 : [...current, userId]
         );
     }, []);
+
+    // Phase 3 표시 시계 — 관전 중 반응 스탬프(3초)·반응 대기 초를 갱신한다. 판정에는 쓰지 않는다.
+    useEffect(() => {
+        if (phase !== GROUP_GAME_PHASE.SPECTATING) return undefined;
+        const timer = setInterval(() => setDisplayNow(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, [phase]);
+
+    // Phase 3 — 내가 리타이어된 경우(PARTICIPANT_INACTIVE): 관전 권한 없이 중립 "결과 집계 중"을 보인다.
+    // 결과로 넘어가는 경로는 기존 recoverGame 그대로다 — 방이 finished가 되면 ENDED(최종 결과)를 반환한다.
+    // 재조회 중 recovery가 잠시 로딩 상태로 바뀌어도 집계 화면이 깜빡이지 않도록, 실제 결과(종료·진행)가
+    // 올 때까지 유지한다.
+    const [retiredHold, setRetiredHold] = useState(false);
+    useEffect(() => {
+        if (recovery?.code === "PARTICIPANT_INACTIVE") setRetiredHold(true);
+    }, [recovery?.code]);
+    useEffect(() => {
+        if (![
+            GROUP_GAME_PHASE.ENDED,
+            GROUP_GAME_PHASE.PLAYING,
+            GROUP_GAME_PHASE.FINISHED,
+            GROUP_GAME_PHASE.SPECTATING,
+        ].includes(phase)) return;
+        setRetiredHold(false);
+        // 서버가 경기 종료(ENDED)를 알리면(Realtime refreshRoomState 경로 포함) 리타이어 시점의
+        // PARTICIPANT_INACTIVE 안내는 더 이상 유효하지 않다 — 최종 결과가 가려지지 않게 지운다.
+        if (phase === GROUP_GAME_PHASE.ENDED) {
+            setRecovery((current) => (current?.code === "PARTICIPANT_INACTIVE" ? null : current));
+        }
+    }, [phase]);
+    useEffect(() => {
+        if (!retiredHold) return undefined;
+        const timer = setInterval(() => { void recoverGame(); }, 5000);
+        return () => clearInterval(timer);
+    }, [retiredHold, recoverGame]);
 
     const handleCountdownComplete = useCallback(async () => {
         if (!roomId || activationCompletedRef.current) return;
@@ -1187,9 +1283,47 @@ export default function GroupGamePage() {
         onSummaryRetry: () => setTargetSummaryRetryKey((value) => value + 1),
     }), [target, targetSummary]);
 
-    const groupTimerLabel = room?.status === "grace_period"
-        ? "유예 시간"
-        : "남은 시간";
+    // ── Phase 3 표시 파생값 — 전부 서버 값에서 읽는다 ─────────────────────
+    const deadline = getGroupDeadlineView(room);
+    const graceCopy = getGroupGraceCopy(deadline);
+    const rosterEntries = orderGroupParticipants(players);
+    const rosterCounts = countGroupParticipants(players);
+    const goalTitle = room?.group_target_title || target.title;
+    const courseStart = room?.group_start_title || startTitle;
+    const reactionsByUser = Object.fromEntries(visibleSpectatorEmojis.map((event) => [event.userId, event]));
+    const deadlineStatus = deadline.state === "ended"
+        ? <Pill tone="neutral" filled wrap>경기 종료 · 완주하지 못한 참가자는 리타이어로 기록됩니다</Pill>
+        : graceCopy
+            ? <Pill tone="gold" filled wrap icon="flag" key={graceCopy}>{graceCopy}</Pill>
+            : null;
+    const myRoute = (path) => (
+        <div className="wr-sheet-route">
+            <RouteRail path={path} currentTitle={path[path.length - 1]} title="내 경로" />
+        </div>
+    );
+
+    if (retiredHold) {
+        // 리타이어 — 관전·반응 없이 중립 집계 화면. 기존 recoverGame이 방 종료를 확인하면 최종 결과로 간다.
+        return (
+            <>
+                <RaceFrame mode="group" label="그룹 레이스">
+                    <RaceHud>
+                        <HudBrand mode="그룹" />
+                        <HudStatus>
+                            <Pill tone="neutral" filled>경기 종료 · 결과 집계 중</Pill>
+                        </HudStatus>
+                        <HudTimer label="경기 종료" seconds={0} state="ended" />
+                        <HudExit label="그룹 로비로" onClick={() => handleReturnToLobby("left")} disabled={leaving} />
+                    </RaceHud>
+                    <RaceHold kicker="GROUP · 리타이어" title="경기 종료 · 결과 집계 중">
+                        <p>최종 기록을 집계하고 있습니다. 경기가 확정되면 최종 결과로 이동합니다.</p>
+                        <img className="wr-race-hold-figure" src="/assets/wiki-race/explorer-lose.png" alt="" height="96" />
+                    </RaceHold>
+                </RaceFrame>
+                {exitDialog}
+            </>
+        );
+    }
 
     if (
         recovery ||
@@ -1205,6 +1339,8 @@ export default function GroupGamePage() {
                     onRetry={() => recoverGame()}
                     onLeave={requestExit}
                     leaving={leaving}
+                    gameMode="group"
+                    modeLabel="그룹"
                 />
                 {exitDialog}
             </>
@@ -1217,69 +1353,30 @@ export default function GroupGamePage() {
             (finishResult?.user_id === user?.id ? finishResult : null) ||
             players.find((player) => player.user_id === user?.id);
         const pendingCount = getPendingGroupPlayers(players).length;
-        const hasServerMoveCount = Number.isFinite(myResult?.move_count);
-        const hasServerElapsed = Number.isFinite(myResult?.elapsed_seconds);
+        const myPath = Array.isArray(myResult?.path_titles) && myResult.path_titles.length
+            ? myResult.path_titles
+            : pathTitles;
 
+        // Result A — 완주 · 경기 진행 중. 관전은 "관전하기"를 눌렀을 때만 시작한다.
         return (
-            <div className="mp-page group-result-page">
+            <>
                 {exitDialog}
-                <div className="mp-container">
-                    <div className="mp-title-block">
-                        <span className="mp-badge">FINISHED</span>
-                        <h1 className="mp-title">내 기록</h1>
-                        <p className="mp-subtitle">
-                            목표 문서: <strong>{target.title}</strong>
-                        </p>
-                    </div>
-
-                    <section className="mp-card group-result-card">
-                        <div className="group-record-grid">
-                            <div>
-                                <span>현재 순위</span>
-                                <strong>{Number.isInteger(myResult?.rank) ? `${myResult.rank}위` : "확정 중"}</strong>
-                            </div>
-                            <div>
-                                <span>이동 횟수</span>
-                                <strong>{hasServerMoveCount ? `${myResult.move_count}회` : "확정 중"}</strong>
-                            </div>
-                            <div>
-                                <span>기록</span>
-                                <strong>
-                                    {hasServerElapsed
-                                        ? formatDuration(myResult.elapsed_seconds)
-                                        : "확정 중"}
-                                </strong>
-                            </div>
-                        </div>
-
-                        <p className="group-pending-message">
-                            {pendingCount > 0
-                                ? `아직 ${pendingCount}명이 진행 중입니다.`
-                                : "모든 참가자의 결과를 확인하고 있습니다."}
-                        </p>
-
-                        <div className="group-result-actions">
-                            {pendingCount > 0 && (
-                                <button
-                                    type="button"
-                                    className="mp-action-btn mp-action-btn--primary"
-                                    onClick={handleStartSpectating}
-                                >
-                                    다른 참가자 관전하기
-                                </button>
-                            )}
-                            <button
-                                type="button"
-                                className="mp-action-btn"
-                                onClick={() => handleReturnToLobby("left")}
-                                disabled={leaving}
-                            >
-                                {leaving ? "게임 정리 중..." : "게임 로비로 나가기"}
-                            </button>
-                        </div>
-                    </section>
-                </div>
-            </div>
+                <GroupResultA
+                    result={myResult}
+                    size={players.length}
+                    finishedCount={rosterCounts.finished}
+                    pendingCount={pendingCount}
+                    deadline={deadline}
+                    startTitle={courseStart}
+                    targetTitle={goalTitle}
+                    path={myPath}
+                    onSpectate={handleStartSpectating}
+                    onLeave={() => handleReturnToLobby("left")}
+                    leaving={leaving}
+                    routeOpen={resultRouteOpen}
+                    onToggleRoute={() => setResultRouteOpen((open) => !open)}
+                />
+            </>
         );
     }
 
@@ -1289,162 +1386,180 @@ export default function GroupGamePage() {
             pendingPlayers.find((player) => player.user_id === selectedSpectatorId) ||
             pendingPlayers[0] ||
             null;
-        const selectedPath = Array.isArray(selectedPlayer?.path_titles)
-            ? selectedPlayer.path_titles
-            : [];
+        const me = players.find((player) => player.user_id === user?.id);
+        const myRank = Number.isInteger(me?.rank) ? me.rank : null;
+        const watch = selectedPlayer ? getWatchView(selectedPlayer) : null;
+        const ended = deadline.state === "ended";
+        const cooldownSeconds = Math.max(0, Math.ceil((reactionCooldownUntil - displayNow) / 1000));
+        const myPath = Array.isArray(me?.path_titles) && me.path_titles.length ? me.path_titles : pathTitles;
+        const watchName = selectedPlayer ? selectedPlayer.nickname_snapshot || "참가자" : "";
+
+        const articleTag = !selectedPlayer ? null : watch?.live
+            ? <>
+                <span>링크를 눌러도 이동하지 않습니다</span>
+                <Pill tone="blue" filled icon="spectator">{watchName}의 화면 · {Number(selectedPlayer.move_count) || 0} 이동</Pill>
+            </>
+            : <>
+                <span>마지막으로 받은 화면 · 읽기 전용</span>
+                {watch?.state === "disconnected"
+                    ? <ConnectionDot ok={false} halo label={`${watchName} · 재연결 중`} />
+                    : <Pill tone="neutral" filled>{watchName} · {watch?.label}</Pill>}
+            </>;
+
+        const watchPanel = !selectedPlayer ? (
+            <RaceHold kicker="관전" title="관전 가능한 참가자 없음">
+                <p>남은 참가자의 상태를 기다리는 중입니다. 경기가 끝나면 최종 결과로 이동합니다.</p>
+            </RaceHold>
+        ) : (
+            <>
+                {spectatorPageError && <p className="state-text error" role="alert">{spectatorPageError}</p>}
+                {spectatorPage ? (
+                    <WikiViewer
+                        target={{
+                            title: goalTitle,
+                            canonicalTitle: goalTitle,
+                            mode: "group",
+                        }}
+                        currentTitle={spectatorPage.canonicalTitle}
+                        currentSummary={spectatorPage.summary}
+                        currentDocumentHtml={spectatorPage.documentHtml}
+                        links={spectatorPage.links}
+                        quickLinks={spectatorPage.quickLinks}
+                        isLoading={spectatorPageLoading}
+                        elapsedSeconds={Number(selectedPlayer.elapsed_seconds) || 0}
+                        clickCount={Number(selectedPlayer.move_count) || 0}
+                        startTitle={selectedPlayer.start_title || room?.group_start_title || ""}
+                        timerLabel="관전 중 기록"
+                        readOnly
+                        showTargetBrief={false}
+                        articleTag={articleTag}
+                    />
+                ) : (
+                    <RaceHold kicker="관전" title="화면 대기 중">
+                        <p>
+                            {spectatorPageLoading
+                                ? "서버가 확정한 Wikipedia 문서를 불러오는 중입니다..."
+                                : `${watchName}의 화면을 아직 받지 못했습니다. 연결이 돌아오면 이어서 표시합니다.`}
+                        </p>
+                    </RaceHold>
+                )}
+            </>
+        );
+
+        const comparePanel = (
+            <RouteCompare
+                entries={rosterEntries}
+                myUserId={user?.id}
+                watchedId={selectedPlayer?.user_id}
+                onWatch={(id) => { setSelectedSpectatorId(id); setSpectatorTab("watch"); }}
+                startTitle={courseStart}
+                targetTitle={goalTitle}
+            />
+        );
+
+        const roster = (
+            <ParticipantRoster
+                entries={rosterEntries}
+                myUserId={user?.id}
+                spectating
+                watchedId={selectedPlayer?.user_id}
+                onSelect={(id) => { setSelectedSpectatorId(id); setSpectatorTab("watch"); }}
+                reactionsByUser={reactionsByUser}
+                nowMs={displayNow}
+                muteMode={muteMode && !ended}
+                mutedIds={mutedSpectatorIds}
+                onToggleMute={handleToggleSpectatorMute}
+                counts={rosterCounts}
+            />
+        );
 
         return (
-            <div className="mp-page group-spectator-page">
+            <>
                 {exitDialog}
-                <div className="mp-container">
-                    <div className="mp-title-block">
-                        <span className="mp-badge">SPECTATING</span>
-                        <h1 className="mp-title">다른 참가자 관전 중</h1>
-                        <p className="mp-subtitle">
-                            참가자의 현재 문서와 이동 경로가 실시간으로 갱신됩니다.
-                        </p>
+                <RaceFrame mode="group" tabs label="그룹 관전">
+                    <RaceHud>
+                        <HudBrand mode="그룹" />
+                        <div className="wr-hud-cell wr-hud-record">
+                            <span className="wr-hud-label">내 기록</span>
+                            <strong><span className="wr-done-glyph" aria-hidden="true">✓</span>{myRank ? `${myRank}위 완주` : "완주"}</strong>
+                            <small className="wr-num">
+                                {[Number.isFinite(me?.elapsed_seconds) ? formatDuration(me.elapsed_seconds) : null, Number.isFinite(me?.move_count) ? `${me.move_count} 이동` : null].filter(Boolean).join(" · ")}
+                            </small>
+                        </div>
+                        <div className={`wr-hud-cell wr-hud-doc wr-hud-watch ${watch?.live ? "is-live" : ""}`}>
+                            <span className="wr-hud-label">{selectedPlayer ? `${watch.label} · ${watchName}` : "관전 대상 없음"}</span>
+                            <span className="wr-hud-doc-value" title={selectedPlayer?.current_title || undefined}>
+                                <RaceIcon name="spectator" size={16} />
+                                <span>{selectedPlayer?.current_title || "화면 대기"}</span>
+                            </span>
+                        </div>
+                        <HudArrow />
+                        <HudDoc kind="goal" label="목표 문서" title={goalTitle} />
+                        <HudStatus />
+                        <HudTimer label={deadline.label} seconds={deadline.seconds} state={deadline.state} />
+                        <HudExit label="방 나가기" onClick={() => handleReturnToLobby("left")} disabled={leaving} />
+                    </RaceHud>
+
+                    <div className="wr-race-tabs" role="tablist" aria-label="관전 보기">
+                        <button type="button" role="tab" id="wr-tab-watch" aria-selected={spectatorTab === "watch"} aria-controls="wr-spectator-panel" className={`wr-race-tab ${ended ? "is-ended" : ""}`} onClick={() => setSpectatorTab("watch")}>
+                            <RaceIcon name="spectator" size={14} />{ended ? "마지막 화면" : "플레이 관전"}
+                        </button>
+                        <button type="button" role="tab" id="wr-tab-compare" aria-selected={spectatorTab === "compare"} aria-controls="wr-spectator-panel" className="wr-race-tab" onClick={() => setSpectatorTab("compare")}>
+                            <RaceIcon name="route" size={14} />경로 비교
+                        </button>
+                        <span className="wr-race-tabs-end">{deadlineStatus}</span>
                     </div>
 
-                    <div className="group-spectator-layout">
-                        <section className="mp-card group-spectator-list-card">
-                            <h2>참가자</h2>
-                            <div className="group-spectator-list">
-                                {players.map((player) => {
-                                    const isMe = player.user_id === user?.id;
-                                    const isPending = pendingPlayers.some(
-                                        (pendingPlayer) => pendingPlayer.user_id === player.user_id
-                                    );
-                                    const isFinished = isGroupPlayerFinished(player);
-                                    const inactive = isGroupPlayerInactive(player);
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={player.id || player.user_id}
-                                            className={`group-spectator-player ${
-                                                selectedPlayer?.user_id === player.user_id ? "active" : ""
-                                            }`}
-                                            onClick={() => {
-                                                if (isPending) setSelectedSpectatorId(player.user_id);
-                                            }}
-                                            disabled={!isPending}
-                                        >
-                                            <span>
-                                                {isMe ? "나" : player.nickname_snapshot || "참가자"}
-                                            </span>
-                                            <strong>
-                                                {isFinished
-                                                    ? `${Number.isInteger(player.rank) ? `${player.rank}위` : "완주"} · 완주 · ${Number.isFinite(player.move_count) ? `${player.move_count}회` : "기록 확인 중"}`
-                                                    : inactive
-                                                        ? `RETIRE · ${formatGroupRetireReason(player.retire_reason || player.leave_reason)}`
-                                                        : `진행 중 · ${player.current_title || "문서 확인 중"} · ${Number.isFinite(player.move_count) ? `${player.move_count}회` : "기록 확인 중"}`}
-                                            </strong>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <div className="group-spectator-settings">
-                                <button
-                                    type="button"
-                                    className="mp-action-btn"
-                                    onClick={() => setMuteAllSpectatorEmojis((current) => !current)}
-                                >
-                                    {muteAllSpectatorEmojis ? "이모티콘 전체 표시" : "이모티콘 전체 끄기"}
-                                </button>
-                                <div className="group-spectator-mute-list">
-                                    {players.map((player) => (
-                                        <button
-                                            key={`mute-${player.user_id}`}
-                                            type="button"
-                                            className="mp-action-btn"
-                                            onClick={() => handleToggleSpectatorMute(player.user_id)}
-                                        >
-                                            {mutedSpectatorIds.includes(player.user_id) ? "표시" : "숨김"} · {player.nickname_snapshot || "참가자"}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
-
-                        <section className="mp-card group-spectator-detail-card">
-                            <span className="mp-badge">LIVE PATH</span>
-                            <h2>{selectedPlayer ? `${selectedPlayer.nickname_snapshot || "참가자"}의 이동 경로` : "관전 가능한 참가자 없음"}</h2>
-                            <p className="group-spectator-current">
-                                현재 문서: <strong>{selectedPlayer?.current_title || "남은 참가자의 상태를 기다리는 중입니다."}</strong>
-                            </p>
-                            <div className="group-spectator-path">
-                                {selectedPath.map((title, index) => (
-                                    <React.Fragment key={`${title}-${index}`}>
-                                        {index > 0 && <span aria-hidden="true">→</span>}
-                                        <em>{title}</em>
-                                    </React.Fragment>
-                                ))}
-                                {selectedPath.length === 0 && (
-                                    <p className="mp-subtitle">아직 저장된 이동 경로가 없습니다.</p>
-                                )}
-                            </div>
-                            <div className="group-spectator-reactions" aria-live="polite">
-                                {visibleSpectatorEmojis.map((event) => {
-                                    const sender = players.find((player) => player.user_id === event.userId);
-                                    return (
-                                        <span key={event.id} className="group-spectator-reaction">
-                                            {event.preset.emoji} {sender?.nickname_snapshot || "참가자"}
-                                        </span>
-                                    );
-                                })}
-                            </div>
-                            <div className="group-spectator-emoji-bar">
-                                {GROUP_SPECTATOR_PRESETS.map((preset) => (
-                                    <button
-                                        key={preset.id}
-                                        type="button"
-                                        className="mp-action-btn"
-                                        onClick={() => handleSendSpectatorEmoji(preset.id)}
-                                    >
-                                        {preset.emoji} {preset.label}
-                                    </button>
-                                ))}
-                            </div>
-                            {spectatorPageLoading && (
-                                <p className="mp-subtitle">서버가 확정한 Wikipedia 문서를 불러오는 중입니다...</p>
-                            )}
-                            {spectatorPageError && (
-                                <p className="mp-error">{spectatorPageError}</p>
-                            )}
-                            {spectatorPage && selectedPlayer && (
-                                <div className="group-spectator-wiki-viewer">
-                                    <WikiViewer
-                                        target={{
-                                            title: room?.group_target_title || target.title,
-                                            canonicalTitle: room?.group_target_title || target.title,
-                                            mode: "group",
-                                        }}
-                                        currentTitle={spectatorPage.canonicalTitle}
-                                        currentSummary={spectatorPage.summary}
-                                        currentDocumentHtml={spectatorPage.documentHtml}
-                                        links={spectatorPage.links}
-                                        quickLinks={spectatorPage.quickLinks}
-                                        isLoading={spectatorPageLoading}
-                                        elapsedSeconds={Number(selectedPlayer.elapsed_seconds) || 0}
-                                        clickCount={Number(selectedPlayer.move_count) || 0}
-                                        startTitle={selectedPlayer.start_title || room?.group_start_title || ""}
-                                        timerLabel="관전 중 기록"
-                                        readOnly
-                                    />
-                                </div>
-                            )}
-                        </section>
+                    <div className="wr-race-body">
+                        <aside className="wr-race-side group-spectator-list-card">{roster}</aside>
+                        <main
+                            className={`wr-race-main group-spectator-detail-card ${watch && !watch.live ? "is-stale" : ""}`}
+                            id="wr-spectator-panel"
+                            role="tabpanel"
+                            aria-labelledby={spectatorTab === "watch" ? "wr-tab-watch" : "wr-tab-compare"}
+                        >
+                            {spectatorTab === "watch" ? watchPanel : comparePanel}
+                        </main>
                     </div>
 
-                    <button
-                        type="button"
-                        className="mp-action-btn group-spectator-leave"
-                        onClick={() => handleReturnToLobby("left")}
-                        disabled={leaving}
-                    >
-                        {leaving ? "게임 정리 중..." : "게임 로비로 나가기"}
-                    </button>
-                </div>
-            </div>
+                    <ReactionDock
+                        presets={GROUP_SPECTATOR_PRESETS}
+                        onSend={handleSendSpectatorEmoji}
+                        cooldownSeconds={cooldownSeconds}
+                        ended={ended}
+                        muteAll={muteAllSpectatorEmojis}
+                        onToggleMuteAll={() => setMuteAllSpectatorEmojis((current) => !current)}
+                        muteMode={muteMode}
+                        onToggleMuteMode={() => setMuteMode((current) => !current)}
+                        mutedCount={mutedSpectatorIds.length}
+                    />
+
+                    <GroupSheet
+                        deadline={deadline}
+                        meLabel={myRank ? `${myRank}위 완주` : "완주"}
+                        counts={rosterCounts}
+                        open={sheetOpen}
+                        onToggle={() => setSheetOpen((open) => !open)}
+                        status={deadlineStatus}
+                        activeTab={sheetTab}
+                        onTab={setSheetTab}
+                        tabs={[
+                            { id: "roster", label: "참가자", content: roster },
+                            { id: "compare", label: "경로 비교", content: comparePanel },
+                            { id: "route", label: "내 경로", content: myRoute(myPath) },
+                        ]}
+                        footer={
+                            <ReactionDock
+                                compact
+                                presets={GROUP_SPECTATOR_PRESETS}
+                                onSend={handleSendSpectatorEmoji}
+                                cooldownSeconds={cooldownSeconds}
+                                ended={ended}
+                            />
+                        }
+                    />
+                </RaceFrame>
+            </>
         );
     }
 
@@ -1513,8 +1628,15 @@ export default function GroupGamePage() {
         );
     }
 
+    // PICKING · COUNTDOWN · PLAYING — 그룹 RACE. 아이템 없음 · 같은 코스 · 서버 마감.
+    const isGroupPlaying = phase === GROUP_GAME_PHASE.PLAYING;
+    const me = players.find((player) => player.user_id === user?.id);
+    const rosterPlaying = (
+        <ParticipantRoster entries={rosterEntries} myUserId={user?.id} counts={rosterCounts} />
+    );
+
     return (
-        <div className="wiki-game-page">
+        <>
             {exitDialog}
             {phase === GROUP_GAME_PHASE.PICKING && (
                 <GroupPickOverlay
@@ -1531,82 +1653,64 @@ export default function GroupGamePage() {
                 />
             )}
 
-            {(phase === GROUP_GAME_PHASE.PICKING ||
-                phase === GROUP_GAME_PHASE.COUNTDOWN ||
-                phase === GROUP_GAME_PHASE.PLAYING) && (
-                    <WikiViewer
-                        target={targetForViewer}
-                        currentTitle={currentTitle}
-                        currentSummary={currentSummary}
-                        currentDocumentHtml={currentDocumentHtml}
-                        links={links}
-                        quickLinks={quickLinks}
-                        isLoading={isLoading}
-                        elapsedSeconds={remainingSeconds}
-                        clickCount={clickCount}
-                        startTitle={startTitle}
-                        timerLabel={groupTimerLabel}
-                        onLinkClick={handleMove}
-                    />
-                )}
+            <RaceFrame mode="group" label="그룹 레이스">
+                <RaceHud>
+                    <HudBrand mode="그룹" />
+                    <HudDoc kind="current" label="현재 문서" title={currentTitle} />
+                    <HudArrow />
+                    <HudDoc kind="goal" label="목표 문서" title={target.title} />
+                    <HudStatus>{isGroupPlaying && graceCopy && <Pill tone="gold" filled wrap icon="flag" key={graceCopy}>{graceCopy}</Pill>}</HudStatus>
+                    <HudStat label="이동" value={clickCount} />
+                    <HudTimer label={isGroupPlaying ? deadline.label : "남은 시간"} seconds={isGroupPlaying ? remainingSeconds : deadline.seconds} state={isGroupPlaying ? deadline.state : "normal"} />
+                    <HudExit label="나가기" onClick={requestExit} disabled={leaving} />
+                </RaceHud>
 
-            {phase === GROUP_GAME_PHASE.PLAYING && (
-                <>
-                    <FloatingHud
-                        targetTitle={target.title}
-                        elapsedSeconds={remainingSeconds}
-                        clickCount={clickCount}
-                        timerLabel={groupTimerLabel}
-                    />
-                    <ScrollToTopButton />
-
-                    <div className="group-rank-panel">
-                        <strong>실시간 순위</strong>
-                        <div>
-                            {finishedPlayers.length === 0
-                                ? "아직 도착자가 없습니다"
-                                : finishedPlayers
-                                    .slice(0, finishRankLimit)
-                                    .map((p) => `${p.rank}등 ${p.nickname_snapshot || "참가자"}`)
-                                    .join(" · ")}
+                <div className="wr-race-body">
+                    <aside className="wr-race-side">
+                        {rosterPlaying}
+                        <div className="wr-roster-foot">
+                            <div className="wr-roster-foot-head">
+                                <span className="wr-hud-label">내 경로</span>
+                                <small>{pathTitles.length}문서</small>
+                            </div>
+                            <RouteChain path={pathTitles} />
                         </div>
-                    </div>
-                    <div className="group-player-progress-panel">
-                        <strong>참가자 진행 상황</strong>
+                    </aside>
+                    <main className="wr-race-main">
+                        <WikiViewer
+                            target={targetForViewer}
+                            currentTitle={currentTitle}
+                            currentSummary={currentSummary}
+                            currentDocumentHtml={currentDocumentHtml}
+                            links={links}
+                            quickLinks={quickLinks}
+                            isLoading={isLoading}
+                            elapsedSeconds={remainingSeconds}
+                            clickCount={clickCount}
+                            startTitle={startTitle}
+                            timerLabel={deadline.label}
+                            onLinkClick={handleMove}
+                        />
+                    </main>
+                </div>
 
-                        <div className="group-player-progress-list">
-                            {players.map((player) => {
-                                const isMe = player.user_id === user?.id;
+                <GroupSheet
+                    deadline={isGroupPlaying ? { ...deadline, seconds: remainingSeconds } : deadline}
+                    meLabel={me && Number.isInteger(me.rank) ? `${me.rank}위 완주` : "진행 중"}
+                    counts={rosterCounts}
+                    open={sheetOpen}
+                    onToggle={() => setSheetOpen((open) => !open)}
+                    status={isGroupPlaying && graceCopy ? <Pill tone="gold" filled wrap icon="flag">{graceCopy}</Pill> : null}
+                    activeTab={sheetTab === "compare" ? "roster" : sheetTab}
+                    onTab={setSheetTab}
+                    tabs={[
+                        { id: "roster", label: "참가자", content: rosterPlaying },
+                        { id: "route", label: "내 경로", content: myRoute(pathTitles) },
+                    ]}
+                />
+            </RaceFrame>
 
-                                return (
-                                    <div
-                                        key={player.id}
-                                        className={`group-player-progress-item ${player.has_finished ? "finished" : ""
-                                            } ${isMe ? "me" : ""}`}
-                                    >
-                                        <div className="group-player-progress-top">
-                                            <span>
-                                                {isMe ? "나" : player.nickname_snapshot || "참가자"}
-                                            </span>
-
-                                            <em>
-                                                {player.has_finished
-                                                    ? `${player.rank}등 도착`
-                                                    : `${player.move_count ?? 0}회 이동`}
-                                            </em>
-                                        </div>
-
-                                        <div className="group-player-progress-title">
-                                            {player.current_title || "시작 대기 중"}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </>
-
-            )}
-        </div>
+            {isGroupPlaying && <ScrollToTopButton />}
+        </>
     );
 }

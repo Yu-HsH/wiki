@@ -12,7 +12,19 @@ import {
 import CountdownOverlay from "../components/CountdownOverlay";
 import SuccessOverlay from "../components/SuccessOverlay";
 import WikiViewer from "../components/WikiViewer";
-import FloatingHud from "../components/FloatingHud";
+import {
+  HudArrow,
+  HudBrand,
+  HudDoc,
+  HudExit,
+  HudStat,
+  HudStatus,
+  HudTimer,
+  RaceFrame,
+  RaceHold,
+  RaceHud,
+  RouteRail,
+} from "../components/wiki-race/race/RaceParts";
 import ScrollToTopButton from "../components/ScrollToTopButton";
 import { isSupabaseConfigured, supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
@@ -769,94 +781,106 @@ export default function GamePage({
     saveLocalGameState,
   ]);
 
+  const showRace =
+    phase === PHASE.PLAYING ||
+    phase === PHASE.COUNTDOWN ||
+    phase === PHASE.SUCCESS;
+
+  // Phase 3 — 싱글은 가장 가벼운 race HUD. 본문이 주인공이고 HUD는 목표·현재·이동·경과·나가기만.
   return (
-    <div className="wiki-game-page">
+    <>
       {isPageLoading && <PageLoadingOverlay />}
-      {error && <div className="state-text error">{error}</div>}
 
-
-      {/* SELECTING 단계의 로딩 UI */}
-      {phase === PHASE.SELECTING && hasPresetMode && !error && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            marginTop: "15vh",
-            gap: "1rem",
-            textAlign: "center",
-          }}
-        >
-          <h2 style={{ marginBottom: "0.5rem" }}>위키 문서를 준비하는 중...</h2>
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              border: "4px solid rgba(0,0,0,0.1)",
-              borderTop: "4px solid #3498db",
-              borderRadius: "50%",
-              animation: "spin 1s linear infinite",
-            }}
-          />
-          <p style={{ color: "#666" }}>
-            AI 타겟과 시작 문서를 불러오고 있습니다
-          </p>
-          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-        </div>
+      {/* SELECTING 단계의 로딩 UI / 폴백 */}
+      {phase === PHASE.SELECTING && (
+        <RaceFrame mode="single" label="싱글 탐험">
+          <RaceHud>
+            <HudBrand mode="싱글" />
+          </RaceHud>
+          {hasPresetMode && !error ? (
+            <RaceHold kicker="SINGLE · 준비" title="위키 문서를 준비하는 중...">
+              <p>목표 문서와 시작 문서를 불러오고 있습니다.</p>
+            </RaceHold>
+          ) : (
+            <RaceHold kicker="SINGLE" title="게임을 설정할 수 없습니다.">
+              {error && <p className="state-text error" role="alert">{error}</p>}
+              <p>메인 페이지로 이동합니다...</p>
+            </RaceHold>
+          )}
+        </RaceFrame>
       )}
 
       {/* 게임 진행 및 성공 화면 */}
-      {(phase === PHASE.PLAYING ||
-        phase === PHASE.COUNTDOWN ||
-        phase === PHASE.SUCCESS) && (
-          <WikiViewer
-            target={target}
-            currentTitle={currentTitle}
-            currentSummary={currentSummary}
-            currentDocumentHtml={currentDocumentHtml}
-            links={links}
-            quickLinks={quickLinks}
-            isLoading={isLoading}
-            elapsedSeconds={elapsedSeconds}
-            clickCount={clickCount}
-            startTitle={startTitle}
-            onLinkClick={handleMove}
-            highlightRequestId={itemSystem.highlightRequestId}
-            searchAvailable={itemSystem.searchAvailable}
-            onConsumeSearch={itemSystem.consumeSearchAvailable}
-            status={itemSystem.status}
-          />
-        )}
+      {showRace && (
+        <RaceFrame mode="single" label="싱글 탐험">
+          <RaceHud>
+            <HudBrand mode="싱글" />
+            <HudDoc kind="current" label="현재 문서" title={currentTitle} />
+            <HudArrow />
+            <HudDoc kind="goal" label="목표 문서" title={target.title} />
+            <HudStatus />
+            <HudStat label="이동" value={clickCount} />
+            <HudTimer label="경과" seconds={elapsedSeconds} />
+            <HudExit label="나가기" onClick={requestExit} disabled={phase !== PHASE.PLAYING} />
+          </RaceHud>
 
-      {/* 아이템 관련 UI */}
-      {useItems && itemSystem &&
-        (phase === PHASE.PLAYING ||
-          phase === PHASE.COUNTDOWN ||
-          phase === PHASE.SUCCESS) && (
-          <>
-            <ItemBar
-              inventory={itemSystem.inventory}
-              canUseItem={itemSystem.canUseItem}
-              onUseItem={itemSystem.useItem}
-            />
+          {error && <p className="state-text error" role="alert">{error}</p>}
 
-            <EffectOverlay
-              blindActive={itemSystem.activeEffects.self.some(
-                (e) => e.id === "blind"
-              )}
-              floatingMessage={itemSystem.floatingMessage}
-              immune={Date.now() < itemSystem.immunityUntil.self}
-            />
-          </>
-        )}
+          <div className="wr-race-body">
+            <aside className="wr-race-side">
+              <RouteRail path={pathTitles} currentTitle={currentTitle} />
+            </aside>
+            <main className="wr-race-main">
+              <WikiViewer
+                target={target}
+                currentTitle={currentTitle}
+                currentSummary={currentSummary}
+                currentDocumentHtml={currentDocumentHtml}
+                links={links}
+                quickLinks={quickLinks}
+                isLoading={isLoading}
+                elapsedSeconds={elapsedSeconds}
+                clickCount={clickCount}
+                startTitle={startTitle}
+                onLinkClick={handleMove}
+                highlightRequestId={itemSystem.highlightRequestId}
+                searchAvailable={itemSystem.searchAvailable}
+                onConsumeSearch={itemSystem.consumeSearchAvailable}
+                status={itemSystem.status}
+              />
+            </main>
+          </div>
+
+          {/* 아이템 관련 UI — 싱글 전용 기존 아이템. 1:1 공격/방어 아이템을 가져오지 않는다 */}
+          {useItems && itemSystem && (
+            <div className="wr-race-dock wr-race-dock--single">
+              <ItemBar
+                inventory={itemSystem.inventory}
+                canUseItem={itemSystem.canUseItem}
+                onUseItem={itemSystem.useItem}
+              />
+              <span className="wr-race-dock-hint">싱글 아이템 · 힌트 표시는 목표 링크를 보장하지 않습니다</span>
+            </div>
+          )}
+        </RaceFrame>
+      )}
+
+      {useItems && itemSystem && showRace && (
+        <EffectOverlay
+          blindActive={itemSystem.activeEffects.self.some(
+            (e) => e.id === "blind"
+          )}
+          floatingMessage={itemSystem.floatingMessage}
+          immune={Date.now() < itemSystem.immunityUntil.self}
+        />
+      )}
 
       {/* 카운트다운 오버레이 */}
       {phase === PHASE.COUNTDOWN && (
         <CountdownOverlay onComplete={handleCountdownComplete} />
       )}
 
-      {/* 결과 화면 */}
+      {/* 결과 화면 — Phase 4 범위. 기존 흐름 그대로 */}
       {phase === PHASE.SUCCESS && (
         <SuccessOverlay
           runId={serverRun?.id ?? null}
@@ -868,36 +892,9 @@ export default function GamePage({
         />
       )}
 
-      {/* 게임 도중 HUD 및 조작 버튼 */}
-      {phase === PHASE.PLAYING && (
-        <>
-          <FloatingHud
-            targetTitle={target.title}
-            elapsedSeconds={elapsedSeconds}
-            clickCount={clickCount}
-          />
-
-          <button
-            type="button"
-            className="single-giveup-button"
-            onClick={requestExit}
-          >
-            포기하고 로비로
-          </button>
-
-          <ScrollToTopButton />
-        </>
-      )}
-
-      {/* 아무 상태도 아닐 때의 폴백 */}
-      {phase === PHASE.SELECTING && (!hasPresetMode || error) && (
-        <div style={{ textAlign: "center", marginTop: "15vh" }}>
-          <h2>게임을 설정할 수 없습니다.</h2>
-          <p>메인 페이지로 이동합니다...</p>
-        </div>
-      )}
+      {phase === PHASE.PLAYING && <ScrollToTopButton />}
 
       {exitDialog}
-    </div>
+    </>
   );
 }
