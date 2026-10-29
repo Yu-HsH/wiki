@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { LEGACY_SINGLE_START_DURATION_MS, SINGLE_START_DURATION_MS, singleStartFrame, singleStartVisualTime } from '../../utils/singleStart.js';
+import { LEGACY_SINGLE_START_DURATION_MS, SINGLE_START_DURATION_MS, singleStartFrame, singleStartVisualTime, singleReverseLeafFrame } from '../../utils/singleStart.js';
 import '../../css/wikiRaceSingleStart.css';
 import useAudioCues from '../../hooks/useAudioCues.js';
 import { SINGLE_AUDIO_CUES } from '../../utils/audioTimeline.js';
@@ -84,11 +84,15 @@ export default function SingleStartCinematic({ run, getServerNow, getElapsedMs, 
       style('.book', { opacity: entry, transform: quiet ? 'none' : `translateY(${(1-entry)*100-camera*9}px) rotateZ(${(1-entry)*-5-camera*.6}deg) rotateX(${camera*2}deg) scale(${.9+.1*entry+camera*.025})` });
       style('.book-cover', { transform: `rotateY(${168*opening}deg)`, visibility: opening >= .999 ? 'hidden' : 'visible' });
       style('.book-pages', { clipPath: quiet ? 'none' : `inset(0 0 0 ${50*(1-opening)}%)` });
-      style('.opening-sheet', { visibility: t >= 3.52 || skip ? 'hidden' : 'visible', opacity: quiet ? 1 : ease(progress(t,.68,1.02)) });
-      style('.arrival-sheet', { visibility: skip || t >= (reduced ? 2.9 : 3.82) ? 'visible' : 'hidden' });
+      // A right-bound journal rewinds by returning the BACK pages first, then the
+      // departure title sheet. Goal stays visible beneath until that last return.
       element.querySelectorAll('.rewind-leaf').forEach((node, index) => {
-        const end = 3.52 + index*.22, p = progress(t,2.9+index*.22,end);
-        Object.assign(node.style, { visibility: !skip && t < end && (!reduced || index === 0 && t < 2.9) ? 'visible' : 'hidden', transform: quiet ? 'none' : `rotateY(${180*p*p*(3-2*p)}deg)`, zIndex: String(28-index*2) });
+        const leaf = singleReverseLeafFrame(ms, index);
+        Object.assign(node.style, {
+          visibility: quiet || leaf.visible ? 'visible' : 'hidden',
+          transform: quiet ? 'none' : `rotateY(${leaf.angle}deg)`,
+          zIndex: String(leaf.zIndex),
+        });
       });
       if (elapsedMs >= durationMs) {
         if (!due.current) {
@@ -108,8 +112,8 @@ export default function SingleStartCinematic({ run, getServerNow, getElapsedMs, 
   </section>;
   return <div ref={root} tabIndex={-1} className="wr-page wr-single-start" data-testid="single-start-cinematic" data-phase={frame.phase} data-quiet={skip || reduced} data-duration-ms={durationMs} role="dialog" aria-modal="true" aria-label="싱글 탐험 출발 준비">
     <div className="book book-rewind"><div className="book-leaves"/><div className="book-pages"><div className="book-page left"/><div className="book-page right"/></div>
-      <div className="journal-binding" aria-hidden="true"><i/><i/><i/></div><div className="rest-page">{page('start', 'arrival')}</div>
-      <div className="rewind-stack">{[0,1,2].map(index => <div key={index} className="rewind-leaf"><div className="leaf-front">{index === 0 ? page('target', 'opening') : <div className="blank-page-lines"/>}</div><div className="leaf-back"/></div>)}</div>
+      <div className="journal-binding" aria-hidden="true"><i/><i/><i/></div><div className="rest-page">{page('target', 'opening')}</div>
+      <div className="rewind-stack">{[0,1,2].map(index => <div key={index} className="rewind-leaf"><div className="leaf-front">{index === 0 ? page('start', 'arrival') : <div className="blank-page-lines"/>}</div><div className="leaf-back"/></div>)}</div>
       <div className="book-cover"><div className="cover-front">{compass}<h2>WIKI<br/>RACE</h2></div><div className="cover-back"/></div>
       <span className="inline-count" data-count={frame.count || ''} hidden={!frame.count} aria-live="polite">{frame.count}</span>
     </div>
