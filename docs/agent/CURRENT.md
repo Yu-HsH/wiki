@@ -1,8 +1,555 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-08** (Phase 1–4 커밋 후 최종 릴리스 회귀 · `release-validation-local-smoke` 셀렉터 복구) · 이전: 2026-10-07 (UI Phase 4 RESULT 로컬 구현 기록) · 2026-10-07 (UI Phase 3 기록) · 2026-10-07 (UI Phase 1·2 로컬 커밋 기록) · 2026-10-06 (Production 배포 #15)
-기준 커밋: **`4818c34`** (`feat: integrate jungle expedition result UI` — Phase 4 코드). Phase 3 = `b6b6a2c`, Phase 4 = `4818c34` — **Phase 1–4 전부 로컬 커밋됨**. 작업 트리의 미커밋 변경은 `scripts/release-validation-local-smoke.mjs` 셀렉터 복구(아래 최종 회귀 절)와 이 문서뿐이다.
-브랜치: `feat/group-final-gaps`. **원격 `main` = `feat/group-final-gaps` = `d496ba2`** (`git ls-remote origin`, 2026-10-08 재측정 [산출물]) — 로컬은 그 위에 미push **6커밋**(`6629445` 문서 · `62105a3` Phase 1 · `b1dec43` Phase 2 · `321ea27` 문서 · `b6b6a2c` Phase 3 · `4818c34` Phase 4). **Production = `d496ba2`** (2026-10-06 배포 #15 기록 기준, 이번 세션 미재조회). Phase 1–4 UI는 **로컬 커밋 · 미push · 운영 미배포** (이 기록 이후의 push는 반영되어 있지 않다).
+갱신 날짜: **2026-10-29** (조건부 운영 배포 및 관련 검증35파일 선별 커밋 승인 수신. 실제 JWT 거부/회원 성공·최신 백업 격리복원·180파일 커밋 확인. DB migration/Edge/main push/Vercel 적용은 아직 없음. 검색 소비 미해결 후속 유지).
+기준 커밋: **`078a6906d28b86e8d1864afaef68ebbf53fa833d`** (승인 제품145 + 검증35 = 180파일 release commit). 고정 후보 source SHA-256 **`c7ef6142bfa9b357d7034dfdce126cff2a81fcf1ba4786b014bd1315f1eba555`** 유지. 이 기록 커밋의 부모가 기준이다.
+브랜치: **`main`**. **원격 `main` = `feat/group-final-gaps` = `4830b38fee774aa8953a8740cd50563c43d0eb76`** (`git ls-remote origin`, 2026-10-29 재확인 [산출물]). 기존 "d496ba2·6커밋 미push" 서술은 현재와 다르다. **실제 Vercel Production도4830b38/Ready**, 배포ID `Fg9XeDWqCDJ5LNSz71Xn3kzJKbYf`·생성Oct8·alias `wiki-dusky-one.vercel.app`을 2026-10-29 dashboard에서 확인했다. #15 이후 push 실행자·건별 승인·정확한 횟수는 미확인으로 번호를 추측해 추가하지 않았다. 아래 이전 날짜의 미push/미배포 문장은 당시 기록이다.
+
+## 2026-10-29 조건부 운영 배포 승인·인증 선행 검증
+
+사용자가 동일 후보의 기존 migration10건→single-run/duel-link-preview→프론트130파일 선별 main 배포를 승인했고, 별도 승인으로 검증35파일을 추가했다. [진행 기록/인증 설정 정정/실제 적용 상태](../ops/RELEASE-2026-10-29.md), [검증35개 목록](2.0x/RELEASE-VERIFICATION-FILES-2026-10-29.json). 제품·DB·Edge 소스와 source SHA는 변경하지 않았다. 검색 성공 소비 우회는 **미해결/알려진 제약 승인**이며 [후속 과제](2.0x/SEARCH-CONSUMPTION-FOLLOWUP.md)로 남긴다.
+
+기준 release commit **078a6906d28b86e8d1864afaef68ebbf53fa833d**, 후보 source **c7ef6142bfa9b357d7034dfdce126cff2a81fcf1ba4786b014bd1315f1eba555**, 2026-10-29 KST. 정확히180파일만 커밋했고 검증한 별도 트리·Git staged object와 대조했다. 해당 트리 npm682/682·운영공개설정build성공(306모듈). 기존 승인 소스의 EOF빈줄경고1건은 SHA보존을 위해 유지했고 그 외 whitespace/충돌 검사 통과. 현재 원격main/feat는4830b38, 실제Production은이전Ready배포이며 push하지 않았다.
+
+preview 최종 설정은 실제 리허설과 같은 **verify_jwt=false + handler auth.getUser 필수회원검증**이다. 이전 LOCAL-RECOVERY의true는당시계획을정정했다. 무토큰/anonapikey/anonJWT/위조JWT/정상서명만료JWT는401,정상서명유효JWT는인증통과·실제회원미리보기/Wikipedia/서버used1확인. 운영test계정3개는추가승인으로정상가입/로그인했고자격정보는저장소밖DPAPI암호화보관. 그뒤최신운영백업2,001,325bytes를별도빈격리DB실복원하여73테이블/함수101/정책42/RLS·ACL72/기본권한24동일확인. 운영raw열린듀얼36행은최근heartbeat10월3일/최근5분신호0,active싱글3행은모두만료상태이며삭제·보정하지않았다. 아래승인대기표기는승인전당시기록이다.
+
+## 2026-10-29 운영 배포 격리 리허설 — 조건부 승인 대기
+
+기준 **4830b38 + 고정 후보 c7ef6142…eba555, 2026-10-29 KST**. [전체 결과·정확한 적용 순서·복귀 제한·미해결/승인 조건](2.0x/RELEASE-REHEARSAL-2026-10-29.md), [후보 파일별 SHA/함수 시그니처/제외 목록](2.0x/RELEASE-CANDIDATE-2026-10-29.json). 원격 main/feat 모두4830b38을 재확인했다. 운영은 백업/read-only SELECT만, migration·Edge/Vercel 변경·commit/push0이다.
+
+운영 전체 custom archive를 새 무료 로컬 Docker **wiki-next-goal-release-20261029/API55421/DB55422**의 빈 DB에 실제 복원했다. 기존 사용자 **wiki-packet13-r2-clean158/54321/54322**는 쓰기 대상에서 제외했다. **73테이블 데이터 지문·함수101·정책42·테이블 RLS/ACL72·기본 권한24 동일**. 역할의 로컬 플랫폼 차이는 별도 기록했고 앱 인증/권한은 실제 API/pgTAP으로 검증했다. 백업·계정·자격 원문은 Git 제외 보호 위치에만 보관했다. 복원본을 보존하고 복사 DB에 **기존10파일만 공식 CLI 순차 적용32→42/pending0**. 별도 migration 전용 복사본의 업무72테이블 중71개 동일, pool만예정된12→17행이다. 공식CLI DB이력10행추가는별도예정변경이다. 로컬 플랫폼 _realtime 누락은 격리 초기 DB에서 관리 스키마만 보완해 해결했다. 운영 적용 대상은 아니다 [산출물: .temp/release-rehearsal-20261029/].
+
+같은 기준/날짜 **npm682/682·pgTAP28파일1500/1500·고정 후보 자체build/diff성공**. 새 랜덤62검사·커스텀/데일리 각7·실제 신구계약 혼재 랭킹9·새듀얼19·3계정그룹7·미리보기 권한/경합17·싱글동시성5·듀얼3시나리오×5/교착0·그룹하니스전체통과. 문서 fixture 검증과 별도로 **새390px UI→무수정Deno→실제Wikipedia 서울특별시 요약→서버used1**을 확인했다. 이전 프론트+이전 Edge+새DB/이전 프론트+새Edge+새DB/새프론트의 옛 런 복구 각각8검사 통과. 옛 프론트 완료F5는 원래 로비 이동 계약이며 새 결과 유지로 오판하지 않았다. 테스트의 기존 데이터/후보/상위50개 가정만4파일 수정, 제품·migration·음원 추가수정0이다.
+
+**검색 성공 소비는 여전히 클라이언트 권위**다. 정상1회 후 React 상태를 되돌리면 같은 이벤트로두번째검색성공/서버원장불변을재현했다(검색9검사 중취약점재현 포함). 기존2026-10-14보류를유지하며서버해결/출시승인으로전환하지않는다. 새scheduled런이있을때옛Edge의snapshot_v1은UNSUPPORTED_ACTION, 새Edge복구후동일런/예약시각보존·소유자leave_v1/결과0확인. **복귀기본은확장DB·새Edge유지+프론트이전artifact**, 전체DB덮어쓰기/무차별런삭제아님. 이전Edge완전복귀는새API캐시클라이언트까지해소해야한다.
+
+**기술리허설통과/조건부운영승인대기**: 검색서버소비미해결위험을명시적으로수용하는건별승인필요. 전체서버권위해결이출시조건이면배포불가. 고정범위는프론트130변경파일·기존migration10건·Edge5파일/2함수이며, 검증참고251파일/음원시안/개인설정/백업을일괄커밋하지않는다. 초기1646파일소실0·기존public/audio53파일SHA동일·config/lockfile보존. 격리컨테이너9개만중지/볼륨보존·기존사용자DB계속가동확인. 실Vercel승격/복귀·Storage본체복원·실기기/Safari/OS suspend는미검증. 기존Production4830b38확인은아래같은날짜앞선실측기록을따른다. 아래복원미실행/배포보류문장은이리허설전기록이다.
+
+## 2026-10-29 승인 로컬3건 복구·싱글 실플레이·운영 호환성 확인
+
+기준 **4830b38 + 기존 미커밋 작업 트리 + 검수 수정 + WikiViewer 수정, 2026-10-29 KST 확인**. [적용/백업·실제 검증·F01~F09 최종 상태·운영 변경/복구 제안](2.0x/LOCAL-RECOVERY-2026-10-29.md). 활성 경기0·로컬API54321/DB54322·39/pending3을 재확인했고 Git 제외 전체DB/schema 백업·archive 전체해독을 확인했다. 복원리허설은 미실행이다. 사용자가 지정한 `20261015061829`→`20261015062624`→`20261015233503`만 원문대로 적용해 **42/pending0**. auth/public/private/storage **73테이블 기존컬럼·행수·digest 동일**·새 컬럼/RPC/RLS/권한 확인. reset/repair/임의 SQL/계정 재생성/삭제 없음 [산출물: `.temp/local-recovery-20261029/`].
+
+실제 데일리 대한민국→훈민정음 1회/11초/+25, 랜덤 장자겸→강유→시간→1998년 FIFA 월드컵→2011년 세계 유도 선수권 대회→덱스 엘몬트 5회/281초/+20, 커스텀 길려원→대한민국 1회/25초/+15 완주. 세 런 모두 서버 예약8,600ms·실제시작=예약·새시간계약·결과/지급 각1행. 준비/진행/결과F5·실제 할당/예약 재요청 동일런/시각·중복결과/원장0. 프로필3완주/435XP/Lv5/새최고0:11과 실제 계약랭킹 확인. 기존NULL 계약 싱글결과0건이므로 양코호트 모두실데이터인 혼재상태는 미검증. DB 복구 후 추가로 발견한 준비DOM의 href 미복구를 `components/WikiViewer.jsx`에서 최소 수정했고 커스텀은 F5없이 시작/이동했다.
+
+두 계정 듀얼 정상21초/1회·25/12XP(같은상대4~5번째50%감쇠), 아이템전 기권32초·본인0/상대0(6번째이상0%감쇠)·안내/양쪽결과F5·저장1행 재확인. 새 그룹 **9A9C51**은 사용자 직접 test2 UI 참가 후 **3/3 READY→훈민정음→한글**, 각1회 이동·1위1초/2위39초/3위134초로 전원 완주했다. 개인 결과 선저장·관전본문20,985자/내부앵커518개 읽기전용·클릭 비이동·대상자동전환·개인F5를 확인했다. `finished/all_resolved`·최종3행·XP **70/55/45** 각1행, test/test1 양쪽 결과F5 전후 저장JSON 동일·중복0. test2 자신의 화면에서 **3위·45 XP 및 F5 후 동일 표시**를 사용자도 확인했다 `[사용자 확인, 2026-10-29]`. 서버 결과/지급은 별도 SELECT 확인. 누적XP **530/287/150**, 실제 test 프로필Lv6/그룹1위3회·싱글3회/0:11 유지, 주간게임XP **440/227/90** 반영 확인.
+
+앞선 턴의 Windows URL 확인 중단·viewport 미반영은 당시 기록으로 남긴다. 사용자 READY 응답 후 새 턴에서 브라우저 제어가 정상 복귀했고, **DOM 실제390×844**에서 경로비교·최종결과·소리/관전정보 비중첩을 재확인했다. 비교 scrollWidth375≤390·이동수nowrap·이름/순위 배치 정상. 소리 panel 하단353.5 < 관전정보 상단730. 기본정원6 대기방 A4A28D에서도 후보→소리설정열기→READY실제클릭→서버1/1·준비취소·정상나가기 확인. 기본6/선택3~8·실제정원8의3계정 준비/완주로 F03/F06/F08 검증을 보완했다. 제품코드/SQL추가변경 없이 수행한 일반플레이이며 직접 데이터 삭제/보정 없음. 아래 최초 검수 기록과 새 증거를 구분한다.
+
+동일 기준/날짜 **npm682/682·build/diff exit0**, 기존청크경고. 초기변경경로1348개 소실0·승인음원53파일SHA동일. Single8.6/Duel2.7·win/go자연종료소스 보존, 새음성/정확2.7영상측정은 미검증. 추가DB적용/운영변경/commit/push/배포0.
+
+운영은 `BEGIN READ ONLY` 카탈로그/이력/객체·Edge다운로드로만 대조했다. 이력32·후속10 미기록에 더해 실제예약컬럼/할당·계약/XP랭킹RPC·daily검증후보컬럼·프리뷰객체가 없고 이동/item일부정의도다름. **현재작업트리와 운영은 비호환이므로 프론트단독배포 금지**. 운영single-run v2는HEAD4830b38과같고새예약API없음, duel-link-preview미배포. wiki-snapshot v3/duel-random-teleport v1는현재소스와LF정규화후동일해 불필요재배포대상에서제외. 실제Production4830b38/Ready·프론트GET200/기존EdgeOPTIONS200 확인, 운영실플레이미검증. 원래옛프론트/Edge의운영장애를단정하지않는다. 위상세보고서§6에대상별순서·데이터영향·백업/복원·기존배포복귀안과새승인조건을준비했으나실행하지않았다.
+
+## 2026-10-29 최초 검수 F01~F09 수정 — 아래는 로컬 적용 승인 전 당시 기록
+
+기준 **4830b38 + 기존 미커밋 작업 트리 + 이번 검수 수정, 2026-10-29 KST 확인**. [F별 상태·전체 수정 파일·실제 검증·DB 적용 후보/데이터 영향/복구·미확인 범위](2.0x/AUDIT-REPAIR-2026-10-29.md). 세 싱글 시작의 실제 Edge 502 본문·서버 로그는 공통 `claim_single_course_v1` 부재였다. `commit/control`도 없으며 `timing_contract`·계약 랭킹 RPC도 없다. 로컬 적용 39개/저장소 42개, 후속 `20261015061829`·`20261015062624`·`20261015233503` **미적용 유지**. 컬럼 하나를 제거하거나 옛 계약으로 우회하지 않았다. 오류 코드를 보존하고 실제 Edge 503 `SERVER_CONTRACT_UNAVAILABLE`·한국어 안내/재시도로 정리했다. 싱글 완주·저장·XP/시간 랭킹은 미검증이다 [코드/산출물: `.temp/audit-repair-20261029/`].
+
+프로필 실패→정상 0회 처리를 제거하고 본인/공개 프로필·HOME/랭킹 재시도/진단 로그를 추가했다. 그룹 비교의 참가자용 `grid-area: rank` 충돌을 전용 셀로 수정하고 이름/이동 수·순위 배치를 실제 390px/데스크톱에서 확인했다. 소리 버튼을 문서 흐름의 상단 영역으로 옮겨 READY·관전 하단 비중첩과 클릭을 확인했다. 그룹 기본 6명을 유지하며 3~8명 선택→실제 정원 8 방 생성/코드 참가, 확정 완주/유예 규칙 안내, 듀얼 즉시 기권패/본인 0 XP 안내, 업적 보상 사용자 문구를 수정했다.
+
+실제 앱/로컬 API/Wikipedia·응답 대체 없음. 기존 2계정 UI 듀얼 정상 `서로의 미래→SNH48→중국→대한민국` 3회/47초, +50/+25·양쪽 F5·결과/원장 중복 없음. 일반전 기권 취소/확정·본인0/상대15(기본30의 동일 상대 4~5번째 감쇠50%)·F5 확인. 정원8의 실제3계정 그룹 한글→훈민정음, 두 계정 UI/세 번째 정상 공개 가입·로그인/게임 API. 개인 완주→관전→비교→전원 종료, 1/2/3위·7/37/63초·각1회·기본70/55/45 XP 저장, 두 브라우저 F5 전후 결과/원장 동일. 프로필 누적345/220/105·주간게임285/160/45 확인. 세 번째 계정은 삭제하지 않았고 자격 정보는 파일에 저장하지 않았다. 세 번째 UI 조작·4위/유예 만료·7/8번째 입장·실휴대전화/Safari는 미검증이다.
+
+같은 기준/날짜 **npm682/682·build/diff exit0**, 기존 큰 청크 경고. 기존 public/audio **53파일 SHA 동일**, 초기 git status 경로 소실0. Single8.6초/Duel2.7초·win/go 자연종료 소스 유지, 새 파형 녹화 검증은 아니다. SQL 수정/적용·초기화·수동 데이터 삭제·운영 변경·commit/push/배포0. 운영은 **읽기 조회만** 수행: migration 이력32개/마지막20261006003000, single-run ACTIVE v2·wiki-snapshot v3·duel-random-teleport v1. 운영 실제 스키마/싱글 API/현재 Production SHA는 미검증이며 로컬과 같은 장애라고 판단하지 않는다. 로컬3건 적용 승인은 운영 후속10건 적용을 뜻하지 않는다. 배포 전 싱글 세 흐름 검증과 운영 의존성 별도 검토가 필요하다.
+
+
+## 2026-10-25 오프닝 V02 — 웅장함·여행 시작의 설렘
+
+기준 **4830b38 + 기존 미커밋 + 오프닝 V02, 2026-10-25 KST 확인**. 사용자 요청에 따라 **「새로운 지평으로」**를 새로 합성하고 `opening` URL만 `opening-v02/journey-departure.wav`로 바꿨다. 넓은 현악 합주·8분음표 현악/하프·상행 호른 주제·저음·팀파니·목관·밝은 반짝임을 더하고 후반부 악기층을 키웠다. 기존 helper/NumPy만 사용했으며 새 의존성/API/샘플0. **20초·96 BPM·8마디, BGM28% × 곡 gain0.5**는 유지했다. native PCM RMS는 V01 **0.062063** → V02 **0.062052**(약0.02% 차이), clipping0으로 평균 음량을 맞췄다. 이 수치는 정서적 완성도의 판정이 아니라 음량·파일 검사다 [코드/산출물: `docs/sound-prototypes/opening-v02/compose.py`, `public/audio/opening-v02/manifest.json`, `services/audioAssets.js`, `.temp/audio-opening-v02-20261025/pcm-comparison.json`].
+
+첫 시작·로그인(`/`, `/login`)의 기존 첫 조작/음소거/숨김/화면 전환 정책을 그대로 사용한다. **AudioManager·기존 효과음/시작/결과 연출·게임 규칙 변경0**이며 V01과 이전 Fixed/Opening ZIP을 보존했다. 역할31개·실사용 원본25개는 그대로이고 활성 오프닝의 경로만 교체했다. 검수 스크립트2개는 이전 기록을 덮어쓰지 않도록 출력 경로 환경변수와 KST 기록 날짜를 보완했다 [코드: `scripts/verify-opening-audio.mjs`, `scripts/analyze-opening-audio.mjs`].
+
+동일 기준/날짜 검증: **npm test677/677**, build/diff exit0(기존 큰 청크 경고), 실제 로그인6사례 통과. 새 실제 React/Web Audio 녹화2개에서20초 루프 경계2회 동안 opening source1개·로그인/회원가입 재렌더 재시작0·게스트 HOME 전환·음량/음소거·숨김/복귀/F5/가이드 이탈을 재검증했다. 녹화의 실제 음성 트랙·PCM·반복 상관 **0.99999999** 확인. 실제 서버·실계정·실기기·Safari·OS 탭 동작·주관적 청음은 미검증이며 웅장함/설렘의 최종 판단은 사용자 청음이다 [산출물: `.temp/audio-opening-v02-20261025/{npm-test.log,build.log,browser-validation.json,media-validation.json}`].
+
+**[V01/V02 비교 청음](../../deliverables/audio-opening-v02-20261025/package/index.html)** · **[WikiRace_Opening_V02_Review.zip](../../deliverables/audio-opening-v02-20261025/WikiRace_Opening_V02_Review.zip)** — **6,872,239bytes·30파일**, SHA-256 **`2c8b23c936d3415cc9a3a8c02390ab37aafe9d3f388efe45decc21c8aff75b8d`**. WAV4개(새 기본/이전 기본/새 원본/새 두 바퀴)·새 녹화2개·이벤트·소스/테스트·검증기 포함. 새 추출본 해시/경로 누락0·6플레이어 시작/탐색/종료·음성 디코딩·외부 요청0·추출본 오디오49/49 [산출물: 같은 전달 폴더 `validation.json`]. 아래 V01 절은 이전 기록이다. commit/push/운영 변경0.
+
+## 2026-10-25 첫 시작·로그인 전용 오프닝 BGM
+
+기준 **4830b38 + 기존 미커밋 + 로그인 오프닝 추가, 2026-10-24~25 KST 확인**. 사용자 지정은 **로그인하는 페이지·아예 처음 시작 화면**이다. `/`(IntroPage의 로그인 모달 포함)·`/login`에만 새 `opening`을 연결했다. 첫 클릭/키 입력 뒤 재생하며 로그인·회원가입 UI 재렌더와 두 경로 사이에서는 같은 곡이 이어진다. 로그인 후 HOME(`/lobby`)에서 기존 칼림바로 전환하고, 공개 문서·게임 경로에서는 기존 종료 정책을 따른다. **싱글·듀얼·그룹 경기 시작 연출에는 새 BGM을 연결하지 않았다** [코드: `services/audioManager.js:musicName`, `services/audioAssets.js`; 실제 화면: `pages/IntroPage.jsx`, `pages/LoginPage.jsx`, 기존 `components/AudioControls.jsx`는 미수정].
+
+새 원곡 **「탐험의 서문」20초·96 BPM·8마디**, 하프 아르페지오·목관·낮은 현악·작은 나무 타격. 기존 합성 helper/NumPy로 직접 합성했으며 새 의존성/API/샘플은 없다. 런타임24kHz mono PCM16, 기존 BGM28% × 새 곡 gain0.5이며 기존 HOME/플레이/결과·SFX 음량은 그대로다. 역할은 **BGM4 + SFX27 = 31**, 실사용 원본25개다. 기존 public WAV34개와 이전 Fixed ZIP의 SHA는 보존했다 [코드/산출물: `docs/sound-prototypes/opening-v01/compose.py`, `public/audio/opening-v01/manifest.json`, `services/audioAssets.js`].
+
+검증(같은 기준, 2026-10-24~25 KST): **npm test677/677**, 오디오 단위/피드백 **49/49**, build exit0(기존 큰 청크 경고), diff-check exit0. 기본 `node --test`가 `deliverables/`의 과거 검수 소스 사본까지 실행해 누락 의존성으로 실패했으므로 `package.json`의 test 대상을 **`tests/*.test.js`**로 명시했다. 원래 제품 테스트 파일은 삭제/변경하지 않았다(오디오 회귀3건 추가만 별도). 격리 브라우저의 로컬 파일 제공기가 `/` 루트를 잘못 차단하던 조건도 `scripts/audio-static-app.mjs`에서 보완했다. 로그인6사례: 첫 조작 전 context0·20초 루프 경계2회 중 source1개/재시작0·로그인/회원가입 전환·실제 게스트 버튼 HOME 전환·개별 음량/전체 음소거·숨김/복귀/F5/가이드 이탈. 녹화2개는 실제 소리 트랙1개·PCM 확인, 첫 녹화 두 주기 상관1.0이다 [산출물: `.temp/audio-opening-20261024/{npm-test-final.log,audio-tests-final.log,build.log,browser-validation.json,media-validation.json}`].
+
+기존 효과음은 현재 게임 화면에서 다시 녹화해 **win3.800초·go1.309333초**, stop 요청 없음·승리음 종료 뒤 결과 BGM1회·Single8.6초/Duel2.7초 유지·F5 중복0을 확인했다. 개발 StrictMode/취소/identity15사례도 통과했다. 실제 서버·실계정 로그인·실제2계정·실제 모바일·Safari·OS 탭 정책·주관적 청음은 여전히 **미검증**이다. 새 영상도 실제 제품 React/Web Audio + 로컬 응답 재현이며 실제 인증/XP 지급 성공의 증거가 아니다 [산출물: `.temp/audio-opening-20261024/lifetime/after/lifetime-checks.json`, `.temp/audio-opening-20261024/strictmode/browser-validation.json`].
+
+별도 **[WikiRace_Opening_Audio_Review.zip](../../deliverables/audio-opening-20261025/WikiRace_Opening_Audio_Review.zip)**: **6,416,234bytes·40파일**, SHA-256 **`900402d69686eb25ea4d0234f4d0f591aca77299d5ac2727fe8cb06a6e6cb234`**. 원본/기본음량/두 바퀴 WAV3개·실제 녹화4개·이벤트/검증 로그·오디오 테스트 의존 소스·해시/검증기를 포함한다. 새 추출본의 경로·해시 누락0, 플레이어7개 시작/탐색/종료·음성 디코딩·외부 요청0, 추출본 테스트49/49 [산출물: 같은 폴더 `validation.json` 및 `validation/`]. 아래 Fixed ZIP은 오프닝 추가 전 AUDIO-01/02 검수 기록으로 보존하며 덮어쓰지 않았다. commit/push/운영 변경0.
+
+## 2026-10-24 효과음 잘림 AUDIO-01·02 수정 검수
+
+기준 **4830b38 + 기존 미커밋 작업 + 오디오 수명 수정, 2026-10-24 KST**. 수정 전 현재 React 게임을 다시 녹화해 듀얼 `win` **1.850667초/원본3.8초**, 싱글 `go` **0.520000초/원본1.3초** 중단을 확인했다. 승리음이 끊긴 **뒤에** 결과 BGM이 시작했으며, 기존 약1.9초 겹침 추정은 근거로 사용하지 않는다 [산출물: 최종 ZIP `reproduced-before/events/`, `reports/lifetimes.json`].
+
+정상 완료는 연출 scope의 추가 요청·진행 중 decode를 닫고 **이미 시작한 win/go만 자연 종료**시킨다. hook cleanup은 정상 인계와 중단을 구분하며 identity 변경 시 이전 owner를 취소한다. 스킵·숨김·pagehide·이탈·음소거·SFX0·새 경기/연출에서는 여운도 중단한다. 결과 BGM은 기존 실제 result voice `onended`를 기다리며 고정 지연 타이머를 추가하지 않았다 [코드: `services/audioManager.js`, `hooks/useAudioCues.js`, `components/cinematic/DuelEndSequence.jsx`, `components/cinematic/SingleStartCinematic.jsx`].
+
+수정 후 실제 게임 녹화에서 `win` **3.800000초**, `go` **1.309333초**(Web Audio 종료 콜백 관측값), 모두 stop 요청 없이 끝났다. Single 예약 계약 **8.600초**, 실제 화면 전환 **8.613400초**(다음 렌더 프레임), Duel 표지 **약2.7초** 유지. 결과 BGM은 승리음 ended 뒤1회다. 승인된 실사용 원본24개·public WAV34개·`audioAssets.js` 및 기존 게임 기본 설정 청음30개의 SHA는 수정 전과 같다 [산출물: ZIP `events/duel-win-after.events.json`, `events/single-go-after.events.json`, `reports/preservation-security.json`, `reports/preview-render.json`].
+
+같은 기준/날짜 검증: **npm test675/675**, 오디오 단위·피드백 **46/46**, build exit0(기존 큰 청크 경고), diff-check exit0. 브라우저는 개발 StrictMode effect 실제2회 setup 및 취소/identity15사례·결과21·게임/BGM19·아이템25사례를 통과했다. 싱글 완주·F5, 듀얼 패배/기권/결과 재조회, 그룹 개인 도착/최종 결과를 포함한다. 실제 서버·실제2계정·실제 모바일·Safari·OS 탭 정책·주관적 청음은 **미검증 유지**다. 새 녹화도 실제 제품 React/Web Audio + 로컬 API/Realtime 응답 재현이며 실제 DB/Auth/XP 지급을 검증한 것이 아니다 [산출물: ZIP `reports/commands/`, `reports/{strictmode-cancellation,results,gameplay,items}.json`].
+
+최종 **[WikiRace_Audio_Review_Fixed.zip](../../deliverables/audio-fixed-20261024/WikiRace_Audio_Review_Fixed.zip)**: **40,010,218bytes / 513파일 / 영상34개 / 현재 관련 소스66개**, SHA-256 **`71a054aae3536b5081f13c14d0df26337bfe185cdbb4786aebca654b7d469f4d`**. 기존 Complete.zip 전체는 `before/`에 그대로 보존하고 현재 트리 수정 전 재현2개와 수정 후 새 녹화12개를 구분했다. `source/utils/groupLobbyState.js`를 추가해 추출본에서도 오디오 테스트46/46이 재실행된다. 최종 ZIP을 새 폴더에 풀어 **Python65,246·PowerShell3,069검사**, 청음 플레이어60개/영상34개 시작·탐색·종료, 외부 요청/재생 오류0, 수정 후 핵심2영상 처음부터 끝까지 자연 재생·표지 종료 후 PCM을 확인했다. 무결성 통과와 실제 기기/서버 미검증은 구분한다 [산출물: `deliverables/audio-fixed-20261024/WikiRace_Audio_Review_Fixed.validation.json` 및 같은 폴더 `validation/`]. 이전 R2 문단은 수정 전 당시 기록이며 아래 실패 판정은 이 단락으로 대체한다. commit/push/운영 변경0.
+
+## 2026-10-24 현재 적용본 재전달 R2
+
+기준 **4830b38 + 현재 미커밋 트리, 2026-10-24 KST**. 사용자는 이전에 받은 파일을10/16 최초 시안으로 보고했다 [사용자 보고; 수신 파일의 실제 해시는 미확인]. 현재 적용 정의를 직접 import해30역할의 경로/gain/rate를 대조했고 실사용 원본24개·소스65개의 해시를 확인했다 [산출물: .temp/audio-current-r2-20261024/runtime-binding.json]. **새 전달본은 [WikiRace_Audio_Review_Complete.zip](../../deliverables/audio-current-20261024-r2/WikiRace_Audio_Review_Complete.zip)** 이며, 첫 화면에 `CURRENT-APPLIED-20261024-R2`와 생성시각·정글v02/결과곡/아이템v04·v05/환호·휘슬v02/금관A 선택을 표시한다. 기존 전달 ZIP은 덮어쓰지 않았다.
+
+30역할·원본24 WAV·현재 재생기로 렌더한 청음30 WAV·실제 소리 포함 영상20개·소스65개/로그/검증기를 포함한다. 제품 해시가 기존 녹화 기준과 같음을 확인하고 같은 현재 React 녹화20개를 보존했다. 새로운 작곡·제품 음원/타이밍/디자인 변경은 없다. 최종 ZIP은22,398,473bytes/260파일, SHA `ea47e998fac2d4975ad03dace24738cf3f44410999e2bd51090e375e457a538b`다. 새 폴더에서60개 청음 플레이어·영상20개 시작/탐색/종료·음성 디코딩/외부 요청0, Python32,869·PowerShell1,941검사 통과 [산출물: 같은 폴더 validation.json·CURRENT_APPLIED_FIRST_SCREEN.png, 같은 기준/날짜].
+
+연결 역할 상태는29 로컬 재현 통과/승리음1 실패(기존 꼬리 약1.95초 중단)이며 실제 서버·실제2계정·실제 모바일/Safari·주관적 청음은 미검증이다. 게임 코드가 같아 이전 npm664/664·build 검증 기록을 유지했고 이번 재전달에서는 파일/재생/해시 검증을 새로 실행했다. 운영 접근·배포·commit/push0. 자세한 출처/제약은 아래 전체 검수 기록과 인계 문서에 있다.
+
+## 2026-10-24 독립 실행 사운드 전체 검수 패키지
+
+기준 **4830b38 + 현재 미커밋 작업 트리, 2026-10-24 KST**. [WikiRace_Audio_Review_Complete.zip](../sound-prototypes/WikiRace_Audio_Review_Complete.zip)은 기존 applied-v01.zip의 WAV0개·ZIP 밖 청음 참조 문제를 보완한다. **BGM3 + SFX27 = 30역할, 실사용 원본24 WAV·현재 재생기로 기본 설정을 반영한 청음30 WAV·실제 음성 포함 영상20개·이벤트 로그·소스65개 사본**을 담는다. 후보 음원·로그인 설정·비밀값은 제외했다. 게임 코드/음원/디자인/타이밍은 이번 작업에서 변경하지 않았다 [산출물: ZIP 내부 manifest.json, SOURCE_VERSION.json, SHA256SUMS.json, reports/preview-render.json].
+
+**검수 상태는 29역할 로컬 재현 통과 + 승리음1역할 실패**다. `DuelEndSequence.finish`의 기존2700ms `stopEffects()` 때문에 원본3.8초 승리음이 약1.851초 재생 후 중단되며 약1.949초가 잘린다. 결과 BGM과 약1.9초 겹침은 재현되지 않았고, 측정 겹침0초/종료 뒤 간격 약0.061초다. 의도된 음 길이라는 근거가 없어 AUDIO-01로 기록했다. 과거의 연결 완료·검사 통과 기록을 전체 음질/끝재생 보장으로 해석하지 않는다 [코드: components/cinematic/DuelEndSequence.jsx; 산출물: ZIP video/duel-win-timing.webm, events/duel-win-timing.events.json, reports/FINDINGS.json].
+
+누락7역할 flip/tick/go/impact/retire/achievement/xp를 실제 제품 동작에서 새로 녹화했다. BGM3곡 각각 두 바퀴/start1회를 녹화하고 경계 시각·PCM 상관·무음/파형 단계를 기록했다. 현재 제품으로 React/서비스65검사 + START/보상/기권7검사 + 설정/첫 조작21검사 + 전체 전환6검사, npm664/664·build exit0(기존 chunk 경고)를 확인했다. 최종 ZIP(22,394,040bytes/258파일)을 새 폴더에 다시 풀어60개 플레이어·영상20개의 재생/끝부분 탐색/종료·음성 디코딩·외부 요청0을 확인했다. 독립 검증기는 압축 해제 폴더에서 Python32,829검사·Windows PowerShell1,899검사 통과, git diff --check exit0이다. ZIP 내부 reports/extracted-*-validation.json과 [최종 패키지 검증 결과](../sound-prototypes/WikiRace_Audio_Review_Complete.validation.json)에 기록했다. 검수 스크립트의 PASS와 위 제품 문제를 구분한다 [산출물, 같은 기준/날짜].
+
+영상은 실제 React/Web Audio + 격리된 API/Realtime/Wikipedia 응답 재현이다. 실제 서버·실제2계정·실제 모바일/Safari·사람의 주관적 청음은 미검증이다. 390px는 데스크톱 Chromium 터치 뷰포트이며 실제 모바일 기기가 아니다. 숨김은 visibility 주입, autoplay 거절은 resume 거절 통제, 연결 복구는 offline/online와 지연 응답 재현임을 표기했다. 로컬 Docker 엔진 불가·운영 접근 금지로 실제 DB 검증을 수행하지 않았다. SQL/Edge 변경이 없어 pgTAP는 재실행하지 않았다. 자세한 진행/재검증은 [AUDIO-GOAL-HANDOFF](2.0x/AUDIO-GOAL-HANDOFF.md) [산출물: ZIP reports/settings-checks.json·live-checks.json·result-checks.json].
+
+## 2026-10-24 선택한 음악·효과음 전체 적용 확인
+
+기준 **4830b38 + 기존 선택 음원/결과곡과 이번 전체 적용 미커밋, 2026-10-24 KST**. 선택한 음악/효과음을 전수 대조해 **BGM3곡·SFX27개 역할 = 재생 alias30개/원본 WAV24개**를 실제 게임 연결 목록으로 확정했다. HOME 칼림바 A·플레이 정글v02·결과 result-v01, 승인 v04/v05 아이템·클릭0.5·고음 환호/휘파람이 포함된 celebration-v02·패배 A·일반 알림7종을 사용한다. 중간 비교/탈락 시안은 보존하고 새 음원을 만들지 않았다 [코드/산출물: services/audioAssets.js, applied-v01/manifest.json·validation.json]. [전체 적용본·개별 청음·실제 음성 영상](../sound-prototypes/applied-v01/index.html). 아래 과거의 미연결/시안 표기는 당시 기록이다.
+
+대부분 이미 연결된 상태였으며, 누락된 Single 검색/링크 힌트의 로컬 효과 수락 후 itemReveal 재생2곳을 보완했다. 사용 가능/소비 상태는 기존 useItemSystem이 판정하며 버튼 자체에는 성공음을 달지 않았다. 이동 아이템은 기존 승인 이동의 navigate만 내고 성공 전/실패/중복/F5는 울리지 않는다. 390px 검사에서 기존 Single 아이템 목록이 dock의 overflow-x:auto에 잘려 터치되지 않는 문제를 발견해, 모바일 Single dock만 overflow:visible로 고쳤다. 기존 구조·문구·수량/규칙·서버 요청은 그대로다 [코드: hooks/useItemSystem.js, pages/GamePage.jsx, css/wikiRaceRace.css].
+
+**npm664/664·build/diff exit0**, 선택 PCM/출처/길이·이전 원본 보존146검사, 실제 React/서비스 **65검사(신규25+기존 실제연결19+결과21)**, HOME/종합청음·영상 **15검사** 통과(위 기준/날짜). 1440/768/390, 실제 모바일 tap, Single random/custom/daily·로컬 지원 효과/승인 이동, Duel applied/blocked/reflected·지연 RPC/중복 Realtime/실제 문서 반영, 대기실/연결 복구/장착 저장, 결과 BGM/스킵/reduced-motion·음소거/음량/숨김/F5를 확인했다. 청음30개를 Chromium으로 디코딩하고 대표 지원음2초·소리 포함 영상3개를 정상1배속 끝재생했다. 서버·Wikipedia·Realtime 응답은 격리 fixture이며 실제 DB 승패/XP 지급 검증은 아니다. 실기기/Safari는 미확인. 기존 build chunk>500kB 경고만 남았다. SQL/Edge 변경이 없어 전체 pgTAP는 재실행하지 않았다. 운영 접근/배포·commit/push0.
+
+## 2026-10-24 모든 게임 결과 BGM — 제작·연결 및 로컬 검증 완료
+
+기준 **4830b38 + 기존 game-v02/승인 오디오 및 이번 결과 BGM 미커밋, 2026-10-24 KST**. 사용자 "모든 게임 끝나고 결과창 보여줄 때 BGM"을 반영했다. 공통 결과곡 `result-v01/expedition-records`는 기타 아르페지오·부드러운 현악·드문 목관으로 만든 **72BPM/8마디/26.6667초** 루프다. 기본 BGM28%×곡55%, 플레이곡보다 낮은 평균 음량이며 외부 샘플/Suno·새 의존성은 없다. 원본·이전 승인곡/효과음은 보존했다 [코드/산출물: result-v01/compose.py, manifest.json, validation.json]. [청음·세 모드 실제 음성 포함 영상](../sound-prototypes/result-v01/index.html). 확인된 결과 기록이 보이고 기존 종료 효과음이 끝나면 페이드 인한다. Group 개인 완주는 제외한다. 별도 연출 타이머 없이 기존 결과 표시 상태와 실제 AudioBufferSourceNode 종료를 따른다.
+
+**npm 664/664·build/diff exit0**, PCM/루프/원본 보존 23검사, 실제 React/서비스 21검사, 청음/실제 음성 영상 10검사 통과(위 기준/날짜). Single random/custom/daily·Duel 승리/패배/기권/무효·Group 전체 종료, 1440/768/390px, 첫 조작·F5/중복·음소거/음량/SFX0·숨김/이탈·스킵/reduced-motion·연속 새 게임의 캐시된 BGM/늦은 결과 확인을 검증했다. 서버·Wikipedia·Realtime 응답은 격리 fixture이며 실제 DB 승패/XP 지급 검증이 아니다. 실기기/Safari·주관적 곡 분위기는 미확인이다. 기존 build chunk>500kB 경고는 남았다. 운영 접근/배포·SQL/Edge 변경·commit/push0.
+
+## 2026-10-24 정글 BGM v02 — 비트 소폭 보강
+
+기준 **4830b38 + 기존 live-v01 및 이번 비트 보강 미커밋, 2026-10-24 KST**. 사용자 요청 "비트를 조금만 더"를 반영했다. 원본 v01 PCM에 마디마다 약한 북 2회·짧은 나무 타격 2회를 추가한 game-v02를 만들었다. 선율·화음·80BPM·24초/8마디·기본 BGM28%×곡60%는 유지했다. 전체 RMS는 v01과 같고, 추가 레이어 RMS는 원본의 약10.5%다. 기존 v01과 승인 효과음/HOME 원본을 보존했다. 외부 샘플/Suno·새 의존성은 없다 [코드/산출물: game-v02/compose.py, manifest.json, validation.json]. [이전/새 곡 비교·실제 음성 포함 영상](../sound-prototypes/game-v02/index.html). 게임 변경은 `services/audioAssets.js`의 jungle 경로뿐이다. 테스트의 옛 파일명 하드코딩도 현재 자산 URL을 따르게 보정했다. 기존 7종 효과음 연결/게임 타이밍/설정은 그대로다.
+
+**npm 659/659·build/diff exit0**, PCM/루프/원본 보존 29검사, 실제 React/서비스 11검사, 비교 청음/영상 10검사 통과(위 기준/날짜). 1440/768/390px에서 새 파일 요청·단일24초 루프·효과음 duck·이동/결과 정지·첫 조작/음소거/음량/F5/숨김 복귀를 확인했다. 새24초·이전24초·새48초 청음과 약29.1초 실제 음성 포함 영상은 정상1배속 끝재생했다. 서버·Wikipedia·Realtime 응답은 격리 fixture이며 새 실제 DB 성공 검증은 아니다. 실기기/Safari·주관적인 비트 양은 미확인이다. 기존 build chunk>500kB 경고만 남았다. 운영 접근/배포·서버/규칙 변경·commit/push0.
+
+## 2026-10-24 효과음7종 연결·정글 인게임 BGM — 프론트 로컬 검증 완료
+
+기준 **4830b38 + 기존 승인 오디오/종합본 미커밋 + 7종/정글 BGM, 2026-10-24 KST**. 사용자 "미연결7개 실제 게임 연결", BGM "약한 긴장감·정글 내부 탐험"을 반영했다. [최신 청음·실제 음성 포함 React 영상5개](../sound-prototypes/live-v01/index.html). 개인 도착/거절/참가/준비/연결끊김·복구/장착저장7종은 기존 runtime을 그대로 복사해 실제 Group 이동 응답·Duel/Group 대기실 승인 읽기·아이템/대기실 요청·진행 중 연결상태·프로필 저장 응답에 연결했다. 최초 snapshot/F5/quiet 재조회·재접속·숨김 복귀는 알림 기준만 갱신한다. 성공 확정 뒤 후속 재조회 실패에는 거절음을 내지 않는다 [코드: audioAssets/audioManager, audioFeedback, useLobbyAudio/useGameAudio, 관련 페이지/편집기]. 아래 미연결7종 표기는 이전 단계 기록이다.
+
+정글 BGM은 직접 합성한 **24초/80BPM/8마디** 루프로 낮은 북·나무 타격·현악·드문 목관을 사용했다. Single random/custom/daily·Duel·Group의 실제 PLAYING 단계에서만 재생한다. 기본 BGM28%×곡60%, SFX 때 잠시40%로 duck, START/결과/복구/나가기 정지·첫조작/음소거/숨김/이동경합 복구를 기존 재생기에 통합했다. 신규 game WAV1,152,044bytes. 기존 HOME·아이템·클릭·축하/패배 원본/서버·게임 시간/규칙은 그대로다. 외부 샘플/Suno·새 의존성0 [코드/산출물: game-v01/compose.py, manifest.json, audioManager].
+
+**집중30/30·npm659/659·build/diff exit0**, BGM PCM/루프/출처·승인원본28검사, 실제 제품 React/서비스의 격리 API·Wikipedia·Realtime 검증 **19검사**, 청음9개 정상1배속 끝재생/세너비·실제 audio/video5개 검증 **9검사 통과**(위 기준/날짜; `.temp/audio-live-20261024/`, game-v01/validation.json). **로컬 Docker 엔진 연결 불가**로 새 실제 DB/Auth/RPC 검증은 못 했다. 화면/서비스는 실제 코드지만 서버 응답은 fixture이며 실제 승패/지급 성공으로 표시하지 않는다. 주관적 정글 분위기/반복피로·실기기/Safari는 미확인. 원본 보존은 preservation.json, [인계](2.0x/AUDIO-GOAL-HANDOFF.md). 운영 접근/배포·전체 pgTAP·commit/push0.
+
+## 2026-10-24 패배음 A 확정·지금까지의 사운드 종합 — 당시 종합본 기록
+
+기준 **4830b38 + 기존 승인 오디오/v03 청음 미커밋 + A 선택/종합본, 2026-10-24 KST**. 사용자 "A버전 선택, 지금까지 나온 것 종합 청음"을 반영했다. `loss`만 승인된 `duel-loss-v03/brass`로 교체했고 원본 runtime을 그대로 복사했다.1.8초/gain0.45/category result·0.72초 cue/2.7초 연출/사건 key는 보존했다 [코드/승인: services/audioAssets.js, public/audio/duel-loss-v03/manifest.json, collection-v01/APPROVED-LOSS.json]. 이전 A/B 시안/영상은 보존한 당시 기록이다.
+
+[최신 종합 청음 페이지](../sound-prototypes/collection-v01/index.html) · [약70초 전체 WAV](../sound-prototypes/collection-v01/all-current.wav). **개별31개 = 게임 연결음20개(21alias, finish/win 공용) + 미연결 알림7개 + START/박수/환호/휘파람 따로듣기4개**다. 합본은 앞27개를 모은70.354625초/27구간으로 원본을 새 작곡 없이 현재 속도·기본 음량으로 렌더했다. 원하는 구간부터 듣기/전체 정지/청음 전용 음량·세너비 대응·실제 오디오 포함 선택 A React 영상2개를 제공한다. 개인 도착음 승인 등 미연결 상태를 연결 완료로 바꾸지 않았다 [코드: collection-v01/build.py, template.html, manifest.json].
+
+**PCM/출처/구간·원본 보존248검사·npm648/648·build/diff exit0**, Chromium 선택 A 실제 제품 연결 **16검사**, 종합 페이지·31개 디코딩/음량/중복방지/정지/구간탐색·70초 정상1배속 끝재생·4개 별도음 끝재생·숨김정지·실제 audio/video2개 **15검사 통과**(위 기준/날짜; `.temp/audio-collection-20261024/`, collection-v01/validation.json). API/결과 사건은 격리 fixture이며 새 실제 서버 승패 검증이 아니다. 주관적 전체 밸런스·실기기/Safari는 미확인. 기존891파일 보존 대조는 preservation.json, [인계](2.0x/AUDIO-GOAL-HANDOFF.md). 운영 접근/배포·commit/push0.
+
+## 2026-10-24 듀얼 패배음 악기 교체 시안 v03 — A 사용자 선택 확정·당시 청음 기록
+
+기준 **4830b38 + 기존 승인 오디오/패배 v02 미커밋 + 다른 악기 청음, 2026-10-24 KST**. 사용자 "피아노인가, 다른 악기도 활용, 아직 애매" 피드백으로 기존 단음 레이어를 재사용하지 않고 **A 트롬본 느낌의 처지는 금관+작은 팀파니 / B 첼로 느낌의 활로 켜는 낮은 현악**2개를 직접 합성했다. 둘 다1.8초/기존과 동일 RMS·개별45%×기본SFX75% 청음이다. 실제 악기 녹음/외부 샘플·새 의존성은 없다. [A/B/이전 v02 비교·실제 음성 포함 연출 영상](../sound-prototypes/duel-loss-v03/index.html). **새2개는 docs 아래 청음 시안이며 게임 기본음은 v02 유지**다 [코드: duel-loss-v03/synthesize.py, manifest.json; services/audioAssets.js 미변경].
+
+**PCM/다른 파형·스펙트럼/레벨/보존41검사·npm648/648·build/diff exit0**, Chromium1440/768/390 두 악기×3너비 실제 연출 cue1회/1.8초 자연종료·A/B/이전본 끝재생·비교페이지·실제 오디오 영상2개 **13검사 통과**(위 기준/날짜; `.temp/audio-loss-instruments-20261024/`, duel-loss-v03/validation.json). 영상은 검수 중에만 WAV응답을 바꾼 청음이며 제품 기본음 교체 증거가 아니다. API/결과 사건도 격리 fixture로 새 실제 서버 승패 검증이 아니다. 악기 유사성/취향·실기기/Safari는 미확인. 기존 제품/음원/미커밋 보존은 preservation.json, [인계](2.0x/AUDIO-GOAL-HANDOFF.md). 운영 접근/배포·commit/push0.
+
+## 2026-10-24 듀얼 패배음 v02 — 현재 게임 기본음·다른 악기 후보 비교 중
+
+기준 **4830b38 + 기존 승인 오디오/패배 v01 미커밋 + 풍성한 패배음, 2026-10-24 KST**. 사용자 "느낌은 좋은데 더 풍성하게, 뭔가 부족하다" 피드백으로 v01의 F4–E4–D4 하강 선율을 바탕으로 낮은 옥타브 관악기·작은 미세 합주·마지막 단조 화음·19~93ms 짧은 반사를 보탰다. 전체 RMS는 기존과 맞췄고 길이1.8초·gain0.45·기존0.72초 cue/2.7초 연출/사건 key는 유지했다. `loss` 경로만 새 v02로 바꿨다 [코드: services/audioAssets.js, duel-loss-v02/synthesize.py]. [동일 설정 A/B·실제 음성 포함 React 영상](../sound-prototypes/duel-loss-v02/index.html). 직접 합성한86,444bytes 게임 파일이며 외부 샘플/새 의존성은 없다.
+
+**PCM/동일 RMS/중저음·원본 보존28검사·npm648/648·build/diff exit0**, Chromium1440/768/390 기존 cue·1.8초 자연종료·중복/F5/음소거/SFX0·스킵/숨김/화면 이동·첫 조작·reduced-motion·승리/기권 분리·A/B·실제 음성 영상2개 **22검사 통과**(위 기준/날짜; `.temp/audio-loss-rich-20261024/`, duel-loss-v02/validation.json). API/결과 사건은 격리 fixture이며 새 실제 서버 승패 검증이 아니다. 주관적인 풍성함과 실기기/Safari는 미확인. 이전 패배 v01·환호·승인 아이템/클릭·미커밋 원본 보존은 preservation.json, [인계](2.0x/AUDIO-GOAL-HANDOFF.md). 운영 접근/배포·commit/push0. 아래 v01은 이전 비교 기록이다.
+
+## 2026-10-24 듀얼 패배음 연장 — v01 이전 음색 기록
+
+기준 **4830b38 + 기존 승인 오디오/celebration-v02 미커밋 + 긴 패배음, 2026-10-24 KST**. 사용자의 "좋아"로 고음 환호/휘파람을 승인 기록하고 듀얼 정상 패배의 `loss`만 기존 약0.49초 도장→1.8초의 부드러운 F4–E4–D4 하강음/낮은 여운으로 교체했다. 기존0.72초 cue에서 재생해2.7초 결과 연출 전에 자연 종료한다. gain0.45/category result·같은 사건 key·모든 게임/연출/서버 시간·기권/승리음·승인 아이템은 유지했다 [코드: services/audioAssets.js, duel-loss-v01/synthesize.py]. [A/B·실제 음성 포함 React 영상](../sound-prototypes/duel-loss-v01/index.html). 게임용24kHz mono16bit86,444bytes, 직접 합성/외부 샘플·Suno·새 의존성0.
+
+**PCM/음정/보존27검사·집중19/19·npm648/648·build/diff exit0**, Chromium1440/768/390의 기존 시점1회/전체1.8초 자연종료·중복/F5·reduced-motion·음소거/SFX0·스킵/숨김/페이지 이동·첫 조작 전 사건·승리/기권 분리·A/B/대표 실제 오디오 영상2개 **22검사 통과**(위 기준/날짜; `.temp/audio-loss-20261024/`, duel-loss-v01/validation.json). API/결과 사건은 격리 fixture이며 새 실제 서버 성공 검증이 아니다. 음색/여운의 주관적 청음과 실기기/Safari는 미확인. 기존 원본/미커밋 보존은 preservation.json, [인계](2.0x/AUDIO-GOAL-HANDOFF.md). 운영 접근/배포·commit/push0.
+
+## 2026-10-23 고음 환호·휘파람 보완 — 10-24 사용자 청음 승인
+
+기준 **4830b38 + 기존 승인 오디오/celebration-v01 미커밋 + 고음 환호/휘파람, 2026-10-23 KST**. 사용자 "환호가 낮고 환호 같지 않다, 더 높은 소리/휘파람" 피드백을 반영했다. 낮은 폐쇄 모음을 높은 열린 환호(기음390/480/570Hz)로 교체하고 약2~3kHz로 올라가는 휘파람2회를 추가했다. 기존 박수+징글은 그대로 사용했고 새 레이어1.65초/전체3.8초, finish/win gain0.8·기존 결과 key/시점은 유지했다 [코드: services/audioAssets.js, celebration-v02/synthesize.py]. [최신 A/B·환호/휘파람 단독·실제 오디오 포함 React 영상](../sound-prototypes/celebration-v02/index.html). 직접 합성한 소리이며 사람 녹음/외부 샘플/Suno·새 의존성은 없다.
+
+**PCM/고음 성분/휘파람/원본 보존67검사·집중19/19·npm648/648·build/diff exit0**, Chromium1440/768/390 결과3종·기존시점1회·1.65초 구간 재생·중복/F5/RM/음소거/숨김 복귀·패배/기권 제외·개별5음원 끝재생·실제 음성 포함 영상3개 **32검사 통과**(위 기준/날짜; `.temp/audio-cheer-20261023/`, celebration-v02/validation.json). API/결과 사건은 격리 fixture이며 새 실제 서버 성공 검증이 아니다. 음색의 주관적 자연스러움·실기기/Safari는 미확인. 기존 v01/아이템/클릭·개인 도착음은 보존했고 운영 접근/배포·commit/push0. [인계](2.0x/AUDIO-GOAL-HANDOFF.md). 아래 v01은 이전 음색/영상 기록이다.
+
+## 2026-10-23 도착·승리 박수/환호 — v01 이전 음색 기록
+
+기준 **4830b38 + 기존 승인 오디오 미커밋 + 결과 박수/환호, 2026-10-23 KST**. 사용자 "좋네"로 ui-v03 개인 도착음 승인([기록](../sound-prototypes/ui-v03/APPROVED.json)), 이어 요청한 축하음은 [celebration-v01 청음·실제 오디오 포함 React 영상](../sound-prototypes/celebration-v01/index.html)에 정리했다. 기존3.8초 완주 징글에 직접 합성한 짧은 박수/작은 비언어적 환호1.65초를 섞어 `finish`/`win` alias만 교체했다. **솔로 서버확인 도착·듀얼 승리·그룹 최종1위 발표**의 기존 시점/중복 키로 재생한다. 그룹 개인 완주/2·3위·패배/기권에는 추가하지 않았다. 게임용 추가182,444bytes, 원본 징글·아이템/클릭 볼륨·재생기/컴포넌트/게임/서버 시간 계약은 그대로다 [코드: services/audioAssets.js, celebration-v01/synthesize.py].
+
+**PCM/레이어/보존67검사·집중19/19·npm648/648·build/diff exit0**, Chromium1440/768/390 결과3종 기존시점1회·박수구간 끝재생·중복/F5 무음, reduced-motion·패배/기권·음소거/숨김 복귀, 비교페이지·오디오/영상3개 **32검사 통과**(위 기준/날짜; `.temp/audio-celebration-20261023/`, celebration-v01/validation.json). API/결과 사건은 격리 fixture이며 실제 서버 성공 재검증은 아니다. 첫 Single 검사는 완주 fixture가 비어 정상적으로 재생 차단됐고 올바른 확정 기록을 넣어 통과했다. 주관적 박수/합성환호 음색·실기기/Safari는 미확인. 승인된 개인 도착음과 나머지 일반 알림 후보의 이벤트 연결은 아직 후속이다. 운영 접근/배포·commit/push·외부 샘플/Suno·새 의존성0. [인계](2.0x/AUDIO-GOAL-HANDOFF.md).
+
+## 2026-10-23 개인 도착음 보완·Duel/Group 참가/준비 공용 — 도착음 사용자 승인
+
+기준 **4830b38 + 기존 ui-v02/승인 아이템 미커밋 + 도착음 보완, 2026-10-23 KST**. 사용자 피드백으로 Group 개인 도착음을 단순 타격0.78초→상승4음/마지막 안정된 화음1.55초로 바꿨다. 기존 원본 완주 징글의 D장조 모티프를 짧게 합성한 효과음이며 원본 파일은 보존했다. [최신 도착음 A/B·공용 참가/준비 청음](../sound-prototypes/ui-v03/index.html). 참가음과 준비음은 기존 ui-v02 파일을 그대로 사용해 Duel/Group 공용 후보로 정리했다. Duel은 두 명 입장+방장 목표 확정으로 시작 가능해지는 전환, Group은 전원 READY 전환에 대응한다 [코드 확인: pages/RoomPage.jsx canStart/hasGuest/hasHostTarget]. 별도 게임 규칙/버튼을 추가하지 않았다.
+
+새1개 원본48kHz mono24bit·24kHz mono16bit 파생74,444bytes·기본75% 청음본/출처/SHA를 docs/ui-v03에만 뒀다. **아직 게임 이벤트 미연결**이며, 참가/준비가 동시에 충족되면 준비음 우선1개·최초 snapshot/F5/중복 무음 원칙을 연결안에 적었다. 승인 아이템·현재 클릭 gain0.5·기존 후보는 그대로다. **PCM/실제4음/보존23검사·집중19/19·npm648/648·build/diff exit0**, Chromium1440/768/390·도착음A/B/보존6개 끝재생 등 **5검사 통과**(위 기준/날짜; `.temp/audio-arrival-20261023/`, `ui-v03/validation.json`). 이후 같은날 사용자 "좋네"로 도착음 음색을 승인했다. 실기기/Safari·실제 사건 연동은 미확인. 운영 접근/배포·commit/push·새 의존성/외부 샘플/Suno0. [인계](2.0x/AUDIO-GOAL-HANDOFF.md) · [연결안](2.0x/AUDIO-NEXT-SFX.md).
+
+## 2026-10-23 클릭음 소폭 증가·새 효과음7종 — 이전 초안
+
+기준 **4830b38 + 기존 승인 아이템/UI 미커밋 + 클릭 크기/후보 제작, 2026-10-23 KST**. 클릭음만0.4→0.5(+1.94dB)로 높여 게임에 반영했다. 원음·80ms 길이·전체 SFX볼륨·기존 UI/게임 gate는 유지했다 [코드: services/audioAssets.js]. [최신 클릭 비교·새7종·실제 클릭음 포함 React 영상](../sound-prototypes/ui-v02/index.html). 새 원본은 개인완주·요청거절·참가·Group 전원준비·연결끊김·복구·저장확인7개다. **7종은 청음 초안이며 게임 이벤트 미연결**, 앱에서 요청/사전 로드하지 않는다. 원본48kHz mono24bit·검토용24kHz mono16bit(전체127,988bytes)·기본75% 청음본·출처/SHA를 docs 아래에만 두었다. 기존 승인 아이템 파일·볼륨은 그대로다 [코드/산출물: ui-v02/synthesize.py, manifest.json].
+
+**PCM/연결94검사·집중19/19·npm648/648·build/diff exit0**, Chromium 실제 React 클릭 gain0.5(1440/390)·후보 요청0·9개 청음 정상1배속 끝재생·1440/768/390 비교페이지·실제 음성 포함 녹화2개 **8검사 통과**(위 기준/날짜; `.temp/audio-next-20261023/`, `ui-v02/validation.json`). 새 후보의 서버 사건 연동 검증을 한 것은 아니다. 사용자 주관적 청음·실기기/Safari는 미확인. 운영 접근/배포·commit/push·새 의존성/외부 샘플/Suno0. [인계](2.0x/AUDIO-GOAL-HANDOFF.md) · [후보/연결 조건](2.0x/AUDIO-NEXT-SFX.md). 아래 클릭0.4/후보 미제작 서술은 이전 단계 기록이다.
+
+## 2026-10-23 아이템 승인·버튼 클릭음 — 이전 단계 기록
+
+기준 **4830b38 + 기존 승인 아이템/오디오 미커밋 + 버튼음, 2026-10-23 KST**. 사용자 "좋아.아이템은 이걸로 고정"에 따라 현재 v04+이동v05의6개 alias/5개 WAV·볼륨·SHA를 [확정 목록](../sound-prototypes/ITEM-SFX-APPROVED.json)에 기록했다. 음원 파일은 바꾸지 않았다. [버튼음·실제 오디오 포함 React 영상](../sound-prototypes/ui-v01/index.html) · [추가 효과음 조사/우선순위](2.0x/AUDIO-NEXT-SFX.md) · [인계](2.0x/AUDIO-GOAL-HANDOFF.md).
+
+직접 합성한80ms 클릭1개(게임용3,884bytes)를 활성 버튼/공통 헤더의 trusted click에 연결했다. 마우스·터치·Enter/Space1회,80ms 간격 제한. 비활성/본문/스크립트 입력은 무음이다. UI voice1개를 게임음과 분리해 아이템음 자리를 빼앗거나 사건 claim2048개를 소모하지 않는다. 음소거/SFX볼륨·첫 조작·숨김/실패 gate를 공유하며, 내부 화면 이동에서는 짧은 클릭만 끝까지 재생한다 [코드: services/audioAssets.js, audioManager.js].
+
+**집중19/19·npm648/648·build/diff exit0**, Chromium1440/768/390 실제 HOME 버튼·마우스/터치/Enter/Space·첫 조작·연속/무효 입력·볼륨/음소거·화면 이동·아이템2초 보존·음성 포함 녹화2개 **42검사 통과**(위 기준/날짜, `.temp/audio-ui-20261023/`). API/게임 사건은 격리 fixture이며 새 실제 서버 성공 검증은 아니다. 추가 후보는 Group 개인완주·실패/거절(우선), 대기실 참가/Group 전원READY·연결 상태, 장착 저장 완료다. 버튼 외 후보는 아직 연결/제작하지 않았다. 아이템 청음은 사용자 승인, 버튼 청음·실기기/Safari는 미확인. 운영 접근/배포·commit/push·새 의존성/외부 샘플/Suno0.
+
+## 2026-10-23 책 한 장 음색 정리 v05 — 아이템 사용자 승인
+
+기준 **4830b38 + 기존 v04 미커밋 + 책넘김 정리, 2026-10-23 KST**. 사용자 "여러 장 넘기는 듯하다" 피드백에 따라 v04의32/91Hz 진폭 떨림·긴 마찰·뒤쪽 독립 접촉을 제거했다. 약0.6초 한 번 넘김과 약한 연속 여운으로 바꾸고2초 버퍼는 유지했다. 소리를2초 내내 끌지 않는다. 이동·도움 아이템·일반 링크 이동의 동일파일 alias만 `sfx-v05/page-turn-clean.wav`로 교체했다. 다른 아이템/VS/HOME·재생기·게임/서버 계약은 보존했다 [코드: services/audioAssets.js, sfx-v05/synthesize.py]. [최신 A/B·실제 오디오 포함 React 영상](../sound-prototypes/sfx-v05/index.html) · [인계](2.0x/AUDIO-GOAL-HANDOFF.md).
+
+**WAV/연결28검사·오디오 단위16/16·npm645/645·build/diff exit0**, Chromium1440/390 실제 React 이동1회·중복/거절/음소거 무음·2초 버퍼 수명, A/B 끝재생·1440/768/390 비교페이지·실제 음성 포함 영상2개 **12검사 통과**(위 기준/날짜). 산출물 `.temp/audio-page-clean-20261023/`, `sfx-v05/validation.json`. 사건/API는 격리 fixture이며 실제 서버 성공 증거가 아니다. v04와 기존 미커밋 보존, 새 의존성/외부 샘플/Suno·운영 접근/배포·commit/push0. 이후 같은날 사용자 청음으로 아이템음을 승인/고정했다. 실기기/Safari는 미확인. 아래 v04/v03는 당시 기록이다.
+
+## 2026-10-23 아이템음2초·VS 충돌 보완 — v04 당시 기록
+
+기준 **4830b38 + 기존 오디오/음색 미커밋 + 요청한2초 보완, 2026-10-23 KST**. [당시 v04 청음·실제 오디오 포함 React 영상](../sound-prototypes/sfx-v04/index.html) · [연결/검증 인계](2.0x/AUDIO-GOAL-HANDOFF.md). 아이템음은 동작과 여운을 포함해 각각2초로 연결했다. 먹물은0/0.62/1.24초 찰박3회, 이동은 책 한 장 넘김, 방어는 승인된 v03 금속 타격에 여운 연장, 반사는 같은 계열의 검 패링, VS는 검열과 분리한 더 큰 쿵 충돌이다. 검열·도움 아이템도2초. 일반 링크 이동은 같은 책넘김을 작고 빠르게1.25초 사용한다. 기존 게임/애니메이션 시간·서버 계약·음소거/중복 gate는 유지했다 [코드: services/audioAssets.js, audioManager.js, sfx-v04/synthesize.py].
+
+원본48kHz mono24bit와 게임용24kHz mono16bit6개(**576,264bytes**)를 새 폴더로 분리하고 v01/v02/v03를 보존했다. **WAV/연결109검사·오디오 단위16/16·npm645/645·build/diff exit0**, Chromium 실제 React fixture1440/390에서 재생원 수명2초·중복/거절/음소거·A/B12개 끝재생·세 너비1440/768/390 비교페이지·영상/음성 동시녹화2개 **32검사 통과**(위 기준/날짜, 산출물 `.temp/audio-duration-20261023/`, `sfx-v04/validation.json`). API/사건은 격리 fixture이며 실제 서버 성공 검증을 새로 한 것은 아니다. 사용자 주관적 청음·실기기/Safari는 미확인. 운영 접근/배포·commit/push·새 의존성·외부 샘플/Suno0. 아래 v03는 이전 음색의 보존 기록이다.
+
+## 2026-10-23 효과음 음색 분리 — v03 당시 기록
+
+기준 **4830b38 + 기존/오디오 미커밋 + 음색 보완, 2026-10-23 KST**. 사용자 "칼림바·책넘김 위주" 피드백을 반영했다. 실제로 이전 아이템음은 종이/카운트/시작음의 재생률 변형이었다. [이전/변경 청음·새 오디오 포함 React 영상](../sound-prototypes/sfx-v03/index.html) · [연결/검증 인계](2.0x/AUDIO-GOAL-HANDOFF.md). 기존 음원은 그대로 두고 물방울·나무 도장·금속판 충돌·두 번 튕김·이동 바람5종을 직접 합성해 `services/audioAssets.js`에 연결했다. 게임용 추가113,500bytes. HOME·책 START·카운트다운·완주 음악·재생기/게임/서버 계약 무변경 [코드: sfx-v03/synthesize.py, public/audio/sfx-v03/manifest.json].
+
+**npm645/645·build/diff exit0**, 오디오 단위16/16·WAV검증100/100·Chromium 실제 React 사건fixture/비교청음/오디오녹화18검사 통과(위 기준/날짜). 실제 서버·운영 사건 검증을 새로 한 것이 아니며, API/이벤트는 격리fixture다. 기존 원본/미커밋 보존, 새 의존성·외부 샘플/Suno·DB/Edge·운영 접근/배포·commit/push0. 사용자 주관적 청음·실기기/Safari는 미완료. 아래10-17 영상은 이전 음색의 보존 기록이다.
+
+## 2026-10-17 공통 오디오·게임 이벤트 통합 — 로컬 완료
+
+기준 **4830b38 + 기존/오디오 미커밋 작업 트리, 2026-10-17 KST**. [연결표·파일·검증·실패/재개·한계](2.0x/AUDIO-GOAL-HANDOFF.md). 기존 v01/v02와 미커밋을 보존하고 v02 A 칼림바 HOME30초 및 기존5개 SFX 파생본(24kHz mono PCM16, 전체1,813,224bytes)을 사용했다. 외부 샘플/Suno·새 의존성 없음. 공통 Web Audio BGM/SFX·전체음소거·별도볼륨/localStorage·첫 조작/거절복구·fade·숨김정지·모드별lazy decode·한정동시재생·sessionStorage 중복 방지를 추가했다 [코드: services/audioManager.js, audioAssets.js, components/AudioControls.jsx, public/audio/manifest.json].
+
+Single 기존8.6초 서버시계/RAF, Duel/Group 기존 연출 프레임·카운트 상태, 승인 이동·아이템 피드백 gate·서버 확정 결과/XP에 연결했다. 게임시간/XP/랭킹/아이템 규칙·SQL/Edge 변경0. reduced-motion에서는 START 연출음을 생략하지만 새 확정 결과음은1회, F5 복구 결과는 무음이다. 실제 빌드에서 공통 Notebook relative 규칙이 START fixed를 덮던 기존 CSS 충돌을 시작 오버레이 제외1행으로 복구했다 [코드].
+
+검증: **npm test645/645·build/diff-check exit0**, 집중 오디오16/16, React fixture46/46·reduced 결과10/10·설정UI6/6, 실제 격리 Single random/custom/daily×1440/768/390 **75검사**, 실제 Duel 승패/Group START·개인/전체종료17검사, 실제 아이템 applied/blocked/reflected/이동18검사, 기권 세너비4검사. 연출 중 F5/스킵/숨김 복귀와 reduced-motion 실제 추가 검증은 인계의 최종 산출물을 따른다. 위 기준/날짜이며 미커밋 결과다. 운영·공개Wikipedia·실기기/Safari 검증은 아니다. 백엔드는 격리 local Auth/RPC/Realtime/DB이고 Wikipedia/snapshot 콘텐츠만 fixture, 아이템 배치는 로컬 고정이다 [산출물: .temp/audio-goal-20261017/].
+
+대표 실제 오디오+영상12개·개별 SFX·이벤트 로그는 같은폴더 review/index.html. 12개 모두 영상/음성 각1트랙·비무음PCM·디코딩 확인, 대표 Single390 영상 정상1배속 끝재생. 후시 음원 삽입 없음. 주관적 음량/반복피로 청음·실기기/Safari는 후속이다. 기존 큰번들/CRLF 경고 유지. 운영 접근/적용·배포·commit/push/reset/clean/stash0. 아래는 기존 음원/디자인 작업의 당시 이력이다.
+
+## 2026-10-16~17 HOME BGM v0.2 A/B — 합주 편곡 청음 대기
+
+기준 **4830b38 + 기존/이번 미커밋 작업 트리**, **제작/오디오·브라우저 검증2026-10-16 KST, 최종 보존 대조10-17 KST**. 사용자 v0.1 청음: 효과음 만족, HOME은 칼림바/다른 악기가 따로 연주하는 인상 [사용자 보고]. [A/B 미리듣기](../sound-prototypes/v02/index.html) · [원인 분석·역할 관계·재생성](../sound-prototypes/v02/README.md). 오디오 제출물은 `docs/sound-prototypes/v02/`의 A/B30초 WAV 두 곡뿐이며 새 합본/효과음/ZIP은 만들지 않았다.
+
+v0.1은 공통96BPM/D장조였으나 유음3파트 음역/패턴이 겹치고 패드가 마디180ms 전부터3.6초 지속돼 이웃화음1.1초 중첩이었다 [코드/분석: `v01-analysis.json`]. 이를 악기/볼륨 교체만으로 처리하지 않고 D장조·4마디 화음 지도 D6→G6→Bm7→Aadd9·4마디×3구절 선율/쉼/반주를 새로 작성했다. A는 칼림바 선율+패드, B는 플루트 선율+한 옥타브 이상 낮은 칼림바2음 반주. 두 안 모두 근음 베이스1/3박·셰이커2/4박, 악기4개/주선율1파트, 원음은 현재 코드마디 안에서 끝나며 짧은 잔향만 이월한다 [코드: `compose.py`; 악보: `score.json`].
+
+**악보/오디오44/44·Chromium 오프라인16/16 통과**(위 기준/날짜). 최종PCM의 A37/B36 선율 발음 음정식별, 현재 코드/조성·박/쉼·음역 분리·원음 gate, 경계1/2차 변화·클리핑0·추정4배peak·동일약-22LUFS 확인. A/B 각30초 실제1× 끝 재생·같은시점 전환·반복·390/768/1440px 확인 [산출물: `validation.json`, `preview-validation.json`; 화면: `.temp/sound-v02-20261016/`]. v0.1/효과음과 앞선 미커밋 보존은 같은폴더 `preservation.json` 참조. 루프/코드 검사 통과가 주관적인 합주감·불협감/반복 피로도 승인을 뜻하지 않는다. 실기기/Safari·인증미터·게임동기화는 미검증. 앱 소스 변경0으로 전체 npm/build·DB 검증은 반복하지 않았고 게임 연결/운영 접근/배포·commit/push·기존 미커밋 삭제0.
+
+## 2026-10-16 사운드 시안 — 게임 연결 전 청음 대기
+
+기준 **4830b38 + 기존/이번 미커밋 작업 트리**, **2026-10-16 KST**. [미리듣기](../sound-prototypes/index.html) · [제작/재생성 설명](../sound-prototypes/README.md) · [실제 연출 연결 제안](../sound-prototypes/TIMELINE.md). `docs/sound-prototypes/` 안에 직접 합성한 HOME30초 루프(96BPM/12마디), 일지/책장/카운트/시작/완주5종, 카운트 합본과 전체83초 청음 WAV를 정리했다. 모두48kHz/24-bit/stereo. 외부 샘플·음원·사운드폰트·음악 생성 서비스·새 의존성 없음 [코드/산출물].
+
+현재 `SingleStartCinematic`/시간함수/실제 GamePage 분기를 읽어 표지.10초·책장2.90초·3/2/1의6.00/6.70/7.40초·시작문구8.10초·본문8.60초와 구계약2.6초를 구분했다. WAV/HTML은 독립 검수물이며 게임 소스의 사운드 연결·게임 타이밍/정책 변경은0이다 [코드].
+
+**오디오51/51·Chromium 오프라인16/16 통과**(위 기준/날짜). PCM 재읽기/해시/클리핑/DC/4배peak 추정·루프 경계·카운트700ms 대조, 전체83초 실제1× 끝 재생·개별WAV/탐색/반복·390/768px 가로넘침 없음. 데스크톱/모바일 PNG는 `docs/sound-prototypes/review/`. 최초 기본 브라우저 경로 누락은 설치된 Chromium 명시 경로로 해결했고, 초기 고정대기/즉시이벤트 단언은 디코딩/이벤트 완료 대기로 보완했다. 마지막 초기 실패 자료는 같은 review 폴더에 보존하고 ZIP에는 최종 산출물만 포함한다 [산출물: `validation.json`, `preview-validation.json`].
+
+**음악적 분위기·음량/반복 피로도의 사용자 청음 승인은 미완료**. 실기기/Safari·인증LUFS/true-peak 미터·게임 내 동기화는 미검증이다. 앱 소스 변경이 없어 이번에는 앱 전체 npm/build·DB 검증을 반복하지 않았다. 대표ZIP은 `docs/sound-prototypes/wiki-race-sound-prototypes-v01-20261016.zip`; 파일별manifest/ZIP해시 검증은 같은 폴더 `package-validation.json` 참조. 운영 접근·배포·commit/push·기존 미커밋 삭제 없음.
+
+## 2026-10-16 HOME 좌우 장식 아트 적용
+
+기준 **4830b38 + 기존/이번 미커밋 작업 트리**, **2026-10-16(한국)**. 제공 ZIP의 좌우 WebP는 각각 **480×1200 RGBA/실제 투명 픽셀 존재**. `docs`에 추출 원본·ZIP을 보존하고 `public/assets/wiki-race/home/`에 동일 바이트로 복사했다. `WikiRaceShell.jsx`에 HOME 전용 `aria-hidden` 장식 레이어, `wikiRaceHome.css`에 1280px 이상에서만 이미지 배경·원본 비율·안쪽/하단 페이드·pointer-events:none을 추가했다. 기존 바깥 우측 gear 의사요소만 대체했으며 중앙 HOME·HERO·오늘 도전·랭킹/XP·게임/DB/Edge는 이번 작업에서 변경하지 않았다 [코드].
+
+실제 React 빌드의 **1920/1440/1024/390** 전후 좌표·중앙 캡처 비교, 시작 CTA, 가로 넘침, 이미지 디코딩, 모바일→데스크톱 resize, 이미지 실패 확인. **1024/390의 최초 장식 요청 0건**. 최종 브라우저 **8/8**, **npm test 629/629 · build/diff-check exit 0** — 기준/날짜는 위와 같다. localhost 접근 제한으로 빌드 파일을 Playwright HTTP 응답으로 제공했으며 계정·코스·랭킹·하단 위키 데이터는 격리 fixture다. 운영·실기기/Safari 검증은 아니다. 기존 큰 번들 경고 유지 [산출물: `.temp/home-side-art-20261016/{before,after}/`, `pixel-comparison.json`, `preservation.json`, `test.log`, `build.log`, `diff-check.log`]. 새 ZIP·장문 보고서·배포·commit/push 없음.
+
+## 2026-10-16 HOME React 중앙 흐름 통합 (좌우 아트 적용 전 기록)
+
+기준 **4830b38 + 기존/이번 미커밋 작업 트리**, **2026-10-16(한국)**. [변경·데이터 구분·제한·재검증](2.0x/HOME-GOAL-HANDOFF.md). 현재 이미 중앙 순서인 DOM을 유지하면서 HOME 전용 CSS 우선순위·HERO 지도/HTML 제목/게임 설명/주 CTA·오늘 도전·탐험가/TOP3·단일 최근 탐험·기록판·하단 위키 노트를 정리했다. 랭킹/기록 오류를 독립 표시하고, 공식 코스 확인 실패 시 fallback 제목을 숨기며 기존 시작 차단을 유지한다. 서버/게임/보상/시간 계약 변경 없음 [코드: `pages/MainPage.jsx`, `components/wiki-race/ExpeditionHero.jsx`, `components/WikiHighlights.jsx`, `css/wikiRaceHome.css`].
+
+npm test **629/629**, 집중 계약 **47/47**, 최종 build / diff-check exit 0. 브라우저 수정 전 **7/7**, 개선 fixture **28/28**, Wikipedia·Commons 실제 읽기 **9/9**, 최종 빌드 미리보기 **7/7**. 다섯 너비1920/1440/1024/768/390·긴 이름/문서·공동 순위·빈 상태·부분/전체 실패·이미지 실패·Guest·키보드·reduced motion·주요 진입 확인. 계정/장착/코스/랭킹은 격리 fixture이며 운영 검증이 아니다. 기준/날짜는 위와 같다 [산출물: `.temp/home-goal/{before,after,live,build-preview}/checks.json`, `test.log`, `focused.log`, `build.log`, `diff-check.log`].
+
+전용 좌우 정글/유적 이미지는 미확보. `wiki-home-b-visual-study.zip`의 draft crop은 README가 실제 적용을 금지하여 사용하지 않았다. 기존 승인 gear-cluster만1600px 이상 우측 바깥에 정적으로 재사용한다. 최종 비교·React 영상·단일 증빙ZIP: `.temp/home-goal/review/`, `.temp/home-goal/HOME-REACT-2026-10-16.zip`. 기존 미커밋 파일 지문 대조는 `preservation.json`에 기록한다. 운영 Supabase/Edge/Vercel 접근·적용·배포·commit/push 없음.
+
+## 2026-10-16 Single START / RESULT — 시각 피드백 2차
+
+기준 **4830b38 + 기존 random/custom/daily 통합 미커밋 + 이번 UI 미커밋**, **2026-10-16(한국)**. [변경파일·검증·한계·재개](2.0x/SINGLE-VISUAL-FEEDBACK-2-HANDOFF.md). 출발 위 “탐험의 첫 문서” / 목표 위 “도착할 문서” 복구, 긴 제목 측정에서 라벨 공간 제외. 아래 설명 없이 큰 파랑/금색 제목 유지. Single 결과 visible skip 제거·내부 Escape/포커스 유지. 기존 업적을 메달·완료 스탬프·보상 칩으로 표시하고 XP를 크게 강조 [코드].
+
+- 최종 실제 로컬 Deno/wiki-snapshot/Auth/RPC/DB/React **세모드 × 1440/768/390 회원9조합 + Guest random390/RM1 = 10조합·21검사**, 결과 skip 노출0·가로 넘침 없음·page/console/API 예상 밖 오류0. 기존 예약8600ms/시각·정상완주·XP custom15/daily25/random20·첫 도착30·Guest 영구기록/XP0 확인. Wikipedia HTTP만fixture이며 공개Wikipedia 완주 증거는 아님 [산출물].
+- **npm629/629·build/diff exit0**, 최종 라벨 대비까지 반영한 제목/전체보기/resize/CTA **27측정** 재통과. 기존572파일 중 허용 UI/문서 외 변경·삭제0, 서버/migration/랜덤/XP·업적 지급/순위 소스 동일. Duel/Group 연출·업적 마크업, 공용 XP 조회·계산·reveal/seen 원문 동일 [산출물/보존 검사].
+- 새 START/결과 PNG와 실제 React 영상10개를 대표 검수 ZIP 하나로 제출: .temp/single-visual-feedback-20261016/single-visual-feedback-2-review-20261016.zip. 영상 정상1×/끝 프레임·ZIP manifest는 동봉 검증JSON 및 루트 zip-verification.json 참조. 기존 영상/ZIP은 이력으로 보존 [산출물].
+- 중간 하니스의 Guest 문구 단언 오류·로컬 JWT 시각 오류를 하니스에서 보완한 뒤 전체10개 재실행. 제품 인증/정책 변경 없음. 검증 스택은 backup 유지 stop, 원래 사용자 로컬DB 유지. 실기기/Safari·실제 외부가용성은 미검증, 기존 큰번들 경고 유지. 운영 접근/적용/배포·commit/push/reset/clean/stash0 [산출물].
+
+## 2026-10-16 Single Random — 신규 서버 연동 로컬 완료
+
+기준 **4830b38 + 기존 미커밋 보존 + random 목표 미커밋, 2026-10-16(한국)**. [파일·승인·검증·실패·재개](2.0x/SINGLE-RANDOM-GOAL-HANDOFF.md). 사용자 승인으로 신규random은 한국어Wikipedia 일반 문서에서 출발·목표를 각각 독립 무작위 선정한다. 난도50/40/10·target-level·후보 풀·경로 탐색은 신규경로에서 사용하지 않는다. custom/daily의 기존 single_reserved_prefetch_v1·8.6초 연출을 재사용한다.
+
+- 서버가 namespace0/page ID/revision을 검증하고 pinned snapshot과 실제본문/run identity를 대조한다. 외부JSON읽기까지 전체29초 상한(정리여유100ms)·요청최대12초·합계후보12회. 마지막실험28,904ms에ALLOCATION_EXPIRED·코스반환0. 장애는 재추첨하지 않는다. pending·DB할당lease30초·준비TTL60초·최근5분미완주3건·예약시각·스킵/RM/F5는 기존계약이다 [코드/산출물].
+- 선검증 random8경로62검사 뒤 제품신규생성분기를 전환했다. 100ms보정 포함 최종제품원문에서 세모드8경로56검사 재통과. 추가 random8경로62·오류6경로52·구계약2경로8·순위/프로필9·Duel/Group13·회원/Guest각12동시요청5시나리오 통과. 구계약run/F5/결과·기존시간/NULL cohort·random20XP·Guest영구기록/XP없음·XP/업적판정 보존. 모두 위기준/날짜, 예상밖page/console/API오류0 [산출물].
+- **npm629/629·build/diff exit0**, 새빈최종격리프로젝트 wiki-next-goal-random-final-20261016에서 migration42개 순차적용·원본SHA동일·pending0·PG17.6.1.158·**전체pgTAP28파일1500/1500**. 브라우저데이터가남은DB의중간SQL재실행에서는 기존daily테스트의 날짜변경이 불변가드에 막혔고, 제품/Daily/그테스트 변경 없이 빈DB에서 재검증했다. 기존advisorsWARN5/ERROR0·큰번들경고 유지 [산출물].
+- 실제 공개Wikipedia + 실제Deno/wiki-snapshot/Auth/RPC/DB/React4검사: 무작위코스·8.6초·고정본문·실제링크1이동 후기권/Guest영구기록0. **이 실제판은 완주증거가 아니다.** 나머지 통제검사는 Wikipedia HTTP만fixture다. 연결경로·난도·완주가능성/전체외부가용성·실기기/Safari/OS suspend는 보장하지 않는다. Guest제한은 기존token단위·prefetch devtools조기열람 절충 유지 [코드/산출물].
+- 기존561파일 중 승인6파일 외 변경/삭제0·기존migration/다른Edge동일·원래사용자 로컬DB 데이터/함수/권한 지문동일. 초기/최종검증stack 모두backup유지stop·사용자stack유지. 운영접근/적용/배포·commit/push/reset/clean/stash0 [산출물].
+
+대표ZIP **하나**: .temp/single-random-20261016/single-random-local-review-20261016.zip (**15,038,955bytes**, 내부66entry/manifest65해시일치·영상9개1×실제재생/끝탐색·비밀정보검사). 실제Wikipedia 영상과 fixture완주영상은 README/검수HTML에서 구분한다. SHA256 6da4cea77c9f5b46d92d228095d813d7d7d669fb4d1759709e1bd0c2963b1389. 다음은 사용자영상검수·실기기확인이다. 아래 random보류·2.6초문장은 이전시점 이력이며, 기존구계약run복구에만 남는다.
+
+## 2026-10-15 Single START 시각 피드백 — 로컬 검수
+
+**후속최소보정(같은4830b38+미커밋/2026-10-15):** SingleStartCinematic/전용CSS만 제품수정. keep-all·균형줄바꿈과 실제공간측정으로 제목크기자동조정, 한글잉크높이1.35줄높이, 예외말줄임은 제목누르기/키보드전체보기·기존hover유지. CTA를 문서중심·아래여백44px에3·2·1과 같은좌표로배치. 실제React컴포넌트 고정프레임의1440/768/390 가독성집중27측정·관련단위8/8·build/diff통과. 전체게임/DB검증은 사용자요청대로반복하지 않았다. 시간함수/GamePage/서버/XP/랭킹 변경0. 대표캡처 `.temp/single-start-readability-20261015/captures/representative-{1440,768,390}.png`; 상세근거는 [인계후속절](2.0x/SINGLE-START-UI-HANDOFF.md)·같은디렉터리검증JSON/로그. 아래는 직전전체검수 이력이다.
+
+기준 **4830b38 + 기존 미커밋 보존 + 이번 UI 미커밋, 2026-10-15(한국)**. [파일/근거/실패·재개](2.0x/SINGLE-START-UI-HANDOFF.md). 아래 이전 통합의 DB·Edge·시간/XP·업적·순위 정책은 바꾸지 않았다.
+
+- 문서페이지의 상하단 문장·나침반/선 제거. 파란 출발명→금색 목표명→박스 없는 큰 가로텍스트3·2·1·시작!로 통일. skip은 기본숨김, Tab/focus-visible 또는Escape로 접근. shared CountdownOverlay/Duel/Group/END 변경0 [코드/산출물].
+- random도 같은 SingleStartCinematic을 사용한다. **기존random API생성 위치/started_at/2600ms는 유지**, 시각frame만 축약. custom/daily 예약8600ms도 유지. **신규random 서버선정은 미구현·보류** [코드/산출물].
+- 이전random 영상끝에 에러안내가 실제 있었다. 하니스의 정상완주후F5 캡처와 legacy복구의 SELECTING/isLoading=true·hasPresetMode=false 오류표시가 원인. 수정전 실제F5에서재현 후 초기/복구로딩은 준비안내로 보완하고 실제실패는 유지. 새대표영상은 확정결과에서종료, F5는 별도검증 [코드/산출물].
+- **npm603/603·build/diff exit0**, 실제로컬 **1440/768/390 × custom/daily/random9경로36검사**, 키보드skip/RM/F5/Guestrandom **추가15검사** 통과. 모두 위기준·날짜. 전구간MutationObserver+16ms관측 fallback0, 실제기록/XP와 기존시각보존 확인. Auth/Deno/RPC/DB/React실제, Wikipedia전송만고정fixture. DB/Edge 변경0이므로 새migration/전체pgTAP 재실행 없음 [산출물].
+
+새대표 검수 `.temp/single-start-ui-20261015/review/index.html`에 이번실제플레이9영상·대표PNG54개·개별영상끝frame9개/모아보기 재생성. 실제1×재생·유한duration/크기·끝탐색 통과, 끝frame모두 정상결과 확인. **이전555파일 중 승인7개 외 변경/삭제0, DB/Edge/보상/순위소스동일**. 이번대표ZIP하나 `.temp/single-start-ui-20261015/single-start-ui-review-20261015.zip`, 내부manifest검증은 같은디렉터리 `zip-verification.json`. 로컬검수 http://127.0.0.1:5276 (HTML200/영상Range206,2시간자동종료). 과거영상/ZIP은 이력으로 보존. 검증Supabase만backup유지stop, 기존사용자stack유지. 운영/commit/push0.
+
+## 2026-10-15 Single START custom/daily — 로컬 통합, 신규 random 보류
+
+기준 **4830b38 + 기존 미커밋 보존 + 이 목표 미커밋, 2026-10-15(한국)**. [승인 범위·구현·실패·검증·재개](2.0x/SINGLE-START-GOAL-HANDOFF.md). **전체 Single START 완료가 아니다.** `target-level` 원본을 확인하지 못해 사용자가 신규 random 할당을 보류했다. 기존 random의 선정/2.6초 시작/create API·과거 기록 복구를 유지한다.
+
+- 로그인/Guest custom·daily만 서버 코스 확정 → 고정 revision 본문 사전 로딩/DOM 준비 → 서버 예약 → 승인된 Round7 탐험 일지8.6초 → 서버 시각 탐색으로 연결했다. 할당 lease30초·준비TTL60초는 예약 전만 적용하고 pending을 재사용한다. 최근5분 미완주 할당 최대3건. 준비/예약 상태에서 이동·완주는 DB에서 거부한다. 예약은 서버now+500ms부터 연출, +9100ms에 시작하며 F5/중복/스킵/RM/숨김/늦은활성화로 바꾸지 않는다 [코드/산출물].
+- 본문은 준비 중 숨김/inert 처리하지만 **개발자 도구 조기 열람은 가능**하다(사용자가 승인한 prefetch 절충). 최초 로딩 실패/지연은 예약 전 처리한다. 예약 후 F5/숨김은 경과 시간을 유지한다. 서버now를 응답 수신 시 performance.now에 고정해 벽시계 변경을 무시하고, 마지막 시작 ACK를 기다리지 않고 예약권한으로 화면을 연다. 느린 document fetch 뒤 최신DB시각 재조회와 늦은ACK 버전퇴행 방지를 포함한다. 네트워크 전달·프레임 잔여 지연의 완전한0ms 동기화/OS suspend는 보장하지 않는다 [코드/산출물].
+- forward-only migration2개 `20261015061829_single_reserved_start_v1`·`20261015062624_single_timing_rankings_v1`. 기존 record 시간값/XP/업적 판정은 변환·삭제하지 않았다. NULL은 이전 기록, `single_reserved_prefetch_v1`은 새 기준으로 시간목록/결과count·순위/daily 개인최고·내순위/프로필 최고를 나눈다. 구daily RPC도 이전기준만 반환하고 XP·업적 중복은 두계약을 통틀어 유지한다. HOME의 역사 통계/이력과 다른 모드/END 연출은 이 목표에서 수정하지 않았다 [코드/산출물].
+- 최종 빈 로컬 프로젝트에서 **migration41개 순차적용/원본SHA일치/pending0/고정PG17.6.1.158**, **전체pgTAP27파일1464/1464(신규45)**·**npm602/602**·build/diff exit0. 실제 React 기본8경로49검사·오류5경로38검사·순위/프로필9검사·추가F5/지연ACK16검사, 실제동시성5시나리오(각12요청) 통과. 최종트리/freshDB 기본8경로49검사도 재통과/예상밖오류0(`browser-1792048447992`). 모두 위 기준·날짜 [산출물].
+- 실제 Deno/Auth/PostgREST/DB/React에 Wikipedia/snapshot 본문만 통제fixture다. 1440/768/390·skip/RM/F5·초기2초지연·예약응답유실·Date.now+1시간·synthetic숨김·F5본문11초지연·중복완주/XP를 검증했다. 실제 외부Wikipedia 전체 가용성·실기기/Safari 검증은 아니다. 추가 경합 첫 실행의 백그라운드 기록조회401 한건은 원인 미확정으로 실패자료를 보존했고 같은조건 재실행은 예상밖page/console/API오류0이었다 [산출물].
+
+기존539파일 중 승인13파일 외 변경/삭제0·기존migration/다른Edge동일, 원래 사용자 로컬DB의 데이터·함수·권한 read-only 지문 동일. 운영조회/적용/배포·commit/push0. 대표검수 `.temp/single-start-20261015/review/index.html`, 정상1×실제영상9개 메타데이터/재생 통과. 대표ZIP **하나** `.temp/single-start-20261015/single-start-local-review-20261015.zip`(12,824,764bytes, 내부66entry/manifest65해시 일치). 검증 전용stack은 backup 유지 stop, 기존사용자stack 유지. 신규 random의 근거 없는 대체선정은 추가하지 않았다.
+
+## 2026-10-15 Duel END 실제 React 통합 — 로컬 완료
+
+기준 **4830b38 + 기존 미커밋을 보존한 최종 트리, 2026-10-15(한국)**. [변경 파일·시제품 대응·실패/검증·재개](2.0x/DUEL-END-GOAL-HANDOFF.md). 목표 파일의 승인 범위에서 Duel END만 통합했다. 아래의 이전 END 미통합 문장은 당시 이력이다.
+
+**같은 날짜 12:51~13:31 이후 목표 모드 재확인:** 시작 시 위 통합·증빙이 이미 존재해 앱 코드는 그대로 보존했다. 현재 트리에서 npm593/593·build/diff exit0·실제 END29·경계9·Single/Duel/Group16검사 재통과(모두 위 기준·날짜, 최종 page/console/API 오류0). 최초 초기 navigation15초 timeout은 실패로 따로 보존했고 임시 검증본의 초기 대기만90초로 늘려 재실행했다. 새 실제 게임 PNG/1×영상6개는 `.temp/duel-end-20261015/recheck-20261015-1251/review/index.html`(현재 로컬5267, 기존5266 응답 없음에 대한 후속 복구·HTML200/영상206 확인); 영상 재생 검증도 통과했다. 격리 스택은 backup=true로 stop, 기존 사용자 스택 유지. 이번 변경은 인계·CURRENT 기록뿐이며 운영 접근/적용·commit/push0. 상세 실패·검증·보존은 위 인계 마지막 절을 따른다 [코드/산출물].
+
+- 실제 시제품 `docs/design/duel-end-2026-10-13/scene.js`/`scene.css`의 종이 참가자 카드·승자 전진/패자 후퇴·승리 도장 낙하/반동/16조각·패배 조용한 도장·기권 중립 구도를 React/CSS로 이식했다. 정상 승패 약2.7초, 기권 약2초 뒤 기존 결과지. 새 이미지/라이브러리/결과지 없음 [코드].
+- 종료는 서버 finished 사유·실제 참가자 승자만 읽는다. 참가자 has_finished만 먼저 오면 방 판정을 읽고, cancelled/불명 이유는 연출 없이 기존 표시. 본인/상대 기권·disconnected_timeout 구분. preview/index/search/효과 정리·START 중첩 방지·중복/늦은 응답/방 변경 보호 [코드/산출물].
+- 기존 bounded 표시 claim을 방+사용자별로 재사용하며 F5·종료방 재입장·다른 페이지 복귀는 정적 결과. RM/숨김/저장 실패도 정적 결과; online/선호 변경/Escape/터치 skip은 기존 결과로 전환. 결과/XP는 커버 아래 즉시 mount하고, 업적 NEW/순차 표시와 XP 표시 효과만 결과지 공개까지 기다린다. 기본 visibility는 true여서 Single/Group 기본 동작 보존 [코드/산출물].
+- **npm593/593 · build/diff exit0 · 실제 로컬 END29검사 · 경계9검사 · 기존 Single/Duel/Group 실제16검사 통과**. 모두 위 기준/날짜. END 실제 DOM 지속은 정상2705.6~2708.7ms·기권2005.1~2020.2ms. 1440/768/390·RM·F5·중복·패널 정리·지연 응답·기권 UI·서버 finalizer·원장 불변, 최종 실제 검사 page/console/API 오류0 [산출물]. SQL/Edge 정의 변경0이므로 전체 migration/pgTAP 재적용/재실행 없음.
+- 실제 인증/RPC/Realtime에 Wikipedia 본문만 통제 fixture를 사용했다. 연결 만료 경계는 격리 DB의 heartbeat 시각만 fixture로 앞당긴 뒤 실제 finalizer 판정을 받았다. 숨김은 synthetic visibility 검사이며 OS suspend/실기기/Safari 보장이 아니다. 대표 실제 React PNG/게임 전체1× 영상6개: `.temp/duel-end-20261015/review/index.html`; 영상 metadata/탐색/1×재생 확인. 상세 summary/실패/보존 근거는 같은 증거 디렉터리와 인계에 유지한다 [산출물].
+
+**운영 조회/적용·배포·commit/push0, 기존 미커밋 보존.** 기존532파일 중 허용6개 외 변경/삭제0·기존 migration/Edge SHA 동일, 원래 로컬 DB의 행/함수·권한 지문도 앞 세션 완료 상태와 동일. 검증용 격리 스택만 backup=true로 stop했다. 이번은 로컬 통합 완료이며 검색 소비 서버 권위·기존 출시 보류·운영 반영 판단은 바뀌지 않는다. 다음은 실제 영상 디자인 검수와 실기기 확인이다.
+
+## 2026-10-15 마지막 로컬 안정화 — 검색 서버 소비 보류
+
+기준 **4830b38 + 기존 미커밋을 보존한 최종 트리, 2026-10-15(한국)**. [목표·수정 파일·실패/검증·재개 인계](2.0x/WIKIRACE-NEXT-GOAL-HANDOFF.md). 사용자 승인 실행 계획에 따라 검색 본문 공급 변경/서버 소비 구현은 보류하고 나머지 로컬 목표를 완료했다.
+
+- 독립 project `wiki-next-goal-r20261015-632152ac`/API55421·DB55422에서 기존 **migration39개** 공식 CLI 순차 적용·이력/원본 SHA 일치·pending0·고정PG17.6.1.158 확인. 새migration0·기존 스택 read-only. Advisor 기존WARN5 유지 [산출물].
+- 태블릿 HUD 고정 컨트롤 축소 방지·문서/상태 칸 배분과 RACE PRE 내부 스크롤 최소 CSS 보정. 실제 React API fixture148/148: 1440/768/390·760/761, Single/Duel/Group·초장문·긴 PRE/표·피격·HUD/Dock/색인/링크. 768px 문서폭 **803→768px**. HOME·시네마틱·게임 로직/규칙 변경0 [코드/산출물].
+- 최종 **npm588/588·pgTAP26파일1419/1419·build/diff exit0**. 실제 격리 P0 11/11·검열14/14·미리보기17/17·실제Wikipedia+Deno2/2·START8/8·검색UI8/8·방어12/12·모드16/16·출시Duel/Group22/22·로그인Single17/17·Guest8/8. Duel동시성3시나리오×5회/deadlock0·Group하니스 전체 통과. 실제 최종 검사의 예상 밖 page/console/API 오류0 [산출물, 위 기준/날짜].
+- 첫 npm586/587은 과거 `.temp` 증거 사본을 현재 앱으로 감사한 오탐. 증거만 제외하고 실제 금지 경로 검출 회귀를 추가해588/588. PRE/라벨·fixture 이식 실패 및 초기 P0 UI/검열 버전 충돌 기록은 보존한다. 최초 일시적 실패 단일 원인은 미확정 [산출물].
+
+**검색 성공 소비는 여전히 클라이언트 권위이며 조작 우회 미해결**이다. 15초·성공1회·빈 입력/미발견 미소비·이동/F5 자동 재개 금지를 보존했으며 정상 UI 검증은 서버 강제 증거가 아니다. 본문/정제/개별 텍스트 노드/revision 일치를 위해 서버 본문 고정이 필요하다는 조사 후 사용자가 영향 범위를 이유로 보류했다. 기존 파일527개·기존 로컬 DB 지문 보존은 인계의 최종 산출물을 따른다. 운영 해결·출시 승인·실기기/Safari/OS suspend 보장 없음. 아래는 이전 단계 이력이다.
+
+## 2026-10-14 Duel 안정화 통합 패키지 — 로컬 완료
+
+기준 **4830b38 + 기존 미커밋을 보존한 최종 트리, 2026-10-14**. 사용자 통합 계획 승인으로 준비→P0→미리보기 서버 권위→전체 안정화를 연속 실행했다. [최종 결과/파일/실패·한계](2.0x/DUEL-STABILITY-RESULT-2026-10-14.md), [작업 인계/승인 정책/재개](2.0x/DUEL-WORK-HANDOFF.md).
+
+- 새 forward-only migration **20261014103131_duel_preview_authority_v1**만 **로컬** 적용(이력38→39). private 세션/목적지/요청 원장과 예약/신뢰 확정 RPC·로컬 Edge를 연결했다. 기존 감사 대상25함수 중 use/state2개만 정의 변경, P0 public 이동·private 아이템 이동 동일. 기존38 migration 파일 보존 [코드/산출물].
+- 활성화별 서로 다른 canonical page ID 성공최대3·동일 목적지 무료·실패 미소비. 예약최대6초/외부최대5초, 원래15초 만료 이내. 토큰교체/중복/응답유실/F5 서버 기록 보존. source identity+활성화 이후 실제 affected_user_id 이동 원장으로 종료해 heartbeat 버전 증가와 구분하며 같은 문서 복귀도 재개0 [코드/산출물].
+- 프론트 직접 Wikipedia fallback0. 이동/종료/닫기/F5/재연결 뒤 패널 자동 재개0·늦은 응답 폐기. 검열 만료 권한 재조회. 기존650ms/2500ms/최근사건/5슬롯/쿨다운/밸런스·Single/Group·검색 정책 보존 [코드].
+- **전체 pgTAP26파일1419/1419·npm586/586·최종 build/diff exit0**. 실제 미리보기 Auth/RPC/React15/15(외부응답fixture), 실제 Deno+Wikipedia2/2, 종료/검열만료3/3, P0인증/React11/11, START/검색8/8, 보호·반사12/12, Single/Duel/Group16/16·각 최종 예상 밖 page/console/API오류0(종료 후 heartbeat400은 코드/finished를 확인한 예상 거부로 별도). START/P0 React fixture13/13는 별도. 아이템 동시성3시나리오×5회/deadlock0·Advisor기존WARN5/신규0 [산출물, 위 기준/날짜].
+- 증거는 .temp/duel-stability-20261014/ 로그·JSON·대표ZIP. 기존파일517개 허용6개 외 변경/삭제0·HEAD동일. 최초P0 순간UI대기 실패의 단일원인은 미확정이며 실패/재검증을 구분해 보존한다. 나머지 fixture/인증/소스기대 오류는 보정·재검증했다 [산출물].
+
+**검색 소비 서버 권위는 미해결 후속**, 기존 성공1회/빈 검색·미발견 미소비 UI 유지. 과거 미리보기 활성화의 출발/성공 기록 backfill은 추측하지 않으며 세션 없는 활성화로 새 권한을 만들지 않는다. Duel END/HOME/Single START/사운드 통합0. **운영 접근/적용·commit/push/배포/reset/clean/stash0**. 이번은 로컬 완료이며 운영 해결/출시 차단 해제는 별도 승인·검수다. 아래 섹션들은 이전 단계 당시 기록이다.
+
+## 2026-10-14 Duel P0 공개 아이템 이동 권한 — 로컬 보정 완료·증거 검수 대기
+
+기준 **4830b38 + 기존 미커밋을 보존한 이번 트리, 2026-10-14**. [함수/권한 감사/우회 전후/정상 아이템/검증/한계](2.0x/DUEL-PUBLIC-MOVE-P0-2026-10-14.md). 사용자 건별 승인으로 `20261014073626_duel_public_move_authority_v1.sql` 작성·**로컬** 적용, 이력37→38. 변경 함수는 public.apply_duel_move_v2 하나다. auth→room lock→현재 참가자 lock→동일 room/actor/request cache→새 NORMAL_LINK만 승인 순서다. 특수/NULL/unknown 타입은 ITEM_RPC_REQUIRED와 snapshot만 반환하며 원장/게임/보상 쓰기0. 삭제된 원 참가자의 cache 우회도 차단했다. 기존 NORMAL_LINK 목적지 ID/clock 검열과 private 아이템/use/SWAP/권한 정의는 동일 [코드/실측].
+
+**신규 SQL51/51·전체25파일1379/1379·npm575/575·build/diff exit0**. 실제 Auth/RPC/React 공개 권한·정상 아이템11/11, 실제 NORMAL_LINK 검열14/14, 실제 Single/Duel/Group16/16·각 최종 page/console/API 오류0. fixture는 START/거부13/13·Duel78/78·RACE120/120으로 별도 기록한다. 공개8타입×6원장ID=48개와 거부 동시재시도5개 모두 거부·전체상태 before=after. 정상 random_link_move/go_back/history_rewind의 실제 문서/이동/원장 및390 Dock/F5/visibility·online 복구 확인 [산출물, 위 기준·날짜].
+
+권한 감사: public SWAP은 기존 SWAP_DISABLED/no-op, private 이동·random destination 등록은 authenticated/anon 실행 불가, Group/Single은 별도 mode/run에 묶임. 추가 Duel 공개 이동 우회 확인0, 범위 밖 수정0. Advisor 기존WARN5 동일·추가0. 역사 되감기의 상대 REWIND 행은 기존 item FK null·shared correlation/metadata 계약으로 보존했다. 최초 로컬 get_xp_summary502와 F5 전 순간 Realtime DOM 대기 timeout·검사 코드 오류 로그도 보존한다. 반복 회귀는 통과했지만 순간 전달/502의 단일 원인을 추측하지 않는다.
+
+**검사한 공개 타입 우회는 로컬에서 차단 확인, P0 전체 출시 차단 해제는 사용자 증거 검수·별도 운영 반영 판단을 기다린다.** 운영 조회/적용·commit/push/배포/reset/clean/stash0. 프론트/디자인650ms·2500ms·최근 사건/검색 만료/START 및 검색 소비·미리보기 서버 계약 변경0. 검수 ZIP·JSON·SQL diff·대표390 PNG는 `.temp/duel-public-move-p0-20261014/`에 별도 생성했다. 아래 승인 대기/미해결 문장은 보정 전 당시 이력이다.
+
+## 2026-10-14 Duel P0 NORMAL_LINK 보정 — 로컬 검증 (공개 타입 보정 전 이력)
+
+기준 **4830b38 + 기존 미커밋을 보존한 이번 트리, 2026-10-14**. [보정/계약/실제 증명/파일/한계](2.0x/DUEL-CENSORSHIP-P0-2026-10-14.md), [공개 타입 후속 승인 계획](2.0x/DUEL-CENSORSHIP-PUBLIC-TYPES-PLAN-2026-10-14.md). 사용자 승인으로 새 migration `20261014052928`만 **로컬**에 적용했다. 기존 snapshot 선택 집합에 censoredPageIds를 추가하고, NORMAL_LINK는 서버 snapshot 목적지 ID·실제 원장 대상/result·lock 후 서버 현재 시각으로 거부한다. LINK_CENSORED는 쓰기/거부 캐시 없이 room/player snapshot을 반환하며 UI는 RACE/본문/저장 상태를 유지한다. 제목 alias·동일 ID·옛 제목 원장, 차단/반사/6초 만료·락 대기·멱등성/F5를 검증했다 [코드/산출물].
+
+**로컬 신규 pgTAP32/32·전체24파일1328/1328·실제 인증 RPC/Realtime/React14/14·npm575/575·build/diff exit0**. API/Realtime React fixture는 START baseline5/5(숨김 읽기2→2/예산0→6 재현), after13/13(첫 진입/F5 숨김 예산0→0), 기존 Duel78/78·RACE120/120으로 별도 기록한다. 실제 직접 NORMAL_LINK6개 LINK_CENSORED 응답의 전체 상태 JSON before=after. 세부 로그/JSON/대표390 PNG는 `.temp/duel-censorship-p0-20261014/` [산출물, 위 기준·날짜]. START는 숨김에서 예산 차감 전 멈추는 guard만 추가했다. 디자인650ms/2500ms/최근 사건·검색 만료·기존 START/Single/Group 보존. 기존 migration 및 private 이동/get state 원문 동일; 변경 함수2개·권한 보존.
+
+**P0 전체 출시 차단은 유지한다.** 추가 감사의 실제 인증 RPC는 public FORCED_LINK·item_event_id=null로 봉인 문서에 만료 전 APPLIED/이동0→1을 재현했다. 이번 NORMAL_LINK 패치로는 막히지 않는다. public 아이템 이동 타입 권한은 위 후속 계획에 별도 제안했고 추가 SQL 작성/적용0. UNDO 코드 감사와 실제 재현을 구분한다. 검색 소비 서버/미리보기3회 권위 미해결, 이번 변경0. 운영 조회/적용·commit/push/reset/clean/stash/배포0. 이전 섹션의 승인 전/미해결 서술은 아래 당시 이력이다.
+
+기존 파일506개의 SHA256 대조에서 허용한 page/service/CURRENT 외 변경·삭제0, 기존 migration36개는 동일하다. 검수 묶음은 `.temp/duel-censorship-p0-20261014/duel-censorship-p0-local-review.zip`에 원문 SQL/세션 baseline diff/계약 diff/실제·fixture 증거를 구분했다. 기존 영상/로그/ZIP은 보존했다 [산출물, 위 기준·날짜].
+
+## 2026-10-14 Duel 마지막 동작 보완 + 프론트 안정화 (이번 P0 보정 전 이력)
+
+기준 **4830b38 + 보존한 미커밋 최종 트리, 2026-10-14**. [최종 보완·수정 파일·검증·한계](2.0x/DUEL-FINAL-MOTION-STABILITY-2026-10-14.md), [P0 우선 계약/승인 경계](2.0x/DUEL-STABILIZATION-PLAN-2026-10-14.md). 사용자가 승인한 먹물/링크 검열·2500ms/최근 사건은 유지한다. 보호 접촉/튕김·역링크 방향 반전·역방향 종이 넘김만 최소 보완했다. 이전 중요 사건이 최신 확정 사용을 가리던 선택 규칙을 보정하고, 최근 3건/650ms/gate/입력/RM/F5/실제 이동 시각은 보존한다. **디자인 수정은 종료하고 안정화를 우선한다.**
+
+검색은 기존 서버 만료와 문서 이탈/소비를 UI에 연결하고 실행 경계도 검사한다. Single/Group의 deadline 기본값/규칙은 유지한다. START는 전이 알림 누락 또는 참가자 초기화 읽기 경합에 대해 recovery generation당 최대6회 room/기존 마스킹 참가자 읽기만 수행한다. 오래된 version/늦은 응답/종료/unmount를 보호하고 기존 VS/카운트다운/지급 경로를 사용한다 [코드].
+
+**npm573/573·build/diff exit0·390 전후 before11/after21·안정화 React fixture16/16·기존 Duel fixture78/78·RACE fixture120/120**. 실제 로컬 **8/8**: 실제15초 만료 후 검색 패널/하이라이트 없음, START6조건 모두 F5 없이 진행·각 참가자 VS1/카운트다운1/5슬롯; page/console/API 오류0. fixture/실제 결과 합산 없음. `.temp/duel-items-final-20261014/review/index.html`: 390px 전후4쌍/RM/F5/안정화 예시 영상16개 metadata·대표4개 1× 재생·목록 넘침0. 시작 전 기존504개 중 허용7개 외 변경/삭제0, Supabase/Edge 원본 해시 동일 [산출물, 위 기준·날짜].
+
+**검열 직접 RPC 우회 P0 출시 차단·미리보기 서버3회 권위는 미해결**. 검색 UI 만료 보완은 서버 소비 권위가 아니며 운영/실기기/OS suspend/장애의 전체 보장이 아니다. 10-14 첫 검열 재검사의 6초 링크 visible 대기 타임아웃은 통과로 세지 않고, 10-13 확정 재현/동일 서버 분기 근거를 보존했다. 이번 되감기 전용 실제 서버 이동 재검증은 미실행. 다음 A는 forward-only 보정 작성·로컬 적용/검증의 **새 승인 대상**이다. 사용자 승인 전 migration/RPC/RLS/Edge 구현·정의 변경0. commit/push/reset/clean/stash/운영접근·배포0.
+
+## 2026-10-13 Duel 아이템 차별화·알림 가독성 통합 — 사용자 디자인 검수 대기
+
+기준 **4830b38 + 보존한 미커밋 트리, 2026-10-13**. [아이템별 전후·React/실제 서버 구분·수정 파일·실패/미해결 보고서](2.0x/DUEL-ITEM-READABILITY-2026-10-13.md). 기존 650ms gate/cues는 보존하고 사건 정보만 2500ms로 분리했다. 먹물 번짐·실제 검열 링크 봉인·보호 준비/차단·반사 방향·강제 이동·역방향 종이를 구분하고, 서버가 실제 이동시킨 사람의 기사만 전환한다. 기사 중복 상징을 없애고 기존 고정 알림 칸에 이름/결과/내·상대 정보를 모았다. 탐색 패널과 ID 없는 기존 응답 안내도 알림을 가리지 않게 배치한다 [코드].
+
+최근 3건은 gate를 통과한 실제 이벤트 ID만 임시 React 상태에 기록한다. 새 저장키/DB 없음. 실패/ID 없는 안내는 가짜 최근 사건을 만들지 않으며, 중복/과거/hidden/F5/online/종료·나가기를 처리한다. 타이머/observer/rAF/listener 정리·RM·터치/키보드/focus 확인. 기존 HUD/Dock 슬롯·서버 만료/쿨다운/게임 입력·이동 동기화·START/END·Single/Group·XP/업적/보상/seen 규칙 변경 0.
+
+**npm573/573·build/diff exit0·React 가독성 fixture374/374·기존 Duel fixture78/78·RACE fixture120/120(기본84/84도 통과)**, 실제 로컬 아이템/Single/Duel/Group **36/36**(page/console/API 오류0). RACE journal 확장120/120은 보고서/`race/report.json`을 따른다. fixture/실제 합산 없음. `.temp/duel-items-readable-20261013/index.html` / localhost5208: 실제 React 1440/768/390 전후 **36쌍**, 복구/미이동/RM/실패 **6개**, 실제 로컬 원장/Realtime **10개** = **영상88개**, metadata88개와 대표PC/모바일/실제1×재생4개 확인. ~2초 PNG/최근 패널도 구분. 실제 강제 이동/되감기의 서버 문서=기사 제목/본문=연출 시점 확인. 자기 이동2종 전용 실제 재검증 미실행.
+
+**검열 직접 RPC 우회 P0 출시 차단 유지**. 검색 만료 UI·미리보기3회 서버 권위·초기 START 지연/알림 누락 정체도 미해결이며 기존 승인 전 계약 제안 보존. 로컬 아이템 검사는 초기화 RPC를 선행하므로 START 해결 증거가 아니다. shared Vite cache504·녹화 옵션 누락·캡처 뒤 검사 시점 밀림·JWT future401·구형 안내 겹침/과거geometry 실패를 보고서에 보존했다. 시작 전 **499개 파일** 해시 대조, 허용 파일 외 변경/삭제0; 기존 미커밋 Supabase/Edge 파일 원본 보존. 이번 의존성/DB/RPC/RLS/Edge 정의 변경·commit/push/reset/clean/stash/운영접근·배포0. **사용자 디자인 검수를 기다린다.**
+
+## 2026-10-13 Duel 아이템 사용자 검수 후속 — 기능 방향 승인, 보완 검수 대기
+
+기준 **4830b38 + 보존한 미커밋 트리, 2026-10-13**. [후속 화면·규칙 우회/START 재현·승인 전 계약 제안·검증](2.0x/DUEL-ITEM-FOLLOWUP-2026-10-13.md). 모바일 큰 기사 상징/도장 중복을 제거하고 본문 앞 고정 높이 알림 칸으로 도장을 이동했다. 서버의 실제 새 본문 반영 뒤 방향 효과를 표시하며, 650ms·기존 색상/gate/F5/복구는 보존한다. 실제 잘못된 링크/역사 되감기 서버 문서=기사 제목/본문=연출 시점 확인. 자기 이동 2종 전용 실제 재검증은 미실행 [코드·산출물].
+
+**npm571/571·build/diff exit0·React 후속 fixture16/16·기존 Duel fixture78/78·RACE fixture120/120**, 실제 로컬 아이템/Single/Duel/Group **31/31**(오류0). `.temp/duel-items-followup-20261013/index.html` / localhost5203: 승인 구현↔후속 실제 React 1440/390 사용·피격·방어 자연 속도 영상, 실제 로컬 원장/Realtime 영상 및 지연 fixture 구분. 영상30개 존재/PC·모바일1× 재생 확인. 시작 시 기존494개 파일 해시 대조로 허용7개 외 기존 변경/삭제0 (`preservation.json`) [산출물, 위 기준·날짜].
+
+**미해결 규칙:** 실제 로컬에서 검열 만료 전 인증 NORMAL_LINK 직접 RPC가 봉인 문서로 이동; 검색 서버15초 만료 후 정상 UI 찾기 성공; 미리보기 정상 UI3회/F5제한은 유지되지만 시험 React 상태 변조로4회 표시·서버소비계약 없음. 서버 수정 A/B/C는 원인/안/테스트 계획만 제출, 사용자 승인 전 미구현. **미해결 START:** 선초기화 없는 정상 입장4 + 대기실 시작4 + guest 변경 알림 누락2는 정상. 첫 문서1.8초 지연+먼저 입장한 브라우저 변경 알림 누락은 guest/host 각각 정체 재현(서버playing·행초기화 완료, F5회복). 옛 실패 당시 원인과 같다는 증거는 없으며 START코드 변경0, 제한 재조회 후속안만 제안했다. 실제 운영/실기기·전체SQL·보상 회귀 미검증. 게임 규칙/장착/서버 정의·XP/업적/보상 코드·Single/Group·기존 승인 장면 보존, commit/push/reset/clean/stash/배포0. 사용자 검수 대기.
+
+## 2026-10-13 Duel 아이템 사용·피격·방어 — 최초 실제 RACE 연결 기록
+
+기준 **4830b38 + 보존한 미커밋 트리, 2026-10-13**. [실제 12종 계약표·변경/미완·검증·영상·실패 기록](2.0x/DUEL-ITEM-FEEDBACK-2026-10-13.md). 실제 성공 RPC/상대 `duel_item_event`의 applied/blocked/reflected/void를 읽어 650ms Dock·기사 상징을 연결했다. Coral 먹물/봉인/이동, Teal 보호/반사, Blue 탐색/기본 사용. 보호 준비≠차단 성공, 반사 target=공격자 구분, 정화 정보 없음→정화 성공 연출0. 최대3개·ID중복/오래된/숨김/복구 사건 재생0·RM 정적·종료/언마운트 정리. 먹물 지속 표시는 서버 activeEffects로 F5/중첩/해제를 맞추며 가림은 기사 안으로 제한했다. 장착·소비/쿨다운/지속 수치·기존 검열 링크 입력 경로·START/RESULT·Single/Group·Duel END 독립 시제품 보존 [코드].
+
+**npm571/571·build/diff exit0·Duel React fixture78/78·기존 RACE120/120·기본 RESULT85/85**, 실제 로컬 **29/29**(실제 RPC/Realtime/원장·먹물/F5/검열·보호/반사/강제 이동 + 기존 Single/Duel/Group, 오류0) [산출물, 위 기준·날짜]. fixture/실제 수치 합산0. `.temp/duel-items-20261013/index.html`: 보존 React 전후 3너비 자연 속도 영상·4상태 PNG·RM/복구/실패·실제 공격자PC/피격방어자모바일 영상 구분. 첫 실제 시작 전이 host 복구 정체는 미확정으로 남겼고, 후속은 실제 초기화 RPC를 선행한 아이템 검증이다. 시험 장착 UNIQUE 충돌은 runner의 ID 교체 순서만 보완하고 제약/데이터 삭제0, 최종 자기 테스트 계정/방/문서 정리 완료.
+
+검색 UI 만료/문서 이탈·미리보기3회 서버 권위/F5·검열의 서버 이동 제한·정화 계약은 기존 잔여 문제로 별도 기록했다. 운영·실기기/Safari·OS suspend·전체SQL·일부 이동/탐색 아이템 전용 실제 서버 재검증 미실행. 시작 전483개 파일의 해시 대조로 허용한 기존파일4개 외 변경/삭제0 확인(`.temp/duel-items-20261013/preservation.json`). 검수 목록 영상39개 존재·PC/모바일 재생 확인. 의존성/DB/RPC/RLS/Edge 정의 변경·commit/push/reset/clean/stash/배포0. 사용자 디자인 검수를 기다린다.
+
+## 2026-10-13 Single END / Single START 정책 / Duel END 독립 시제품 — 사용자 검수 대기
+
+기준 **4830b38 + 보존한 미커밋 트리, 2026-10-13**. [전체 수정·실제/독립 구분·검증·실패 보고서](2.0x/SINGLE-DUEL-FOLLOWUP-2026-10-13.md). **실제 앱은 Single END만 수정**했다. 별도 코스/시간/이동 기록지를 제거하고 기존 ResultCard 제목 영역의 완주!·도장·반동만 1.8초 표시한다. 기존 통계/코스/상세 경로/XP/업적은 한 결과지와 같은 DOM/순서/공간에 유지된다. 조회 지연/오류/무효는 축하 없음, 기존 claim/seen/원장/서버 완료 계약 보존. 아래 이전 2.3초 Single END 기록은 이 변경 전 이력이다.
+
+**npm565/565·최종 build/diff exit0·장면57/57·기존 RESULT104/104**, 실제 로그인 Single PC/모바일 각17/17(15/20/25·재완주0·F5 재지급0), 실제 Guest 별도8/8(PC/모바일 일반/RM·Edge completed·영구 game_records0·XP 동일 DOM/위치), 실제 Group10/10(개인F5→전체발표), Duel START4/4 [로컬 산출물, 위 기준·날짜]. Guest 완료 F5는 기존 GamePage가 저장 상태를 삭제해 **로비로 복귀**한다. 결과지 복구를 새로 구현하지 않았다. 삭제한 기록 카드를 찾던 assertion과 Guest F5 오인 실패는 보존하고 검증을 실제 정책에 맞췄다.
+
+[Single START A/B/C 결정](2.0x/SINGLE-START-INTEGRATION-DECISION-2026-10-13.md): **C, 기존2.6초 유지 추천**. 로그인 elapsed는 run 생성 시각 기준이라 생성 뒤8.6초 적용 금지. 전체 Round7의 장기 후보는 B(prepared/active 분리)이고 사전 공개/랭킹·자정·중복/응답 유실 정책 승인이 필요하다. Round7 원본 재사용 범위/원본 독립20/20, 실제 START/started_at/elapsed/DB·RPC·Edge 변경0.
+
+[Duel END 시제품·실제 연결 인계](2.0x/DUEL-END-PROTOTYPE-HANDOFF-2026-10-13.md): 독립 HTML `docs/design/duel-end-2026-10-13/index.html`, 정상 승패2.7초·중립기권2초. 상대 기권/재접속 유예 종료/무효는 실제 서버 사유만. **독립65/65·PC/모바일 일반/RM 영상12개·프레임48개**, 실제 앱 연결0/보상·코스·기록 생성0. 사용자 디자인 승인 전 연결 보류.
+
+검수 `.temp/cinematic-next-20261013/index.html`: Single 실제 React 전후 영상8개(API fixture), Duel 독립12개, 편집하지 않은 실제 localhost 원본6개를 구분. 선택적 Single 짧은 클립은 인코딩 색 마커와 DOM 종료의 불일치로 제외했으며 임의 offset 보정 없음. 기존768px 초장문 RACE 넘침·claim 동시성 한계·실기기/Safari/OS suspend/운영/전체SQL 미검증 유지. 초기473개 해시 대조, 허용8개 외 기존 변경/삭제0. Duel/Group START·Group END·HOME·Single START·기존 미커밋 DB/Edge 원본 보존. commit/push/reset/clean/stash/운영접근·배포0.
+
+## 2026-10-13 Cinematic 디자인 회귀 복원 — 사용자 시각 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-13**. [복원·비교·검증·실패·영상 보고서](2.0x/CINEMATIC-DESIGN-REGRESSION-2026-10-13.md). 작은 중앙 팝업으로 축소된 Duel/Group START를 Round4 전체 화면 카드·VS 충돌·지도 릴 크기/수치 곡선으로 복원했다. Group END는 최신 사용자 검수본의 3→2→1 시상대·마지막 1위 강조·기록지 접힘을 복원하고 말줄임표/큰 금색 사각 프레임을 넣지 않았다. Single END는 2.3초 동안 중복된 기존 기록 행을 가린 뒤 같은 최종 기록지를 보여 준다. ResultXp/업적은 같은 DOM을 유지한다. 기존 seen/원장/claim/useSceneSequence/게임 페이지·서버 계약·START 5000/5400+2600ms 변경0 [코드].
+
+**npm565/565·build/diff exit0**, 격리 장면57/57, **RACE120/120·RESULT104/104**, 실제 localhost **Group PC/모바일 각10/10·Single 각17/17·Duel START 새방 각4/4**, F5/skip/서버 XP·업적·보상 원장 불변·테스트 데이터 정리/RLS 보존 [산출물, 위 기준·날짜]. `.temp/cinematic-design-20261013/index.html`: 승인본/수정 전/수정 후 1배속 영상48개와 동일 너비·시점 정지 프레임96개, 실제 localhost 장면 클립8개. 정상 연출 주요 영역 너비(PC/모바일)는 Duel1320/370, Group START1080/362, Group END1110/362, Single END1000/362px로 승인본과 일치한다. 프레임 시점 오차는 16ms 이내다. **이는 기하·동작 검증이며 사용자 디자인 승인 PASS가 아니다.**
+
+기존 `actual-clips/group-end-1440.webm`은 4.5초에서 Group START가 보여 종료 검수 근거로 제외했다 [영상 프레임]. 새 클립은 DOM 전환 및 영상 픽셀 마커로 정렬하며 PC6.962초/모바일6.965초 디코딩 길이 안에 전체6.2초 발표와 기록지 전환이 포함된다 [산출물]. END의 reduced-motion/F5는 기존 최종 기록지로 직행하며, Group 5.25초 이후는 기존 실제 결과지로 연결한다. 독립 시제품의 모의 기록 표와 달라지는 이유는 실제 RESULT/XP·seen 계약 보존이다. 실기기/Safari·OS suspend·운영 검증은 미실행. HOME 신규 아트·Single START Round7 제외, 의존성/DB/RPC/RLS/Edge 정의 변경·commit/push/배포0. 기존 10-12 자료/실패 로그 보존.
+
+## 2026-10-12 Cinematic 실제 게임 통합 1차 — 기능 검증 이력, 시각적 동등성 철회
+
+**2026-10-13 사용자 검수에서 승인 시제품과 큰 차이가 확인됐다. 아래 PASS는 당시 기능 검증 이력으로만 읽는다. 작은 팝업과 잘못 추출된 Group END 영상은 위 복원 기록으로 대체한다.**
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-12**. [통합·파일·이벤트·복구·실패·영상 보고서](2.0x/CINEMATIC-INTEGRATION-2026-10-12.md), [Single START 후속 시계 설계](2.0x/SINGLE-START-SAFE-OPTIONS-2026-10-12.md). START는 Round4, END는 최신 round4-user-review-20261012를 실제 React에 연결했다. Duel 실제 참가자/사용 가능한 장착·공통 코스 VS, Group 실제 roster·기호 슬롯, Group 서버 전체 확정 3→2→1/동순위·기록지, Single completed 서버 scalar·두 끝점·완료 표식. 개인 Group/리타이어 본인/미확정·무효·오류에 성공 발표 없음. 기존 START 5초/5.4초/countdown2.6초·Single 시작 시계·Group 3초poll/요청세대/version·ResultXp/업적/seen/지급/보상 유지 [코드]. 발표 중 기존 결과/XP 접근·native skip·숨김/RM/F5 정적·기존 claim 하나 재사용.
+
+최종 **npm565/565·build/diff exit0**, 장면 fixture 전체56/56(React 영상15개)·후속55/55(video/RM 루프 제외+늦은Group/게스트/무관storage 추가), **RACE120/120·RESULT104/104·대기실 B안92/92 및 확장 준비119/119** 각 통과 [산출물, 위 기준·날짜; fixture와 실서버 합산0]. 실제 localhost **Single PC/모바일 각17/17·Duel START 정상/누락 새방 각1성공(각4/4)·3인Group PC/모바일 개인F5→전체발표 각10/10·Group 늦은오류/응답역전8/8·이벤트누락8/8·Duel/Group 회귀23/23**. 실제 teleport Edge/기권/결과F5·XP/업적/인벤토리 불변·자기 테스트 데이터 정리·RLS보존 확인. `.temp/cinematic-integration-20261012/index.html`/ZIP: 실제12개 장면별WebM/PNG(PC1440/모바일390·개인→전체·F5)와 fixture15개를 구분, 원본영상·실패 로그 보존. 기존 변경107개 초기해시 기록·허용 범위 밖 변경/삭제0, HOME/SingleSTART/기존 DB·Edge 변경 보존 [산출물].
+
+**768px 초장문 RACE35px 넘침은 별도 배포 전 수정 대상**: 현재 문서803px, 새 Cinematic CSS 비활성803px(동일DOM 비교). 기존30px 이력과 fixture 조건이 다름. cross-tab 동시claim 원자성·기존256capacity·실기기/Safari/OS suspend/운영/장기만료/전체SQL 미검증. HOME 신규아트·SingleSTART Round7·Duel 특수효과/승패cinematic·음원·신규보상·의존성 추가0. 이번 DB/RPC/RLS/Edge 정의·규칙/시계/보상 정책 추가 변경0. **commit/push/운영접근/배포0, 사용자 검수 대기**.
+
+## 2026-10-11 HOME·모드별 시작/종료 시퀀스 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-11**. [전수 감사](2.0x/SCENE-SEQUENCE-AUDIT-2026-10-11.md), [구현·서버/F5·검증·실패·영상](2.0x/SCENE-SEQUENCE-IMPLEMENTATION-2026-10-11.md), [후속 아트/사운드](2.0x/SCENE-SEQUENCE-ART-2026-10-11.md). HOME 기존420ms hero 등장 대체·표지/지도/경로/PLAY, 즉시 클릭·재방문 정적. Single 실제 서버 코스 기록지, Duel 공통코스 유지/순서 강조, Group 후보회전 제거/실제 활성 참가자·장착 배치읽기·코스. 시작 대기2.6초/VS5초/Group5.4초와 서버시각·입력·복구 유지. 개인Group 완료와 전체 순위 기록 분리, 실제 순위/내행 강조 후 XP 고정형제. 기존 XP220ms/업적600ms/seen·원장·이동/아이템/장착·Group 세대/version/3초reconcile 그대로 [코드]. 기존 표시 claim 저장키 하나 재사용, 최초 복구/숨김/RM 정적·StrictMode 중복/수명 연장 방지.
+
+최종 **npm563/563·build/diff exit0·장면fixture63/63·HOME 실제라우트/live위키8/8·RACE123/123·RESULT104/104·B안대기실136/136**, 실제 **Single17/17·Duel START 정상 새방1성공/누락 새방1성공(각4/4)·Duel/Group23/23·3인Group 시작/개인F5→새전체효과9/9·이벤트누락8/8·늦은400/역전8/8** [산출물, 위 기준·날짜]. fixture/실제 합산0. 갤러리 .temp/scene-sequences/index.html: 자연속도PC1440/모바일390 장면별18개 + 최초RM5개, 실제원본/장면별클립,5너비 및8인긴코스. 테스트 자기데이터 정리/RLS보존.
+
+단위의 XP분기순서 가정 실패·시작기사 가시성/PLAYING readiness 구분 실패·debug opt-in 누락·HOME fixture 전용CSS 누락은 원본 보존 후 보완/독립 실행. 최초Group클릭 정확시각은 없어 유일원인 단정0. 기존 초장문768px RACE30px 넘침·cross-tab claim원자성·실기기/Safari/OS suspend/운영/20분실시간만료/전체SQL 미검증, 기존256capacity는 장식만 fail-closed. 독립 책 오프닝/전용 도장/음원은 P2/명세보류. 이번 DB/RPC/RLS/Edge 정의/서버규칙/보상/XP/라이브러리/캐릭터/음원 추가변경0. **기존 미커밋 보존·commit/push/운영접근/배포0; 사용자 검수 대기**.
+
+## 2026-10-11 Duel 시작 표현·모바일 목차 후속 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-11**. [원인·파일·검색·검증·실패·영상](2.0x/START-OVERLAY-REVIEW-2026-10-11.md). 두 플레이어 VS와 서버 공통 출발→목표를 중앙 한 번 표시, /about 구형 안내 수정. 공용 카운트다운 종이 시각만 변경; 700/700/700/500ms·VS5초·START/입력/복구 유지. 앱 목차 DOM은760px 이하 RACE 본문 앞 가로 목차·44px native button으로 보완 [코드].
+
+최종 **npm561/561·build/diff exit0·시작 fixture14/14·RACE123/123·RESULT104/104**, 실제 **Duel START 정상 새방1성공·이벤트누락 새방1성공(각 runner4/4)·Single17/17·Duel/Group22/22·Group 늦은400/역전7/7** [산출물, 위 기준·날짜]. `.temp/start-review/index.html`에 전후 이미지·짧은 일반/RM 영상·실제 로컬 서버 원본. RM은 별도 context 최초 렌더부터 설정. 두 계정 공통 코스·4너비 VS·자기 테스트 데이터 정리·RLS보존 확인.
+
+**초장문768px VS는 정상이나 뒤 RACE 문서는798px(30px 넘침)으로 별도 미해결**. 최초 전체폭 assertion·fixture 링크 속성 누락 실패 보존. 실기기/Safari/운영/전체SQL 이번 미검증. 기존 이동/아이템/RESULT/XP/업적/장착·서버규칙·DB/RPC/RLS/Edge/보상 추가변경0, 기존 미커밋 변경 보존. **commit/push/운영접근·배포0; 사용자 검수 대기**.
+
+## 2026-10-10 애니메이션 전수 감사·핵심 게임 연출 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-10**. [전수 감사](2.0x/ANIMATION-AUDIT-2026-10-10.md), [구현·실패 이력·검증·영상·재실행](2.0x/ANIMATION-IMPLEMENTATION-2026-10-10.md), [아트 제작/연동 명세](2.0x/ANIMATION-ART-SPEC-2026-10-10.md). 세 모드의 실제 승인 move 응답에서만 현재문서/추가 마지막 경로300ms 강조. Duel 실제 itemEventId 공유 gate·server timestamp/참가자 확인 후 작은 공격/방어HUD300ms, press150ms는 선택만. 복구/snapshot/F5에서 move pulse0, 숨긴 탭/RM은 표시생략·timer 정리. 기존 RESULT320ms/XP220ms/업적600ms/seen/공개보상/Group 최신요청·버전·3초poll·마스킹/원장 보존. PROFILE 실제 저장성공WAAPI만 box-shadow420ms→opacity/2px300ms로 대체 [코드].
+
+최종 **npm561/561·build/diff exit0·RACE fixture123/123·RESULT fixture104/104·PROFILE/RANKING fixture30/30**. 실제 로컬 **Single17/17·확장Duel/Group24/24·Group 이벤트누락7/7·늦은400오류/응답역전7/7**, 각 runner 자기데이터 정리/RLS보존 확인 [산출물, 위 기준·날짜]. fixture/실제 합산0. `.temp/motion-audit/index.html`에 **최종PNG112장·짧은fixture WebM10개(1.76~12초)·실제로컬 원본WebM5개**, 기본5해상도/RM/실패/F5/모바일focus·tap·CTA 검사. 첫 실제 teleport응답wait30초 timeout은 미확정 원인으로 보존; 새게임22/22·확장24/24 성공으로 최초실패를 삭제하지 않음. 테스트슬롯중복 고유제약 실패는 runner만 한슬롯 준비로 보정 [산출물].
+
+운영·실기기/Safari·OS suspend·20분 만료·전체SQL·profiler·실제 동일websocket프레임 이중주입 미검증. cross-tab race 강조는 탭별이며 새 영구claim/지급체계 추가0. 전용책장/잉크/도장/카드자산·음원 미제작은 상세명세로 보류. 기존미커밋DB/Edge변경 보존, 이번 서버규칙/DB/RPC/RLS/Edge/보상/음원/의존성 추가변경0. **commit/push/운영접근·배포0, 사용자 검수 대기.**
+
+## 2026-10-10 2차-B RACE / RESULT 최종 개편 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-10**. [구현 전 조사·모드별 계약·파일·검증·실패 이력·스크린샷](2.0x/RACE-RESULT-FINAL-2026-10-10.md), [사운드 연결·중복 방지·자산·미결정 정책](2.0x/RACE-RESULT-AUDIO-2026-10-10.md). 실제 위키 본문/파란 링크·검색·검열·아이템·서버 코스·XP/업적/보상 정책 유지. 현재/목표 라벨과 종이 HUD, 모바일 실제 내 경로 접기·긴 목표 두 줄/펼침 전체, 잘리는 아이템 오류 안내 보정. RESULT 중앙 인물/지형 대신 기록지·서버 날짜·정적 완주/결과 표식·실제 경로·확정 XP·공개 보상 견본/프로필 연결. 220/320ms 표시 모션·reduced-motion·브라우저 저장소의 결과별 재연출 방지; 기존 업적600ms/seen/히든 정책 유지. Duel START·Group 요청 세대/version/3초 reconcile/종료 중단 추가 수정0 [코드].
+
+최종 **npm556/556·build/diff exit0·RACE fixture120/120·RESULT fixture104/104·실제 로컬 Single17/17·Duel/Group22/22** [산출물, 위 기준·날짜]. 실제 Group 장애는 이벤트 누락/오래된 성공 응답/늦은400 오류 각 새게임1성공·7/7이며 기존 runner의 서버 순위·원장 불변/F5·종료 뒤 조회 중단 검사를 유지했다. 실제 runner는 자기 계정/방/문서를 정리하고 RLS 정책 보존을 확인. fixture와 실제 서버 수치는 합산하지 않는다. 마지막 모바일 오류 안내 CSS 보완은 RACE120/120·build로 검증했고 정상 실제게임 반복은 그 직전 최종트리였다. `.temp/race-result-final/index.html`에 **PNG90장(기본7화면×5너비35장 포함)·10.32초 fixture 영상1개**, 대표 화면 육안 확인 [산출물].
+
+중간 RESULT 기권fixture 단발 실패1회는 `result-review.log`에 보존. 당시 어느 boolean이 false인지 로그가 없어 정확한 원인 미확정; 결과 shell 진입 뒤 기권 사유 표시를 기다리도록 runner만 보완(timeout 증가/앱 기권 변경0)하고 최종104/104를 확인했다. 재실행의 진입 로그는 이미 사유가 표시된 상태라 경합 재현으로 주장하지 않는다. 초기 HUD90px assertion 실패·sandbox build EPERM·모바일 오류 안내 잘림과 보완도 보고서에 기록했다. 운영·실기기/Safari·실제 OS suspend·20분 실시간 만료·전체 SQL gate는 이번 미검증. 실제 음원/재생 코드·새 아트·의존성·DB/RPC/Edge/RLS 추가 변경0, 승인된 보호 화면 추가 개편0. **commit/push/운영 접근·배포0. 구현·로컬 검증을 마치고 사용자 디자인 검수를 기다린다.**
+
+## 2026-10-10 2차-B 선행 Group 결과 전환 안정화 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-10**. [원인 A~F·시간순 로그·파일·실패 이력·검증·재실행 명령](2.0x/GROUP-RESULT-STABILITY-2026-10-10.md). 실제 로컬 서버의 finished/version12/결과3행에서 **오래된 playing/개인 결과1행 응답이 ENDED→FINISHED로 덮어쓰는 C**, **변경 이벤트 차단 시 개인 결과 재조회 없이 정체하는 B·D**를 결정론적으로 재현 [코드/산출물]. 요청 세대·서버/참가자 버전·종료 역행 보호, recovery 중 조회 차단, 개인 결과/관전 전용 3초 reconcile·실패 backoff·focus/visible/online 복귀·종료/나가기/해제 중단, 실제 조회 상태 안내·DEV opt-in 진단으로 보완했다. Group 보상/서버 계약·Duel 앱 코드·RACE/RESULT 디자인·사운드 추가 변경0.
+
+수정 전 일반 **10성공/0실패**, 역전 **0/1**·이벤트 차단 **0/1**; 수정 초기 복구/Realtime 경합 **0/1**도 보존하고 보완 뒤 별도 검증. **최종 일반 독립 새 게임 10성공/0실패**, 추가 장애 **12성공/0실패**(차단3·역전3·조회지연1·개인F5 1·숨김복귀1·offline복구1·동시완주1·늦은400 1). 실제 3브라우저/Auth/DB/RPC/RLS/Realtime이며 문서 그래프만 seeded fixture. 순위1·2·3·서버 원장(XP/업적 seen_at 제외/보유 보상)과 결과/F5 불변·390px CTA·종료 뒤 재확인 중단 확인 [산출물, 위 기준·날짜]. 중간 일반10성공/0실패와 역전 보완1성공도 별도 기록했다. 선행 늦은503 검증은 SDK 기본 GET 재시도를 확인해 오류 폐기 판정에서 제외하고, 재시도 없는400에서 discard-error 로그를 검증했다. 두 산출물을 모두 보존했다.
+
+최종 npm **552/552**, build/diff exit0; 대기실 fixture **136/136**·RACE **89/89**·RESULT **90/90**; 실제 기존 Duel/Group 회귀 **22/22**(Duel 결과/F5/기권/teleport 포함) [산출물, 위 기준·날짜]. fixture/실제 수치는 합산하지 않는다. `.temp/group-transition/`에 회차별 JSON·실패 PNG·상태 로그·최종390px 캡처, 실행 로그는 `.temp/group-transition-*.log`. 모든 실제 runner는 자기 테스트 방/계정/문서를 정리하고 RLS 정책 보존을 검사했다.
+
+**최초 2차-A timeout의 정확한 원인은 당시 서버/이벤트/조회 순서 로그 부족 및 데이터 정리로 미확정이다. 위 결함 수정으로 과거 실패를 해결 판정하지 않는다.** 운영/실기기/Safari/실제 OS suspend/새 20분 실시간 만료 실행은 미검증. 확인된 두 클라이언트 결함의 로컬 안정화 검증은 완료했고, **사용자 검수 후 2차-B 디자인 진행 가능; 이 세션에서는 시작하지 않는다.** commit/push/운영 DB·Edge·Vercel 변경·배포0, 기존 미커밋 변경 보존.
+
+## 2026-10-10 2차-A 게임 진입·대기실 최종 개편 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 미커밋 변경 보존 최종 트리**, **2026-10-10**. [페이지별 변경·계약·실행 이력·2차-B 인계](2.0x/PREPARATION-FINAL-2026-10-10.md). PLAY 모드별 링크 탐험 브리핑/출발·목표/준비·실제 아이템/게스트 제한, MULTIPLAYER 모드·규칙/생성·참가 위계/Enter·pending·중복요청 차단/실제 오류·접근 가능한 도움말, Duel/Group 서버 상태·다음 행동·연결 안내. 대기실 카드 재등장 제거/긴 문자열·44px 조작영역/모바일 목록 덮는 sticky 제거. Duel 3초 재조회·Realtime·최신응답/취소/목표저장 보호·기존 canStart/START RPC, Group 3~8인·READY·서로 다른 후보2개·호스트/승계 계약 유지 [코드]. 보호 화면·RACE/RESULT 앱 소스/XP·보상·DB·Edge·RLS 추가변경0, 신규아트/음원/의존성0.
+
+npm **549/549**·build/diff exit0·대기실 fixture **136/136**·보호 화면 fixture **49/49**·실제 로컬 Single **17/17**·실제 대기실 UI **30/30**·실제 Duel START 새방 **3/3**(실제 프레임누락2회, 세회차 재조회복구 확인) [산출물, 위 기준·날짜]. fixture 예상밖 console/pageerror0. 실제 대기실 console2는 runner가 차단한 Wikipedia 대문/그림 요청으로 경로 확인, pageerror/API실패0. **실제 전체게임은 Group 개인→전체 결과 전환 timeout1회로 미완료**: Duel 경기/결과/F5/teleport·기권 및 Group 준비/시작/개인완주 통과. 독립 Group 후속 **7/7** 통과했으나 첫 실패를 해결 처리하지 않음. 상세 로그·정리·포트충돌/옛 fixture selector 보정 이력은 인계문서에 보존. `.temp/preparation-final/index.html`에 5해상도·긴문자·준비/로딩/START불가/오류·복구·게스트 touch 캡처. 운영·실기기·전체SQL 이번 미검증, Group 최종전환 원인/전용자산·사운드는 후속. commit/push/운영변경·배포0. **2차-A 로컬 구현/검증 후 사용자 디자인 검수 대기; 전체 Group 최종 결과 무결점 판정은 보류.**
+
+## 2026-10-10 도감 장식·모바일 최종 보완 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 최종 미커밋 트리**, **2026-10-10**. [적용·모바일 높이·보상 보존·검증·실패/정리 이력](2.0x/ACHIEVEMENTS-FINAL-DECORATION-2026-10-10.md). 사용자 제공 SVG6종을 실제 크기 검수 후 원본 그대로 적용: 공개5분류32px/실제 최종완료 정적 도장48px. 지급 보상assetRef/카탈로그와 별도이며 새 아트 생성0. PC3/태블릿2열·자연 카드높이 보존, 모바일600px 이하 이름→설명→진행→다음보상 요약/상세 펼침·aria/키보드/초점. 같은 일반13개 스냅샷·390×1000에서 기본 문서높이 **8,002→5,821px, 2,181px/27.3% 감소** [산출물, 위 기준·날짜]. 상세 보상 견본·획득 이력 유지/접기 펼치기 API·데이터 변경0 [코드/산출물].
+
+npm **549/549**·build/diff exit0·수정전 SVG/해상도 **6/6**·최종 도감fixture **38/38**·기존 도감fixture **22/22**·실제 로컬 공개/보상 **10/10**·실제 Single/Duel 업적·결과·F5 **17/17** [산출물, 위 기준·날짜]. .temp/achievement-final/index.html에 최종33장/수정전5장/원본크기1장/신규해금·F5녹화. 녹화파일 watch EBUSY 초기중단→테스트 산출물감시제외 후 exit0; 남은 자기 테스트 계정·문서 확인/정리. 도장SVG는 정적이며 기존 신규 reveal/seen/F5 재연출 방지 유지. HOME/RANKING/PROFILE/기존 보상·서버규칙/XP/RLS 추가변경0. 운영·실기기·Group/전체SQL 이번 미검증. **제공 UI장식은 적용 완료; 기존 보상 신규아트·음원 미제작은 별도 유지.** commit/push/운영DB·Edge·Vercel 변경0.
+
+## 2026-10-10 ACHIEVEMENTS 발견 도감 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경 보존 미커밋 트리**, **2026-10-10**. [구현·계약·검증·산출물](2.0x/ACHIEVEMENTS-ALBUM-2026-10-10.md), [공개 자산 감사·제작 명세](2.0x/ACHIEVEMENTS-ART-AUDIT-2026-10-10.md). 도감 표지/일반완성·진행·히든발견 분리/4상태/획득내역/실제 공개 보상 견본·inventory 확인/3·2·1열/결과 완료 표식. HOME/RANKING/PROFILE 승인 배치·공통 카드·업적조건/XP/보상정책/RLS/서버 추가 변경0 [코드]. 실제 새 로컬 계정 공개RPC 일반13개·미발견 히든 목록없음; 공개 카탈로그만 감사하며 히든 총수·이름 추정0.
+
+npm **547/547**·build/diff exit0·전용 도감 fixture **22/22**·실제 로컬 공개/보상 **10/10**·실제 Single/Duel 업적 **17/17**·기존 PROFILE/RANKING fixture **30/30** [산출물, 위 기준·날짜]. F5에서 확정XP 복구/seen reveal0/unlock 증가0 확인. .temp/achievements-album/index.html에 기본5해상도·상태·비교·실제 해금/F5녹화. fixture와 실제 서버 구분, 초기 스모크 실패 및 잔여 테스트 계정 정리 기록. 운영/Group/전체SQL 이번 미검증. **UI 구현·로컬검증 완료/신규 전용아트·음원 미제작**. commit/push/운영DB·Edge·Vercel 변경0, 사용자 디자인 검수 대기.
+
+## 2026-10-10 RANKING + PROFILE 최종 개편 — 사용자 디자인 검수 대기
+
+기준 **4830b38 + 기존 변경을 보존한 최종 미커밋 트리**, **2026-10-10**. [파일·계약·검증·아트 제한·검수 자료](2.0x/RANKING-PROFILE-POLISH-2026-10-10.md). RANKING 메달/실제 장착 TOP3·내 순위/수치·참고기록 위계·모바일 목록·공동순위/긴 이름. PROFILE 대표 카드/실제 XP·기록·수집 4+2슬롯·다음 공개 업적 목표·서버 확정 저장/실패·카드 DOM 유지·닉네임 접기·게스트 로그인 안내. HOME 앱 소스·공통 ProfileCard·랭킹 RPC/RLS/Realtime/XP/카탈로그/DB/Edge 변경0, 이전 미커밋 작업 보존 [코드].
+
+npm **544/544**·build/diff exit0·전용 UI fixture **30/30**·기존 UI fixture **49/49**·HOME 최종 회귀 **19/19**·실제 로컬 보상/Auth/RLS **9/9**·실제 로컬 Group **7/7** [산출물, 위 기준·날짜]. Fixture와 실제 서버 수치 합산하지 않음. 정상 주 검증 페이지 console/pageerror0, 의도 실패 별도. `.temp/ranking-profile-final/index.html`에 스크린샷20개(기본10+장착전후/미보유/동률·긴이름)와 짧은 fixture webm. 운영 계정/카탈로그 미확인, 새 아트·음원 미제작, 기존 번들 경고 유지. 이번 Single/Duel 게임 재실행0. **commit/push/운영 DB·Edge·Vercel 변경0. 두 페이지 구현·로컬 검증 후 사용자 디자인 검수를 기다린다.**
+
+## 2026-10-10 HOME 마무리 — 사용자 검수 대기
+
+기준 **4830b38 + 기존 변경을 보존한 미커밋 트리**, 2026-10-10. [수정·데이터 구분·스크린샷·제한](2.0x/HOME-POLISH-2026-10-10.md). HOME 내 인물 제거/본인 장착 full 카드, 최근 기록 장식 제거/원본 시작·경로 보존, 오늘 코스 밀도, TOP3 순위 위계·동률 표시. 발견 노트·공통 헤더·게임/DB/랭킹 집계/XP 정책 수정0. npm544/544·build/diff 통과·브라우저19/19, 정상 console/pageerror0(의도503 별도) [산출물]. Wikipedia 실제 읽기와 계정/보상/랭킹 fixture 구분. 신규 아트0, 기존 변경 보존, commit/push/운영 변경0.
+
+## 2026-10-10 HOME 최종 시안 후속 — 로컬 구현
+
+기준 **4830b38 + 기존 변경을 보존한 미커밋 트리**, 2026-10-10. [HOME 변경·자산 조사·검증·미완성 사항](2.0x/HOME-FINAL-2026-10-10.md). HOME 한정 CSS·사람 없는 히어로·실제 장착 TOP3·발견 노트 4/2/1열, 실제 Wikipedia/Commons 콘텐츠와 출처 유지. 전용 정글/유적/수첩 아트는 미확보이며 CSS 표현과 구분. npm544/544·build 통과 [산출물]. 기존 미커밋 변경 보존, commit/push/운영 변경0.
+
+## 2026-10-10 B안 전면 UI 감사·후속 구현 — 로컬 디자인 검토 가능 / 운영 배포 판단 보류
+
+기준 **4830b38 + 기존 변경을 보존한 미커밋 트리**, **2026-10-10**. [전체 감사](2.0x/B-UX-AUDIT-2026-10-09.md), [구현·검증·파일·스크린샷·배포 전 체크](2.0x/B-EXECUTION-2026-10-10.md), [보상·모션·사운드 명세](2.0x/B-REWARDS-MOTION-AUDIO-2026-10-09.md). 공통 종이/점선/외곽 장식 레이어·헤더 터치영역·짧은 모션/reduced motion, HOME 하단 노트·랭킹 기록지, 프로필 미보유→도감 연결/서버 확인 장착 피드백/배경 실제 카드 미리보기, 일반13개 도감 분류별3/2/1열·일반 먼저/히든 전폭 요약 마지막·보상 이름 태그, PLAY 준비3단계·대기실/결과 공통면 구현 [코드]. **START/서버 계약/XP 지급·결과 저장/기존 DB·Edge 파일 추가 변경0**. 이전 미커밋 변경은 보존.
+
+최종 **npm544/544 · build/diff exit0 · 페이지 UI49/49 · 대기실fixture101/101 · RACEfixture89/89 · RESULTfixture90/90 · 실제 로컬Single17/17 · 실제 로컬Duel/Group22/22** [산출물]. 모든 수치는 위 기준·날짜이며 fixture와 실제 서버를 합산하지 않음. 페이지 UI 정상 console/pageerror0, RACE/RESULT 의도적 실패는 별도 기록. AFTER56개(주요11화면×5너비+보상preview1)·BEFORE4개, `.temp/b-ux-after/index.html`에서 비교. 신규 이미지·보상 ID/슬롯·지급 정책·음원·의존성 추가0. 기존4migration/Edge 선행·운영SHA/검증·승인·전용일러스트·음원은 후속; 이번 운영 조회/변경·commit/push/배포0.
+
+## 2026-10-09 Duel START 안정화 — 재현·수정·최종 로컬 검증
+
+기준 **4830b38 + 기존 변경을 보존한 미커밋 트리**,2026-10-09. [원인·회차별 결과·변경파일·배포전 확인](2.0x/DUEL-START-2026-10-09.md),[배경 이미지 제작 명세](2.0x/ILLUSTRATION-SPEC-2026-10-09.md). 수정 전 실제 두계정6회는5성공/1실패:양쪽SUBSCRIBED지만host최종조회1명 뒤guest join 이벤트미수신,DB2명/host UI1명 정체. **waiting3초 서버재확인+focus/visible 복귀,latest read/취소응답보호,목표저장전조회무효화**로복구. 원래누락의Realtime내부사유는미확정. 최종일반12/12·실제서버host프레임누락6/6(모든회차reconcile복구확인),전체실제게임22/22·fixture91/91·npm544/544·build/diff exit0 [산출물]. 중간/추가진단은실행기록에별도보존하며실패를재시도로지우지않음. 주요3랭킹/참고버튼분리·TOP1/프로필미리보기작은마무리,실제일반업적13개로5해상도밀도검토(별도응답재생UI44/44). 신규이미지제작/삽입·서버계약변경·commit/push/운영변경0. 이전의미해결기록은이실행의재현/수정범위에서대체되며운영스모크/기존배포선행조건은별도보류.
+
+## 2026-10-09 UI 완성도 후속 — 로컬 구현 / 실제 Duel 간헐 실패 확인 필요
+
+기준 **4830b38 + 기존 변경을 보존한 미커밋 트리**, 2026-10-09. [수정 파일·검증·스크린샷·한계](2.0x/UI-POLISH-2026-10-09.md). 공통 CSS 지도/기록판/수첩 배경, HOME 시작→목표 구분 및768px 기록판 압축, TOP3 위계·모바일 탭, 프로필 장착/보유/미보유 안내·숫자 대비, 업적 히든/보상 영역, 위키 그림 실패 안내. 신규 자산·의존성·서버 계약 변경0. npm544/544·build/diff exit0·fixture UI44/44(5해상도/20스크린샷)·초기 경합 fixture83/83·실제 Single17/17·실제 Duel/Group 재실행22/22 [산출물]. **실제 첫 Duel은 DB2명/화면1명으로 START timeout; 원인 미확정이며 재실행 성공을 해결 근거로 쓰지 않는다.** SQL clean/외부 링크는 이번 재실행하지 않음. commit/push/운영 변경0.
+
+## 2026-10-09 후속 실행 — 로컬 구현·검증 완료 / 운영 확인 보류
+
+기준 **4830b38 + 기존 변경을 보존한 미커밋 작업 트리**, 2026-10-09 [산출물]. [실행 결과·검증 한계·변경 파일·재실행 명령](2.0x/EXECUTION-2026-10-09.md).
+
+- 별도 빈 폐기 컨테이너에서 전체 migration **36/36**, SQL **1,296/1,296(23파일)** 통과. 플랫폼 Auth/Storage schema-only 기반 psql 순차 적용이며 CLI 이력 검증과 구분. 기존 개발 DB reset·앱 데이터 복사 없음. 실제 Wikipedia 후보5 **5/5** 재확인 [산출물].
+- 초기 SELECT 지연이 최신 참가자/목표를 덮어쓰는 START 경합을 fixture에서 재현하고 latest-read 보호로 교정. 대기실 **83/83** 통과. 이전 실제 첫 실패의 동일 원인 여부는 미확정 [코드/산출물].
+- HOME 3열 제거·중앙 최대1200px 복원·하단 Wiki 노트. 승인 장비 이미지는1600px 이상 좌우 장식. RANKING TOP3 장착 카드/프로필·내 기록 비교·나머지 목록 분리. PROFILE auth-card 제거·Jungle Shell 및 저장/장착 유지. ACHIEVEMENTS 서버 분류 필터·히든 보호·꾸미기 진입 [코드].
+- **npm544/544 · build/diff exit0 · 실제 Single17/17 · 실제 Duel/Group22/22 · 격리 페이지UI29/29(1440/1024/390)**. 정상 console/page error0, 기존 번들 경고 유지. `.temp/wiki-2.0x-ui/`에 네 페이지 각3크기 스크린샷 [산출물].
+- 운영 읽기 권한 미확인으로 접근 시도 없음. [적용 전 읽기 전용 SQL](2.0x/PREDEPLOY-READONLY.sql) 제공. 운영 migration4/Edge 선행·Production SHA/승인은 별도. 신규 자산·보상 정책·Group 자동 disconnected·일일 업적 날짜 보류 유지. commit/push/운영 DB·Edge/Vercel 변경0.
+
+## 2026-10-09 1차 개발 검수 — 이전 이력 (위 후속 실행이 우선)
+
+기준 **4830b38 + 미커밋 검수 작업 트리**, 2026-10-09 [산출물]. [검수·페이지 상태·후속 작업 명세](2.0x/REVIEW-2026-10-09.md).
+
+- **교정3건:** HOME TOP3에 제한 밖의 내 행이 포함되는 문제, RANKING 공식 코스 조회 실패/fallback 표시, 주간 XP가 created_at을 사용하는 C2 계약 불일치. 주간은 **granted_at**으로 교정했다.
+- **새 후속 migration `20261009051855`**는 주간 집계 함수 하나만 교체한다. 이전3개 migration 보존. **로컬36개**, 이 개편 운영 적용 대기 migration은 **4개**, Edge single-run도 선행 필요. 원장·과거 기록·보상·정책 소급 변경0.
+- **HOME 방향 정정:** 사용자는 3열 정보 대시보드를 원하지 않는다. 기존 중앙 hero/게임 진입/탐험가·랭킹 유지 → 하단 Wiki 콘텐츠 확장 → PC 양옆은 배경 장식. 현3열 CSS는 요구 불일치이며 완료 판정을 철회했다. 이번은 후속 설계, 전체 홈 대규모 재작성0.
+- **페이지 현황:** PLAY 및 freeze Lobby/Race/Result는 기존 범위 재사용. MULTIPLAYER/RANKING/ACHIEVEMENTS 부분 완료, PROFILE 이전 auth-card 유지. 일일 업적 날짜·Group 자동 disconnected 판정·신규 꾸미기/음원은 후속.
+- **재검증:** npm544/544 · SQL전체1,296/1,296(23파일) · build/diff exit0 · 실제 Single17/17 · 격리 UI23/23(1440/1024/390 진입/홈/랭킹/프로필, 업적/팝업/장애·정상 console 오류0). 실제 링크5쌍 재감사 성공. 모든 수치는 2026-10-09, 4830b38 + 검수 미커밋 트리 기준. 기존 번들 경고 유지.
+- **실제 Duel/Group 회귀:** 첫 실행은 대기실 START 비활성 timeout, fixture 정리 완료. 진단(UI roster/status+DB 목표) 추가 후 **재실행22/22 통과**. 첫 실패 원인은 미확인, 응답 경합 재현은 후속이다. 성공한 재실행을 첫 실패의 해결 근거로 쓰지 않는다.
+- [읽기 전용 적용 후 SQL](2.0x/REVIEW-DB-CHECKS.sql)은 로컬에서 실행 확인; 운영 미실행. 초기 깨끗한 별도 DB에 migration4개를 재적용하는 clean gate는 이번 미실행.
+
+**이 세션 commit/push/운영 DB·Edge·Vercel 변경0.** 세부 검수 자료를 먼저 검토하고 후속 HOME 구현/운영 적용은 사용자 별도 승인 범위로 진행한다.
+
+## 2026-10-09 Wiki Race 2.0.x — 1차 로컬 구현 기록 (아래는 검수 전 이력)
+
+**기준 4830b38 + 미커밋 작업 트리, 2026-10-09 [산출물].** 상세 변경·근거·분류·남은 정책은 [2.0.x 진행 기록](2.0x/PROGRESS-2026-10-09.md).
+
+- **T1/T2 로컬 해결:** 서버 고정 시작·목표로 daily 생성, 위조 시작 ID/제목/revision 차단, 원래 코스 날짜·F5 결과/XP 보존, 동일 코스 개인 최고 랭킹. 실제 위키 링크 검증 후보 5쌍을 추가하며 하루 1코스 유지. 기존 NULL 시작은 미사용·동일 목표 검증 후보일 때만 보정; 이미 사용된 코스는 보존. 운영 당일 라면/시작 NULL을 임의 변경하지 않았다.
+- **2.0.2 로컬 구현:** HOME 3열/모바일 핵심 우선 배치, 실제 Wikipedia 콘텐츠·출처·캐시·실패 표시, 일일 기록/주간 gameplay XP/누적 XP 랭킹 및 전원 대상 내 순위. 기존 PLAY/온라인 공용 Shell은 재사용.
+- **2.0.3 부분 완료:** 업적 획득일/단계 보상/히든 보호와 기존 장착 단계 미리보기. 신규 꾸미기 자산·보상 정책은 보류. 기존 daily 업적의 완료 날짜+목표 기준 누적은 후속 정책 정리 필요, 기존 unlock/XP 소급 변경 없음.
+- **2.0.4 준비 완료/재생 보류:** 게임용 음원 부재 확인, [이벤트·자산·재생 계획](2.0x/AUDIO-PLAN.md) 작성. 저작권 불명 음원 추가 없음.
+- **T3:** 기존 Group 개인/최종 결과·관전·경로와 Duel 이동/기권/결과/F5는 로컬 회귀 통과. 그룹 연결 끊김 자동 마킹·모든 장기 시간 경계는 미확인/후속으로 분리했다.
+
+| 최종 검증 | 결과 (2026-10-09, 4830b38 + 미커밋 트리) |
+|---|---|
+| npm test | **544/544** |
+| npm run build / git diff --check | **exit 0 / exit 0**, 기존 큰 번들 경고만 |
+| 신규/보정 SQL 관련 pgTAP | **163/163** (single43 + pool13 + XP100 + explorer7) |
+| 기존 포함 로컬 SQL 전체 회귀 | **1,295/1,295**, 23파일 오류/실패 0 |
+| 실제 로컬 Single 스모크 | **17/17** — fixed pair·2회원·반복 XP·active/completed F5 |
+| 실제 로컬 Duel+Group 스모크 | **22/22** — RLS/Realtime/actual Edge·기권·3인·결과 F5·원장 불변 |
+| 기존 Phase3 실제 로컬 스모크 | **16/16** — 관전·grace·리액션·모바일 |
+| 2.0.x 격리 UI | **11/11** — HOME 1440/768/390·랭킹·업적·진입·오류 |
+
+**로컬 DB migration 35개, 운영 적용은 하지 않음.** 새 migration 3개(`20261009030624`, `20261009032309`, `20261009033227`)와 single-run Edge 변경은 운영 미적용이며 프론트 배포 전 선행 필요. 새 의존성·재화·슬롯·보상 ID·과거 migration 수정 0. 본 세션 운영 DB/Edge 변경·배포·commit·push 0. 운영 스키마·배포의 현재값은 별도 승인/조회 후 확인한다.
 
 ## 최신 운영 상태 — RELEASED WITH FOLLOW-UP
 

@@ -1,0 +1,157 @@
+{
+  "date": "2026-10-29",
+  "sourceSha256": "c7ef6142bfa9b357d7034dfdce126cff2a81fcf1ba4786b014bd1315f1eba555",
+  "reason": "Approved 145 product files over HEAD leave old tests incompatible; selecting these already-hashed verification files reproduces 682/682 in a separate tree.",
+  "productFilesChanged": 0,
+  "migrationsAdded": 0,
+  "edgeChanges": 0,
+  "approvalStatus": "approved by user 2026-10-29; exact 35-file list unchanged",
+  "files": [
+    {
+      "path": "scripts/supabase-runtime-common.mjs",
+      "sha256": "21e2748492dd3e30dc896b8164951b6402b65c1f862c648b7f5363f82206b5f6"
+    },
+    {
+      "path": "scripts/verify-daily-course-pool.mjs",
+      "sha256": "cab7c5ce858601c538a09dd3ea37ef58856b2a8d1180baab9f8fc10825d68c3b"
+    },
+    {
+      "path": "supabase/tests/xp_result_grants_v1.sql",
+      "sha256": "fbeed25c71b9db1fd77734f90c2144258d32b5710c1ddb655c8f170411e69f32"
+    },
+    {
+      "path": "tests/achievementAlbum.test.js",
+      "sha256": "cfa31254f3c52181216826af28e2e4acf74a4b6db49abbcd92052161613a0816"
+    },
+    {
+      "path": "tests/appRouting.test.js",
+      "sha256": "454bdf7bb700834826d78f486b7442ea205dd5794182ecbdd0321a1cc044dae6"
+    },
+    {
+      "path": "tests/audioFeedback.test.js",
+      "sha256": "f3a972957f87cd9bd62b26b26131361cfa67b92316ec2f07af8503ec96eb67b7"
+    },
+    {
+      "path": "tests/audioManager.test.js",
+      "sha256": "575695eb202465d0b27c577444e1206c4bfef5038c1e43a261db3d8c8a9e883f"
+    },
+    {
+      "path": "tests/auditRepair.test.js",
+      "sha256": "9df871252002f19ebe03b82527868fad321babae56a15aa78509d59b00512780"
+    },
+    {
+      "path": "tests/cinematicPresentation.test.js",
+      "sha256": "cc1ea3f4efe20420c100ea71017840276962bb23dc600975e64d685cd0eee685"
+    },
+    {
+      "path": "tests/dailyChallengeReady.test.js",
+      "sha256": "31df04b5a40a46f8cf234d2e99c673b09af6d148dee8a8d70cebc89260bd0ca9"
+    },
+    {
+      "path": "tests/dailyCourse.test.js",
+      "sha256": "837c7891a2048b5988d6a71324de0d60ec20dd5f2944716ef579cfbf00118dda"
+    },
+    {
+      "path": "tests/dailyCoursePool.test.js",
+      "sha256": "baf8efb0c81e6278b1b8245e53a7662f8e496e68171565e41c829e383f3c3e76"
+    },
+    {
+      "path": "tests/duelCensorshipRejection.test.js",
+      "sha256": "37e5dbce6513b1355a0a78dde29439f218e982911fd7241a8ff779a13319673c"
+    },
+    {
+      "path": "tests/duelEndPresentation.test.js",
+      "sha256": "3bde296a55850611e52bee479a6caaa65ce88296e677a67ef6997e2b1b2a5544"
+    },
+    {
+      "path": "tests/duelFeedback.test.js",
+      "sha256": "92fb0e1b6de118a451e129c4154c74b62af0a38070f4302def3bd98cfe4c461e"
+    },
+    {
+      "path": "tests/duelHostTarget.test.js",
+      "sha256": "02c6356a3eb10f36bba254d49da81fb02ebbe646074f8399c77ace8022f5cedf"
+    },
+    {
+      "path": "tests/duelItemAuthority.test.js",
+      "sha256": "40e211e1c505b9ea8f1869c1d8fce3671b77c6b0c4a5ba9e1b39cf315887611a"
+    },
+    {
+      "path": "tests/duelPlayersView.test.js",
+      "sha256": "1a9e6793caab3e61cc31c91ddf667ef851ff70f20c55ce6dd9ba27cba42521a1"
+    },
+    {
+      "path": "tests/duelPreviewGateway.test.js",
+      "sha256": "be328d5da51cbe1d7102b3ecf3de4d22488ca05b79d390f4c68561daaa3d8bf8"
+    },
+    {
+      "path": "tests/duelPreviewState.test.js",
+      "sha256": "32181c5fd7e0000dc879df98531178f0258769aaca3d5ec600a68f33eb35ce6d"
+    },
+    {
+      "path": "tests/duelResultHotfix.test.js",
+      "sha256": "7733c02371b796c43e8801731548c4830c68ebf76bb67c049e9fac8e3f2dbe88"
+    },
+    {
+      "path": "tests/explorationRecords.test.js",
+      "sha256": "717258f482a4f765ed73efb2158631e430bdd103431893096266a379a1b1acee"
+    },
+    {
+      "path": "tests/groupSnapshotGuard.test.js",
+      "sha256": "ea917cfeb215421e99615f4145f5dd45a8321e56eaeb29d9f3b152c486b332c9"
+    },
+    {
+      "path": "tests/isolatedValidationTarget.test.js",
+      "sha256": "c6e8a96053fcfc5bca987a8558a2ec59e0e25c47bbd7837174eeb34bd265c237"
+    },
+    {
+      "path": "tests/matchExpression.test.js",
+      "sha256": "2b57ec1335a0e2d0941fa6d8afb7922275378c86bdb6144b23b1d24fd3e0a6ec"
+    },
+    {
+      "path": "tests/profileRewards.test.js",
+      "sha256": "7cb0b0dccb409e58ea58a697c7d771274fd055cae9865e7f0b386b2e4535732c"
+    },
+    {
+      "path": "tests/raceMotion.test.js",
+      "sha256": "5b18cc82fe77c741f99ad78e0f99127f2347ab45c74ce8bc96f656205fb30259"
+    },
+    {
+      "path": "tests/resultJournal.test.js",
+      "sha256": "60326e3bf6d78f37daef57872579ec9428758103734fec0eb7e55cce5e8db435"
+    },
+    {
+      "path": "tests/resultPresentation.test.js",
+      "sha256": "35d897a0ead53bae4d4ce7a9316406dab47a37042dbcb7c8c067ca59f0213431"
+    },
+    {
+      "path": "tests/retroScripts.test.js",
+      "sha256": "915de0a9a235a02180501864b8eeed167a058587d05d8e5be2f1065313fe0bd8"
+    },
+    {
+      "path": "tests/singleRandomStart.test.js",
+      "sha256": "1cf29ba0cf8197f9a188b6bc82c2de71949be3cfc0615b429ecf7335da20ddc1"
+    },
+    {
+      "path": "tests/singleRunMode.test.js",
+      "sha256": "ae74c57e6cfc62b661c6c4ad6a1c2ffdc633a9ddc4ef39806ea433c3a3db8125"
+    },
+    {
+      "path": "tests/singleStart.test.js",
+      "sha256": "0113d211ee85c1e4912ca12a2cc08eedd818b8a3dbd160dd535d8962469adae6"
+    },
+    {
+      "path": "tests/xpResultDisplay.test.js",
+      "sha256": "e5b665d67a965eb2d2fcee3156cd8a3e214a64de3e040a8683bccfdf1167baf7"
+    },
+    {
+      "path": "tests/xpTotal.test.js",
+      "sha256": "371530c0b646b1ff8bf705a8576b1c923eff736fb049f62e70de7935a25917f5"
+    }
+  ],
+  "validation": {
+    "nodeTestExit": 0,
+    "tests": 682,
+    "pass": 682,
+    "fail": 0
+  }
+}

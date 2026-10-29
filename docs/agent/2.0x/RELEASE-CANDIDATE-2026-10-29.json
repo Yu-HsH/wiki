@@ -1,0 +1,3298 @@
+{
+  "date": "2026-10-29",
+  "base": "4830b38fee774aa8953a8740cd50563c43d0eb76",
+  "uncommitted": true,
+  "sourceSha256": "c7ef6142bfa9b357d7034dfdce126cff2a81fcf1ba4786b014bd1315f1eba555",
+  "fileCounts": {
+    "runtime": 235,
+    "edge": 10,
+    "migrations": 42,
+    "verification": 251
+  },
+  "hashAlgorithm": "SHA256 UTF-8 concatenation sorted group/path rows: group TAB path TAB file_sha256 LF (candidate-manifest.json)",
+  "runtimeSha256": "09c4531d3d9e7449298afca20e3a40d5bbb8524c71714a3d315c0dd77fd7d900",
+  "verificationSha256": "8a8b7062fa858c829d1b2956ff67d0ca18b7ad624ea30c4732e9fa3d129dd0a7",
+  "newDependencies": 0,
+  "lockfileChanged": false,
+  "runtime": [
+    {
+      "path": "App.jsx",
+      "group": "runtime",
+      "bytes": 8711,
+      "sha256": "59bea7efa8ca2207f3dd60aee8f0487b3e52cfe84c085cfaec55fe62c3a0fe4a",
+      "changedFromHead": true
+    },
+    {
+      "path": "appStyles.js",
+      "group": "runtime",
+      "bytes": 1355,
+      "sha256": "409611c3121d3c86aaa55aad31756c2284254387799d757807338a14784b36bd",
+      "changedFromHead": true
+    },
+    {
+      "path": "authContext.jsx",
+      "group": "runtime",
+      "bytes": 10627,
+      "sha256": "91f6670604f0fef6533f0028255310d782a2dc84fc09b71d4e9c9934594300cc",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/AchievementRewardPreview.jsx",
+      "group": "runtime",
+      "bytes": 2072,
+      "sha256": "b3bf2069543335785d623abbb709064d1927e9aeac548836282ed9c2a1e18151",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/AdBanner.jsx",
+      "group": "runtime",
+      "bytes": 2733,
+      "sha256": "aa20556a826900e2b4d1f49f6f7578dde193203e2e8b4c086d47f868a9229914",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/AudioControls.jsx",
+      "group": "runtime",
+      "bytes": 2583,
+      "sha256": "ddec303f6b070ab6008de6d72d5f0b81bd9f8fafcdd551389da0b87dcb02fa52",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/cinematic/CinematicParts.jsx",
+      "group": "runtime",
+      "bytes": 8129,
+      "sha256": "68e1a3d227c0a51ce3a3461305bc97a91c7a1f964adf7f2e428d35b1176869cc",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/cinematic/DuelEndSequence.jsx",
+      "group": "runtime",
+      "bytes": 7739,
+      "sha256": "57a6c34727c30e92b50be56598d6895115fa5fb5ddae092538fe2d3760e8080c",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/cinematic/DuelEndVisibility.js",
+      "group": "runtime",
+      "bytes": 200,
+      "sha256": "c96d2d5dddd54200a818c0703e870867f22c85b36ceb48cfdf5f8a59773347af",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/cinematic/SingleResultRoute.jsx",
+      "group": "runtime",
+      "bytes": 1234,
+      "sha256": "c5f43246c56dd5a89f8cbedd40ba662d2bd503effda41f0ebf6e1cb592fabe32",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/cinematic/SingleStartCinematic.jsx",
+      "group": "runtime",
+      "bytes": 9834,
+      "sha256": "ec5e5a4f774c2d0dae5982b81d975e51de636fb5e262901cc17477a00cdd90be",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/CountdownOverlay.jsx",
+      "group": "runtime",
+      "bytes": 2645,
+      "sha256": "2896b301609e7292271a643d4ef15a55a76803df0bb92a8f6c2a189319e59032",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/DuelItemBar.jsx",
+      "group": "runtime",
+      "bytes": 30776,
+      "sha256": "62b02b02ecac241687f02579f4cb7af011fe3966feaca45602367fcf035a088d",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/DuelItemFeedback.jsx",
+      "group": "runtime",
+      "bytes": 6281,
+      "sha256": "39595ac2082eac09f5cb8777901a356a47cb7403574e1ef3185f143309079883",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/EffectOverlay.jsx",
+      "group": "runtime",
+      "bytes": 925,
+      "sha256": "ba06ef6f33dbe7f2fb74246802aa300c7acf48378ca9ee2428bde6ac1d57df4e",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/ExitGuard.jsx",
+      "group": "runtime",
+      "bytes": 2330,
+      "sha256": "76f713a175fe9a85f6d022047eba27c3f949e1df1f37464d2727f4d19f9076f2",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/FinishEffect.jsx",
+      "group": "runtime",
+      "bytes": 1242,
+      "sha256": "3d1067497372d383de89d2938d5968e67344b125baa0bf8aedc71aa109537232",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/FloatingHud.jsx",
+      "group": "runtime",
+      "bytes": 1482,
+      "sha256": "eee3ffb31859a72ebd530452c09cc91901ba774acb5bca1080f16c383b8f4e0f",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/GameSetup.jsx",
+      "group": "runtime",
+      "bytes": 3183,
+      "sha256": "145976d1e7ef60d3e5e2b0d368c16e0397690bb4aab63240c29a652cbe23f2e9",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/GroupPickOverlay.jsx",
+      "group": "runtime",
+      "bytes": 3210,
+      "sha256": "43414c76ba97be31ac6ea25b1dbbf07baefe825507a95db3593a3d34e704a0e1",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/ItemBar.jsx",
+      "group": "runtime",
+      "bytes": 2211,
+      "sha256": "d1b2dd4f993b88123e06c1ed119e8c65a005748cd10556738cba19534b755bb4",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/MaintenanceScreen.jsx",
+      "group": "runtime",
+      "bytes": 1929,
+      "sha256": "31b438ae90abe1e86745e7deab74e2f0fe48685def57f8b07ef8d7f17aea45d1",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/OnlineGameRecoveryPanel.jsx",
+      "group": "runtime",
+      "bytes": 2286,
+      "sha256": "3131dba958e2ad54e2cae68824d3081e226568a15b048f874d359eff74cb169c",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/PageLoadingOverlay.jsx",
+      "group": "runtime",
+      "bytes": 447,
+      "sha256": "79876fb5563ad85e793427a9a3b07940dee88cbdb238ab7171b59ff0b1b6ff04",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/ProfileAvatar.jsx",
+      "group": "runtime",
+      "bytes": 2706,
+      "sha256": "b83d8c1e6ae09a774145c7d31e662bdb9828a3a6948adf7edef2e326aacb9a2d",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/ProfileCard.jsx",
+      "group": "runtime",
+      "bytes": 4163,
+      "sha256": "03790d13515848efdf6e3df299612db2b2c3fbb58be6f6e2ce725a5416ae79c2",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/ProfileRewardEditor.jsx",
+      "group": "runtime",
+      "bytes": 10125,
+      "sha256": "8e726f8e739756f531927fc6116fcc6c002df0f760ead09104facaae8b81e805",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/ResultAchievements.jsx",
+      "group": "runtime",
+      "bytes": 4554,
+      "sha256": "328e563dd8a3e2d758ec9570058f4ed0069e4ee83701b8e035b7791caec30ec3",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/ResultXp.jsx",
+      "group": "runtime",
+      "bytes": 9894,
+      "sha256": "5ebe9cf6e200310f9d18a26fc31702ce154ff92461ce3fa32aaad595b37473fa",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/ScrollToTopButton.jsx",
+      "group": "runtime",
+      "bytes": 736,
+      "sha256": "7080883a1b7abb840d43f5119fdd69ac421d4d9a1e07ff6a0df8316e09faee46",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/SingleAchievementCard.jsx",
+      "group": "runtime",
+      "bytes": 2205,
+      "sha256": "c22442a930169828c0c62f19a19ccc0499bd628a54cb16d82163d31768ec0438",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/StartCourse.jsx",
+      "group": "runtime",
+      "bytes": 643,
+      "sha256": "032d7debb36b7207f5ab4ccc18f85f92bd17c8fd833dd5a0147ea9f1a184820b",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/SuccessOverlay.jsx",
+      "group": "runtime",
+      "bytes": 9401,
+      "sha256": "76aaa7d5164d0f2df173e4884911c9bb050684e965150e7afaa282e5042a0756",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/UserProfileModal.jsx",
+      "group": "runtime",
+      "bytes": 7621,
+      "sha256": "92f6f79d74821c9de9c33ddc64918b543176640ebef746ef226c28b2f60299a0",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/VsIntroOverlay.jsx",
+      "group": "runtime",
+      "bytes": 3397,
+      "sha256": "505441fc73acf989fe8c1502d51744c513ba56d2e2451d6275bea89274b8a6d1",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/wiki-race/ExpeditionDialog.jsx",
+      "group": "runtime",
+      "bytes": 1433,
+      "sha256": "3163c5ac16ef24a19bbe5cf67dbe8f3d2c139a1bfc943dceffd908475bb77ea2",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/wiki-race/ExpeditionHero.jsx",
+      "group": "runtime",
+      "bytes": 1220,
+      "sha256": "c0ca6134c577d90c245d7fc9c7d598495cb3f8055e5eb22e516af8b9ee1b88ae",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/wiki-race/LobbyParts.jsx",
+      "group": "runtime",
+      "bytes": 4584,
+      "sha256": "0df8d8ff9483f3122a9ac97c615e5155f39e5257b85aee417c08cefbff8b6885",
+      "changedFromHead": false
+    },
+    {
+      "path": "components/wiki-race/race/GroupRaceParts.jsx",
+      "group": "runtime",
+      "bytes": 16668,
+      "sha256": "e86569a5fa27b5cc57d26a2380590b31c4385d25bbf81fefd6239dbb0e51fdad",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/wiki-race/race/RaceParts.jsx",
+      "group": "runtime",
+      "bytes": 7915,
+      "sha256": "5253bb2fb07e15a8a1ac89f2be34c8849d17c3b3408813f19bb855062b421536",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/wiki-race/result/ResultParts.jsx",
+      "group": "runtime",
+      "bytes": 12367,
+      "sha256": "81a21eb26649d3b4948403e27b24b6e3b2d8b63ba2136fb773ecfcacdece51e3",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/wiki-race/WikiRaceShell.jsx",
+      "group": "runtime",
+      "bytes": 2837,
+      "sha256": "19689155877b1af2f47e93927b73be92c5018764d15c8c4c3d4ad5c02d2175e0",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/WikiHighlights.jsx",
+      "group": "runtime",
+      "bytes": 3414,
+      "sha256": "35b7b8192a97e4eb5af4e5af7d85e2f94258fa226e5224a54432030c1c905f42",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/WikiViewer.jsx",
+      "group": "runtime",
+      "bytes": 22773,
+      "sha256": "d0713e854a97f153a1ef73185adb2129ad98ff971104270f18a443516cdfec3d",
+      "changedFromHead": true
+    },
+    {
+      "path": "components/XpProgress.jsx",
+      "group": "runtime",
+      "bytes": 1291,
+      "sha256": "d40c5950a64ee8c4376a6fc35a8316a1ccbc3b24372801d0471ff11ab7c83304",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/achievements.css",
+      "group": "runtime",
+      "bytes": 4448,
+      "sha256": "eda9c3cec60770814d84ca870c39a9d8f525153d2f4353de9530ec8dbffa205d",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/app.css",
+      "group": "runtime",
+      "bytes": 43882,
+      "sha256": "71e3b0d71654c5f260866a701b7a856d84eae4b44db93f8e8276b867572d95eb",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/group.css",
+      "group": "runtime",
+      "bytes": 4998,
+      "sha256": "088beb2f5560ece6b386f0ab11c3f4efb94c71d8e9012d241eb3565dd001bd23",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/groupSpectator.css",
+      "group": "runtime",
+      "bytes": 4005,
+      "sha256": "0d21e69434e31cfcf11107764c7864efe966d765f06a18c74e3f4f401dbe6f0e",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/matchExpression.css",
+      "group": "runtime",
+      "bytes": 1667,
+      "sha256": "a647c7f0d1e70104b5de5ae8b3919a118e79d65426c14399f8c673e06b20ae6b",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/matchResult.css",
+      "group": "runtime",
+      "bytes": 416,
+      "sha256": "19b06ca4aa2daeb331fbcfeb1d4dc6e0f438244545a3b8f45c7c2112f033ff24",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/multiplayer.css",
+      "group": "runtime",
+      "bytes": 47219,
+      "sha256": "c9474a6c8a4caaf885c2c84269a00c73bf1b7d85a568bf39364cac4fceb70af1",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/profileCard.css",
+      "group": "runtime",
+      "bytes": 11380,
+      "sha256": "ec93b405e53b7f0a6670b676bf846a7bada1b3b7ccda3d185989e88547f41226",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/recovery.css",
+      "group": "runtime",
+      "bytes": 646,
+      "sha256": "3e3e6c6930286f97f0a9c75c3eac9476a00581e4845e267aa8268dfb02f347af",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/resultXp.css",
+      "group": "runtime",
+      "bytes": 914,
+      "sha256": "eaeb5f56619a96c7a14037c6d8d71574d2a282f7e3b901532526bc7bd4b2e015",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/SuccessOverlay.css",
+      "group": "runtime",
+      "bytes": 678,
+      "sha256": "bbd62df07b744efc2320eaf61fc6f4f133cc362c9dc28489bb75d12d061cf2fc",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/wiki.css",
+      "group": "runtime",
+      "bytes": 14053,
+      "sha256": "164ee6f290455b9640466111e1461be50140b683c0b9fe28ad271733a71fbd10",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/wikiRaceAlbum.css",
+      "group": "runtime",
+      "bytes": 7451,
+      "sha256": "dd2d401b8b9a02742fe5f67fd75190bd0b9f8a15986967f076c4b73e810cd9a8",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceAudio.css",
+      "group": "runtime",
+      "bytes": 1402,
+      "sha256": "e806ab9e74061631652255eda7389340f79d3629ed60b315c93fb4b1590cc94e",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceBase.css",
+      "group": "runtime",
+      "bytes": 11547,
+      "sha256": "7194b847f9ef2ea2b18e909cf2c7d3a3222fb09183f24db001c45fde3a2efd5f",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceCinematic.css",
+      "group": "runtime",
+      "bytes": 34917,
+      "sha256": "8a8d33e8d5c148b43b8c999eceafa28da7f2714d2c523eecb5326ee5aa89f37c",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceCollection.css",
+      "group": "runtime",
+      "bytes": 9817,
+      "sha256": "e49f90f8e0d55ee91409b4499bf881154cada7fa5f6cdebd9ffd8abc82d9c375",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceDuelEnd.css",
+      "group": "runtime",
+      "bytes": 5980,
+      "sha256": "619afa696a6700c4e7c28c8a6d38bae1e9774b6433c1cb97e28b8149a78736f0",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceDuelFeedback.css",
+      "group": "runtime",
+      "bytes": 18399,
+      "sha256": "8d9604959f77a29d9bc8b8b33d9cc3742aad0405a34aabbb6ed2abb6a7974495",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceExpansion.css",
+      "group": "runtime",
+      "bytes": 10986,
+      "sha256": "b32bf883d2bb3a8333b611ca4e70dc3f950ca6e12ffb040e6bfb528ebcbed047",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceHome.css",
+      "group": "runtime",
+      "bytes": 14923,
+      "sha256": "c7f0ec8e6f21d130e11eb095ce373ac6ce065b2bd63f5bd9f27debcbaa7a9fbb",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceJournal.css",
+      "group": "runtime",
+      "bytes": 8289,
+      "sha256": "b1515ff0014a4fe3e8b35a9276c2aca8bdda7d931bca33b67a74c9e32d49b9dd",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceLobby.css",
+      "group": "runtime",
+      "bytes": 24513,
+      "sha256": "4fd06dd0dfce8e846136f20cf632e79fd9fe3511dafda9b9fffb2dc80254653d",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/wikiRaceMotion.css",
+      "group": "runtime",
+      "bytes": 4591,
+      "sha256": "a1374416e00d3679a3500e426fd1e2b88f80e90e57aa4d28b47f94f695b05051",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceNotebook.css",
+      "group": "runtime",
+      "bytes": 6292,
+      "sha256": "007887058c3e95fa191e4bab1062f4872dd43640860d136f626b6f663aa0c86f",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRacePreparation.css",
+      "group": "runtime",
+      "bytes": 5601,
+      "sha256": "9aeab71375194b662a6db6188308f5b13247cafecb30f20c5483ea77e451c9f3",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceRace.css",
+      "group": "runtime",
+      "bytes": 49451,
+      "sha256": "a863976094207070a11d59812d75b1acd0c0d7e4cf561ad6b15a3e076bdf66b7",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceResult.css",
+      "group": "runtime",
+      "bytes": 14409,
+      "sha256": "b23ccabc2f9f3fd8ac25aa812f5e2c700b511e3e382f0f2ee78acbd51fdf8c11",
+      "changedFromHead": false
+    },
+    {
+      "path": "css/wikiRaceSequences.css",
+      "group": "runtime",
+      "bytes": 5393,
+      "sha256": "9c46cf7d8603f0ff290d53a79f4166d5cba4fdb21f82526d24c32584896e5bbf",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceSingleResult.css",
+      "group": "runtime",
+      "bytes": 4269,
+      "sha256": "fbaeaad003ea752127d3c7f6b2e8437808e44a6c9acf8716030d3ac305ba78ce",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceSingleStart.css",
+      "group": "runtime",
+      "bytes": 7484,
+      "sha256": "9621245d6c4ab3210366e69c3435ecaf3525be82cf508b004588034e1b407a84",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceStart.css",
+      "group": "runtime",
+      "bytes": 3631,
+      "sha256": "fee6106c38215789c5b53374173008dee02c7eed604ddc9abfd6c5e29dc67cbb",
+      "changedFromHead": true
+    },
+    {
+      "path": "css/wikiRaceTokens.css",
+      "group": "runtime",
+      "bytes": 1363,
+      "sha256": "af2bf1b3db22fcfbf517a745f58f533c5c1e2e5322df6528e0575824f0d2b521",
+      "changedFromHead": false
+    },
+    {
+      "path": "data/duelItems.js",
+      "group": "runtime",
+      "bytes": 16198,
+      "sha256": "6c7e5d1ff9799415e1b94bd52ea7e144a520c064bdfab68bfc982d23c443ba30",
+      "changedFromHead": false
+    },
+    {
+      "path": "data/itemPools.js",
+      "group": "runtime",
+      "bytes": 2658,
+      "sha256": "dd79a44b14efc34ae86e8e52b18b3d87420f88652f857f6db89f59bbbc50d7fa",
+      "changedFromHead": false
+    },
+    {
+      "path": "data/items.js",
+      "group": "runtime",
+      "bytes": 5096,
+      "sha256": "62acd04ba1866f8c35d94036650f2d2a91bacf767300da7c4b1a29e1229c7806",
+      "changedFromHead": false
+    },
+    {
+      "path": "hooks/useAudioCues.js",
+      "group": "runtime",
+      "bytes": 1569,
+      "sha256": "fbe99aedf09681e678ad3e1ffcc0d2c3918b6550d414e8a940a61b210c2dc3c5",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useCinematicFrame.js",
+      "group": "runtime",
+      "bytes": 1144,
+      "sha256": "7b6e5b68fd681336db10954ff6e678ce3b893012efd3e74f3a0e91f2d8e76467",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useDuelFeedback.js",
+      "group": "runtime",
+      "bytes": 3936,
+      "sha256": "2b7ee937cad014735144d9e4ac85d1e98381cb3361e02e65a401472aefb09fe5",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useGameAudio.js",
+      "group": "runtime",
+      "bytes": 2082,
+      "sha256": "912c53376ce285f635cd14d5a6acc9042d8f3ddca51ec84a9b490c8b8b0347dd",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useItemSystem.js",
+      "group": "runtime",
+      "bytes": 10306,
+      "sha256": "c6165785bac959d80cd71245464e35361ff7811f841409550e35f599e4f84006",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useLobbyAudio.js",
+      "group": "runtime",
+      "bytes": 1382,
+      "sha256": "070bd635b5a6e1e3b92783bd36e7698ddcfb32b7e49086375f4fb0c7a612a4b9",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useMatchExpression.js",
+      "group": "runtime",
+      "bytes": 1171,
+      "sha256": "d8442987837b9fb8ddc7b7431360de869e7023fb7142850f46f6a0122b3c6277",
+      "changedFromHead": false
+    },
+    {
+      "path": "hooks/useProfileCards.js",
+      "group": "runtime",
+      "bytes": 1576,
+      "sha256": "e566b9b11e61c9b30a7cddc0cd9b9b9caf60384d41746140bde70c651a41d951",
+      "changedFromHead": false
+    },
+    {
+      "path": "hooks/useRaceMotion.js",
+      "group": "runtime",
+      "bytes": 1381,
+      "sha256": "738a1650306275171948b6e5f02ff6dba92aea4a642989179eb1f6b6b364686c",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useResultAudio.js",
+      "group": "runtime",
+      "bytes": 1041,
+      "sha256": "bf3f1144cb0e57f63f5a8a73e31618e699fbf017ddba6203f94bb1a3ac22b239",
+      "changedFromHead": true
+    },
+    {
+      "path": "hooks/useSceneSequence.js",
+      "group": "runtime",
+      "bytes": 2333,
+      "sha256": "c26e21886ddfb213d501e20910a672fb6f42e3f60f3def8a934416cbc09d7386",
+      "changedFromHead": true
+    },
+    {
+      "path": "index.html",
+      "group": "runtime",
+      "bytes": 308,
+      "sha256": "10640781256bc41144da25d41446b035719d1dc86990462d10490dd2075f7b8e",
+      "changedFromHead": false
+    },
+    {
+      "path": "main.jsx",
+      "group": "runtime",
+      "bytes": 1479,
+      "sha256": "db4d6ba8e3c1c401d3d10e4fe6c677c555770108e47c30076310fec549a6c80c",
+      "changedFromHead": false
+    },
+    {
+      "path": "Opening.png",
+      "group": "runtime",
+      "bytes": 2313226,
+      "sha256": "fc062da2d84aec1fef6cf8274fbf62ba356a2d0939dd5c55b2eec50f6999e094",
+      "changedFromHead": false
+    },
+    {
+      "path": "package-lock.json",
+      "group": "runtime",
+      "bytes": 51721,
+      "sha256": "43e73743a2963f57cec08dc3fae25fc4153c3d54d769ec12d1433f31fe6c8d7a",
+      "changedFromHead": false
+    },
+    {
+      "path": "package.json",
+      "group": "runtime",
+      "bytes": 932,
+      "sha256": "bf625fecf7aad3e397b17323c0d2d32f331c1d8b34d0ff5530c937186efd5390",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/AchievementsPage.jsx",
+      "group": "runtime",
+      "bytes": 11460,
+      "sha256": "b6c464e0ac123f3a91da8129ee27cd4c54cded4746fad960c06097377cf8c7f0",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/GamePage.jsx",
+      "group": "runtime",
+      "bytes": 48031,
+      "sha256": "27f9f4af18912af35962b73ccb19486fd3e8d633c4dda09216c78fdfc9b191da",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/GroupGamePage.jsx",
+      "group": "runtime",
+      "bytes": 84233,
+      "sha256": "777398e216eb1f5967fbfd773662ba08a441367a5cbb3b165f07153008aeb7cf",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/GroupRoomPage.jsx",
+      "group": "runtime",
+      "bytes": 32496,
+      "sha256": "b6edd7b4ad5699f60140c88c5c46015522f5a459537f7933fa486d2fb4dfa53a",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/IntroPage.jsx",
+      "group": "runtime",
+      "bytes": 3390,
+      "sha256": "8e37a300bc1fe819f2fa4037a80a410b546c4001f355be9fb2bb3590c19f5df1",
+      "changedFromHead": false
+    },
+    {
+      "path": "pages/LoginPage.jsx",
+      "group": "runtime",
+      "bytes": 11321,
+      "sha256": "85b22a50c376391d7f065dd63af29f4f694eae56bf5f07e89672f6f92fc17eaa",
+      "changedFromHead": false
+    },
+    {
+      "path": "pages/MainPage.jsx",
+      "group": "runtime",
+      "bytes": 32624,
+      "sha256": "5c2b87408d655f4015e7a143e1bb838e16aeee02383329406cc651d0c75e36cc",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/MultiplayerGamePage.jsx",
+      "group": "runtime",
+      "bytes": 89427,
+      "sha256": "c545c0112a0888cad657192b80f5b8cbc51762ca4a44d737e75975bf5eaa9f13",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/MultiplayerPage.jsx",
+      "group": "runtime",
+      "bytes": 18184,
+      "sha256": "3c69e77fef2cc2b084876b7e4d69c76003aef9149fe1b439f20260b5c7b4321c",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/PlayPage.jsx",
+      "group": "runtime",
+      "bytes": 4764,
+      "sha256": "8a4a561ec7c1800527a009023a01415824067dbcd11bd142177e93f7e2806fe3",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/ProfilePage.jsx",
+      "group": "runtime",
+      "bytes": 18048,
+      "sha256": "0dda5e9da4aea1b0a171a5c92d49368d8b1c516760986463dfc5cf560bc743e8",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/PublicContentPage.jsx",
+      "group": "runtime",
+      "bytes": 10064,
+      "sha256": "91199f864c72041b786874c3d416f37dffc7b57596545b78ccc230a3a99c6bbf",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/RankingPage.jsx",
+      "group": "runtime",
+      "bytes": 18777,
+      "sha256": "a6cfc58d588e38ade253dad6af1cc1a8daa491d8de79308e2261d84084b4c23c",
+      "changedFromHead": true
+    },
+    {
+      "path": "pages/RoomPage.jsx",
+      "group": "runtime",
+      "bytes": 31412,
+      "sha256": "76eb4e6e775082ad0c0c4f1575bcc95da6ebfd49b1d8e4f4e05545b25e653e7d",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/ads.txt",
+      "group": "runtime",
+      "bytes": 58,
+      "sha256": "d621970705430a3f4a4ab686e41434915e7aa1b8594dd92f1186dec6372f0584",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/achievement-decoration/category-daily.svg",
+      "group": "runtime",
+      "bytes": 1573,
+      "sha256": "3c9da36808ffcaf6cea701c4ce288a8013176151c8589261d85c44c72857e3d2",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/achievement-decoration/category-duel.svg",
+      "group": "runtime",
+      "bytes": 1449,
+      "sha256": "bbd1befd10f2cad6fffe8148595e883096c1971db72758d10e36ca1d5e69a925",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/achievement-decoration/category-exploration.svg",
+      "group": "runtime",
+      "bytes": 1505,
+      "sha256": "0943ebe7b51ebeb12ec325f21abd073478a6841e5bdb2f5d0a7d26fe9cb201e9",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/achievement-decoration/category-group.svg",
+      "group": "runtime",
+      "bytes": 1581,
+      "sha256": "ecc9b2191ccdcecc6ad8b248dab0ea8c5d4912bb919004d76ce1147ab692ca79",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/achievement-decoration/category-onboarding.svg",
+      "group": "runtime",
+      "bytes": 1527,
+      "sha256": "d7f6a22d43c6a378e404501629226755bea4710e10276df6d6aa0bd9655416a0",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/achievement-decoration/discovery-complete.svg",
+      "group": "runtime",
+      "bytes": 1500,
+      "sha256": "1ba77e46d46b518f4b86e1963ad12ea7171d29b98a5a06c85667483dfb6d5b73",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/achievement-decoration/SOURCE.md",
+      "group": "runtime",
+      "bytes": 1311,
+      "sha256": "0a78b49093acdc088d6cc89e9eab9c3bfb92124826ae80282cdad89570ca3729",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/explorer-home.png",
+      "group": "runtime",
+      "bytes": 350336,
+      "sha256": "dad1d2ac2bb8dcee1a4063e79695955b89ca9b9717dfdb5d2a3e1f66ecfe87d3",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/explorer-lose.png",
+      "group": "runtime",
+      "bytes": 283951,
+      "sha256": "c242f4a90ffa1deddced715082c6d472de91de4bd66be998666485ae56e9bc5e",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/explorer-play.png",
+      "group": "runtime",
+      "bytes": 353069,
+      "sha256": "f596deee25e4026bb800db048142d3a44b5cd6481c3a2b6ca05765056b66fe74",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/explorer-portrait-small.png",
+      "group": "runtime",
+      "bytes": 66531,
+      "sha256": "04c0b013117e0f453af9b742a42d49309f17958b90e8856670f4acb73e274c6b",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/explorer-portrait.png",
+      "group": "runtime",
+      "bytes": 130521,
+      "sha256": "9b8111a918b374fe65cbfe223184d36d3ae0f930379a046562aff3abe356b9c2",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/explorer-win.png",
+      "group": "runtime",
+      "bytes": 367771,
+      "sha256": "af56e88bcfd36f3d5334132a674e264a5643224893d0bd4fbb61c703fb149b00",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/gear-cluster.png",
+      "group": "runtime",
+      "bytes": 213777,
+      "sha256": "826b27fd2a16cd9cc820117e31303cf859751fde1ce8aa57ec650594867681bb",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/hero-landscape.png",
+      "group": "runtime",
+      "bytes": 1034518,
+      "sha256": "2fc0bf482209db70b15d5fc088a3741e236cd6d2bbdd5e9b449200d8003a0990",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/home/wiki-home-left-decoration.webp",
+      "group": "runtime",
+      "bytes": 112202,
+      "sha256": "b4974c4f10ff3ff57ae0b2efdf78cf357b243b0973b3b3163d67105df6295fac",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/home/wiki-home-right-decoration.webp",
+      "group": "runtime",
+      "bytes": 103084,
+      "sha256": "cdd5cbf96144400785ef5cff23db25591a14a7efeafe0eecc2dc999abcdd0c2f",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/assets/wiki-race/mini-route.png",
+      "group": "runtime",
+      "bytes": 270582,
+      "sha256": "4e76f187bde605d7feb6b8e61a26fd36447081b9e154af23c5cb2c28e04e465e",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/README.md",
+      "group": "runtime",
+      "bytes": 1358,
+      "sha256": "32402fccaf583a8942922af504e2fa31f62e2a5bc118ce8ae64af82e641a874d",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/route-duel.svg",
+      "group": "runtime",
+      "bytes": 1419,
+      "sha256": "7989b16827ba1b4f0a2db7f6c7b481ff9b1daca8f25fed248d1d727813273632",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/route-group.svg",
+      "group": "runtime",
+      "bytes": 1684,
+      "sha256": "3f4ddee96ce09f4e3db7f6fdf142ef4db4de489342bd42fbe9f9f40ae90a5c37",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/assets/wiki-race/route-solo.svg",
+      "group": "runtime",
+      "bytes": 1254,
+      "sha256": "f75d019c27997b7609a4dea894d012c60388e31ad52969da23b34d27245bd514",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/audio/celebration-v02/goal-arrival.wav",
+      "group": "runtime",
+      "bytes": 182444,
+      "sha256": "cd752ee9a33a559c081426ff9cb1a962d94321c6bbffa04f4273f585082b8b70",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/countdown.wav",
+      "group": "runtime",
+      "bytes": 25004,
+      "sha256": "cecda84dae4acafec2f4c3c4e5b11a2154f87c7370eb3db6a3fdc8ebe59f3db3",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/duel-loss-v03/brass.wav",
+      "group": "runtime",
+      "bytes": 86444,
+      "sha256": "19db40ebf146137b373ce7a758ab2e36efe0888fef9eb54550906034864b33db",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/game-start.wav",
+      "group": "runtime",
+      "bytes": 62444,
+      "sha256": "0832cfe7e1cf9b19843b90084444db219da0665c32507a709b0641c195ac5347",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/game-v02/jungle-expedition.wav",
+      "group": "runtime",
+      "bytes": 1152044,
+      "sha256": "fe55772025a0f1d72d12b237293acf4550e3172aa3c1aeeac4334318eee7fb50",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/home-kalimba.wav",
+      "group": "runtime",
+      "bytes": 1440044,
+      "sha256": "7d9288050128192816b1f2cdbaad6f5e6bf8177d7a1ff0671ea1cb16309f0ae0",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/journal-open.wav",
+      "group": "runtime",
+      "bytes": 50444,
+      "sha256": "99208d542689ea37c4938f6dcf11bcd58e732895947a4ad144a508d21b25c467",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/opening-v02/journey-departure.wav",
+      "group": "runtime",
+      "bytes": 960044,
+      "sha256": "028ba0efe1f7aed9d08d53e1746bfbb798375d20f8f8d5b47ba2a7377fc3911f",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/page-flip.wav",
+      "group": "runtime",
+      "bytes": 52844,
+      "sha256": "58f28099d5219ed4a3d29402d5747cb79e5c78bd33866a0f70555869c10fdfab",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/result-v01/expedition-records.wav",
+      "group": "runtime",
+      "bytes": 1280044,
+      "sha256": "14b2acd036f8725e5fad0b3a41a201260bb0660b3fe8e23bc2dfca822e00362f",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/sfx-v03/teleport-air.wav",
+      "group": "runtime",
+      "bytes": 25004,
+      "sha256": "517ddd9dbe0647730886d492913fc065c89b84de7652796e80a98de5e6201342",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/sfx-v04/blade-parry.wav",
+      "group": "runtime",
+      "bytes": 96044,
+      "sha256": "898fba7667810296ac0cf79d5af64b5e3557554962550f4afaf1e53c47585385",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/sfx-v04/ink-splash-three.wav",
+      "group": "runtime",
+      "bytes": 96044,
+      "sha256": "9dd7a40d0769d336ee51abb0fab13c01e136f26b345fbb40fb3a992f7f117702",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/sfx-v04/seal-impact.wav",
+      "group": "runtime",
+      "bytes": 96044,
+      "sha256": "1e45849d2f2945293bf243071a0569d22bb10f38a49436d024413bfa883b1aba",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/sfx-v04/shield-block.wav",
+      "group": "runtime",
+      "bytes": 96044,
+      "sha256": "195cd762612546e722c5565186ab13a0e307f92790e9fcc2b2e97d108a720042",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/sfx-v04/vs-boom.wav",
+      "group": "runtime",
+      "bytes": 96044,
+      "sha256": "1971efc423bdd43643f51290c63b9c3d6e65e619e2cf40adeea41b53f7d83030",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/sfx-v05/page-turn-clean.wav",
+      "group": "runtime",
+      "bytes": 96044,
+      "sha256": "c3c6a09fd761396a05028b2982b3d1d632ccd1d092a93ba220354f368140743d",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v01/button-click.wav",
+      "group": "runtime",
+      "bytes": 3884,
+      "sha256": "5b5575480df97718f0e3150ec0cb653195ebd5f5ad80fa2c89fb75dd8f7d4f01",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v02/connection-lost.wav",
+      "group": "runtime",
+      "bytes": 18284,
+      "sha256": "23a5b2f67f260e5d9204082cdca953b663a1276b65656cd53928fd466841ac9e",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v02/connection-restored.wav",
+      "group": "runtime",
+      "bytes": 18284,
+      "sha256": "fdd6e389f68dafe5507b581d7ffbb131cad9a94d0fd9a0562610eafc02694cab",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v02/group-ready.wav",
+      "group": "runtime",
+      "bytes": 20204,
+      "sha256": "991364dceeb1b762de12403672e29497e98eb628c62000debc9d7c4edaf7cd4c",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v02/lobby-join.wav",
+      "group": "runtime",
+      "bytes": 11564,
+      "sha256": "a9e241dcc85387594aa0f8e7a9bb1cb6d4e5e94fb8deb0f278963757754705d9",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v02/request-denied.wav",
+      "group": "runtime",
+      "bytes": 11564,
+      "sha256": "8c3a3d62824ee56209a815efd1c67057b0f109b80f565e54f0436d86d34d7e5c",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v02/save-confirm.wav",
+      "group": "runtime",
+      "bytes": 10604,
+      "sha256": "3a07fb15bfd276329a9e94a73719d0bad9b52e8c378c3cb5707b8dda46695915",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/audio/ui-v03/personal-arrival.wav",
+      "group": "runtime",
+      "bytes": 74444,
+      "sha256": "58f0497e8ba5c9485dfd3f95052e558caaa0826feed360efec4b130671c7ed15",
+      "changedFromHead": true
+    },
+    {
+      "path": "public/profile-icons/book.svg",
+      "group": "runtime",
+      "bytes": 353,
+      "sha256": "bd0fab69a290469ccc1530285f79121684fea885f38f37e16588938698915be5",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/compass.svg",
+      "group": "runtime",
+      "bytes": 359,
+      "sha256": "df45d72b5fc54fd10ce637b696da2a057e5d52b59f6f4a240387be341ed0ddbe",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/daily-explorer.svg",
+      "group": "runtime",
+      "bytes": 391,
+      "sha256": "267c6d4ab902a7dcfc7b9bc71c4fa596fd4dbae954a9ee3e426af699a1f1dd4b",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/first-arrival.svg",
+      "group": "runtime",
+      "bytes": 318,
+      "sha256": "a0b332da3954b7646a30fba8fd3119935cce94eb076de982a7a3614972706046",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/globe.svg",
+      "group": "runtime",
+      "bytes": 360,
+      "sha256": "8967735b1792b17c31817542a9b9aa43bccb631494a2dd1e3d2617688151f805",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/group-together.svg",
+      "group": "runtime",
+      "bytes": 409,
+      "sha256": "d10a841cf25bd2626319724ea188b11c4310ec01dacb584f20e188cba9718f7b",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/lantern.svg",
+      "group": "runtime",
+      "bytes": 377,
+      "sha256": "57884e4d8835832febaecc7b21c7460e6cb3dc714198b8dd95cb4a420a36f30e",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/map.svg",
+      "group": "runtime",
+      "bytes": 331,
+      "sha256": "47d00da6dd854891e857d5348d77c15661db4375e157054bd2635dfa745138c9",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/quill.svg",
+      "group": "runtime",
+      "bytes": 349,
+      "sha256": "fd71ed4a0991dadbb1f35ce0ba498d624873404b7a4c342456602e09f1064aaa",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/shield.svg",
+      "group": "runtime",
+      "bytes": 334,
+      "sha256": "dd75c692c27dfaf1061c067e7f2d705b6f7aa7786e30440df27d13a750d8c65a",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/x/2a70eb1b.svg",
+      "group": "runtime",
+      "bytes": 329,
+      "sha256": "220cad42f7c98df60f7046bb4b2b79ab607170abb4ab80da46f4b16d345e6c96",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/x/3036149e.svg",
+      "group": "runtime",
+      "bytes": 355,
+      "sha256": "4615d2d959f12b03bca67897ca6090cad4c81af3383a01ab14828b58eed2cea0",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/x/4285e53f.svg",
+      "group": "runtime",
+      "bytes": 398,
+      "sha256": "3c90df186e02e796a7badbbfd2ad106a4331b629032de7aaf38aff8184a152d6",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/x/48fa697d.svg",
+      "group": "runtime",
+      "bytes": 341,
+      "sha256": "dad756c66244a7544186d1dbdfb0f9277457761f8d1e269934422cfda6850a7e",
+      "changedFromHead": false
+    },
+    {
+      "path": "public/profile-icons/x/620733c9.svg",
+      "group": "runtime",
+      "bytes": 313,
+      "sha256": "503bc69ec73a29c6461d1954e0e244c83929b50e05d65ff35f63138584a780b0",
+      "changedFromHead": false
+    },
+    {
+      "path": "rankingService.js",
+      "group": "runtime",
+      "bytes": 16318,
+      "sha256": "4424283a916cab9ad432ec28e0eac574e9d73d7cc35a0cd7c1a126e192c69f3d",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/achievementService.js",
+      "group": "runtime",
+      "bytes": 3515,
+      "sha256": "94aaed74811a3f193684e7b99f7a8f1cf1c3257a3dd875a43ad1499c1f4bd258",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/analyticsService.js",
+      "group": "runtime",
+      "bytes": 1394,
+      "sha256": "b7bd03a71e51b769f2eeacce5b73598ec8caf1d79773471386c4253702a02da7",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/audioAssets.js",
+      "group": "runtime",
+      "bytes": 3099,
+      "sha256": "be4a518b499c4b99a818796f34dede0478f7153e5353123004ea9b4deb1391a2",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/audioManager.js",
+      "group": "runtime",
+      "bytes": 17525,
+      "sha256": "04050ef32670b3522e2b9f7bea47edf357a2a29a000ce7f2ca293be1cf950761",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/dailyChallengeService.js",
+      "group": "runtime",
+      "bytes": 3024,
+      "sha256": "090b5fea09a3fb441236587a417c52aa3b67a0ac8709e8091b25bb4dedbc86d4",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/duelItemService.js",
+      "group": "runtime",
+      "bytes": 27459,
+      "sha256": "f274d9867b8325c33f03be74ef160c2f2e7bbf66c35eb38e5fb0533905d908b1",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/groupMultiplayerService.js",
+      "group": "runtime",
+      "bytes": 8370,
+      "sha256": "b42483991d51e0d51b72d07d5f5cc5b0967c36dbc53931324e04a229708ac3fa",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/groupSpectatorService.js",
+      "group": "runtime",
+      "bytes": 4201,
+      "sha256": "f71ca914242d3af68ae57136fbb38d0c58b0bf50d979aaa99d200d43ba739fa1",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/multiplayerService.js",
+      "group": "runtime",
+      "bytes": 7148,
+      "sha256": "11fce6f0de37bb1bbc3661281f661748e6f816feda33d603be34c56e0016d93d",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/profileRewardService.js",
+      "group": "runtime",
+      "bytes": 6602,
+      "sha256": "0df214ed9e2443b020c3faafc0223696ba6fe5ff936026586310598ec33d5abd",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/profileStatsService.js",
+      "group": "runtime",
+      "bytes": 4670,
+      "sha256": "1e0b2a52786da7bef1591685e6d9d3a9c6f2a0c3ded9f76c36ea3297b234987a",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/singleGameService.js",
+      "group": "runtime",
+      "bytes": 4180,
+      "sha256": "44a81d62177991ce9b298255c90f655f11fdc6e4b322a6b30033e4b7b1967730",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/singleStartService.js",
+      "group": "runtime",
+      "bytes": 1591,
+      "sha256": "b77855bb40ef74e57b7b514baba25b8e8510381d58b409b8cdc4f8757719f6dc",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/targetService.js",
+      "group": "runtime",
+      "bytes": 960,
+      "sha256": "71abee4b45eda889ebdd680348cb61c51c1fc7a394d098a8f64e1262c07c3454",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/wikiHighlightsService.js",
+      "group": "runtime",
+      "bytes": 4840,
+      "sha256": "12f6d6eccc585a964d451245e6fd6fd6fc9f46ee19e2f210ecc4111e9cd7013e",
+      "changedFromHead": true
+    },
+    {
+      "path": "services/wikiLinkPolicy.js",
+      "group": "runtime",
+      "bytes": 4814,
+      "sha256": "e66a939a900c40ad2d9fd23b026e3d89baaaa2fe003286296fb17d2df55b727d",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/wikiService.js",
+      "group": "runtime",
+      "bytes": 18181,
+      "sha256": "7813590bbbd90271d1ef607155d43948db05f0eb2c02f17e32f1542b74e43d38",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/wikiSnapshotService.js",
+      "group": "runtime",
+      "bytes": 2829,
+      "sha256": "962848a8e2bb12f9983b1caade5acc9e4b0d8bd4331a3986e72508280353e0bd",
+      "changedFromHead": false
+    },
+    {
+      "path": "services/xpService.js",
+      "group": "runtime",
+      "bytes": 6233,
+      "sha256": "5fc14555ed91ba4e9e80732bf6f883530df2f0b79b195eea9e1632c30587c195",
+      "changedFromHead": false
+    },
+    {
+      "path": "supabaseClient.js",
+      "group": "runtime",
+      "bytes": 1986,
+      "sha256": "dbd8ff95fd35055687674647bc53409a20d4caf22901cd0ee03bc72758bab0ab",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/achievementDecoration.js",
+      "group": "runtime",
+      "bytes": 771,
+      "sha256": "59efbc52d69aec2a86f7065a4a59a34be982ccd63387fac3204b0c94234ddeef",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/achievementDisplay.js",
+      "group": "runtime",
+      "bytes": 12906,
+      "sha256": "0877bf03ebfcf3ce61b5d6fbb60ad898efec0509ae44afb2515cb84dc9f4a0f4",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/appRoutes.js",
+      "group": "runtime",
+      "bytes": 826,
+      "sha256": "9f7977de693bba15ed3997f8dc25a0c96a152c60700f680479442e3dacb16639",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/audioFeedback.js",
+      "group": "runtime",
+      "bytes": 2113,
+      "sha256": "d8082cc378313d160b12f5a2bb2d670db43880ac69012b99dbe2542f2fd0feb2",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/audioTimeline.js",
+      "group": "runtime",
+      "bytes": 1029,
+      "sha256": "ff586940d9fb1df7ef9756ea81b8b3bd1617e434f7f14604b2939f9289185365",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/cinematicMotion.js",
+      "group": "runtime",
+      "bytes": 8422,
+      "sha256": "6f1e306df5c85b0635bd7831116239fb4b72c9886e4a9956f097a9d1676312bb",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/cinematicPresentation.js",
+      "group": "runtime",
+      "bytes": 633,
+      "sha256": "31d279efe4e5772ee87e3dbac438b95c8e9eea1c77cd73630310cbfa6ff7f46d",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/dailyCourse.js",
+      "group": "runtime",
+      "bytes": 1109,
+      "sha256": "ad6dbfc55ed929b62031808e8bb25b48b6496539ffea845f2536d3822d8b3462",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/duelEndPresentation.js",
+      "group": "runtime",
+      "bytes": 3810,
+      "sha256": "fd29dd192db1b18fc2719f3b2355cd9e9d6656bb2437433acc44e2c1e2c9c262",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/duelFeedback.js",
+      "group": "runtime",
+      "bytes": 5957,
+      "sha256": "f8f3ecae33b03a65860b3c732d4a20892f1b83877775f2bbc7b8bc9708d89b01",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/duelPreview.js",
+      "group": "runtime",
+      "bytes": 1370,
+      "sha256": "223698ef7b078c8648c1e1d1a65fa4baf40805422f74649ec1ae17b2efb42b2f",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/duelResultPresentation.js",
+      "group": "runtime",
+      "bytes": 2205,
+      "sha256": "87e355d26890d62e2c0b9dc61a8fd89ee50e5ac88396266a152a3cde154c8396",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/groupGameFlow.js",
+      "group": "runtime",
+      "bytes": 7307,
+      "sha256": "4ea743ac7620dec181ff89e0287b72dcc756de48e9f49fcc0187804991e0f8d4",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/groupGameTimer.js",
+      "group": "runtime",
+      "bytes": 2944,
+      "sha256": "c83600fc9e91e3bab392980739dc92c27d19902cfce52391472df780a3c99a07",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/groupLobbyState.js",
+      "group": "runtime",
+      "bytes": 3095,
+      "sha256": "e7bae7797d15cb5bd5f8648739d06c1ec1857555621731e56c8a5aac3745164d",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/groupRacePresentation.js",
+      "group": "runtime",
+      "bytes": 4695,
+      "sha256": "455093c0e23758a2de5a4e626e974438436e341be55e656d10e75a4124699332",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/groupResultFormatter.js",
+      "group": "runtime",
+      "bytes": 423,
+      "sha256": "acf59a1ed0a918bf15ca96fa874208ef8d2c8f2fe58808bd6ef71464093ec725",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/groupResultTrace.js",
+      "group": "runtime",
+      "bytes": 348,
+      "sha256": "368b977f5ca0ed4e711ef9e296df29605cf63ddfc6668112bde785d49e8574b8",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/groupSnapshotGuard.js",
+      "group": "runtime",
+      "bytes": 1190,
+      "sha256": "9be9c7d1a1ca02860f2c28ffba3f6a3ffef53589ff5da8e254c3b31dea451e10",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/groupTargetSummary.js",
+      "group": "runtime",
+      "bytes": 1563,
+      "sha256": "0dcde73c2cbc2dbab6e85247c94c2fb98ff89e6b87f11cc65c825adbc6030790",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/itemSystem.js",
+      "group": "runtime",
+      "bytes": 2186,
+      "sha256": "1043501d5ee80452646195d1d0ef641d42710864383ca9d053b4a878a0f18025",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/latestRequest.js",
+      "group": "runtime",
+      "bytes": 646,
+      "sha256": "39a82e8c1fd4bf8da1752324909158e087526479897563027efcdf39ed176e1f",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/localAuthSession.js",
+      "group": "runtime",
+      "bytes": 393,
+      "sha256": "fd251860a75ade73940009176e0a4cac3a1cda50d9641f97835ccae4874ba233",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/maintenanceGate.js",
+      "group": "runtime",
+      "bytes": 4338,
+      "sha256": "b090d303299bec0ae3744da4467fa36e2891aa47f9b382644412a1a9aca15210",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/onlineGameSession.js",
+      "group": "runtime",
+      "bytes": 8735,
+      "sha256": "afbb8302f12cc82939393369f8d35e03bd4f4d9f149c4359ebd690fb73809024",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/profileCard.js",
+      "group": "runtime",
+      "bytes": 11762,
+      "sha256": "fe7fc8403c548b413374195fe79f22f3680ccb80b21da8c729c1645289cd99f1",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/raceMotion.js",
+      "group": "runtime",
+      "bytes": 1391,
+      "sha256": "cda95345460f7ccf236597dba26f8ab66606dab0f54e806500b0d4ffa3ade450",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/resultJournal.js",
+      "group": "runtime",
+      "bytes": 900,
+      "sha256": "321d7a340d7e14581878b24ef5eca7356d68b1f33ca126b2a0bc2d8c740f80f4",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/resultPresentation.js",
+      "group": "runtime",
+      "bytes": 7473,
+      "sha256": "fd974c68b6cffc5659a112e306f64b4b96845fdfbfd85e9dac0d8156ef83f1ce",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/resultReasonLabels.js",
+      "group": "runtime",
+      "bytes": 5967,
+      "sha256": "e8449e3ea9dddcab140523cb11eb93c40ca0cc7c94728b85accb2f4778aa3465",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/rewardTokens.js",
+      "group": "runtime",
+      "bytes": 2123,
+      "sha256": "f5db34c0c08e0b3156a0f0ab86b3099a7a81e7623200e0bad0c94704dbd4897d",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/serverAuthority.js",
+      "group": "runtime",
+      "bytes": 2727,
+      "sha256": "25af7c5dabc3d08883e8a1062feb4c7408e0ab14a6ddb35b1016b3bb431e3868",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/serviceError.js",
+      "group": "runtime",
+      "bytes": 1387,
+      "sha256": "74822cb6a3cd1bfef661a8dccee59201faf19607be09d11b2f27fd90a2aec4d8",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/singleGameSession.js",
+      "group": "runtime",
+      "bytes": 5706,
+      "sha256": "1c31b192bdd881ff75d864a6609f76c07d73ef51ce15cad6f04510a87ce8c3b6",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/singleStart.js",
+      "group": "runtime",
+      "bytes": 2563,
+      "sha256": "a1d12180bb4aa1a99484484aaeb079cf9520e0b1406c7c584e35ca91a6dd5635",
+      "changedFromHead": true
+    },
+    {
+      "path": "utils/xpProgress.js",
+      "group": "runtime",
+      "bytes": 1976,
+      "sha256": "4430397c351dd26b115fe6df2ec5e925f0caa078d62453b997f77f5559bd44a9",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/xpResultDisplay.js",
+      "group": "runtime",
+      "bytes": 8419,
+      "sha256": "8ef83dd9a541e414d066358394196a24c2cea8079fcf90bb43616e7d5aeb6e6e",
+      "changedFromHead": false
+    },
+    {
+      "path": "utils/xpRules.js",
+      "group": "runtime",
+      "bytes": 9995,
+      "sha256": "efd32450d04227235778496de7c4a8884954e1cc2298f76d6b5ad767bb6c9d98",
+      "changedFromHead": false
+    },
+    {
+      "path": "vercel.json",
+      "group": "runtime",
+      "bytes": 126,
+      "sha256": "6860158a7f766c43ff65bab8c699470ceab780cf7d770f9e1ccbb70a55601eef",
+      "changedFromHead": false
+    },
+    {
+      "path": "wiki.jsx",
+      "group": "runtime",
+      "bytes": 25758,
+      "sha256": "d7cbfa5101140999d24761dfe83cf9b61a1130ca9c88105cbe698d88c78c2d43",
+      "changedFromHead": false
+    }
+  ],
+  "edgeDeploy": [
+    {
+      "path": "supabase/functions/duel-link-preview/handler.mjs",
+      "group": "edge",
+      "bytes": 3536,
+      "sha256": "2454ed59f4ffae4379013065d380b623e2bc5be0155bdfced3477f6c7223cf72"
+    },
+    {
+      "path": "supabase/functions/duel-link-preview/index.ts",
+      "group": "edge",
+      "bytes": 1812,
+      "sha256": "e9403a2e1299da2fb26c5f55b6a88786b25af5445d463f0dfdf8898b9b318ec9"
+    },
+    {
+      "path": "supabase/functions/single-run/index.ts",
+      "group": "edge",
+      "bytes": 7538,
+      "sha256": "a23506a3d37082b17c73ac73461da2c3911aad549a06141ef35470a0c6a4137c"
+    },
+    {
+      "path": "supabase/functions/single-run/random.mjs",
+      "group": "edge",
+      "bytes": 4620,
+      "sha256": "e75136e76595d8cc5c40edd0c263adb50d00310318aa93c3a598dee91a4c5a7a"
+    },
+    {
+      "path": "supabase/functions/single-run/start.mjs",
+      "group": "edge",
+      "bytes": 7149,
+      "sha256": "f1186d4a9815ca9018d00958e96752ea44867df1292a69fa44b9b0df5a369a32"
+    }
+  ],
+  "edgeUnchanged": [
+    {
+      "path": "supabase/functions/duel-random-teleport/destination.ts",
+      "group": "edge",
+      "bytes": 1707,
+      "sha256": "17a7725dba6ef54b9a616ee7f5b3f0df8a783e908c5fca8e49570582e6a3a700"
+    },
+    {
+      "path": "supabase/functions/duel-random-teleport/index.ts",
+      "group": "edge",
+      "bytes": 4727,
+      "sha256": "041317163426c4e3fe2777f081bafeee78d9ab4f7a09be0be46b1a7925dc6331"
+    },
+    {
+      "path": "supabase/functions/username-lookup/index.ts",
+      "group": "edge",
+      "bytes": 3146,
+      "sha256": "4cf6c8f144cd3853c19ce41381de4c6f65cd560923e745138665b7d8e62844a9"
+    },
+    {
+      "path": "supabase/functions/username-signup/index.ts",
+      "group": "edge",
+      "bytes": 6193,
+      "sha256": "49f4c6d5d7c0a688c1c5ca61ff29f6266e0c5d9d800db005e2e504e2bc4f1a3e"
+    },
+    {
+      "path": "supabase/functions/wiki-snapshot/index.ts",
+      "group": "edge",
+      "bytes": 13890,
+      "sha256": "ad710e09e35a9b979bea7eb6d2b41e6ce227744d033b326cd7e1f71b7d9ba5ad"
+    }
+  ],
+  "migrations": [
+    {
+      "order": 1,
+      "path": "supabase/migrations/20261009030624_daily_course_identity_v2.sql",
+      "group": "migrations",
+      "bytes": 8326,
+      "sha256": "429e599a9ee8c5d40557af0fbfcac1543c76be4be502dc266837dd499b46b0a2",
+      "functions": [
+        {
+          "name": "private.validate_daily_course_identity_v2",
+          "arguments": ""
+        },
+        {
+          "name": "private.daily_course_best_records_v2",
+          "arguments": ""
+        },
+        {
+          "name": "public.get_daily_course_rankings_v2",
+          "arguments": "p_limit integer default 50"
+        },
+        {
+          "name": "private.grant_single_result_xp_v1",
+          "arguments": "p_record_id uuid"
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "path": "supabase/migrations/20261009032309_daily_course_pool_verified_v2.sql",
+      "group": "migrations",
+      "bytes": 5281,
+      "sha256": "8970bc2663a4d167c1e4c49d8b6a5ef77d99e5b971128c9ecfac695eb70545c9",
+      "functions": [
+        {
+          "name": "public.ensure_today_daily_challenge",
+          "arguments": ""
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "path": "supabase/migrations/20261009033227_explorer_xp_rankings_v2.sql",
+      "group": "migrations",
+      "bytes": 2562,
+      "sha256": "cea20b1447219cdf9fa59407e50d1075d643adc9bace0b20114134d084afb9b3",
+      "functions": [
+        {
+          "name": "public.get_explorer_xp_rankings_v2",
+          "arguments": "p_weekly boolean default false,p_limit integer default 50"
+        },
+        {
+          "name": "public.get_my_daily_course_rank_v2",
+          "arguments": ""
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "path": "supabase/migrations/20261009051855_explorer_xp_grant_timestamp_fix.sql",
+      "group": "migrations",
+      "bytes": 1942,
+      "sha256": "1dfe64c1914c8167dbc1ef98f4ac2c7315e858c2b6be95a39f78dfc195cd2611",
+      "functions": [
+        {
+          "name": "public.get_explorer_xp_rankings_v2",
+          "arguments": "p_weekly boolean default false,p_limit integer default 50"
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "path": "supabase/migrations/20261014052928_duel_link_censorship_authority_v1.sql",
+      "group": "migrations",
+      "bytes": 26363,
+      "sha256": "de035d9021a2e5d69e6a8c3b808dcece14f88812bef062c1e4bbc0c5e5a440f5",
+      "functions": [
+        {
+          "name": "public.use_duel_item_v3",
+          "arguments": "p_room_id uuid, p_grant_id uuid, p_request_id uuid, p_correlation_id uuid DEFAULT NULL::uuid"
+        },
+        {
+          "name": "public.apply_duel_move_v2",
+          "arguments": "p_room_id uuid, p_request_id uuid, p_correlation_id uuid, p_expected_version bigint, p_to_page_id text DEFAULT NULL::text, p_to_revision_id text DEFAULT NULL::text, p_to_title_snapshot text DEFAULT NULL::text, p_clicked_raw_title text DEFAULT NULL::text, p_event_type text DEFAULT 'NORMAL_LINK'::text, p_item_event_id uuid DEFAULT NULL::uuid, p_undone_event_id uuid DEFAULT NULL::uuid"
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "path": "supabase/migrations/20261014073626_duel_public_move_authority_v1.sql",
+      "group": "migrations",
+      "bytes": 11854,
+      "sha256": "7d470217d43ad0bfb79f0492aee015dc0e03a3685e5caa726cc4a5b108847f7b",
+      "functions": [
+        {
+          "name": "public.apply_duel_move_v2",
+          "arguments": "p_room_id uuid, p_request_id uuid, p_correlation_id uuid, p_expected_version bigint, p_to_page_id text DEFAULT NULL::text, p_to_revision_id text DEFAULT NULL::text, p_to_title_snapshot text DEFAULT NULL::text, p_clicked_raw_title text DEFAULT NULL::text, p_event_type text DEFAULT 'NORMAL_LINK'::text, p_item_event_id uuid DEFAULT NULL::uuid, p_undone_event_id uuid DEFAULT NULL::uuid"
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "path": "supabase/migrations/20261014103131_duel_preview_authority_v1.sql",
+      "group": "migrations",
+      "bytes": 16042,
+      "sha256": "48b53b4c29dcab1f9e21b062e43c9614da12cc63f1504306e5a1dbeb9e97b8f1",
+      "functions": [
+        {
+          "name": "private.duel_preview_state_v1",
+          "arguments": "p_event uuid,p_actor uuid"
+        },
+        {
+          "name": "public.reserve_duel_preview_v1",
+          "arguments": "p_room_id uuid,p_item_event_id uuid,p_target_page_id text,p_request_id uuid"
+        },
+        {
+          "name": "public.settle_duel_preview_v1",
+          "arguments": "p_room_id uuid,p_item_event_id uuid,p_user_id uuid, p_target_page_id text,p_request_id uuid,p_lease_token uuid,p_summary jsonb default null"
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "path": "supabase/migrations/20261015061829_single_reserved_start_v1.sql",
+      "group": "migrations",
+      "bytes": 34617,
+      "sha256": "6c59d2980bbdfac7a9a2e1ea83a332d7c4a92e47d7ea950683fc4502016d8155",
+      "functions": [
+        {
+          "name": "private.resolve_single_start_v1",
+          "arguments": "p_run_id uuid"
+        },
+        {
+          "name": "private.guard_single_reserved_v1",
+          "arguments": ""
+        },
+        {
+          "name": "public.claim_single_course_v1",
+          "arguments": "p_request_id uuid,p_user_id uuid,p_guest_hash text,p_mode text,p_target text default null"
+        },
+        {
+          "name": "private.single_start_daily_date_valid_v1",
+          "arguments": "p_course_date date,p_server_now timestamptz"
+        },
+        {
+          "name": "public.commit_single_course_v1",
+          "arguments": "p_allocation_id uuid,p_user_id uuid,p_guest_hash text,p_start jsonb,p_goal jsonb,p_daily_date date default null"
+        },
+        {
+          "name": "public.control_single_start_v1",
+          "arguments": "p_run_id uuid,p_user_id uuid,p_guest_hash text,p_action text"
+        },
+        {
+          "name": "private.copy_single_timing_contract_v1",
+          "arguments": ""
+        },
+        {
+          "name": "public.get_single_game_run",
+          "arguments": "p_run_id uuid"
+        },
+        {
+          "name": "public.apply_single_move_v2",
+          "arguments": "p_run_id uuid, p_request_id uuid, p_correlation_id uuid, p_expected_version bigint, p_to_page_id text default null, p_to_revision_id text default null, p_to_title_snapshot text default null, p_clicked_raw_title text default null, p_event_type text default 'NORMAL_LINK', p_item_event_id uuid default null, p_undone_event_id uuid default null"
+        },
+        {
+          "name": "public.apply_guest_single_move_v2",
+          "arguments": "p_run_id uuid, p_guest_token_hash text, p_request_id uuid, p_correlation_id uuid, p_expected_version bigint, p_to_page_id text default null, p_clicked_raw_title text default null, p_event_type text default 'NORMAL_LINK'"
+        },
+        {
+          "name": "public.leave_single_game_run",
+          "arguments": "p_run_id uuid, p_request_id uuid"
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "path": "supabase/migrations/20261015062624_single_timing_rankings_v1.sql",
+      "group": "migrations",
+      "bytes": 3454,
+      "sha256": "2c9ee5b8250907c8a51c452de03a01b0c32cbed3e3a3b57a0fced4c39510d159",
+      "functions": [
+        {
+          "name": "private.daily_course_best_contract_v1",
+          "arguments": "p_contract text"
+        },
+        {
+          "name": "private.daily_course_best_records_v2",
+          "arguments": ""
+        },
+        {
+          "name": "public.get_daily_course_rankings_contract_v1",
+          "arguments": "p_contract text default 'single_reserved_prefetch_v1',p_limit integer default 50"
+        },
+        {
+          "name": "public.get_my_daily_course_rank_contract_v1",
+          "arguments": "p_contract text default 'single_reserved_prefetch_v1'"
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "path": "supabase/migrations/20261015233503_single_random_reserved_v1.sql",
+      "group": "migrations",
+      "bytes": 8033,
+      "sha256": "4356465e3166cd009645bd468f5e2e6c5aa76325ae35c7b2d5396b8e23c0d260",
+      "functions": [
+        {
+          "name": "public.claim_single_course_v1",
+          "arguments": "p_request_id uuid,p_user_id uuid,p_guest_hash text,p_mode text,p_target text default null"
+        },
+        {
+          "name": "public.commit_single_course_v1",
+          "arguments": "p_allocation_id uuid,p_user_id uuid,p_guest_hash text,p_start jsonb,p_goal jsonb,p_daily_date date default null"
+        }
+      ]
+    }
+  ],
+  "baselineMigrationFiles": [
+    {
+      "path": "supabase/migrations/20260730170602_baseline_remote_schema.sql",
+      "group": "migrations",
+      "bytes": 41399,
+      "sha256": "59d92ebb1b81fbd4a0c7f2695c382be1e32d5361edad70b88ae394a5e5591ee3"
+    },
+    {
+      "path": "supabase/migrations/20260804004535_group_security_hardening_phase1.sql",
+      "group": "migrations",
+      "bytes": 9695,
+      "sha256": "967e8277756d274238c5a9a0b16299d2137efb993995c6b08660a8b2d1647a34"
+    },
+    {
+      "path": "supabase/migrations/20260807003609_group_match_lifecycle_phase2a.sql",
+      "group": "migrations",
+      "bytes": 29051,
+      "sha256": "1dadb3ed69d32fa40a353bd9f93969433c6cc34d1cda0728666f14646a74fbcb"
+    },
+    {
+      "path": "supabase/migrations/20260813072952_group_security_phase2c.sql",
+      "group": "migrations",
+      "bytes": 22644,
+      "sha256": "08acc3f5e2bb117961421fd542bd098bf0483ad7630a65ed59b2caa662a6af86"
+    },
+    {
+      "path": "supabase/migrations/20260814090000_server_authority_v2.sql",
+      "group": "migrations",
+      "bytes": 11174,
+      "sha256": "ee45a7dc28262494ab80aee35b11d24b5f8ec201343fa374e74462283c33b61e"
+    },
+    {
+      "path": "supabase/migrations/20260814091000_server_authority_rpc_v2.sql",
+      "group": "migrations",
+      "bytes": 52613,
+      "sha256": "19afc129025cf8a4a405e7112f41be493958f3105b541c1b24f7eba9800b01dd"
+    },
+    {
+      "path": "supabase/migrations/20260814092000_duel_authority_v2.sql",
+      "group": "migrations",
+      "bytes": 15389,
+      "sha256": "f0fc220434461296927660dc08b0c2a1383d4eb8834dcac5fbf6567268aa4874"
+    },
+    {
+      "path": "supabase/migrations/20260814093000_server_authority_cutover_v2.sql",
+      "group": "migrations",
+      "bytes": 1861,
+      "sha256": "85e5606515c085b8cb24ad3f58dfee3e283d8a91dd6bc7fc4bbf22b66a20411f"
+    },
+    {
+      "path": "supabase/migrations/20260814094000_duel_item_authority_v2.sql",
+      "group": "migrations",
+      "bytes": 1184,
+      "sha256": "5e23300e885028c498fda3adedd2cbc6eeb05a10ead11a10f93753fac5692e64"
+    },
+    {
+      "path": "supabase/migrations/20260814103000_group_final_gaps_v13.sql",
+      "group": "migrations",
+      "bytes": 39065,
+      "sha256": "78ed0615e879820078dd2e868cb9ac62836c748344661e254abffed6857c6b82"
+    },
+    {
+      "path": "supabase/migrations/20260814113000_group_final_gaps_v13_hardening.sql",
+      "group": "migrations",
+      "bytes": 11562,
+      "sha256": "2c8cb78265607f382c2c1d4f60c09f4a43022ae15c999361d2bb9f739ac3c743"
+    },
+    {
+      "path": "supabase/migrations/20260814123000_group_spectator_emoji_atomicity_fix.sql",
+      "group": "migrations",
+      "bytes": 4819,
+      "sha256": "29906b9fb4c553445676fdfddf951365a96fb8121df96acf7cc92979aa7a42a6"
+    },
+    {
+      "path": "supabase/migrations/20260903090000_xp_ledger_v1.sql",
+      "group": "migrations",
+      "bytes": 13213,
+      "sha256": "3192f191c41227642dcfe02824d0adbedf43fbd1d8b9e10afcbcd14cd6191fb9"
+    },
+    {
+      "path": "supabase/migrations/20260904090000_duel_item_authority_v3.sql",
+      "group": "migrations",
+      "bytes": 48136,
+      "sha256": "7dd9150d3bd851eb288fedd26719f775d3c7312eb94c3a0c04f4fe9b0ffcfaa8"
+    },
+    {
+      "path": "supabase/migrations/20260904100000_duel_item_link_resolvable_v3.sql",
+      "group": "migrations",
+      "bytes": 14448,
+      "sha256": "df168a1035e17a1c9959d6eeff6f4aa0eee3d02f06d67f11d8bab68b10f2e330"
+    },
+    {
+      "path": "supabase/migrations/20260928090000_c4_check_c3_grant_total_xp.sql",
+      "group": "migrations",
+      "bytes": 7080,
+      "sha256": "631fd97fbee3a846e8c7c3214b6e8bb3c3e85ae9b33f64ec0badfb4a369377ac"
+    },
+    {
+      "path": "supabase/migrations/20260929090000_xp_total_v1.sql",
+      "group": "migrations",
+      "bytes": 10650,
+      "sha256": "7784b657ad24ada9ebaf56e000fe6fbf15764d4f3b08b4f91bca161a62121b93"
+    },
+    {
+      "path": "supabase/migrations/20260930090000_xp_result_grants_v1.sql",
+      "group": "migrations",
+      "bytes": 19897,
+      "sha256": "3f8b1bb3ffa724a8683a1ca6c030eeab31a8065909fa4540af7492e2a41e7b2d"
+    },
+    {
+      "path": "supabase/migrations/20260930100000_duel_item_link_index_v3.sql",
+      "group": "migrations",
+      "bytes": 3386,
+      "sha256": "db02d490d00e674f66108ed4762bcc986eafd2ff16bed2ec883241a3d841bb18"
+    },
+    {
+      "path": "supabase/migrations/20261001090000_c1_reward_tables_v1.sql",
+      "group": "migrations",
+      "bytes": 19997,
+      "sha256": "a662161985eff266e2ba209f0e24192f67b1e7f43043a4cca4809da3d91160ea"
+    },
+    {
+      "path": "supabase/migrations/20261001100000_duel_host_target_v2.sql",
+      "group": "migrations",
+      "bytes": 5012,
+      "sha256": "fdbac5e2dc5869d696c169a16c44f03d01df2ec0cf20013703e833b643538bd0"
+    },
+    {
+      "path": "supabase/migrations/20261002090000_achievements_rewards_v1.sql",
+      "group": "migrations",
+      "bytes": 50577,
+      "sha256": "3d033501d7746e21a5d53a0b9600bb6f24c40bfac702f9bf4edbe35e9a7a4073"
+    },
+    {
+      "path": "supabase/migrations/20261002100000_achievement_triggers_v1.sql",
+      "group": "migrations",
+      "bytes": 44904,
+      "sha256": "2546e483bcda5442c522dc8551f6d2e278e03987f57f7ecddefcab1fddd47939"
+    },
+    {
+      "path": "supabase/migrations/20261003090000_achievement_authority_filter_v1.sql",
+      "group": "migrations",
+      "bytes": 22438,
+      "sha256": "05ac6c73eb3d71c0599bcade2ca9336295c12d12c3b14c70cc8963036f62ea80"
+    },
+    {
+      "path": "supabase/migrations/20261003100000_badge_retirement_v1.sql",
+      "group": "migrations",
+      "bytes": 12223,
+      "sha256": "bd08532800773754318c295433de6acac81b9ef464eea4f31e7d776176f1db99"
+    },
+    {
+      "path": "supabase/migrations/20261004090000_sec_finish_db_v1.sql",
+      "group": "migrations",
+      "bytes": 27201,
+      "sha256": "d0cc3ad689c499a5b6d1a09ed69de27c6f56188715e8c13ae2a5d0ae5e0cfe92"
+    },
+    {
+      "path": "supabase/migrations/20261004100000_duel_players_view_v1.sql",
+      "group": "migrations",
+      "bytes": 4839,
+      "sha256": "488bb07ff19b965054b0da3419698dd96477c12a2c20c916cc3f7d84e0f6a0d3"
+    },
+    {
+      "path": "supabase/migrations/20261004110000_duel_players_rls_v1.sql",
+      "group": "migrations",
+      "bytes": 2739,
+      "sha256": "899740449b1224da64b0b542693c165bf14cf1ca3057f495b42fe2fd9eda2278"
+    },
+    {
+      "path": "supabase/migrations/20261006000302_security_privilege_cleanup_v1.sql",
+      "group": "migrations",
+      "bytes": 579,
+      "sha256": "c0ac13704758ae39f1f26c2b5d90493c55ba7516a2dcea2bac58f9c855368eca"
+    },
+    {
+      "path": "supabase/migrations/20261006000303_single_run_mode_xp_v1.sql",
+      "group": "migrations",
+      "bytes": 8138,
+      "sha256": "dd82b2f7436bc1fe0a85abfe328346cdeb75671a08d1bb236f3914b0c4eafc42"
+    },
+    {
+      "path": "supabase/migrations/20261006002015_duel_random_teleport_v1.sql",
+      "group": "migrations",
+      "bytes": 36981,
+      "sha256": "f502b96117442f8c70fc8df5b6b1447e02be72e0f93ea89fc73d3f7d5222902f"
+    },
+    {
+      "path": "supabase/migrations/20261006003000_restore_forced_link_resolvable_pool_v1.sql",
+      "group": "migrations",
+      "bytes": 10705,
+      "sha256": "8889208f39181d10571738b43e1305e8fa081f337fa034c82bcc72ccaeaa424b"
+    }
+  ],
+  "supportingVerificationFiles": [
+    {
+      "path": "scripts/16b-f-check-applied.sql",
+      "sha256": "a62bf5f0112568900ff960b1707e02ae031cf31477e568052a95ae51dfd6d30e"
+    },
+    {
+      "path": "scripts/16b-f-check-exposure.sql",
+      "sha256": "02e8bad6f41471418fd09a2cacf623e6ea892e8e44f0b149e2a6a5ff8420a52b"
+    },
+    {
+      "path": "scripts/16b-f-check-opened.sql",
+      "sha256": "86542aa765809898e2ab0160f2f77abf4a1fb6df5f1bbdd762025f8b2f2d2ca8"
+    },
+    {
+      "path": "scripts/16b-r-retro-apply.sql",
+      "sha256": "8dbccef01e5425e6a510569a9df76f4260410436d5168b26f94da043619e19d1"
+    },
+    {
+      "path": "scripts/16b-r-retro-dryrun.sql",
+      "sha256": "6f25693e058a7a866813fbe679ceb98d40b369b5237a71bd974cd954bdbbb319"
+    },
+    {
+      "path": "scripts/16b-r-retro-local-fixture.sql",
+      "sha256": "a54e4c32e652993d0566ece69b6df9518aa778305db369b00fa13df8f19948fc"
+    },
+    {
+      "path": "scripts/16b-r-retro-local-run.mjs",
+      "sha256": "89439305ed1eccdbd27b119e2af75713e5749d9deab1127237c1a32af77838fb"
+    },
+    {
+      "path": "scripts/16d-2-migration-local-check.mjs",
+      "sha256": "b85f5a2a873259e3175f112876495d3010b554cfcc7dbed3f039372e366393fe"
+    },
+    {
+      "path": "scripts/16d-check-badge-holders.sql",
+      "sha256": "19f59054dc81fed02db02b4ed37baeb4f2e1f69c20028a5949c900a8c8a817f3"
+    },
+    {
+      "path": "scripts/achievement-display-smoke.mjs",
+      "sha256": "f421bbedee13d79d7627535e26a14ca113feffb54e41a12b7d1e8eba0c1fd5d9"
+    },
+    {
+      "path": "scripts/analyze-audio-complete.mjs",
+      "sha256": "26d6d9acedaa0a6cc02ebcd2a6de5333eb9875996bb8968626c9e10a128c10a0"
+    },
+    {
+      "path": "scripts/analyze-opening-audio.mjs",
+      "sha256": "2288fe662220af931b7ff8437e5493a8f53f7b0ba192316181cd62bdb75395fe"
+    },
+    {
+      "path": "scripts/audio-browser-capture.mjs",
+      "sha256": "873e6f99c8abd22fb291eb1e02c9b1961b3b01eb56fd0c7616eaeda2e841a3b0"
+    },
+    {
+      "path": "scripts/audio-complete-capture-helpers.mjs",
+      "sha256": "50e5c4d5d1f4d8b8014a833a86916640c9f0ca89f8ea051e2c178fa4c2d521de"
+    },
+    {
+      "path": "scripts/audio-fixture.jsx",
+      "sha256": "bf2d8f019c2397c24d0e2ea78ed496b9d94e2fb39e6d791681713c5618e45f49"
+    },
+    {
+      "path": "scripts/audio-lifetime-fixture.jsx",
+      "sha256": "063643cdc889756f25211c04abe35e241d6f1a466e27c7e6d045647eef237ff1"
+    },
+    {
+      "path": "scripts/audio-review-verify-template.ps1",
+      "sha256": "685f26b92a6e1c1e4ef8a049e83d597f781e8d69c3b28cdf036a2b88432f3e27"
+    },
+    {
+      "path": "scripts/audio-review-verify-template.py",
+      "sha256": "b27522018b28564ec59b5f5e5cf809224581f5172b13f7e90d2938695311249d"
+    },
+    {
+      "path": "scripts/audio-static-app.mjs",
+      "sha256": "6e91b438273f8751ab76e89f8ced37d80b200ee11d6f14e901a6c33aa027c14e"
+    },
+    {
+      "path": "scripts/audit-audio-review-package.py",
+      "sha256": "891349c466ae17fad0b16f23383e6880979856061fd568ceffadce5d9f467bc5"
+    },
+    {
+      "path": "scripts/badge-retirement-ui-smoke.mjs",
+      "sha256": "9ce8fd82d7c88d64d8f915bd977757b112e4c32e8f50342026d5eff663666da5"
+    },
+    {
+      "path": "scripts/capture-audio-complete-loops.mjs",
+      "sha256": "235ad11ad57d62008d0707f0dacac66846fd701a42df124b7e3600ed4c3ab8c8"
+    },
+    {
+      "path": "scripts/capture-audio-complete-scenes.mjs",
+      "sha256": "945444985f259d2251278eb798a1f1f7dc9fe8bd0d61c947cd8e4550971c4a97"
+    },
+    {
+      "path": "scripts/capture-audio-complete-settings.mjs",
+      "sha256": "3ada497037c2ce42d29e29a6f3c94bfed8c7e5cab139482f6862f9243ee9854b"
+    },
+    {
+      "path": "scripts/capture-audio-complete-transition.mjs",
+      "sha256": "0129bcf337ccdf513826abd1885d4e748a8f477b6327474aa8d7d20a051d17d1"
+    },
+    {
+      "path": "scripts/capture-audio-fixed.mjs",
+      "sha256": "fbc46197da9f730d0a9df7a6f91a67d0f17ceb990e1b00097d15d16b3b79da6a"
+    },
+    {
+      "path": "scripts/cinematic-dom-capture.mjs",
+      "sha256": "5a676d1b9a55cc8d0be2499f6bc2c08253cc19a638d882b59d4840bbef9ef7a4"
+    },
+    {
+      "path": "scripts/create-cinematic-design-clips.mjs",
+      "sha256": "6ab8c9abd2ab9694f546bdbd0c0e2ce56cb131ffebc81b0d047f1c4a659f91bd"
+    },
+    {
+      "path": "scripts/create-cinematic-integration-review.mjs",
+      "sha256": "8190302c283b942a534ff6db3d34740fdda61d3c752551a7b7b09a32ba7c7798"
+    },
+    {
+      "path": "scripts/create-duel-feedback-followup-review.mjs",
+      "sha256": "fc1050b679a407e34e9ffa8cfb640d9bb94ecf4d262122c5489467171f0f6a9a"
+    },
+    {
+      "path": "scripts/create-duel-feedback-review.mjs",
+      "sha256": "bf9b40295b385cba14d03162e3be0512116b48a1072a69f04da50014faa803c8"
+    },
+    {
+      "path": "scripts/create-duel-readable-review.mjs",
+      "sha256": "d8ae84b63240fa99c5978e298d1bc6943659b5a35e6a848b4dd833a50aeba7e8"
+    },
+    {
+      "path": "scripts/create-scene-clips.mjs",
+      "sha256": "72e1532719aec6d8d68815dc03ea9cd8c8d98d0f98de9bae6c533a317fa3a14d"
+    },
+    {
+      "path": "scripts/duel-feedback-fixture.mjs",
+      "sha256": "087db6b4f3e106f0d6d6ab43321c63db7d63f5af70920fa3345f18fc85518ee0"
+    },
+    {
+      "path": "scripts/duel-host-target-smoke.mjs",
+      "sha256": "17f605cfc1e68e21c1006b74cf232b5784aaf497a8864aead8368c757e7333db"
+    },
+    {
+      "path": "scripts/duel-players-view-smoke.mjs",
+      "sha256": "46ba5e8a70d4645bb5b6feb27850e9a2db8b1c0b79c3031d506dcb00d4809d9c"
+    },
+    {
+      "path": "scripts/package-audio-review-complete.py",
+      "sha256": "2fe9548a7aaefe482493d71769c3125846680852488e8c31f74f94aeb80bad07"
+    },
+    {
+      "path": "scripts/package-audio-review-fixed.py",
+      "sha256": "bd9e17e99490f6844c4b79cc230619bf8515fb33a43b873c5e5a32a2267270bf"
+    },
+    {
+      "path": "scripts/package-single-random-evidence.mjs",
+      "sha256": "86151aa098a9580fef1e3668d0e829af522e083ad5ef293a0d757d43fec521b2"
+    },
+    {
+      "path": "scripts/package-single-start-evidence.mjs",
+      "sha256": "3067ddf65915c1fc3654bd0ae9c19f09a34ede1f82eb76221baf1c0cd08f38b8"
+    },
+    {
+      "path": "scripts/package-single-start-ui-review.mjs",
+      "sha256": "3b503c7bbb5d55a8e5e4dac4611754c1bd3b5c5a71207c246fbb08993facb190"
+    },
+    {
+      "path": "scripts/package-single-visual-feedback.mjs",
+      "sha256": "ecd5257cf8fec1ddb9a3a45a2bcc60a9758c120faa7a7c456cfae7e0a2573d9d"
+    },
+    {
+      "path": "scripts/packet13-browser-b1-scenarios.mjs",
+      "sha256": "b4095e4cea74c971149439a5484471095a4c4b138cd12bad0c9fd9c68798305a"
+    },
+    {
+      "path": "scripts/packet13-browser-b1.mjs",
+      "sha256": "153dc26de880c03068079af5dc5e7dfbb58a987ae0fed14fc28835362c3f8418"
+    },
+    {
+      "path": "scripts/prepare-audio-complete.mjs",
+      "sha256": "8c7c8b607c676dfc1f206ea1aac5a01bc048f7481235e0799e6995538881f8db"
+    },
+    {
+      "path": "scripts/prepare-game-audio.py",
+      "sha256": "31b350d24e5269c06d4eb8940b5d59fac3c86ceaded518accb61a4a6b5d81ae0"
+    },
+    {
+      "path": "scripts/release-validation-local-smoke.mjs",
+      "sha256": "0cfd0a3f6e7cda38a9d498a4d91505aba768841689471f17b24f9fea51f719c2"
+    },
+    {
+      "path": "scripts/render-audio-review-previews.mjs",
+      "sha256": "7f768093d043c9db2a39d64d0838f3b21e3149b383555427c1a64438961ee3e0"
+    },
+    {
+      "path": "scripts/sec-finish-check-prod.sql",
+      "sha256": "9db79e91fdd92b2dafc066f647d9a7a3d17a20f30942847dc3e1e69f0fd8ec6f"
+    },
+    {
+      "path": "scripts/sec-m2-check-prod.sql",
+      "sha256": "0343d87dc3eb4b2c61b0f2d1dd3be67599f65496fb881a5eb0884a9f44737620"
+    },
+    {
+      "path": "scripts/sec-m2-verify-readonly.sql",
+      "sha256": "40eab9e7e6a5f303937d01fcdbb202efcc5f430e36a6ec7f53ec38a5e9752a12"
+    },
+    {
+      "path": "scripts/serve-duel-feedback-review.mjs",
+      "sha256": "b13d7c7c2fb5ec682b8909befce00b1d5be66718a89d497ac5daef15a1912829"
+    },
+    {
+      "path": "scripts/serve-single-start-ui-review.mjs",
+      "sha256": "8c9a6c6519144dc63f13c7607c24c15b3e6352a704b38366c5b1791469bd53d0"
+    },
+    {
+      "path": "scripts/single-random-local.mjs",
+      "sha256": "d9bc50c57375d70a0f548ae646f2ccfccb5f94f516183c83cacf1577401293fe"
+    },
+    {
+      "path": "scripts/single-start-local.mjs",
+      "sha256": "8a03ae02169bbb0c5999092400f0f99217c0abb46b648c9c9b479e54d8c12296"
+    },
+    {
+      "path": "scripts/single-start-ui-cases.mjs",
+      "sha256": "3cb89f16c939de1e87236adca76bdc439a103346639a778270b0e57e2f481411"
+    },
+    {
+      "path": "scripts/single-visual-feedback-cases.mjs",
+      "sha256": "3aa099518e1f8af1c859d925a44283538dbe02d0fba3ac2557ec827ae605fff5"
+    },
+    {
+      "path": "scripts/supabase-clean-gate.mjs",
+      "sha256": "8903a718177f4ae7204d6bb6864c7a3dbe8c91cad2a1b03a714b70a5c1e76846"
+    },
+    {
+      "path": "scripts/supabase-log-window-self-test.mjs",
+      "sha256": "86dbc00cc883067ab649d7c419ee683d1d8250db0fe38464a91c21107ce0f099"
+    },
+    {
+      "path": "scripts/supabase-postgrest-smoke.mjs",
+      "sha256": "f93649084e2c95f7b0b6f4e785b7e63fecf86d586ec223f0fc5c42b823b6b757"
+    },
+    {
+      "path": "scripts/supabase-runtime-common.mjs",
+      "sha256": "21e2748492dd3e30dc896b8164951b6402b65c1f862c648b7f5363f82206b5f6"
+    },
+    {
+      "path": "scripts/supabase-runtime-preflight.mjs",
+      "sha256": "ffe33b97d370861b1835e5d100916aa6d26cf5c5003b7ba5dd0c83e7021a730d"
+    },
+    {
+      "path": "scripts/supabase-runtime-validation.mjs",
+      "sha256": "dc1f7515a21eddcacb4146745320eb69ef51d2ba5eb231caae0597bfed6af3df"
+    },
+    {
+      "path": "scripts/supabase-start-pinned.mjs",
+      "sha256": "c0d72597439171017b543ba5d0b16017609f9c2203f1627a259773d37614f143"
+    },
+    {
+      "path": "scripts/ui-2.0x-browser.mjs",
+      "sha256": "f2ad42b534599b235f6198ee4c7356995c9ecf7d255a1b0296fce5afdbca9afb"
+    },
+    {
+      "path": "scripts/ui-phase1-browser.mjs",
+      "sha256": "68344fde9f279413437505818c3888bcd48b0c6d6398e88a7718d104921b9719"
+    },
+    {
+      "path": "scripts/ui-phase2-browser.mjs",
+      "sha256": "3306e6af0fbb8fcd233926992323b1fe11394e2f462c1d2d8e9b45a90a926a2d"
+    },
+    {
+      "path": "scripts/ui-phase2-local-smoke.mjs",
+      "sha256": "4c51b87b01b1b0ed9606ebcf91dff167de20032835bd89d7f3e59ef86236f943"
+    },
+    {
+      "path": "scripts/ui-phase3-browser.mjs",
+      "sha256": "ed11b27e3b9475e56c43585a7b60769f3a9b99a6e757bfe7d18f18382eb151f7"
+    },
+    {
+      "path": "scripts/ui-phase3-local-smoke.mjs",
+      "sha256": "af951f278b86d3b7a59bf6b4630b7d68cb21929c57fcc6a5748d8030703751d2"
+    },
+    {
+      "path": "scripts/ui-phase4-browser.mjs",
+      "sha256": "76ca48e5c934114bc62becc657afd5313aa2b7e800706dd332aed6660a2de223"
+    },
+    {
+      "path": "scripts/verify-201-clean.mjs",
+      "sha256": "a10b98a548366d2bf829c7a44abf016b524be66687ca2908a4cfd9b4ab5538cc"
+    },
+    {
+      "path": "scripts/verify-201-links.mjs",
+      "sha256": "588fefc29ee8f6a8e23d9d99d92409d5f56e341d5abe1ea5c008222cee4f87b1"
+    },
+    {
+      "path": "scripts/verify-achievement-final.mjs",
+      "sha256": "1d9b5ee1cfbfa56e6b296be328eb2c37786c626a86034a3a7a1b6c4e421422d3"
+    },
+    {
+      "path": "scripts/verify-achievements-album-local.mjs",
+      "sha256": "41eee9b15e7f726fc903f107df59aeac62d26b6d5c82f8f8dcdd6748242e13e0"
+    },
+    {
+      "path": "scripts/verify-achievements-album.mjs",
+      "sha256": "5ca92f67b3eade589371d207c3a2460a1303bb75cd27a3e0a6710df5850d5a39"
+    },
+    {
+      "path": "scripts/verify-all-audio-media.mjs",
+      "sha256": "f044c1bb3087817ade8d3306c4743c7876312ce9652a1b404536feb3241f0a99"
+    },
+    {
+      "path": "scripts/verify-all-audio.mjs",
+      "sha256": "0aee73a1212daabe6bf8c06d83a07ce19f514cfc70417a2ed1c5616b5fb83f8b"
+    },
+    {
+      "path": "scripts/verify-arrival-audition.mjs",
+      "sha256": "8cbadfad1b3368b7770c70b93f58d4a92d5a5abf445aa6cf868e6366b085c689"
+    },
+    {
+      "path": "scripts/verify-audio-beat-media.mjs",
+      "sha256": "a4da329151cdca7eb7e3c924e822cb5c0160d0598ad20937cc3a4b3c7b81f649"
+    },
+    {
+      "path": "scripts/verify-audio-beat.mjs",
+      "sha256": "f9e0f49541b125960372dff6a39d3942fb0bdf8762b621b46cf284e88fd3a644"
+    },
+    {
+      "path": "scripts/verify-audio-candidates.mjs",
+      "sha256": "ef60db0c11a06912fc88caec837dc50c7987a7701dec7a476566a6876a0235a4"
+    },
+    {
+      "path": "scripts/verify-audio-celebration.mjs",
+      "sha256": "667a48d4619708ade9bd546e153d98725cf54e79bfb3b750b3f30312ba37e96e"
+    },
+    {
+      "path": "scripts/verify-audio-cheer.mjs",
+      "sha256": "5769b23fd0350fc3ca6428abba82270503546c2465bb86777c8a0e53b1932a12"
+    },
+    {
+      "path": "scripts/verify-audio-collection.mjs",
+      "sha256": "fa5cb1f1e7bc8e51d075014f3860f490fa21380c973dfd800e9c6ed0d9ecd104"
+    },
+    {
+      "path": "scripts/verify-audio-controls.mjs",
+      "sha256": "d7054ada66773df17da7d48b1488cf4161716b62c8b93f292344c6be2e35384f"
+    },
+    {
+      "path": "scripts/verify-audio-duration.mjs",
+      "sha256": "6b129b949edecfa25b872dbc1a48e45f3c88123209f0792692a9b3d535110993"
+    },
+    {
+      "path": "scripts/verify-audio-fixed-extracted.mjs",
+      "sha256": "1a6795243b413a14187af4c17ac1fca4945e4c52e44c4a416ef16ed188a82bde"
+    },
+    {
+      "path": "scripts/verify-audio-forfeit.mjs",
+      "sha256": "afb1c1b7d48f714f3ca2fc58527a62871e1a27438338ea91fc6a8b8064756615"
+    },
+    {
+      "path": "scripts/verify-audio-items.mjs",
+      "sha256": "7df2c34a9b21bda9170041312ce8520c7b489d99ac2e880134757364f2c53270"
+    },
+    {
+      "path": "scripts/verify-audio-lifetime.mjs",
+      "sha256": "07045c05983faf508d4096a615d164393664b111308451e8dbe887ce47549633"
+    },
+    {
+      "path": "scripts/verify-audio-live-media.mjs",
+      "sha256": "1d133ed917d8cb6fb075da5dc5f51dd9fd049e8d2274a7a963a72bbb96ac8102"
+    },
+    {
+      "path": "scripts/verify-audio-live.mjs",
+      "sha256": "ad12ed6f3b8af076f473fb447afe1d9e10396bd3adc2f86f2e7af3cd5e5b199a"
+    },
+    {
+      "path": "scripts/verify-audio-local.mjs",
+      "sha256": "61ff46d72cb45d69df5c866dff935f98c610e20ee5dbb8bf236a375bd392abb7"
+    },
+    {
+      "path": "scripts/verify-audio-loss-instruments.mjs",
+      "sha256": "950b92c33c40d59ec7ecf09b64b5303b97d35e3a27b3b0195df111b7a0da139a"
+    },
+    {
+      "path": "scripts/verify-audio-loss-rich.mjs",
+      "sha256": "da3aa1c838b93972bace9b64a0e1263ff2118cf55699fd3b6996d7a511b54964"
+    },
+    {
+      "path": "scripts/verify-audio-loss.mjs",
+      "sha256": "2ac5a3fe423a43dc235412b53742ce5faa57c3433466143b4e144308c9737eb3"
+    },
+    {
+      "path": "scripts/verify-audio-media.mjs",
+      "sha256": "fded32664bfa995032cb9873b678f9aaba8ee44605ee424ead5ee8f90ce2fe48"
+    },
+    {
+      "path": "scripts/verify-audio-page-clean.mjs",
+      "sha256": "e2c02c3464d88e67a8b13e5c4396400be09b75a752b1634d022544458ec21f7b"
+    },
+    {
+      "path": "scripts/verify-audio-preservation.mjs",
+      "sha256": "8b5eff86fef39af767f4848164c394ce9316628189732545aad175e992a87a5c"
+    },
+    {
+      "path": "scripts/verify-audio-review-extracted.mjs",
+      "sha256": "697e9d6a9d98eaa4e1c75c1c5fb8895e2c02a6f839853dcf7939efad1c4ce54f"
+    },
+    {
+      "path": "scripts/verify-audio-selected-loss.mjs",
+      "sha256": "f5cd216f5327fb95ec29cb6ee2ed46c9fdf573f9fe28af1dd4e33aaf5369f406"
+    },
+    {
+      "path": "scripts/verify-audio-timbres.mjs",
+      "sha256": "06357fd018291cc1e73333e078df546f49e086ba37b344a4ce4d28b1f69afb66"
+    },
+    {
+      "path": "scripts/verify-audio-ui.mjs",
+      "sha256": "ee168a86e285d850a7c550f28a88f07788d2dfa184293828117310e1f73ee041"
+    },
+    {
+      "path": "scripts/verify-cinematic-integration.mjs",
+      "sha256": "959d95837a70c0c3bc37622bb9e5a737ce68aacc3b6f6e87c07f52577851b309"
+    },
+    {
+      "path": "scripts/verify-daily-course-pool.mjs",
+      "sha256": "cab7c5ce858601c538a09dd3ea37ef58856b2a8d1180baab9f8fc10825d68c3b"
+    },
+    {
+      "path": "scripts/verify-duel-censorship-p0-local.mjs",
+      "sha256": "f38d399de00d990448fdaf4919cca109090106a09f9e5a2f776aa0481957e555"
+    },
+    {
+      "path": "scripts/verify-duel-end-local.mjs",
+      "sha256": "9083453e921e0db5cb63db15961a289357d2dcd4315d883c6c4f00e2755a6e72"
+    },
+    {
+      "path": "scripts/verify-duel-end-prototype.mjs",
+      "sha256": "1d2526c38e930c7ce1feb2a3c754ba6c7a131192006b830e78aa2e609c69e4da"
+    },
+    {
+      "path": "scripts/verify-duel-feedback-followup-local.mjs",
+      "sha256": "d3cd49e7ce19d1fd72bc367b85da3ef34231dd7417054d93eebf11bc1bf0a1ac"
+    },
+    {
+      "path": "scripts/verify-duel-feedback-followup.mjs",
+      "sha256": "cd4674f705bc687a3259d5941a4192dd42b14ce2f183b475c43b38c41619400b"
+    },
+    {
+      "path": "scripts/verify-duel-feedback-local.mjs",
+      "sha256": "2bba6c59a005253ef8b2ff58a786d202a20068f2e35e8cc2ca4a89ee9c01a813"
+    },
+    {
+      "path": "scripts/verify-duel-feedback.mjs",
+      "sha256": "d2b3f40b2e3b249fa77ff013dc013341ff7f2c3999c463a775cb64e86326b248"
+    },
+    {
+      "path": "scripts/verify-duel-p0-react.mjs",
+      "sha256": "3f8fd96fd0fa23d13edf98f1d0e17024a80ab7d9af3290a159a682836fe14ffa"
+    },
+    {
+      "path": "scripts/verify-duel-preview-local.mjs",
+      "sha256": "df0ffb76e72b0e348ddc0a35ecc5007b3aed0eae90380310583e2e731e740222"
+    },
+    {
+      "path": "scripts/verify-duel-public-move-local.mjs",
+      "sha256": "3764ce0cef0b27d58a4282710ebf56fa447874ec6ed318784e5b4d81c730c22c"
+    },
+    {
+      "path": "scripts/verify-duel-readable-local.mjs",
+      "sha256": "3246d15da1784024ec666dd4518dec00326fb33efb8c717cd794520fea99d922"
+    },
+    {
+      "path": "scripts/verify-duel-readable-regression.mjs",
+      "sha256": "eea26f24f5597905e4f82b51011e169af2c060732da32fce7e9e3a22137cd4ed"
+    },
+    {
+      "path": "scripts/verify-duel-readable.mjs",
+      "sha256": "0aaa99c93b6c0c3a91a91b0b586c7df1e4e33558fb06a728eaf03e7cc96d83fc"
+    },
+    {
+      "path": "scripts/verify-duel-rules-local.mjs",
+      "sha256": "56c7499988591924661514009bd0d4deb39aa472535adf61df247c17dddb1864"
+    },
+    {
+      "path": "scripts/verify-duel-search-local.mjs",
+      "sha256": "49b2e6908590f975dc13e76a1a707a8bc7e2b2a7e02837042cf6058cf5d5c613"
+    },
+    {
+      "path": "scripts/verify-game-audio.mjs",
+      "sha256": "3681cc58d9539aa8455c64c4751b6ff4cc345f367de343a19d9ec7bd4d5ef82d"
+    },
+    {
+      "path": "scripts/verify-home-final.mjs",
+      "sha256": "3ebdcffdf71c0e6408aeec67eafe27dcc85cf34d38ae1f961bb165a60ad98a82"
+    },
+    {
+      "path": "scripts/verify-home-goal.mjs",
+      "sha256": "cca86690e1741240e74488fde9945278756307e54e1b4b30f60d7e7096297d73"
+    },
+    {
+      "path": "scripts/verify-home-polish.mjs",
+      "sha256": "75fec484ea478c68334bb78ba131f891bd50e1d999d4e983ffa100d0829856f1"
+    },
+    {
+      "path": "scripts/verify-next-goal-local.mjs",
+      "sha256": "b1dc9cc0ac67e74582b0e4d330c6249f6d69d04277ba568ef5a741a5acf170a0"
+    },
+    {
+      "path": "scripts/verify-opening-audio.mjs",
+      "sha256": "0f963abee957093c69ceb318137bfffff7ba64f3a784ae4461fbfb1331d0d66c"
+    },
+    {
+      "path": "scripts/verify-race-overflow.mjs",
+      "sha256": "efdedc06e24aecfb10b43243ebdd850feb494fbbe389736cd866a7f57005dd85"
+    },
+    {
+      "path": "scripts/verify-ranking-profile-local.mjs",
+      "sha256": "9b80bb1a2842130f6dd62746e1a5d354f77d1832157a9d38f0a319c4cf5db0f6"
+    },
+    {
+      "path": "scripts/verify-ranking-profile.mjs",
+      "sha256": "7bf60d0bd5334f3b539b77d6f0dcaa2ae89255a5a6d1bb54a8b393582a28523a"
+    },
+    {
+      "path": "scripts/verify-result-audio-media.mjs",
+      "sha256": "6dafe7aa06d29c5a7b993b6c8b438890f055ba9a8d384b9c60cb104355b1378c"
+    },
+    {
+      "path": "scripts/verify-result-audio.mjs",
+      "sha256": "a4962c320f997cc429006ff01f95b91dab7662f186c780be9b393c8f5ddb7d13"
+    },
+    {
+      "path": "scripts/verify-scene-sequences.mjs",
+      "sha256": "b0d7a6996103b211015611da2f11fbcf4087f97f2d6d7018da95cb48231a8f6b"
+    },
+    {
+      "path": "scripts/verify-single-random-browser.mjs",
+      "sha256": "c97b4e5bd60c0561b6f37e0681bc04012dfbd510e184af1ff78772b22ce84e1a"
+    },
+    {
+      "path": "scripts/verify-single-random-budget.mjs",
+      "sha256": "565343d6f9598fbe4999b508cefab1170b34315dd56f234da862fabcbe0feb91"
+    },
+    {
+      "path": "scripts/verify-single-random-concurrency.mjs",
+      "sha256": "b6442e17b9448bb8605236497f25eabee9b6f53371e5ac3606efc0b886507ae8"
+    },
+    {
+      "path": "scripts/verify-single-random-preservation.mjs",
+      "sha256": "ce85cf8d6fada1ed9f1e7925f98c3a42af90cfb86f07441832379f8d187ead22"
+    },
+    {
+      "path": "scripts/verify-single-start-browser.mjs",
+      "sha256": "d810ddf7c7c34d74b2083eda2f836cd87c4b8e728924dbeadf559f160b6a020f"
+    },
+    {
+      "path": "scripts/verify-single-start-clean-replay.mjs",
+      "sha256": "5794b78fe91960b0ea6ca25494eabc3a81ef0c3e2c440c4de552c64b43b15946"
+    },
+    {
+      "path": "scripts/verify-single-start-concurrency.mjs",
+      "sha256": "fea4a559ec74825b1cc4b6762ef998dccbcf3d3998d00f9cb943fa850737544a"
+    },
+    {
+      "path": "scripts/verify-single-start-preservation.mjs",
+      "sha256": "9a168e12fc9ba7d27d8fd0e543f66a0016f1a24e9998f4392bae778803a87920"
+    },
+    {
+      "path": "scripts/verify-single-start-readability.mjs",
+      "sha256": "658230986fd43b44b4a6fe23e9f033f65e0b5dd928a5e4448fa1ce48134aee02"
+    },
+    {
+      "path": "scripts/verify-single-start-ui.mjs",
+      "sha256": "5973b611a9dfca9d298d1ae624561cbe3d12abfc2f03634444ea14da33c39a5c"
+    },
+    {
+      "path": "scripts/verify-single-visual-feedback.mjs",
+      "sha256": "143dbad8112b02adbcb8cabdb4abdaf26873d90172cac231b8312fdbd8ad9ab0"
+    },
+    {
+      "path": "scripts/verify-single-visual-preservation.mjs",
+      "sha256": "08ae9cf575900312c6e88cd2b3124827cc572e7644ffc487021dc7e0cee7e083"
+    },
+    {
+      "path": "scripts/verify-single-visual-readability.mjs",
+      "sha256": "d26a67b1385a1216b6dae60fa8bfa4ac9503beca6002f8dd74709ebda3c8afee"
+    },
+    {
+      "path": "scripts/verify-start-overlays.mjs",
+      "sha256": "7583e31547f0ad4ae3609082577b05c7027e96333a98fb92bb90690181628ff6"
+    },
+    {
+      "path": "scripts/verifyWikiLinks.mjs",
+      "sha256": "8db96c4474c7b7c4b29e3392f1fcf705090f9de75be5744cfa4414ff61f7ad32"
+    },
+    {
+      "path": "scripts/wikiSnapshotRequestCount.mjs",
+      "sha256": "0df1204561d0b4803dce5aee23304096a47a41f1a1ec2bc2925e9c474e6962ab"
+    },
+    {
+      "path": "supabase/tests/achievement_authority_filter_v1.sql",
+      "sha256": "f6506ae63f65f4e1fe857947621aaaf6cb2c03c81faaf591ea8361a3bf16afbf"
+    },
+    {
+      "path": "supabase/tests/achievement_triggers_v1.sql",
+      "sha256": "dc6ea3fcb189e8773b4eb2275ce38c4ce598958c7958201e04042b4043ae8da1"
+    },
+    {
+      "path": "supabase/tests/achievements_rewards_v1.sql",
+      "sha256": "f316273c80f6bdfbf2f901362bc282d521e1e87e24ab0374c18bb9c3339fd95c"
+    },
+    {
+      "path": "supabase/tests/badge_retirement_v1.sql",
+      "sha256": "0ad3bced778a6b4ec07e81ecd943fa6dbfdd4ceeba81d77c8f17623027d25a5b"
+    },
+    {
+      "path": "supabase/tests/c1_reward_tables_v1.sql",
+      "sha256": "80fc1daafc8169955abcc207089803ffc976edc4d17fe1e88974d6990346dd92"
+    },
+    {
+      "path": "supabase/tests/c4_check_c3_grant_total_xp.sql",
+      "sha256": "91ca35cfadffa2de97bc772dadade9e37f32191cad782c64eeba8d2940503c6b"
+    },
+    {
+      "path": "supabase/tests/daily_course_pool_v2.sql",
+      "sha256": "8c97dced120e7c339869e58e853d8a7243fd7fa7bff24a1450f0f3f01ff4193b"
+    },
+    {
+      "path": "supabase/tests/duel_item_authority_v3.sql",
+      "sha256": "119ea3e731e5a7ba448cef0d54f743bef9e9e32a6e187617d68b98b7f18b30aa"
+    },
+    {
+      "path": "supabase/tests/duel_item_concurrency_v3.ps1",
+      "sha256": "93e0aa424a0f56023594d6254a78af82423ed19b146e9222f147932a7f1114a1"
+    },
+    {
+      "path": "supabase/tests/duel_link_censorship_authority_v1.sql",
+      "sha256": "bb71500cb2fa42a042ddc77064f3820f42181392299abc7af3f9fcaa89920e54"
+    },
+    {
+      "path": "supabase/tests/duel_players_rls_v1.sql",
+      "sha256": "9089ba3e3eff4961e245967447ed9a12bdce16b93bf11470d0d295c3fc1411c8"
+    },
+    {
+      "path": "supabase/tests/duel_players_view_v1.sql",
+      "sha256": "f93c6f83df537a87f969e89f95a4ce895380184e66e31a154beb7feeeeeb8464"
+    },
+    {
+      "path": "supabase/tests/duel_preview_authority_v1.sql",
+      "sha256": "b39d291cceea0abdfc306db1d067acefcca222e3b0b3dcfd50cb1ff14dcf8c6f"
+    },
+    {
+      "path": "supabase/tests/duel_public_move_authority_v1.sql",
+      "sha256": "4a36ac793779a113d1ac55e5feed9cc0c748da08dde537138f0ec9ddf408cd75"
+    },
+    {
+      "path": "supabase/tests/duel_random_teleport_v1.sql",
+      "sha256": "059b2b4ad9c2b498ff4dbfb42cb0c0b19600d3d91a143f430812052f1511a538"
+    },
+    {
+      "path": "supabase/tests/edge_functions_local_success.ps1",
+      "sha256": "58ea4f9f93e0fa1cd454cfb735f172a71b6d84e79460d43776f01677ba131e88"
+    },
+    {
+      "path": "supabase/tests/explorer_xp_rankings_v2.sql",
+      "sha256": "395ac50fc356e9a848f5ad59b85086890b5557229be56b50abf0cc3693ee9965"
+    },
+    {
+      "path": "supabase/tests/group_final_gaps_v13_hardening_concurrency_helpers.ps1",
+      "sha256": "3e629d28235e5722d2cadeb3934d378f9786c3214c47703b807a1be069959db0"
+    },
+    {
+      "path": "supabase/tests/group_final_gaps_v13_hardening_concurrency_self_test.ps1",
+      "sha256": "7e819b9dd1900841cb72cbb8e56f1abc98e092149544c6b7572ffa746999e53b"
+    },
+    {
+      "path": "supabase/tests/group_final_gaps_v13_hardening_concurrency.ps1",
+      "sha256": "df3475cf720f3619676e8d4b3af98a55b07ffc12ddcad420e4071d77ea961264"
+    },
+    {
+      "path": "supabase/tests/group_final_gaps_v13_hardening_preflight.sql",
+      "sha256": "37d9bfb7e77f62bc4975da937757cc17377be067459b409050b36d31fbfccabe"
+    },
+    {
+      "path": "supabase/tests/group_final_gaps_v13.sql",
+      "sha256": "f29ad78dae9fd8f99cec76303e7207ad5f61b47a0963b45ee6a3d574b0f210e6"
+    },
+    {
+      "path": "supabase/tests/group_match_lifecycle_phase2a.sql",
+      "sha256": "7aa82250ad409720055766fca5b7e79708ba87124238d919b688f2845fe74cff"
+    },
+    {
+      "path": "supabase/tests/group_security_phase2c.sql",
+      "sha256": "dcc7972d8e44ad07e8b3e05d6854305ab4ec1fb603f6227280473e8aa46418df"
+    },
+    {
+      "path": "supabase/tests/group_spectator_emoji_atomicity.sql",
+      "sha256": "7f530bcd5199d3007a0f87e020ffd591ff2bc8d5094130ef464b91ceef21d36b"
+    },
+    {
+      "path": "supabase/tests/group_spectator_emoji_clean_migration_gate.ps1",
+      "sha256": "be62fe48959ed889cde80924824f6358116bac7039c4b8545c3316068304f486"
+    },
+    {
+      "path": "supabase/tests/group_spectator_emoji_crash_diagnostic.ps1",
+      "sha256": "788f33993cec9ea145cbf41b247d5fdb0833c5feeccf7596a07adab7b3ce090a"
+    },
+    {
+      "path": "supabase/tests/group_spectator_emoji_runtime_gate.ps1",
+      "sha256": "e077acfd4bf6d7294800d71f9a97d7fe732d2786d4217aee2c7eabe582eae828"
+    },
+    {
+      "path": "supabase/tests/sec_finish_db_v1.sql",
+      "sha256": "7d6bf8255665cc6daa88c282c659d0335af741a8854cde9c914d637551519474"
+    },
+    {
+      "path": "supabase/tests/security_privilege_cleanup_v1.sql",
+      "sha256": "ca70c280200efb994b35eb50cffc390301d7bf8e5a23f08735d8729af22c3070"
+    },
+    {
+      "path": "supabase/tests/server_authority_concurrency_v2.ps1",
+      "sha256": "3d1771fe8630125e89aa008811ebf725fa6504942093810f61ef828c91362ca9"
+    },
+    {
+      "path": "supabase/tests/server_authority_v2.sql",
+      "sha256": "a6a1d21e8a6b17973e024172efe6f31f4c867d17a7b85e3a037cc8aa33d9472a"
+    },
+    {
+      "path": "supabase/tests/single_random_reserved_v1.sql",
+      "sha256": "1f328d4363f4987dfc619c00293c4682b0a9268131e0a3ce091bd5ea420b7f8f"
+    },
+    {
+      "path": "supabase/tests/single_reserved_start_v1.sql",
+      "sha256": "812a670227578fa31d8a817136d5f13bb117fd45c174231439cc5e2d777cc65d"
+    },
+    {
+      "path": "supabase/tests/single_run_mode_xp_v1.sql",
+      "sha256": "1b628ec720eeaebfabed9272388c1cee49ab489e6cbe66d1616b44ed63284284"
+    },
+    {
+      "path": "supabase/tests/supabase_runtime_preflight.ps1",
+      "sha256": "1fc5361307282e0ed4c6102cd37a78586cc62ab6c84e19f5f3099aff6abb1080"
+    },
+    {
+      "path": "supabase/tests/xp_ledger_v1.sql",
+      "sha256": "947c97b24ab4211c5d69701a93d845f7061abd6333624aec7447d7da0d91adaa"
+    },
+    {
+      "path": "supabase/tests/xp_result_grants_v1.sql",
+      "sha256": "fbeed25c71b9db1fd77734f90c2144258d32b5710c1ddb655c8f170411e69f32"
+    },
+    {
+      "path": "tests/achievementAlbum.test.js",
+      "sha256": "cfa31254f3c52181216826af28e2e4acf74a4b6db49abbcd92052161613a0816"
+    },
+    {
+      "path": "tests/achievementAuthorityFilter.test.js",
+      "sha256": "a443c6ff64879216bf160184fdcb0e38f73fe25225a44e599ddc7bfe589f010f"
+    },
+    {
+      "path": "tests/achievementDisplay.test.js",
+      "sha256": "7d7da653135b58a1670e9dac1fe8f58d2075fa10b346ffea6793792cf5061f70"
+    },
+    {
+      "path": "tests/appRouting.test.js",
+      "sha256": "454bdf7bb700834826d78f486b7442ea205dd5794182ecbdd0321a1cc044dae6"
+    },
+    {
+      "path": "tests/audioFeedback.test.js",
+      "sha256": "f3a972957f87cd9bd62b26b26131361cfa67b92316ec2f07af8503ec96eb67b7"
+    },
+    {
+      "path": "tests/audioManager.test.js",
+      "sha256": "575695eb202465d0b27c577444e1206c4bfef5038c1e43a261db3d8c8a9e883f"
+    },
+    {
+      "path": "tests/auditRepair.test.js",
+      "sha256": "9df871252002f19ebe03b82527868fad321babae56a15aa78509d59b00512780"
+    },
+    {
+      "path": "tests/badgeRetirement.test.js",
+      "sha256": "80ed44ecc28f32c51281a12dd3bb0877221dc2c45c21f847c60d41e00ebadbfe"
+    },
+    {
+      "path": "tests/cinematicPresentation.test.js",
+      "sha256": "cc1ea3f4efe20420c100ea71017840276962bb23dc600975e64d685cd0eee685"
+    },
+    {
+      "path": "tests/dailyChallengeReady.test.js",
+      "sha256": "31df04b5a40a46f8cf234d2e99c673b09af6d148dee8a8d70cebc89260bd0ca9"
+    },
+    {
+      "path": "tests/dailyCourse.test.js",
+      "sha256": "837c7891a2048b5988d6a71324de0d60ec20dd5f2944716ef579cfbf00118dda"
+    },
+    {
+      "path": "tests/dailyCoursePool.test.js",
+      "sha256": "baf8efb0c81e6278b1b8245e53a7662f8e496e68171565e41c829e383f3c3e76"
+    },
+    {
+      "path": "tests/duelCensorshipRejection.test.js",
+      "sha256": "37e5dbce6513b1355a0a78dde29439f218e982911fd7241a8ff779a13319673c"
+    },
+    {
+      "path": "tests/duelEndPresentation.test.js",
+      "sha256": "3bde296a55850611e52bee479a6caaa65ce88296e677a67ef6997e2b1b2a5544"
+    },
+    {
+      "path": "tests/duelFeedback.test.js",
+      "sha256": "92fb0e1b6de118a451e129c4154c74b62af0a38070f4302def3bd98cfe4c461e"
+    },
+    {
+      "path": "tests/duelHostTarget.test.js",
+      "sha256": "02c6356a3eb10f36bba254d49da81fb02ebbe646074f8399c77ace8022f5cedf"
+    },
+    {
+      "path": "tests/duelItemAuthority.test.js",
+      "sha256": "40e211e1c505b9ea8f1869c1d8fce3671b77c6b0c4a5ba9e1b39cf315887611a"
+    },
+    {
+      "path": "tests/duelLinkIndex.test.js",
+      "sha256": "9d1e223595dfac92e9624fec6bc70adca3e63bfa8328f48d20ac952321efd924"
+    },
+    {
+      "path": "tests/duelPlayersView.test.js",
+      "sha256": "1a9e6793caab3e61cc31c91ddf667ef851ff70f20c55ce6dd9ba27cba42521a1"
+    },
+    {
+      "path": "tests/duelPreviewGateway.test.js",
+      "sha256": "be328d5da51cbe1d7102b3ecf3de4d22488ca05b79d390f4c68561daaa3d8bf8"
+    },
+    {
+      "path": "tests/duelPreviewState.test.js",
+      "sha256": "32181c5fd7e0000dc879df98531178f0258769aaca3d5ec600a68f33eb35ce6d"
+    },
+    {
+      "path": "tests/duelRandomTeleport.test.js",
+      "sha256": "ace4b524a11ee2ce4e8fabd05d2737fbe159077002098edd603c05ebd2c2eb9a"
+    },
+    {
+      "path": "tests/duelResultHotfix.test.js",
+      "sha256": "7733c02371b796c43e8801731548c4830c68ebf76bb67c049e9fac8e3f2dbe88"
+    },
+    {
+      "path": "tests/duelSwapDisabled.test.js",
+      "sha256": "9caeacfc580c929b4b7ee6b8e9dfa012020c44c92fc1a55b4837a12c3748d848"
+    },
+    {
+      "path": "tests/explorationRecords.test.js",
+      "sha256": "717258f482a4f765ed73efb2158631e430bdd103431893096266a379a1b1acee"
+    },
+    {
+      "path": "tests/groupFinalGaps.test.js",
+      "sha256": "838df6874f738da0a381c5d902491d2ab6438eb917d251a9159d7b12c800eaf4"
+    },
+    {
+      "path": "tests/groupGameEntry.test.js",
+      "sha256": "891677751c5a8787faeab773e17e30260fcfb0774df7df0c094474f038dd7689"
+    },
+    {
+      "path": "tests/groupGameFlow.test.js",
+      "sha256": "f3a5f401cbd7035343ad977280feb8cf2d90d0aef4a42fd80f11e2a527dfca2e"
+    },
+    {
+      "path": "tests/groupGameTimer.test.js",
+      "sha256": "2dcdd2b2c435da7c7fafcfedb5b02a91ebdb9344e7d028dc1538d9ad54b33732"
+    },
+    {
+      "path": "tests/groupLobbyState.test.js",
+      "sha256": "9526f63805ae8fc60ac2ae56e0dd1aa0de7fc3e4916b6d308aa0bb0a36e77428"
+    },
+    {
+      "path": "tests/groupOnlineGameSession.test.js",
+      "sha256": "443c79734ac77ea287a334d1e6100f7a40ca1ee8d9c3c278a293d7022673a0d4"
+    },
+    {
+      "path": "tests/groupRacePresentation.test.js",
+      "sha256": "7ccaafbab6c3831ceeb208197bb00f1b5ae4d51975b2efbee6729f695dbc16dd"
+    },
+    {
+      "path": "tests/groupResultFormatter.test.js",
+      "sha256": "067c1da33823abd903d9abea6d1365c00d8dd4e16af42f5bf485a1cbad2c8f28"
+    },
+    {
+      "path": "tests/groupSecurityPhase2c.test.js",
+      "sha256": "d4f651741df9bc48ed1569fc6a32067fc4782210e49c632557579ecbb40fa961"
+    },
+    {
+      "path": "tests/groupSnapshotGuard.test.js",
+      "sha256": "ea917cfeb215421e99615f4145f5dd45a8321e56eaeb29d9f3b152c486b332c9"
+    },
+    {
+      "path": "tests/groupTargetSummary.test.js",
+      "sha256": "f2c39fac2cb3001bc72f878119d8e51242994dffa0415cd1b5c7ec5a67342c5f"
+    },
+    {
+      "path": "tests/guestSingleSession.test.js",
+      "sha256": "7af015cd04ef78d913c89d5fd453de7b522c97682b0771beff8e5b6c8a1b30ea"
+    },
+    {
+      "path": "tests/isolatedValidationTarget.test.js",
+      "sha256": "c6e8a96053fcfc5bca987a8558a2ec59e0e25c47bbd7837174eeb34bd265c237"
+    },
+    {
+      "path": "tests/maintenanceGate.test.js",
+      "sha256": "3703f7d4295c97c7085ca14b1b052676e1470231fb6f257f058d2c839264841b"
+    },
+    {
+      "path": "tests/matchExpression.test.js",
+      "sha256": "2b57ec1335a0e2d0941fa6d8afb7922275378c86bdb6144b23b1d24fd3e0a6ec"
+    },
+    {
+      "path": "tests/matchResultExperience.test.js",
+      "sha256": "e60d83c3a3f50c002e4bbcae07b95147000f26ebfc77b4aad24a2474310f1f89"
+    },
+    {
+      "path": "tests/onlineAccess.test.js",
+      "sha256": "d526541077873b60aed865c3fcea9d50adb232b3ae8eca4d1c4fd7761b8833cd"
+    },
+    {
+      "path": "tests/onlineGameSession.test.js",
+      "sha256": "c949eba6a8cd5903551934362794153847b3a054c69e28d990a90c4585bb1218"
+    },
+    {
+      "path": "tests/packet13BrowserB1Scenarios.test.js",
+      "sha256": "3837cfe5883be437a003a33eb04eba3f299bcdee44eed4c02a646222b573bb5c"
+    },
+    {
+      "path": "tests/profileCard.test.js",
+      "sha256": "680164edf2ae5b767018041e1232c3855d75892ca5fd4a2251d1c9e956ed360c"
+    },
+    {
+      "path": "tests/profileRewards.test.js",
+      "sha256": "7cb0b0dccb409e58ea58a697c7d771274fd055cae9865e7f0b386b2e4535732c"
+    },
+    {
+      "path": "tests/raceMotion.test.js",
+      "sha256": "5b18cc82fe77c741f99ad78e0f99127f2347ab45c74ce8bc96f656205fb30259"
+    },
+    {
+      "path": "tests/resultJournal.test.js",
+      "sha256": "60326e3bf6d78f37daef57872579ec9428758103734fec0eb7e55cce5e8db435"
+    },
+    {
+      "path": "tests/resultPresentation.test.js",
+      "sha256": "35d897a0ead53bae4d4ce7a9316406dab47a37042dbcb7c8c067ca59f0213431"
+    },
+    {
+      "path": "tests/resultReasonLabels.test.js",
+      "sha256": "8b93ae04256ededd7a021a0314e67356557e1797dbb0d1413a91999cb56002cf"
+    },
+    {
+      "path": "tests/retroScripts.test.js",
+      "sha256": "915de0a9a235a02180501864b8eeed167a058587d05d8e5be2f1065313fe0bd8"
+    },
+    {
+      "path": "tests/secFinishDbV1.test.js",
+      "sha256": "60c3da9f055067cfc237cac85a7158f73b7c5310089554bda8ea2fe3bdd03f78"
+    },
+    {
+      "path": "tests/serverAuthority.test.js",
+      "sha256": "fc20df6191337f9c2ef0c829d1e76febb5b1845eea93759bd1415fc5ccec37b0"
+    },
+    {
+      "path": "tests/serverAuthorityMigration.test.js",
+      "sha256": "294e893931b0e9380f00b73e155097d38cf7e4fd6d9e4e785ec1b7ff9ae2857d"
+    },
+    {
+      "path": "tests/singleRandomStart.test.js",
+      "sha256": "1cf29ba0cf8197f9a188b6bc82c2de71949be3cfc0615b429ecf7335da20ddc1"
+    },
+    {
+      "path": "tests/singleRunMode.test.js",
+      "sha256": "ae74c57e6cfc62b661c6c4ad6a1c2ffdc633a9ddc4ef39806ea433c3a3db8125"
+    },
+    {
+      "path": "tests/singleStart.test.js",
+      "sha256": "0113d211ee85c1e4912ca12a2cc08eedd818b8a3dbd160dd535d8962469adae6"
+    },
+    {
+      "path": "tests/supabaseRuntimeValidation.test.js",
+      "sha256": "ad753b138bcfe488b01410961517f71e47dcdc2c4d0ee8a674a2aa4b8d0a438c"
+    },
+    {
+      "path": "tests/wikiLinkPolicy.test.js",
+      "sha256": "7cffed4d3b28ca236b8f6f578f3fbe015a5b07420db8c43dca167ce64bb076ac"
+    },
+    {
+      "path": "tests/wikiService.test.js",
+      "sha256": "f0906067f45a9c0b89a85c6111613971bfaeb8e6327f1a3f9c356e00ddabcc4c"
+    },
+    {
+      "path": "tests/xpLedger.test.js",
+      "sha256": "7e6b51c75fbd57292d765419a051b5f86a0801b8c6794e4c67fd991eb941bebf"
+    },
+    {
+      "path": "tests/xpResultDisplay.test.js",
+      "sha256": "e5b665d67a965eb2d2fcee3156cd8a3e214a64de3e040a8683bccfdf1167baf7"
+    },
+    {
+      "path": "tests/xpResultGrants.test.js",
+      "sha256": "c7242f0f933ae6f41544b395f8fd1fa17957c39f520fb075160c15221694be61"
+    },
+    {
+      "path": "tests/xpTotal.test.js",
+      "sha256": "371530c0b646b1ff8bf705a8576b1c923eff736fb049f62e70de7935a25917f5"
+    }
+  ],
+  "excluded": [
+    ".env*",
+    "supabase/config.toml",
+    "supabase/.temp",
+    "supabase/snippets",
+    "backup/",
+    ".temp/",
+    "deliverables/",
+    "docs/sound-prototypes/",
+    "unreferenced public/audio variants",
+    "GROUP_SPECTATOR_MIGRATION.sql",
+    "personal settings",
+    "node_modules/",
+    "dist/"
+  ],
+  "releaseChangedFiles": [
+    "App.jsx",
+    "appStyles.js",
+    "components/AchievementRewardPreview.jsx",
+    "components/AudioControls.jsx",
+    "components/cinematic/CinematicParts.jsx",
+    "components/cinematic/DuelEndSequence.jsx",
+    "components/cinematic/DuelEndVisibility.js",
+    "components/cinematic/SingleResultRoute.jsx",
+    "components/cinematic/SingleStartCinematic.jsx",
+    "components/CountdownOverlay.jsx",
+    "components/DuelItemBar.jsx",
+    "components/DuelItemFeedback.jsx",
+    "components/ExitGuard.jsx",
+    "components/GroupPickOverlay.jsx",
+    "components/ItemBar.jsx",
+    "components/ProfileRewardEditor.jsx",
+    "components/ResultAchievements.jsx",
+    "components/ResultXp.jsx",
+    "components/SingleAchievementCard.jsx",
+    "components/StartCourse.jsx",
+    "components/SuccessOverlay.jsx",
+    "components/UserProfileModal.jsx",
+    "components/VsIntroOverlay.jsx",
+    "components/wiki-race/ExpeditionHero.jsx",
+    "components/wiki-race/race/GroupRaceParts.jsx",
+    "components/wiki-race/race/RaceParts.jsx",
+    "components/wiki-race/result/ResultParts.jsx",
+    "components/wiki-race/WikiRaceShell.jsx",
+    "components/WikiHighlights.jsx",
+    "components/WikiViewer.jsx",
+    "css/wikiRaceAlbum.css",
+    "css/wikiRaceAudio.css",
+    "css/wikiRaceBase.css",
+    "css/wikiRaceCinematic.css",
+    "css/wikiRaceCollection.css",
+    "css/wikiRaceDuelEnd.css",
+    "css/wikiRaceDuelFeedback.css",
+    "css/wikiRaceExpansion.css",
+    "css/wikiRaceHome.css",
+    "css/wikiRaceJournal.css",
+    "css/wikiRaceMotion.css",
+    "css/wikiRaceNotebook.css",
+    "css/wikiRacePreparation.css",
+    "css/wikiRaceRace.css",
+    "css/wikiRaceSequences.css",
+    "css/wikiRaceSingleResult.css",
+    "css/wikiRaceSingleStart.css",
+    "css/wikiRaceStart.css",
+    "hooks/useAudioCues.js",
+    "hooks/useCinematicFrame.js",
+    "hooks/useDuelFeedback.js",
+    "hooks/useGameAudio.js",
+    "hooks/useItemSystem.js",
+    "hooks/useLobbyAudio.js",
+    "hooks/useRaceMotion.js",
+    "hooks/useResultAudio.js",
+    "hooks/useSceneSequence.js",
+    "package.json",
+    "pages/AchievementsPage.jsx",
+    "pages/GamePage.jsx",
+    "pages/GroupGamePage.jsx",
+    "pages/GroupRoomPage.jsx",
+    "pages/MainPage.jsx",
+    "pages/MultiplayerGamePage.jsx",
+    "pages/MultiplayerPage.jsx",
+    "pages/PlayPage.jsx",
+    "pages/ProfilePage.jsx",
+    "pages/PublicContentPage.jsx",
+    "pages/RankingPage.jsx",
+    "pages/RoomPage.jsx",
+    "public/assets/wiki-race/achievement-decoration/category-daily.svg",
+    "public/assets/wiki-race/achievement-decoration/category-duel.svg",
+    "public/assets/wiki-race/achievement-decoration/category-exploration.svg",
+    "public/assets/wiki-race/achievement-decoration/category-group.svg",
+    "public/assets/wiki-race/achievement-decoration/category-onboarding.svg",
+    "public/assets/wiki-race/achievement-decoration/discovery-complete.svg",
+    "public/assets/wiki-race/achievement-decoration/SOURCE.md",
+    "public/assets/wiki-race/home/wiki-home-left-decoration.webp",
+    "public/assets/wiki-race/home/wiki-home-right-decoration.webp",
+    "public/audio/celebration-v02/goal-arrival.wav",
+    "public/audio/countdown.wav",
+    "public/audio/duel-loss-v03/brass.wav",
+    "public/audio/game-start.wav",
+    "public/audio/game-v02/jungle-expedition.wav",
+    "public/audio/home-kalimba.wav",
+    "public/audio/journal-open.wav",
+    "public/audio/opening-v02/journey-departure.wav",
+    "public/audio/page-flip.wav",
+    "public/audio/result-v01/expedition-records.wav",
+    "public/audio/sfx-v03/teleport-air.wav",
+    "public/audio/sfx-v04/blade-parry.wav",
+    "public/audio/sfx-v04/ink-splash-three.wav",
+    "public/audio/sfx-v04/seal-impact.wav",
+    "public/audio/sfx-v04/shield-block.wav",
+    "public/audio/sfx-v04/vs-boom.wav",
+    "public/audio/sfx-v05/page-turn-clean.wav",
+    "public/audio/ui-v01/button-click.wav",
+    "public/audio/ui-v02/connection-lost.wav",
+    "public/audio/ui-v02/connection-restored.wav",
+    "public/audio/ui-v02/group-ready.wav",
+    "public/audio/ui-v02/lobby-join.wav",
+    "public/audio/ui-v02/request-denied.wav",
+    "public/audio/ui-v02/save-confirm.wav",
+    "public/audio/ui-v03/personal-arrival.wav",
+    "rankingService.js",
+    "services/audioAssets.js",
+    "services/audioManager.js",
+    "services/duelItemService.js",
+    "services/multiplayerService.js",
+    "services/profileStatsService.js",
+    "services/singleStartService.js",
+    "services/wikiHighlightsService.js",
+    "utils/achievementDecoration.js",
+    "utils/achievementDisplay.js",
+    "utils/audioFeedback.js",
+    "utils/audioTimeline.js",
+    "utils/cinematicMotion.js",
+    "utils/cinematicPresentation.js",
+    "utils/dailyCourse.js",
+    "utils/duelEndPresentation.js",
+    "utils/duelFeedback.js",
+    "utils/duelPreview.js",
+    "utils/duelResultPresentation.js",
+    "utils/groupResultTrace.js",
+    "utils/groupSnapshotGuard.js",
+    "utils/raceMotion.js",
+    "utils/resultJournal.js",
+    "utils/serviceError.js",
+    "utils/singleGameSession.js",
+    "utils/singleStart.js"
+  ],
+  "productFilesModifiedThisSession": [],
+  "verificationFilesModifiedThisSession": [
+    "supabase/tests/achievements_rewards_v1.sql",
+    "scripts/release-validation-local-smoke.mjs",
+    "scripts/verify-single-random-browser.mjs",
+    "scripts/verify-single-start-browser.mjs"
+  ]
+}
