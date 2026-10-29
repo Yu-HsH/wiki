@@ -44,9 +44,9 @@ test('F5 uses persisted session identities; duplicate realtime responses play on
 test('hidden and route-change decode races discard rather than queue SFX', async () => {
   const host=fakeHost(),m=new AudioManager(host); await m.unlock();
   let resolve; host.fetch=()=>new Promise(r=>{ resolve=r; });
-  // /play now intentionally starts home BGM; use a silent route here to
-  // isolate the pending SFX cancellation from an unrelated background decode.
-  const pending=m.play('ink',{key:'pending'}); m.setScene('/game');
+  // Use an informational route: /play now starts BGM, while /game also
+  // preloads sounds and would replace the test's pending fetch resolver.
+  const pending=m.play('ink',{key:'pending'}); m.setScene('/about');
   resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)}); assert.equal(await pending,false);
   host.document.hidden=true; assert.equal(await m.play('ink',{key:'hidden'}),false);
   host.document.hidden=false; assert.equal(await m.play('ink',{key:'hidden'}),false);
