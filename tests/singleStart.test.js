@@ -14,9 +14,11 @@ test('integer timeline changes exactly at 8100 and 8600, without prototype float
   assert.equal(singleStartFrame(8599).phase, 'countdown'); assert.equal(singleStartFrame(8600).phase, 'article');
 });
 
-test('legacy journal presents both titles and all counts without extending the 2600ms deadline', () => {
+test('legacy journal shows goal before rewind and start before countdown, within 2600ms', () => {
   const frames=Array.from({length:2601},(_,ms)=>singleStartFrame(singleStartVisualTime(ms,2600)));
-  assert.deepEqual([...new Set(frames.map(frame=>frame.phase))],['opening','start','rewind','target','countdown','article']);
+  assert.deepEqual([...new Set(frames.map(frame=>frame.phase))],['opening','target','rewind','start','countdown','article']);
+  assert.equal(singleStartFrame(720).phase,'target');
+  assert.equal(singleStartFrame(4000).phase,'start');
   assert.deepEqual([...new Set(frames.filter(frame=>frame.count).map(frame=>frame.count))],['3','2','1','시작!']);
   assert.equal(frames[2599].phase,'countdown');assert.equal(frames[2600].phase,'article');
   for(const ms of [0,720,2900,4000,6000,8100,8600])assert.equal(singleStartVisualTime(ms),ms,'reserved server timeline is untouched');
