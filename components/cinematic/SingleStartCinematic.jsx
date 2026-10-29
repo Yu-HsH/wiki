@@ -102,14 +102,14 @@ export default function SingleStartCinematic({ run, getServerNow, getElapsedMs, 
     };
     draw(); return () => cancelAnimationFrame(raf);
   }, [run.id, run.scene_starts_at, getServerNow, getElapsedMs, durationMs, skip, reduced]);
-  const page = kind => <section className={`focus-sheet ${kind}-sheet ${kind === 'start' ? 'opening-sheet' : 'arrival-sheet'}`} aria-label={kind === 'target' ? '목표 문서' : '출발 문서'}>
+  const page = (kind, position) => <section className={`focus-sheet ${kind}-sheet ${position}-sheet`} aria-label={kind === 'target' ? '목표 문서' : '출발 문서'}>
     <span className="focus-label">{kind === 'target' ? '도착할 문서' : '탐험의 첫 문서'}</span>
     <DocumentTitle title={kind === 'target' ? run.target_title_snapshot : run.start_title_snapshot} onInspect={setInspectedTitle} />
   </section>;
   return <div ref={root} tabIndex={-1} className="wr-page wr-single-start" data-testid="single-start-cinematic" data-phase={frame.phase} data-quiet={skip || reduced} data-duration-ms={durationMs} role="dialog" aria-modal="true" aria-label="싱글 탐험 출발 준비">
     <div className="book book-rewind"><div className="book-leaves"/><div className="book-pages"><div className="book-page left"/><div className="book-page right"/></div>
-      <div className="journal-binding" aria-hidden="true"><i/><i/><i/></div><div className="rest-page">{page('target')}</div>
-      <div className="rewind-stack">{[0,1,2].map(index => <div key={index} className="rewind-leaf"><div className="leaf-front">{index === 0 ? page('start') : <div className="blank-page-lines"/>}</div><div className="leaf-back"/></div>)}</div>
+      <div className="journal-binding" aria-hidden="true"><i/><i/><i/></div><div className="rest-page">{page('start', 'arrival')}</div>
+      <div className="rewind-stack">{[0,1,2].map(index => <div key={index} className="rewind-leaf"><div className="leaf-front">{index === 0 ? page('target', 'opening') : <div className="blank-page-lines"/>}</div><div className="leaf-back"/></div>)}</div>
       <div className="book-cover"><div className="cover-front">{compass}<h2>WIKI<br/>RACE</h2></div><div className="cover-back"/></div>
       <span className="inline-count" data-count={frame.count || ''} hidden={!frame.count} aria-live="polite">{frame.count}</span>
     </div>
