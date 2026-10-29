@@ -356,3 +356,18 @@ test('opening retains independent BGM/SFX settings and no late music after depar
   m.update({ bgm: 0, sfx: .43 }); assert.equal(m.bgm, null); assert.equal(m.sfxBus.gain.value, .43);
   m.setScene('/play'); m.update({ bgm: .28 }); await new Promise(r => setImmediate(r)); assert.equal(m.bgm, null);
 });
+
+test('shared menu BGM stays continuous across mode selection, rankings, profile and waiting rooms', async () => {
+  const host=fakeHost(), m=new AudioManager(host);await m.unlock();
+  m.setScene('home');await new Promise(r=>setImmediate(r));
+  const voice=m.bgm;
+  for(const path of ['/play','/ranking','/profile','/achievements','/multiplayer','/multiplayer/room/abc','/multiplayer/group/room/def']){
+    m.setScene(path);
+    await new Promise(r=>setImmediate(r));
+    assert.equal(m.bgm,voice, `same music on ${path}`);
+    assert.equal(m.musicName(),'home');
+  }
+  m.setScene('/game');
+  assert.equal(m.musicName(),null);
+  assert.equal(m.bgm,null);
+});
