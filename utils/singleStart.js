@@ -17,7 +17,7 @@ export function singleServerElapsed(run, serverNow) {
 }
 export function singleStartFrame(milliseconds) {
   const ms = Math.max(0, Math.floor(milliseconds));
-  return { ms, phase: ms < 720 ? 'opening' : ms < 2900 ? 'start' : ms < 4000 ? 'rewind' : ms < 6000 ? 'target' : ms < 8600 ? 'countdown' : 'article',
+  return { ms, phase: ms < 720 ? 'opening' : ms < 2900 ? 'target' : ms < 4000 ? 'rewind' : ms < 6000 ? 'start' : ms < 8600 ? 'countdown' : 'article',
     count: ms < 6000 || ms >= 8600 ? null : ms < 6700 ? '3' : ms < 7400 ? '2' : ms < 8100 ? '1' : '시작!' };
 }
 
