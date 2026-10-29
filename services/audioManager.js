@@ -134,7 +134,8 @@ export class AudioManager {
     this.result = null; void this.syncBgm();
   }
   musicName() {
-    if (this.scene === 'home') return 'home';
+    if (this.scene === 'home' || ['/play', '/ranking', '/profile', '/achievements', '/multiplayer'].includes(this.scene)
+      || /^\/multiplayer\/(group\/)?room\//.test(this.scene || '')) return 'home';
     if (this.scene === '/' || this.scene === '/login') return 'opening';
     if (this.result?.active && this.result.route === this.scene) return 'result';
     return this.gameplay?.active && this.gameplay.route === this.scene ? 'jungle' : null;
