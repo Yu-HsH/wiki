@@ -13,6 +13,7 @@ export default function ItemBar({
             <button
                 type="button"
                 className="item-panel-toggle"
+                aria-expanded={open}
                 onClick={() => setOpen((prev) => !prev)}
             >
                 🎒 아이템 {usableCount}

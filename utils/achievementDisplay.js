@@ -138,6 +138,10 @@ export function buildAchievementCard(card) {
     kindLabel: hidden ? HIDDEN_KIND_LABELS[card.hiddenKind] ?? null : null,
     name: card.name ?? "",
     condition: card.condition ?? "",
+    description: card.description ?? "",
+    nextRewardRefs: (Array.isArray(nextTier?.rewards) ? nextTier.rewards : [])
+      .filter(reward => reward?.rewardId && formatRewardRef(reward))
+      .map(reward => ({ ...reward })),
     tierCount,
     unlockedTier,
     tierLabel: formatTierLabel(complete ? tierCount : unlockedTier, tierCount),
@@ -147,6 +151,10 @@ export function buildAchievementCard(card) {
       label: formatTierLabel(tier.tier, tierCount),
     })),
     complete,
+    earned: tiers.filter(tier => tier.unlocked).map(tier => ({
+      tier: toInteger(tier.tier), unlockedAt: tier.unlockedAt ?? null,
+      xp: toInteger(tier.xp) ?? 0, rewards: rewardTexts(tier.rewards),
+    })),
     progress,
     next: nextTier
       ? {
@@ -275,6 +283,10 @@ export function buildResultReveal(response) {
         tierLabel: top ? formatTierLabel(top.tier, entry.tierCount) : "",
         xp,
         rewards: tiers.flatMap((tier) => rewardTexts(tier.rewards)),
+        rewardRefs: tiers.flatMap((tier) => (Array.isArray(tier.rewards) ? tier.rewards : []))
+          .filter((reward) => reward?.rewardId && formatRewardRef(reward))
+          .filter((reward, index, refs) => refs.findIndex((ref) => ref.rewardId === reward.rewardId) === index)
+          .map((reward) => ({ ...reward })),
         unlockIds: tiers.map((tier) => tier.unlockId).filter(Boolean),
       };
     });

@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from "./supabaseClient.js";
+import { SINGLE_START_CONTRACT } from "./utils/singleStart.js";
 
 /**
  * 게임 기록 및 랭킹 관리 서비스
@@ -26,7 +27,7 @@ function toNumberOrNull(value) {
  * 그래서 컬럼 목록도 한 곳에만 있다.
  */
 const SINGLE_RECORD_COLUMNS =
-  "id, run_id, user_id, player_name, start_title, target_title, elapsed_seconds, click_count, path_titles, result_status, created_at";
+  "id, run_id, user_id, player_name, start_title, target_title, elapsed_seconds, click_count, path_titles, result_status, created_at, timing_contract";
 
 /**
  * `game_records` 행을 프론트 표기로 정규화합니다.
@@ -45,6 +46,7 @@ function normalizeGameRecord(record) {
     pathTitles: record.path_titles ?? [],
     resultStatus: record.result_status ?? "completed",
     createdAt: record.created_at,
+    timingContract: record.timing_contract ?? null,
   };
 }
 
@@ -167,16 +169,17 @@ export async function fetchSingleRunResult({ runId, client } = {}) {
   const [record] = await fetchSingleGameRecords({ runId, limit: 1, client: db });
   if (!record) return null;
 
+  const cohort = query => record.timingContract ? query.eq('timing_contract', record.timingContract) : query.is('timing_contract', null);
   const [fasterCount, tiedEarlierCount, totalCount] = await Promise.all([
     countGameRecords(db, (query) =>
-      query.lt("elapsed_seconds", record.elapsedSeconds)
+      cohort(query).lt("elapsed_seconds", record.elapsedSeconds)
     ),
     countGameRecords(db, (query) =>
-      query
+      cohort(query)
         .eq("elapsed_seconds", record.elapsedSeconds)
         .lt("created_at", record.createdAt)
     ),
-    countGameRecords(db, (query) => query),
+    countGameRecords(db, cohort),
   ]);
 
   return {
@@ -277,10 +280,13 @@ function getKSTPeriodStartIso(period) {
  * 일간/주간/전체 랭킹 데이터를 가져옵니다.
  * @param {Object} options - {period: "daily"|"weekly"|"all", limit: number}
  */
-export async function fetchRankings({ period = "all", limit = 50 } = {}) {
+export async function fetchRankings({ period = "all", limit = 50, client, timingContract = SINGLE_START_CONTRACT } = {}) {
+  const db = resolveRecordsClient(client);
   // 1. 로컬 데모 모드 랭킹 산출
-  if (!isSupabaseConfigured) {
-    let records = readLocalRecords();
+  if (!db) {
+    // Offline practice has no authoritative daily leaderboard.
+    if (period === "daily") return [];
+    let records = readLocalRecords().filter(record => (record.timing_contract ?? null) === timingContract);
     const periodStartIso = getKSTPeriodStartIso(period);
 
     if (periodStartIso) {
@@ -295,6 +301,8 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
       .slice(0, limit)
       .map((record) => ({
         id: record.id,
+        runId: record.run_id ?? null,
+        timingContract: record.timing_contract ?? null,
         userId: record.user_id,
         playerName: record.player_name,
         targetTitle: record.target_title,
@@ -310,12 +318,13 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
   }
 
   // 2. Supabase 서버로부터 랭킹 데이터 조회
-  let query = supabase
+  let query = db
     .from("game_records")
-    .select("id, user_id, player_name, target_title, elapsed_seconds, click_count, path_titles, created_at")
+    .select("id, run_id, user_id, player_name, target_title, elapsed_seconds, click_count, path_titles, created_at, timing_contract")
     .order("elapsed_seconds", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(limit);
+  query = timingContract ? query.eq('timing_contract', timingContract) : query.is('timing_contract', null);
 
   const periodStartIso = getKSTPeriodStartIso(period);
 
@@ -323,7 +332,9 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
     query = query.gte("created_at", periodStartIso);
   }
 
-  const { data: records, error: recordError } = await query;
+  const { data: records, error: recordError } = period === "daily"
+    ? await db.rpc("get_daily_course_rankings_contract_v1", { p_limit: limit, p_contract: timingContract })
+    : await query;
   if (recordError) throw recordError;
 
   const resultRecords = records || [];
@@ -334,10 +345,11 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
   let profiles = [];
 
   if (userIds.length > 0) {
-    const { data: profileData } = await supabase
+    const { data: profileData, error: profileError } = await db
       .from("profiles")
       .select(`id, nickname, profile_image_url, ${PROFILE_XP_COLUMNS}`)
       .in("id", userIds);
+    if (profileError) throw profileError;
     profiles = profileData || [];
   }
 
@@ -348,6 +360,8 @@ export async function fetchRankings({ period = "all", limit = 50 } = {}) {
     const profile = profileMap[record.user_id];
     return {
       id: record.id,
+      runId: record.run_id ?? null,
+      timingContract: record.timing_contract ?? null,
       userId: record.user_id,
       playerName: record.player_name,
       targetTitle: record.target_title,
@@ -404,4 +418,20 @@ export async function fetchXpRankings({ limit = 50, client } = {}) {
 
   if (error) throw error;
   return (data || []).map(normalizeXpRankingRow);
+}
+
+export async function fetchExplorerXpRankings({ weekly = false, limit = 50, client } = {}) {
+  const db = resolveRecordsClient(client);
+  if (!db) return [];
+  const { data, error } = await db.rpc("get_explorer_xp_rankings_v2", { p_weekly: weekly, p_limit: limit });
+  if (error) throw error;
+  return (data || []).map(row => ({ ...normalizeXpRankingRow(row), rankingXp: Number(row.ranking_xp), rank: Number(row.rank), totalCount: Number(row.total_count) }));
+}
+
+export async function fetchMyDailyCourseRank({ client, timingContract = SINGLE_START_CONTRACT } = {}) {
+  const db = resolveRecordsClient(client);
+  if (!db) return { rank: null, totalCount: 0 };
+  const { data, error } = await db.rpc("get_my_daily_course_rank_contract_v1", { p_contract: timingContract });
+  if (error) throw error;
+  return data;
 }

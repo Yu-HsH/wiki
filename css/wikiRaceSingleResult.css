@@ -1,0 +1,36 @@
+/* Single presentation only. Reward values and unlock/seen processing stay upstream. */
+.wr-result.wr-result--single .wr-rxp-row { gap: 12px; }
+.wr-result.wr-result--single .wr-rxp-row > .wr-hud-label { color: #82621c; font-weight: 700; letter-spacing: .04em; }
+.wr-result.wr-result--single .rxp { padding: 20px; border: 1px solid #d7c58e; border-radius: 12px; background: linear-gradient(135deg, #fff9e7, #f9f5e8); }
+.wr-result.wr-result--single .rxp-line { align-items: center; gap: 10px 16px; }
+.wr-result.wr-result--single .rxp-gain { font-size: 42px; font-weight: 800; line-height: 1.2; color: #947019; }
+.wr-result.wr-result--single .rxp-progress { max-width: 440px; margin-top: 14px; }
+.wr-result.wr-result--single .ach-reveal { gap: 12px; margin-top: 22px; padding-top: 18px; border-top: 1px solid #ddcfaa; }
+.wr-result.wr-result--single .wr-single-awards-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; color: var(--wr-ink); }
+.wr-result.wr-result--single .wr-single-awards-heading strong { font: 700 16px/1.4 var(--wr-font-heading); }
+.wr-result.wr-result--single .wr-single-awards-heading > span { font-size: 11px; font-weight: 700; color: var(--wr-ink-2); }
+.wr-result.wr-result--single .wr-single-achievement { --award-accent: #6d5794; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; padding: 20px; border: 1px solid #d6cfde; border-radius: 10px; background: #fffefb; box-shadow: 0 3px 0 #e7e0cf; color: var(--wr-ink); }
+.wr-result.wr-result--single .wr-single-achievement.ach-reveal-card--hidden { --award-accent: #27776e; border-color: #bbd3cb; background: #f9fdf8; }
+.wr-result.wr-result--single .wr-single-achievement-medal { width: 64px; height: 76px; color: var(--award-accent); }
+.wr-result.wr-result--single .wr-single-achievement-medal svg { display: block; width: 100%; height: 100%; }
+.wr-result.wr-result--single .wr-single-achievement-content { min-width: 0; }
+.wr-result.wr-result--single .ach-reveal-head { flex-wrap: wrap; align-items: center; gap: 6px 12px; opacity: 1; }
+.wr-result.wr-result--single .ach-reveal-tag { color: var(--award-accent); font-size: 11px; letter-spacing: .06em; }
+.wr-result.wr-result--single .ach-reveal-xp { padding: 4px 8px; border: 1px solid #e7d598; border-radius: 6px; background: #fff7df; color: #82621c; font-size: 12px; white-space: nowrap; }
+.wr-result.wr-result--single .ach-reveal-name { margin: 8px 0 6px; font: 800 22px/1.4 var(--wr-font-heading); overflow-wrap: anywhere; }
+.wr-result.wr-result--single .ach-reveal-name .ach-tier { font-size: 12px; font-weight: 600; color: var(--award-accent); }
+.wr-result.wr-result--single .ach-reveal-condition { margin: 0 0 12px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.wr-result.wr-result--single .album-reveal-stamp { display: inline-block; margin: 0; padding: 4px 8px; border: 1px solid currentColor; border-radius: 4px; color: var(--award-accent); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.wr-result.wr-result--single .ach-reveal-rewards { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--wr-divider); font-size: 12px; line-height: 1.6; }
+.wr-result.wr-result--single .ach-reveal-rewards > strong { display: block; color: var(--wr-ink-2); font-size: 11px; }
+.wr-result.wr-result--single .wr-single-reward-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.wr-result.wr-result--single .wr-single-reward-chips li { max-width: 100%; padding: 5px 9px; border: 1px solid #d8c38a; border-radius: 6px; background: #fff8e3; color: #785918; font-weight: 600; overflow-wrap: anywhere; }
+.wr-result.wr-result--single .wr-reward-profile-link { font-size: 11px; }
+@media (max-width: 600px) {
+  .wr-result.wr-result--single .rxp { padding: 14px 12px; }
+  .wr-result.wr-result--single .rxp-gain { font-size: 36px; }
+  .wr-result.wr-result--single .wr-single-achievement { grid-template-columns: 42px minmax(0, 1fr); gap: 10px; padding: 14px 10px; }
+  .wr-result.wr-result--single .wr-single-achievement-medal { width: 42px; height: 52px; }
+  .wr-result.wr-result--single .ach-reveal-name { font-size: 20px; }
+  .wr-result.wr-result--single .ach-reveal-condition { font-size: 12px; }
+}

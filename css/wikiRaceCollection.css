@@ -1,0 +1,88 @@
+/* Ranking/Profile only: shared HOME stationery tokens, no global overrides. */
+.wr-ranking .ranking-board-heading {display:flex;justify-content:space-between;align-items:end;gap:16px;padding:20px 28px 0;color:var(--wr-ink-2)}
+.wr-ranking h2,.wr-profile h2 {font-size:19px;margin:4px 0 8px;color:var(--wr-ink)}
+.wr-ranking .ranking-board-heading small {font-size:12px;max-width:280px}
+.wr-ranking .ranking-top {align-items:start;gap:18px;padding:24px 28px}
+.wr-ranking .ranking-top article {padding:22px;background:var(--wr-paper-2);border-radius:4px 4px 16px 4px;box-shadow:0 5px 0 #263d2d0a}
+.wr-ranking .ranking-top article[data-rank="1"] {padding-block:28px;border-width:2px;border-top-width:6px}
+.wr-ranking .ranking-top article:not([data-rank="1"]) {margin-top:22px}
+.wr-ranking .ranking-place {display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.wr-ranking .ranking-place .wr-kicker {margin:0;color:var(--wr-ink);font-size:20px}
+.wr-ranking .ranking-place small {display:block;font-size:11px;margin-top:3px}
+.wr-ranking .ranking-medal {display:grid;place-items:center;flex:none;width:48px;height:48px;border:4px double #96743c;border-radius:50%;color:#76561b;font-weight:900;font-size:22px;background:#efe0b7}
+.wr-ranking [data-rank="2"] .ranking-medal {border-color:#6b7a79;background:#e4e8e4;color:#4e605f}
+.wr-ranking [data-rank="3"] .ranking-medal {border-color:#9a6b4a;background:#ecd8c6;color:#815437}
+.wr-ranking .ranking-score {display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-top:22px;padding-top:16px;border-top:1px dashed var(--wr-frame);font-variant-numeric:tabular-nums}
+.wr-ranking .ranking-score small {flex-basis:100%;font-size:11px;color:var(--wr-ink-2)}
+.wr-ranking .ranking-score strong {font-size:26px;color:var(--wr-ink)}
+.wr-ranking .ranking-score span {font-size:13px}
+.wr-ranking .ranking-my-record {display:flex;flex-wrap:wrap;align-items:center;gap:18px;border-left:5px solid var(--wr-teal);margin:0 28px 12px;padding:22px}
+.wr-ranking .ranking-my-record .ranking-summary {padding:0;margin:0;font-size:13px}
+.wr-ranking .ranking-my-score {display:grid;gap:8px;flex:1;font-variant-numeric:tabular-nums}
+.wr-ranking .ranking-my-score strong {font-size:22px}
+.wr-ranking .ranking-my-record small {color:var(--wr-ink-2);font-size:12px}
+.wr-ranking .ranking-table-wrap {margin:16px 28px 28px;box-shadow:none;border:1px solid var(--wr-frame);border-radius:4px}
+.wr-ranking .ranking-table {min-width:0;width:100%}
+.wr-ranking .ranking-table td {padding:16px 12px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.wr-ranking .ranking-table .mine {background:var(--wr-paper-2);box-shadow:inset 4px 0 var(--wr-teal)}
+.wr-ranking .pcard {min-width:0}
+.wr-ranking .pcard-body {min-width:0}
+.wr-ranking :is(.pcard-name,.pcard-title) {white-space:normal;overflow:visible;overflow-wrap:anywhere}
+.wr-ranking .ranking-filter-tabs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+.wr-ranking .toggle-btn {white-space:normal;padding:12px 8px}
+.wr-ranking .ranking-toolbar {gap:14px}
+.wr-profile .wr-profile-content {max-width:1120px;padding:28px}
+.wr-profile .profile-notebook-heading {display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px dashed var(--wr-frame)}
+.wr-profile h1 {font-size:clamp(24px,3vw,34px);margin:0 0 10px}
+.wr-profile .profile-notebook-heading p {color:var(--wr-ink-2);font-size:13px;margin:0}
+.wr-profile .profile-showcase {display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);align-items:start;gap:24px;margin:24px 0}
+.wr-profile .profile-representative {padding:24px 20px;border:1px solid var(--wr-frame);border-top:5px double var(--wr-gold);border-radius:4px 4px 18px 4px;background:var(--wr-paper-2);display:grid;justify-items:center;min-width:0}
+.wr-profile .pcard-upload-slot {width:100%;max-width:100%;padding:24px 12px;margin:12px 0 22px;border:0;border-radius:0;background:transparent}
+.wr-profile .profile-representative .pcard {width:100%;max-width:100%;justify-content:center}
+.wr-profile :is(.pcard-name,.pcard-title) {white-space:normal;overflow:visible;overflow-wrap:anywhere;text-align:center}
+.wr-profile .profile-card-record {display:flex;flex-wrap:wrap;justify-content:center;gap:12px 24px;padding:18px 0;margin-top:18px;border-block:1px dashed var(--wr-frame);width:100%;font-size:12px}
+.wr-profile .profile-card-record b {display:block;font-size:23px;margin-top:6px;color:var(--wr-ink);font-variant-numeric:tabular-nums}
+.wr-profile .profile-card-caption {font-size:12px;color:var(--wr-ink-2);text-align:center;line-height:1.6}
+.wr-profile .preward {width:100%;max-width:none;margin:0;border-radius:4px 4px 16px 4px}
+.wr-profile .preward-summary {padding:18px 16px;color:var(--wr-ink);font-size:18px}
+.wr-profile .preward-rows {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0 12px;gap:10px;list-style:none}
+.wr-profile .preward-row {padding:12px;margin:0;border:1px solid var(--wr-frame);border-radius:5px;min-width:0;background:var(--wr-paper)}
+.wr-profile .preward-row-head {grid-template-columns:minmax(0,1fr) auto;gap:6px}
+.wr-profile .preward-label {grid-column:1;font-size:12px;font-weight:700}
+.wr-profile .preward-current {grid-column:1;overflow-wrap:anywhere;font-size:14px}
+.wr-profile .preward-toggle {grid-column:2;grid-row:1/3;min-width:44px;padding:6px;font-size:12px}
+.wr-profile .preward-panel {margin-top:12px;padding:0;border:0;display:grid;gap:8px}
+.wr-profile .preward-choice {display:flex;justify-content:start;text-align:left;width:100%;padding:10px;background:var(--wr-paper-2);min-width:0}
+.wr-profile .preward-choice--selected {outline:2px solid var(--wr-teal);outline-offset:-2px}
+.wr-profile .preward-choice .preward-tag {font-size:10px;flex-basis:100%;margin:0}
+.wr-profile .preward-goals {border-top:1px dashed var(--wr-frame);padding-top:12px;display:grid;gap:8px}
+.wr-profile .preward-locked {padding:10px;border:1px dashed var(--wr-frame);display:grid;gap:6px;font-size:12px}
+.wr-profile .preward-locked small {color:var(--wr-ink-2);line-height:1.6}
+.wr-profile .preward-locked a {color:var(--wr-teal);min-height:44px;display:flex;align-items:center}
+.wr-profile .profile-settings {padding:18px 22px;border:1px solid var(--wr-frame);background:var(--wr-paper-2);border-radius:4px;margin-bottom:24px}
+.wr-profile .profile-settings summary {cursor:pointer;font-weight:700;min-height:28px}
+.wr-profile .profile-settings[open] summary {margin-bottom:18px}
+.wr-profile .profile-save-success {color:var(--wr-teal);font-size:13px}
+.wr-profile .profile-stats-section {padding-top:18px;border-top:1px dashed var(--wr-frame)}
+.wr-profile .profile-stats-container {display:grid;grid-template-columns:1.2fr 1fr 1.2fr;gap:14px}
+.wr-profile .profile-stats-group {padding:14px;border:1px solid var(--wr-frame);min-width:0;background:var(--wr-paper-2);border-radius:4px}
+.wr-profile .profile-stats-grid {gap:6px}
+.wr-profile .profile-stat-card {padding:12px 6px;min-width:0}
+.wr-profile .profile-stat-value {font-size:24px}
+@media(max-width:1024px) {.wr-profile .profile-showcase{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.wr-profile .preward-rows{grid-template-columns:1fr}.wr-ranking .ranking-top{gap:10px}.wr-ranking .ranking-top article{padding:16px}.wr-profile .profile-stats-container{grid-template-columns:1fr}}
+@media(max-width:767px) {
+.wr-profile .profile-showcase{grid-template-columns:1fr}.wr-profile .profile-representative{padding:24px}.wr-profile .preward-rows{grid-template-columns:repeat(2,minmax(0,1fr))}
+.wr-ranking .ranking-top{grid-template-columns:1fr}.wr-ranking .ranking-top article:not([data-rank="1"]){margin-top:0}.wr-ranking .ranking-top article{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wr-ranking .ranking-place{grid-column:1/-1;margin-bottom:0}.wr-ranking .ranking-score{margin:0}
+.wr-ranking .ranking-table-scroll{overflow:visible}.wr-ranking .ranking-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.wr-ranking .ranking-table tbody,.wr-ranking .ranking-table tr{display:block}.wr-ranking .ranking-table td{display:inline-block;border:0;max-width:100%;padding:8px 12px}.wr-ranking .ranking-table tr{padding:12px 0;border-bottom:1px dashed var(--wr-frame)}.wr-ranking .ranking-player-cell{width:100%}.wr-ranking td[data-label]::before{content:attr(data-label) ' ';font-size:11px;color:var(--wr-ink-2)}.wr-ranking .ranking-path-detail{width:100%}
+}
+@media(max-width:480px) {
+.wr-profile .wr-profile-content{padding:20px 16px}.wr-profile .profile-notebook-heading{align-items:start;flex-direction:column}.wr-profile .preward-rows{grid-template-columns:1fr}.wr-profile .profile-representative{padding:20px 14px}.wr-profile .profile-settings{padding:16px}
+.wr-ranking .ranking-board-heading{padding:20px 16px 0;align-items:start;flex-direction:column;gap:4px}.wr-ranking .ranking-top{padding:18px 16px}.wr-ranking .ranking-top article{grid-template-columns:1fr}.wr-ranking .ranking-score{margin-top:4px}.wr-ranking .ranking-my-record{margin:0 16px;padding:16px}.wr-ranking .ranking-table-wrap{margin:16px}.wr-ranking .ranking-my-score{flex-basis:100%}
+}
+@media(prefers-reduced-motion:reduce){.wr-ranking *, .wr-profile *{animation:none!important;transition:none!important}}
+/* Keep level badges intact even beside unusually long public names. */
+.wr-ranking .pcard-name-row,.wr-profile .pcard-name-row {flex-wrap:wrap}
+.wr-ranking .pcard-level,.wr-profile .pcard-level {white-space:nowrap;flex:none}
+.wr-ranking .ranking-top .pcard {align-items:flex-start}
+.wr-ranking .ranking-top .pcard-name {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.wr-ranking .ranking-top .pcard-title {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}

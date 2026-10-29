@@ -1,0 +1,54 @@
+/* Scene decoration only. Data and controls never depend on animation completion. */
+.wr-home .wr-hero :is(.wr-landscape,.wr-home-sign,.wr-hero-entry,.wr-expedition-trail,.wr-checkpoint) { animation: none; }
+.wr-home .wr-hero .wr-expedition-trail { display: block; opacity: .35; width: 54%; bottom: 14px; }
+.wr-start-course { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 14px; text-align: left; padding: 18px 0; border-block: 1px dashed var(--wr-divider); }
+.wr-start-course div { min-width: 0; }
+.wr-start-course small { display: block; font-size: 12px; color: var(--wr-ink-2); margin-bottom: 6px; }
+.wr-start-course strong { display: block; overflow-wrap: anywhere; color: var(--wr-blue); font-size: 17px; }
+.wr-start-course div:last-child strong, .wr-start-path { color: var(--wr-gold); }
+.countdown-journal.has-course { width: min(660px,100%); }
+.wr-group-departure.group-pick-card { width: min(760px,100%); background: var(--wr-paper); color: var(--wr-ink); border: 1px solid var(--wr-frame); border-top: 4px double var(--wr-frame); border-radius: 14px; box-shadow: var(--wr-shadow-shell); padding: 28px; text-align: center; }
+.wr-group-departure h2 { font: 600 23px/1.4 var(--wr-font-heading); margin: 0 0 20px; color: var(--wr-ink); }
+.wr-start-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; list-style: none; padding: 0; margin: 0 0 20px; }
+.wr-start-roster li { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; border: 1px dashed var(--wr-divider); background: var(--wr-paper-2); border-radius: 8px; padding: 8px 12px; }
+.wr-start-roster li > span:last-child { overflow-wrap: anywhere; font-size: 13px; }
+.wr-start-note { margin: 18px 0 0; font-size: 12px; color: var(--wr-ink-2); }
+.vs-journal { animation: none; }
+.group-pick-overlay.wr-start-overlay { backdrop-filter: none; }
+/* Keep XP220ms and achievement600ms logic; the frame is quieter than new unlock cards. */
+.wr-result .wr-rxp-row > .wr-hud-label { color: var(--wr-ink-2); }
+.wr-result--group .wr-journal-seal { white-space: normal; word-break: keep-all; }
+.wr-result.is-journal-arrival .wr-rcard { animation: none; }
+@media (prefers-reduced-motion:no-preference) {
+  .wr-home .is-home-sequence .wr-landscape { animation: wr-scene-map 300ms ease-out; }
+  .wr-home .is-home-sequence .wr-home-sign { animation: wr-scene-sign 320ms ease-out 100ms backwards; }
+  .wr-home .is-home-sequence .wr-expedition-trail { animation: wr-scene-trail 380ms ease-out 180ms backwards; }
+  .wr-home .is-home-sequence .wr-hero-entry { animation: wr-scene-note 320ms ease-out 400ms backwards; }
+  .is-start-sequence .wr-start-course, .is-duel-sequence .vs-players, .is-group-sequence .wr-start-roster li { animation: wr-scene-note 300ms ease-out backwards; }
+  .is-duel-sequence .vs-course, .is-group-sequence .wr-start-course { animation: wr-scene-note 360ms ease-out 180ms backwards; }
+  .is-start-sequence .wr-start-path { animation: wr-scene-path 300ms ease-out 120ms backwards; }
+  .is-group-sequence .wr-start-roster li { animation-delay: calc(var(--scene-order) * 40ms); }
+  .wr-result.is-journal-arrival .wr-rscene, .is-personal-sequence .wr-result-a-scene { animation: wr-scene-note 360ms ease-out; }
+  .wr-result.is-journal-arrival .wr-journal-seal, .is-personal-sequence .wr-journal-seal { animation: wr-scene-seal 320ms ease-out 100ms backwards; }
+  .wr-result.is-journal-arrival .wr-result-head, .is-personal-sequence .wr-result-head { animation: wr-scene-note 300ms ease-out 180ms backwards; }
+  .wr-result.is-journal-arrival .wr-result-stats, .is-personal-sequence .wr-result-stats { animation: wr-scene-note 280ms ease-out 240ms backwards; }
+  .wr-result--group.is-journal-arrival .wr-standings-list .wr-srow { animation: wr-scene-note 280ms ease-out calc(180ms + var(--scene-order) * 45ms) backwards; }
+  .wr-result--group.is-journal-arrival .wr-standings-list .is-me { animation: wr-scene-mine 300ms ease-out 580ms backwards; }
+}
+@keyframes wr-scene-note { from { opacity: .75; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes wr-scene-path { from { opacity: .4; } to { opacity: 1; } }
+@keyframes wr-scene-map { from { opacity: .75; transform: scale(1.012); } to { opacity: 1; transform: scale(1); } }
+@keyframes wr-scene-sign { from { opacity: .75; transform: translateY(4px) rotate(-5deg); } to { opacity: 1; transform: translateY(0) rotate(-5deg); } }
+@keyframes wr-scene-trail { from { opacity: .15; transform: translateX(-6px); } to { opacity: .35; transform: translateX(0); } }
+@keyframes wr-scene-seal { from { opacity: .65; transform: rotate(-5deg) scale(1.04); } to { opacity: 1; transform: rotate(-5deg) scale(1); } }
+@keyframes wr-scene-mine { from { opacity: .7; transform: translateX(3px); } to { opacity: 1; transform: translateX(0); } }
+@media(max-width:600px) {
+  .wr-home .wr-hero .wr-expedition-trail { width: 50%; bottom: 4px; }
+  .wr-start-course { grid-template-columns: minmax(0,1fr); gap: 10px; }
+  .wr-start-path { justify-self: center; transform: rotate(90deg); }
+  .wr-group-departure.group-pick-card { padding: 20px 16px; }
+  .wr-group-departure h2 { font-size: 20px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .wr-start-overlay *, .wr-result *, .wr-result-a *, .wr-home .wr-hero * { animation: none !important; transition: none !important; }
+}

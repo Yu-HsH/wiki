@@ -253,14 +253,15 @@ test("ProfilePage: 업로드 UI 제거, 편집기 연결, legacy 값은 계속 �
   assert.doesNotMatch(page, /profile_image_url:\s*avatarUrl/, "profile_image_url 쓰기 경로 없음");
   assert.match(page, /select\("username, nickname, profile_image_url, total_xp, profile_level"\)/, "읽기는 유지 (C5 §3.1 2단계)");
   assert.match(page, /<ProfileRewardEditor/);
-  assert.match(page, /user && !user\.isGuest && \(\s*<ProfileRewardEditor/, "게스트는 편집기를 받지 않는다 (17 §6)");
+  assert.match(page, /user && !user\.isGuest && !dataErrors\.rewards && \(\s*<ProfileRewardEditor/, "게스트와 보유 목록 조회 실패 시 편집기를 표시하지 않는다 (17 §6)");
   assert.match(page, /mergeRewardSlots\(/);
 });
 
 test("ProfileRewardEditor: 서버 응답만 반영 (낙관적 갱신 없음), 접히는 섹션, 빈 alt 없음", () => {
   const editor = read("components/ProfileRewardEditor.jsx");
-  assert.match(editor, /<details className="preward">/);
-  assert.match(editor, /const equipment = await request\(\);\s*onEquipment\?\.\(equipment\);/);
+  assert.match(editor, /<details className="preward" open>/);
+  // Confirmed-response feedback may run between the await and equipment rendering.
+  assert.match(editor, /const equipment = await request\(\);[\s\S]*?onEquipment\?\.\(equipment\);/);
   assert.doesNotMatch(editor, /alt=""/);
   assert.match(editor, /aria-pressed=\{selected\}/, "선택 상태를 색 말고도 전달");
   // 16d: 카드 4행 + 경기 표현 2행, 경기 표현도 같은 서버 응답으로만 갱신한다
@@ -314,9 +315,9 @@ test("남의 카드: 랭킹·그룹 대기실은 배치 훅, 모달은 단건 �
     assert.match(source, /useProfileCards\(/);
     assert.doesNotMatch(source, /fetchProfileCard\(|get_profile_card_v1/, "행 안에서 단건 조회 없음");
   }
-  assert.equal((ranking.match(/mergeRewardSlots\(/g) || []).length, 2, "랭킹 두 표");
+  assert.equal((ranking.match(/mergeRewardSlots\(/g) || []).length, 3, "랭킹 두 표와 TOP3는 동일 배치 카드 병합");
   assert.equal((group.match(/mergeRewardSlots\(/g) || []).length, 2, "그룹 대기실 두 지점");
-  assert.match(modal, /fetchProfileCard\(userId\)\.catch\(\(\) => null\)/, "모달: 실패해도 프로필은 연다");
+  assert.match(modal, /fetchProfileCard\(userId\)\.catch\(error => \{[\s\S]*?console\.error\([\s\S]*?setDetailError\(true\); return null;/, "모달: 실패는 로그·재시도로 안내하고 프로필은 연다");
   assert.match(modal, /mergeRewardSlots\(/);
   assert.match(hook, /\}, \[key\]\);/, "집합이 바뀔 때만 다시 조회");
   assert.doesNotMatch(read("pages/GroupGamePage.jsx"), /useProfileCards|mergeRewardSlots/, "경기 중 화면은 동결");

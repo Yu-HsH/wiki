@@ -13,12 +13,14 @@ import { canUseItem as canUseItemBase } from "../utils/itemSystem";
  * 외부 콜백:
  * - onMove(title, options?)
  * - onRandomTeleport()
+ * - onLocalItemApplied(item): Single's synchronous hint/search effect accepted.
  */
 export default function useItemSystem({
     mode = "single",
     links = [],
     onMove,
     onRandomTeleport,
+    onLocalItemApplied,
 }) {
     const [inventory, setInventory] = useState([]);
 
@@ -202,12 +204,14 @@ export default function useItemSystem({
                 case "highlight_links": {
                     setHighlightRequestId((prev) => prev + 1);
                     showMessage("유망한 링크 표시!");
+                    onLocalItemApplied?.(item);
                     break;
                 }
 
                 case "search_once": {
                     setSearchAvailable(true);
                     showMessage("페이지 내 검색 1회 가능");
+                    onLocalItemApplied?.(item);
                     break;
                 }
 
@@ -280,6 +284,7 @@ export default function useItemSystem({
             mode,
             onMove,
             onRandomTeleport,
+            onLocalItemApplied,
             showMessage,
             status.immuneUntil,
         ]

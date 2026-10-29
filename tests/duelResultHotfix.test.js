@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
  *    target만 보는 수신 경로가 상대의 이동을 놓쳤다.
  */
 const root = fileURLToPath(new URL("..", import.meta.url));
-const read = (relativePath) => readFileSync(`${root}/${relativePath}`, "utf8");
+const read = (relativePath) => readFileSync(`${root}/${relativePath}`, "utf8").replace(/\r\n/g, "\n");
 
 const PAGE_PATH = process.env.DUEL_RESULT_HOTFIX_PAGE || "pages/MultiplayerGamePage.jsx";
 const pageSource = read(PAGE_PATH);
@@ -56,8 +56,8 @@ test("① 결과 판정은 서버가 확정한 승자를 읽고, 모르는 종�
   const handler = sliceBetween(pageSource, "const handleRoomFinished = (", "handleRoomFinishedRef.current = handleRoomFinished");
   assert.match(handler, /finished_reason === "normal_finish"/);
   assert.match(handler, /winner_user_id/);
-  assert.match(handler, /enterSolvedState\(\)/);
-  assert.match(handler, /enterOpponentWinState\(\)/);
+  assert.match(handler, /enterSolvedState\(finishedRoom\)/);
+  assert.match(handler, /enterOpponentWinState\(finishedRoom\)/);
   // 복구 안에서 불렸으면 다시 복구를 부르지 않는다 — 무한 왕복을 막는다.
   assert.match(handler, /if \(!fromRecovery\) recoverGameRef\.current\?\.\(\)/);
 });
@@ -69,9 +69,9 @@ test("① 결과 화면은 한 번만 성립하고, 복구 패널을 확실히 �
   assert.match(settle, /setRecovery\(null\)/);
   assert.match(settle, /setPending\(false\)/, "무효화된 복구는 자기 finally에서 pending을 끄지 않는다");
 
-  for (const name of ["const enterSolvedState = () => {", "function enterOpponentWinState() {"]) {
+  for (const name of ["const enterSolvedState = (finishedRoom) => {", "function enterOpponentWinState(finishedRoom) {"]) {
     const body = sliceBetween(pageSource, name, "\n  }"); // Phase 4: 자동 로비 이동 타이머 제거 — 끝 표지는 함수 끝
-    assert.match(body, /if \(!settleIntoResult\(PHASE\.(SUCCESS|OPPONENT_WIN)\)\) return;/, name);
+    assert.match(body, /if \(!settleIntoResult\(PHASE\.(SUCCESS|OPPONENT_WIN), finishedRoom\)\) return;/, name);
     assert.doesNotMatch(body, /setTimeout|navigate\(/, `${name} 결과에 머문다 (자동 이동 없음)`);
   }
 });
@@ -93,8 +93,10 @@ test("① 경기 중에 끝난 방은 복구에서도 결과로 간다 — 새�
     /handleRoomFinishedRef\.current\?\.\(session\.room, \{ fromRecovery: true, resultPlayers: session\.players \}\)/
   );
 
-  const opponentWin = sliceBetween(pageSource, "if (!opponentPlayer?.has_finished) return;", "enterOpponentWinState();");
+  const opponentWin = sliceBetween(pageSource, "if (!opponentPlayer?.has_finished) return;", "return () => { cancelled = true; };");
   assert.match(opponentWin, /if \(!reachedPlayingRef\.current\) return;/);
+  assert.match(opponentWin, /latestRoom\?\.status === "finished"/);
+  assert.doesNotMatch(opponentWin, /enterOpponentWinState\(/);
 });
 
 test("② 전제 — 역사 되감기의 target은 시전자이고, 옮겨진 사람은 rewoundUserIds에 있다", () => {
@@ -110,6 +112,6 @@ test("② 수신 경로는 rewoundUserIds에 내가 있으면 서버 이동을 �
   assert.match(handler, /rewoundUserIds\.includes\(user\.id\)/);
   assert.match(
     handler,
-    /if \(\(incoming\.moveEventId && iAmTarget\) \|\| iWasRewound\) \{\n\s+await resyncFromServerMove\(\);/
+    /if \(\(incoming\.moveEventId && iAmTarget\) \|\| iWasRewound\) \{\n\s+closeLinkPreview\(\);\n\s+(?:const synchronized = )?await resyncFromServerMove\(\);/
   );
 });

@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
-import { LOBBY_PATH } from "../utils/appRoutes";
 import { supabase } from "../supabaseClient";
 import { fetchAllProfileStats } from "../services/profileStatsService";
 import { fetchXpSummary } from "../services/xpService";
 import ProfileCard from "../components/ProfileCard";
 import XpProgress from "../components/XpProgress";
+import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import ProfileRewardEditor from "../components/ProfileRewardEditor";
 import { fetchOwnRewardInventory, fetchProfileCard } from "../services/profileRewardService";
 import { fetchMyAchievements } from "../services/achievementService";
+import { serviceErrorMessage } from "../utils/serviceError.js";
 import { buildAchievementSummary } from "../utils/achievementDisplay";
 import {
   DENSITY,
@@ -44,8 +45,12 @@ export default function ProfilePage() {
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [xpSummary, setXpSummary] = useState(null);
+  const [dataErrors, setDataErrors] = useState({});
+  const [reloadKey, setReloadKey] = useState(0);
 
   // 장착 상태 (C1 §3). 서버 응답으로만 바뀐다 — 처음엔 카드 RPC, 이후 equip/unequip 응답.
+  const previewRef = useRef(null);
+  const [rewardGoals, setRewardGoals] = useState([]);
   const [rewardSlots, setRewardSlots] = useState(null);
   const [ownedRewards, setOwnedRewards] = useState([]);
   const [rewardsLoading, setRewardsLoading] = useState(true);
@@ -61,49 +66,34 @@ export default function ProfilePage() {
       return;
     }
 
-    const loadData = async () => {
-      try {
-        // 1. 프로필 정보 조회
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("username, nickname, profile_image_url, total_xp, profile_level")
-          .eq("id", user.id)
-          .single();
-
-        if (!profileError && profileData) setProfile(profileData);
-
-        // 진행도 쌍은 서버가 계산한다 (C3 §4). 실패해도 프로필 화면은 그대로 보인다.
-        fetchXpSummary(user.id)
-          .then(setXpSummary)
-          .catch((xpError) => console.error("XP 요약 로드 실패:", xpError));
-
-        // 장착 상태와 보유 목록 — 실패해도 카드는 기본 표시(legacy·이니셜)로 남는다.
-        Promise.all([fetchProfileCard(user.id), fetchOwnRewardInventory()])
-          .then(([card, owned]) => {
-            setRewardSlots(card);
-            setOwnedRewards(owned);
-          })
-          .catch((rewardError) => console.error("프로필 보상 로드 실패:", rewardError))
-          .finally(() => setRewardsLoading(false));
-
-        // 업적 요약 — 실패하면 요약 블록만 빠진다.
-        fetchMyAchievements()
-          .then((response) => setAchievementSummary(buildAchievementSummary(response)))
-          .catch((achievementError) => console.error("업적 요약 로드 실패:", achievementError));
-
-        // 2. 전체 전적 조회
-        const statsData = await fetchAllProfileStats(user.id);
-        setStats(statsData);
-      } catch (err) {
-        console.error("데이터 로드 실패:", err);
-      } finally {
-        setLoading(false);
-        setStatsLoading(false);
+    let cancelled = false;
+    setDataErrors({}); setStats(null); setXpSummary(null);
+    setProfile(null); setRewardSlots(null); setOwnedRewards([]); setAchievementSummary(null); setRewardGoals([]);
+    setLoading(true); setStatsLoading(true); setRewardsLoading(true);
+    const load = async (key, subject, request, apply) => {
+      try { const value = await request(); if (!cancelled) apply(value); }
+      catch (error) {
+        console.error(`${subject} 조회 실패:`, error);
+        if (!cancelled) setDataErrors(previous => ({ ...previous, [key]: serviceErrorMessage(error, subject) }));
       }
     };
-
-    loadData();
-  }, [user]);
+    void load('profile', '프로필', async () => {
+      const { data, error } = await supabase.from('profiles').select("username, nickname, profile_image_url, total_xp, profile_level").eq('id', user.id).single();
+      if (error) throw error;
+      return data;
+    }, setProfile).finally(() => { if (!cancelled) setLoading(false); });
+    void load('xp', 'XP', () => fetchXpSummary(user.id), setXpSummary);
+    void load('rewards', '보유 보상', () => Promise.all([fetchProfileCard(user.id), fetchOwnRewardInventory()]), ([card, owned]) => {
+      setRewardSlots(card); setOwnedRewards(owned);
+    }).finally(() => { if (!cancelled) setRewardsLoading(false); });
+    void load('achievements', '업적', fetchMyAchievements, response => {
+      setAchievementSummary(buildAchievementSummary(response));
+      setRewardGoals((response.achievements || []).flatMap(a => (a.tiers || []).filter(t => !t.unlocked).slice(0, 1).flatMap(t => (t.rewards || []).map(reward => ({ ...reward, achievementName: a.name, condition: a.condition, current: a.current, threshold: t.threshold })))));
+    });
+    void load('stats', '게임 전적', () => fetchAllProfileStats(user.id), setStats)
+      .finally(() => { if (!cancelled) setStatsLoading(false); });
+    return () => { cancelled = true; };
+  }, [user, reloadKey]);
 
   const displayUsername = profile?.username || user?.username || "-";
 
@@ -125,6 +115,9 @@ export default function ProfilePage() {
 
   const handleEquipment = (equipment) => {
     setRewardSlots(applyEquipment(profileCard, equipment));
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      previewRef.current?.animate([{ opacity: .65, transform: "translateY(2px)" }, { opacity: 1, transform: "none" }], { duration: 300 });
+    }
   };
   const displayName = resolveDisplayName(profileCard, NAME_FALLBACK.EXPLORER);
 
@@ -177,29 +170,21 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="app-center">
+      <WikiRaceShell user={user} level={null} onLogout={handleLogout} view="profile"><div className="wr-profile-content" aria-busy="true">
         <p className="app-muted">프로필 불러오는 중...</p>
-      </div>
+      </div></WikiRaceShell>
     );
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card" style={{ maxWidth: 460 }}>
-        {/* Header Actions */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-          <button type="button" className="app-btn app-btn-ghost" onClick={() => navigate(LOBBY_PATH)}>
-            ← 로비
-          </button>
-          <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>
-            로그아웃
-          </button>
-        </div>
-
-        <p className="auth-badge">내 프로필</p>
+    <WikiRaceShell user={user} level={profileCard.level} onLogout={handleLogout} view="profile">
+      <div className="wr-profile-content">
+        <p className="wr-kicker">MY EXPLORER · 탐험가 수첩</p>
+        <header className="profile-notebook-heading"><div><h1>나만의 탐험 기록 카드</h1><p>발견한 보상을 장착하고, 다음 탐험에 내 이름을 남겨 보세요.</p></div><button className="app-btn app-btn-ghost" onClick={() => navigate("/ranking")}>명예 기록판 →</button></header>
 
         {/* Avatar Section */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "1rem 0" }}>
+        <div className="profile-showcase">
+          <section id="profile-card-preview" className="profile-representative" ref={previewRef} aria-label="대표 탐험 카드"><p className="wr-kicker">EXPLORER CARD · 현재 장착</p>
           <div className="pcard-upload-slot">
             {/* C5 §4 "프로필 — 전부". 장착 편집은 아래 ProfileRewardEditor (17b) */}
             <ProfileCard
@@ -212,18 +197,22 @@ export default function ProfilePage() {
           </div>
 
           <XpProgress summary={xpSummary} />
+          {stats && <div className="profile-card-record"><span>싱글 완주 <b>{stats.single.totalWins}회</b></span><span>새 기준 최고 <b>{formatTime(stats.single.bestTime)}</b></span><span>이전 최고 <b>{formatTime(stats.single.previousBestTime)}</b></span></div>}
+          <p className="profile-card-caption">이 카드의 아이콘·칭호·프레임은 명예 기록판에도 표시됩니다.</p></section>
 
           {/* 게스트는 장착 상태를 만들 수 없다 (17 §6) — 편집 자체를 렌더하지 않는다 */}
-          {user && !user.isGuest && (
+          {user && !user.isGuest && !dataErrors.rewards && (
             <ProfileRewardEditor
               card={profileCard}
               owned={ownedRewards}
               loading={rewardsLoading}
               onEquipment={handleEquipment}
+              goals={rewardGoals}
             />
           )}
         </div>
 
+        {user?.isGuest ? <p className="profile-card-caption">게스트는 탐험 기록과 보상을 저장할 수 없습니다. <button type="button" className="app-btn app-btn-ghost" onClick={handleLogout}>로그인하기</button></p> : <details className="profile-settings"><summary>탐험가 정보 · 닉네임 편집</summary>
         {/* Basic Info */}
         <div style={{ marginBottom: "1rem" }}>
           <p className="auth-label" style={{ marginBottom: 2, fontWeight: 600 }}>아이디</p>
@@ -235,6 +224,7 @@ export default function ProfilePage() {
           {editMode ? (
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <input
+                aria-label="닉네임"
                 className="auth-input"
                 style={{ flex: 1 }}
                 value={nicknameInput}
@@ -263,9 +253,10 @@ export default function ProfilePage() {
             </div>
           )}
           {saveError && <p className="auth-error" style={{ marginTop: "0.25rem" }}>{saveError}</p>}
-          {saveSuccess && <p style={{ color: "#4ade80", marginTop: "0.25rem", fontSize: "0.85rem" }}>{saveSuccess}</p>}
+          {saveSuccess && <p className="profile-save-success" role="status">{saveSuccess}</p>}
         </div>
 
+        </details>}
         {/* ── 업적 요약 (16c, 본인만) ── */}
         {achievementSummary && (
           <div className="ach-summary" style={{ marginBottom: "1.5rem" }} data-testid="profile-achievements">
@@ -292,6 +283,11 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {Object.keys(dataErrors).length > 0 && <div role="alert">
+          {Object.entries(dataErrors).map(([key, message]) => <p className="app-error" key={key}>{message}</p>)}
+          <button type="button" className="app-btn app-btn-ghost" onClick={() => setReloadKey(value => value + 1)}>프로필 다시 불러오기</button>
+        </div>}
+
         {/* ── 전적 섹션 ── */}
         {!user?.isGuest && (
           <div className="profile-stats-section">
@@ -310,12 +306,13 @@ export default function ProfilePage() {
                       <span className="profile-stat-value">{stats.single.totalWins}<small className="profile-stat-unit">회</small></span>
                     </div>
                     <div className="profile-stat-card">
-                      <h4>최고 시간</h4>
+                      <h4>새 기준 최고 시간</h4>
                       <span className="profile-stat-value">{formatTime(stats.single.bestTime)}</span>
+                      <small>이전 기록 {formatTime(stats.single.previousBestTime)}</small>
                     </div>
                     <div className="profile-stat-card">
                       <h4>최소 클릭</h4>
-                      <span className="profile-stat-value">{stats.single.bestClicks || "-"}<small className="profile-stat-unit">회</small></span>
+                      <span className="profile-stat-value">{stats.single.bestClicks ?? "-"}<small className="profile-stat-unit">회</small></span>
                     </div>
                   </div>
                 </div>
@@ -356,11 +353,11 @@ export default function ProfilePage() {
                 </div>
               </div>
             ) : (
-              <p className="app-muted" style={{ fontSize: "0.9rem" }}>전적 정보가 없습니다.</p>
+              <p className="app-muted" style={{ fontSize: "0.9rem" }}>{dataErrors.stats ? '전적을 확인할 수 없습니다. 위의 다시 불러오기를 이용해 주세요.' : '전적 정보가 없습니다.'}</p>
             )}
           </div>
         )}
       </div>
-    </div>
+    </WikiRaceShell>
   );
 }

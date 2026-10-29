@@ -1,10 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { DuelEndRecordsVisible } from "./cinematic/DuelEndVisibility.js";
 import XpProgress from "./XpProgress.jsx";
 import ResultAchievements from "./ResultAchievements.jsx";
 import { fetchDuelResultXp, fetchResultXp, fetchXpSummary } from "../services/xpService.js";
 import { fetchLevelAtTotalXp, fetchResultAchievements } from "../services/achievementService.js";
 import { buildResultXpView, formatLevelUp } from "../utils/xpResultDisplay.js";
 import { buildResultReveal } from "../utils/achievementDisplay.js";
+import { claimResultMotion } from "../utils/resultJournal.js";
+import { CinematicContext } from './cinematic/CinematicParts.jsx';
+import { audioManager } from '../services/audioManager.js';
 
 /** 1:1에서 첫 조회가 비었을 때 한 번 더 기다리는 시간 — realtime 신호가 커밋보다 먼저 올 때. */
 const DUEL_RETRY_DELAY_MS = 800;
@@ -104,7 +108,18 @@ export default function ResultXp({
   onAchievementsLoaded = null,
 }) {
   const [data, setData] = useState(null);
+  const recordsVisible = useContext(DuelEndRecordsVisible);
+  const cinematic = useContext(CinematicContext);
   const [failed, setFailed] = useState(false);
+  const [motionKey, setMotionKey] = useState(null);
+  useEffect(() => {
+    const key = scope === 'duel' ? roomId : sourceId;
+    if (!motionKey || !recordsVisible || cinematic.phase === 'ceremony' || cinematic.phase === 'single'
+      || cinematic.audioEligible === false || !key || !data?.entries?.length) return;
+    const unlocked = buildResultReveal(data.achievements)?.items?.length > 0;
+    // One grouped reward cue: achievements take precedence over the XP tick.
+    void audioManager.play(unlocked ? 'achievement' : 'xp', { key: `reward:${scope}:${userId}:${key}` });
+  }, [motionKey, recordsVisible, cinematic.phase, cinematic.audioEligible, scope, userId, sourceId, roomId, data]);
   const onAchievementsLoadedRef = useRef(onAchievementsLoaded);
   onAchievementsLoadedRef.current = onAchievementsLoaded;
 
@@ -130,6 +145,10 @@ export default function ResultXp({
         if (cancelled || !loaded) return;
         setData(loaded);
         setFailed(!Array.isArray(loaded.entries));
+        if (Array.isArray(loaded.entries) && loaded.entries.length > 0) {
+          const identity = `xp:${scope}:${userId}:${scope === "duel" ? roomId : sourceId}`;
+          try { if (claimResultMotion(window.localStorage, identity)) setMotionKey(identity); } catch { /* static */ }
+        }
         onAchievementsLoadedRef.current?.(buildResultReveal(loaded.achievements)?.items.length ?? 0);
       })
       .catch((error) => {
@@ -160,14 +179,15 @@ export default function ResultXp({
   });
   const reveal = buildResultReveal(data?.achievements ?? null);
   const revealBlock = reveal && reveal.items.length > 0
-    ? <ResultAchievements reveal={reveal} tone={tone} />
+    ? <ResultAchievements reveal={reveal} tone={tone} presentation={scope === "single" ? "single" : undefined} />
     : null;
   if (!view) return <>
     {!showAsGuest && <p className="rxp-note" role="status">{failed ? "XP 지급 정보를 불러오지 못했습니다." : data ? "이 결과에 기록된 XP 지급 내역이 없습니다." : "XP 지급 정보를 확인하는 중입니다."}</p>}
     {revealBlock}
   </>;
 
-  const className = `rxp rxp--${tone}`;
+  const identity = `xp:${scope}:${userId}:${resultKey}`;
+  const className = `rxp rxp--${tone}${motionKey === identity && recordsVisible ? " is-journal-xp-arrival" : ""}`;
 
   if (view.kind !== "granted") {
     return (

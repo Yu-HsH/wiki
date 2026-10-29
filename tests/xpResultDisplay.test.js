@@ -176,7 +176,7 @@ test("wiring: SuccessOverlay places XP after the record summary and before the p
   const outcome = overlay.indexOf("<ResultOutcome");
   const stats = overlay.indexOf("<ResultStats");
   const xp = overlay.indexOf("<ResultXp");
-  const path = overlay.indexOf("MY ROUTE · 이동 경로");
+  const path = overlay.indexOf("<SingleResultRoute");
   assert.ok(outcome > 0 && stats > outcome && xp > stats && path > xp, "결과 ▸ 기록 ▸ XP ▸ 경로");
   assert.equal((overlay.match(/<ResultXp\s/g) || []).length, 1, "one ResultXp mount per result view");
   assert.match(overlay, /scope="single"/);

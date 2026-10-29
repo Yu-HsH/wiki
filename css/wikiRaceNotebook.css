@@ -1,0 +1,81 @@
+/* B: picture-book expedition notebook. Presentation only, loaded after legacy layers. */
+.wr-page:not(.wr-result-layer--overlay):not(.wr-single-start):not(.wr-start-overlay) { position: relative; isolation: isolate; }
+.wr-page::before { position: absolute; top: 180px; z-index: -1; }
+.wr-shell { z-index: 1; }
+@media (min-width:1600px) {
+  .wr-home::before, .wr-home::after {
+    position: absolute; width: min(240px, calc((100% - 1200px) / 2 - 48px));
+    height: 220px; z-index: -1; opacity: .35;
+    background: url('/assets/wiki-race/gear-cluster.png') center / contain no-repeat;
+    border: 0; border-radius: 0;
+  }
+  .wr-home::before { left: 24px; top: 240px; }
+  .wr-home::after { right: 24px; top: 620px; }
+}
+.wr-header { background: var(--wr-paper-2); }
+.wr-header :is(nav a, .wr-header-user button) { min-height: 44px; display: inline-flex; align-items: center; }
+.wr-header nav a { transition: border-color 150ms ease, color 150ms ease; }
+.wr-page :is(.dashboard-badge, .wr-kicker, .wr-section-label) { letter-spacing: .12em; }
+.wr-page :is(.daily-card, .wr-play-heading, .wr-lobby-head, .dashboard-header) {
+  border-bottom: 1px dashed var(--wr-frame);
+}
+.wr-home .wr-wiki-highlights { border-top: 4px double var(--wr-frame); }
+.wr-home .wr-wiki-highlights section { padding: 18px 0; }
+.wr-home .wr-wiki-highlights h2 { display: flex; align-items: center; gap: 8px; }
+.wr-home .wr-wiki-highlights h2::before { content: ""; width: 6px; height: 18px; background: var(--wr-gold); border-radius: 2px; flex: none; }
+.wr-briefing-note { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 14px 28px; margin: 0; list-style: none; background: var(--wr-paper-2); border-top: 1px dashed var(--wr-frame); }
+.wr-briefing-note li { display: inline-flex; align-items: center; gap: 8px; color: var(--wr-ink-2); }
+.wr-briefing-note b { color: var(--wr-gold); font-variant-numeric: tabular-nums; }
+.wr-entry :is(.mp-card, .mp-help-modal) { background: var(--wr-paper); border-color: var(--wr-frame); }
+.wr-lobby :is(.wr-duel-stage, .wr-group-stage) { background: var(--wr-paper-2); }
+.wr-ranking .ranking-top article { position: relative; border-radius: 6px 16px 6px 6px; }
+.wr-ranking .ranking-my-record { border-radius: 4px 12px 12px 4px; }
+.wr-ranking .ranking-table td { border-bottom-style: dashed; }
+.wr-profile .preward-group-label { padding: 10px 16px; margin: 0; border-top: 1px dashed var(--wr-frame); color: var(--wr-ink-2); }
+.wr-profile .preward-guide a { display: inline-flex; min-height: 44px; align-items: center; }
+.wr-profile .preward-choice { min-height: 44px; border-color: var(--wr-frame); border-radius: 8px; gap: 8px; }
+.wr-profile .preward-choice--selected { border-color: var(--wr-gold); }
+.wr-profile .preward-row { padding-inline: 12px; }
+.wr-profile .preward-choice { flex-wrap: wrap; max-width: 100%; overflow-wrap: anywhere; }
+.wr-profile .preward-choice .pcard { max-width: 100%; }
+.wr-profile .preward-feedback { padding: 10px 16px; margin: 0; color: var(--wr-teal); border-top: 1px dashed var(--wr-frame); }
+.wr-achievements .ach-section:not(.ach-section--hidden) { order: 0; }
+.wr-achievements .ach-section--hidden { order: 1; grid-column: 1 / -1; }
+.wr-achievements .ach-page { grid-template-columns: minmax(0, 1fr); max-width: 1120px; gap: 8px; }
+.wr-achievements .ach-section { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 24px; }
+.wr-achievements :is(.ach-section-title, .ach-hidden-note, .ach-card--hidden-summary) { grid-column: 1 / -1; }
+.wr-achievements .ach-card { align-content: start; }
+.wr-achievements .ach-card-state { justify-self: start; }
+.wr-achievements .ach-section-title { border-bottom: 1px dashed var(--wr-frame); padding-bottom: 12px; }
+.wr-achievements .ach-card { padding: 16px; border-radius: 4px 12px 12px 4px; }
+.wr-achievements .ach-card-state { display: inline-flex; font-size: 11px; font-weight: 700; color: var(--wr-ink-2); border: 1px solid var(--wr-frame); border-radius: 4px; padding: 2px 7px; margin-bottom: 8px; }
+.wr-achievements .ach-card--complete .ach-card-state { color: var(--wr-teal); border: 2px solid var(--wr-teal); }
+.wr-ach-reward-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.wr-ach-reward { padding: 4px 8px; border: 1px dashed var(--wr-gold); border-radius: 4px; background: var(--wr-paper); color: var(--wr-ink); font-size: 12px; overflow-wrap: anywhere; }
+.wr-result .wr-rcard { border-radius: 6px 18px 6px 6px; border-top: 4px double var(--wr-frame); }
+.wr-result .wr-result-row { border-bottom-style: dashed; }
+.wr-result .rxp-gain { font-variant-numeric: tabular-nums; }
+/* Short, once-only arrival. Existing roster, item effects and result reveal remain intact. */
+.wr-home .wr-wiki-highlights, .wr-ranking .ranking-top article,
+.wr-achievements .ach-card, .wr-profile .preward-panel,
+.wr-profile .preward-feedback, .wr-result .rxp-line {
+  animation: wr-enter var(--wr-motion-ui, 220ms) var(--wr-ease-out, ease-out) both;
+}
+.wr-ranking .ranking-top article:nth-child(2) { animation-delay: 45ms; }
+.wr-ranking .ranking-top article:nth-child(3) { animation-delay: 90ms; }
+.wr-page :is(.app-btn, .wr-btn, .preward-choice, .wr-ach-filters button, .toggle-btn) {
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+.wr-page :is(.app-btn, .preward-choice, .wr-ach-filters button, .toggle-btn):not(:disabled):active { box-shadow: inset 0 2px 3px #24343020; }
+.wr-page :is(.qs-modal-card, .user-profile-modal-card, .mp-help-modal) { animation: wr-enter 220ms ease-out both; }
+.wr-achievements .ach-progress-bar > span { transition: width 220ms ease-out; }
+@media (max-width:600px) {
+  .wr-briefing-note { padding: 14px 20px; gap: 8px; flex-direction: column; }
+  .wr-achievements .ach-card { padding: 12px; }
+  .wr-page .wr-ach-reward { max-width: 100%; }
+}
+@media (min-width:601px) and (max-width:1199px) { .wr-achievements .ach-section { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width:600px) { .wr-achievements .ach-section { grid-template-columns: minmax(0, 1fr); padding: 20px 8px; } }
+@media (prefers-reduced-motion:reduce) {
+  .wr-page *, .wr-page *::before, .wr-page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

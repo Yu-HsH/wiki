@@ -1,0 +1,98 @@
+/* 2차-B: display layer only. Semantic item/link colours stay in the Freeze sheets. */
+.wr-race:not(.wr-result):not(.wr-result-a) .wr-race-shell { border-top: 4px double var(--wr-frame); }
+.wr-race:not(.wr-result):not(.wr-result-a) .wr-race-hud { background: var(--wr-paper); }
+.wr-race .wr-hud-doc--current { background: #3268a808; }
+.wr-race .wr-hud-doc--goal { background: var(--wr-gold-bg); }
+.wr-race .wr-route-head { border-bottom: 1px dashed var(--wr-divider); margin-bottom: 10px; }
+.wr-race .wr-route-step { padding-block: 8px; font-size: 13px; }
+.wr-race .wr-route-foot { font-size: 12px; }
+.wr-race .wr-race-side { background: var(--wr-paper); }
+.wr-race .wr-hud-label { letter-spacing: .04em; }
+.wr-race .wr-article-head { border-bottom-style: dashed; }
+.wr-race .article-content { background: #fff; }
+/* Preserve code whitespace and let long lines scroll inside the article. */
+.wr-race .article-content pre { max-width: 100%; overflow-x: auto; }
+.wr-mobile-route-notes { display: none; }
+/* Sheets are records, with no terrain scene or central character. */
+.wr-result .wr-result-frame, .wr-result-a .wr-result-a-frame { background: var(--wr-paper-2); background-image: none; }
+.wr-result .wr-rscene, .wr-result-a .wr-result-a-scene { height: auto; min-height: 130px; display: flex; align-items: center; gap: 16px; padding: 24px 32px; margin: 0; }
+.wr-result .wr-rscene::before, .wr-result .wr-rscene::after, .wr-result .wr-rcard::after,
+.wr-result-a .wr-result-a-scene::before, .wr-result-a .wr-result-a-scene::after { content: none; }
+.wr-journal-heading { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.wr-journal-heading small { font: 600 10px/1.4 var(--wr-font-heading); letter-spacing: .12em; color: var(--wr-ink-3); }
+.wr-journal-heading strong { font: 600 24px/1.3 var(--wr-font-heading); color: var(--wr-ink); }
+.wr-journal-heading > span { font-size: 12px; color: var(--wr-ink-2); }
+.wr-result .wr-rscene-dest { position: static; max-width: 36%; margin-left: auto; border: 0; border-left: 1px dashed var(--wr-frame); border-radius: 0; background: none; padding: 8px 16px; }
+.wr-journal-seal { flex: none; display: grid; place-items: center; width: 90px; min-height: 58px; padding: 8px; border: 2px solid var(--wr-ink-3); outline: 1px solid var(--wr-frame); outline-offset: 3px; border-radius: 6px; color: var(--wr-ink-2); font: 600 13px/1.4 var(--wr-font-heading); transform: rotate(-5deg); white-space: nowrap; }
+.wr-journal-seal.is-complete { color: var(--wr-teal); border-color: var(--wr-teal); }
+.wr-result .wr-rcard { margin-top: 0; animation: none; }
+.wr-result-a .wr-result-card { margin-top: 0; }
+.wr-result .wr-result-row, .wr-result-a .wr-result-row { border-bottom-style: dashed; }
+.wr-result .rxp { padding: 14px 16px; background: var(--wr-gold-bg); border: 1px solid var(--wr-divider); border-radius: 8px; }
+.wr-result .rxp-line { animation: none; }
+.wr-result .fx-finish::after { animation: none; opacity: 0; }
+.wr-result.is-journal-arrival .fx-finish::after { animation: fx-finish-pulse 320ms ease-out both; }
+.wr-result.is-journal-arrival .wr-rcard { animation: wr-journal-arrive 320ms ease-out both; }
+.wr-result .rxp.is-journal-xp-arrival .rxp-line { animation: wr-journal-arrive 220ms ease-out both; }
+.wr-result .rxp.is-journal-xp-arrival .rxp-levelup { animation: wr-journal-arrive 220ms ease-out both; }
+.wr-result .wr-chain-chip, .wr-result-a .wr-chain-chip { max-width: 100%; white-space: normal; overflow-wrap: anywhere; padding: 6px 10px; font-size: 13px; }
+.wr-result .wr-chain-sep, .wr-result-a .wr-chain-sep { border-top: 1px dashed var(--wr-frame); background: none; }
+.wr-result .wr-earned-rewards { margin-top: 10px; }
+.wr-result .wr-earned-rewards summary { cursor: pointer; padding: 10px 0; min-height: 44px; }
+.wr-result .album-reward { padding: 12px; margin-top: 8px; border: 1px dashed var(--wr-frame); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+.wr-result .album-reward-label { display: flex; flex-wrap: wrap; gap: 8px; }
+.wr-result .album-reward-specimen { max-width: 100%; }
+.wr-result .album-reward-specimen .pcard { max-width: 100%; }
+.wr-result .wr-reward-profile-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--wr-blue); }
+.wr-result .wr-ractions .wr-race-btn, .wr-result-a .wr-result-actions button { min-height: 44px; }
+@keyframes wr-journal-arrive { from { opacity: .6; } to { opacity: 1; } }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .wr-race .wr-hud-cell { padding-inline: 8px; }
+  /* Long titles must shrink instead of shrinking the exit cell below its button. */
+  .wr-race .wr-race-hud > .wr-hud-cell:not(.wr-hud-doc):not(.wr-hud-status) { flex-shrink: 0; }
+  .wr-race .wr-race-hud > .wr-hud-doc { flex: 1 1 0; }
+  .wr-race .wr-race-hud > .wr-hud-status { flex-grow: 0; }
+  .wr-race .wr-hud-timer { min-width: 100px; }
+  .wr-race .wr-hud-brand { gap: 5px; }
+  .wr-race .wr-hud-doc-value { font-size: 17px; }
+  .wr-race .wr-hud-stat-value { font-size: 20px; }
+}
+@media (max-width: 760px) {
+  .wr-mobile-route-notes { display: block; padding: 0 16px 12px; background: var(--wr-paper); border-bottom: 1px dashed var(--wr-divider); }
+  .wr-mobile-route-notes summary { min-height: 44px; padding-block: 12px; cursor: pointer; color: var(--wr-blue); font-size: 13px; }
+  .wr-mobile-route-notes p { margin-bottom: 8px; font-size: 12px; overflow-wrap: anywhere; }
+  .wr-mobile-route-notes .wr-chain-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+  /* Natural flow: scrolling never hides the article under a tall HUD. */
+  .wr-race:not(.wr-result):not(.wr-result-a) .wr-race-hud { position: static; }
+  .wr-race .wr-hud-doc .wr-hud-label { display: block; font-size: 10px; }
+  .wr-race .wr-hud-doc { flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 6px; }
+  .wr-race .wr-hud-doc--current, .wr-race .wr-hud-doc--goal { flex: 1 1 35%; max-width: 44%; }
+  .wr-race .wr-hud-doc-value > span { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .wr-race .wr-target-brief > summary { min-height: 44px; }
+  .wr-race .wr-target-brief > summary .wr-hud-label { flex: none; }
+  .wr-race .wr-target-brief:not([open]) > summary strong { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .wr-race .wr-target-brief[open] > summary strong { min-width: 0; overflow-wrap: anywhere; }
+  .wr-race .wr-hud-exit button { min-height: 44px; }
+  .wr-race .wr-hud-exit { padding-block: 2px; }
+  .wr-race .wr-hud-brand .wr-hud-label { display: none; }
+  .wr-race--single .wr-hud-brand .wr-hud-label { display: block; font-size: 10px; }
+  /* The dock scroll container clips absolute notices placed above its bounds. */
+  .wr-race .duel-item-notice { position: fixed; left: 12px; right: 12px; bottom: calc(var(--race-dock-mobile, 62px) + 8px); z-index: 65; max-width: none; min-height: 64px; padding-right: 58px; }
+  .wr-race .duel-item-notice__close { width: 44px; height: 44px; }
+  .wr-race .wr-race-link { min-height: 44px; display: inline-flex; align-items: center; }
+  .wr-result .wr-rscene, .wr-result-a .wr-result-a-scene { min-height: 98px; padding: 18px 12px; gap: 12px; }
+  .wr-journal-heading strong { font-size: 21px; }
+  .wr-result .wr-rscene-dest { display: none; } /* course below retains full title */
+  .wr-journal-seal { margin-left: auto; width: 84px; min-height: 50px; font-size: 12px; }
+  .wr-result .rxp { padding: 12px; }
+  .wr-result .wr-rstats dd { font-size: 26px; }
+  .wr-result-a .wr-result-strip { gap: 8px; }
+  .wr-result-a .wr-result-strip > div { flex: 1 1 60%; }
+  .wr-result-a .wr-result-deadline { margin-left: 0; }
+  .wr-result-a .wr-result-strip small { font-size: 12px; line-height: 1.6; }
+  .wr-race--duel ~ .floating-message, .wr-race--duel:has(.wr-hud-status .wr-pill) ~ .floating-message { top: auto; bottom: calc(var(--race-dock-mobile, 62px) + 46px); }
+  .wr-race:has(.duel-item-index) ~ .floating-message { bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-result *, .wr-result *::before, .wr-result *::after, .wr-result-a * { animation: none !important; transition: none !important; }
+}

@@ -94,10 +94,10 @@ test("normalizeXpRankingRow — profile_level이 없으면 level은 null이다",
 
 /* ── fetchRankings (결정 3: 시그니처 불변, select만 확장) ─────── */
 
-test("fetchRankings — 시그니처 불변, 프로필 select에 total_xp·profile_level만 추가", () => {
+test("fetchRankings — 기존 옵션 기본값 유지, 테스트 client 주입과 프로필 XP 조회", () => {
   assert.match(
     rankingServiceSource,
-    /export async function fetchRankings\(\{ period = "all", limit = 50 \} = \{\}\)/
+    /export async function fetchRankings\(\{ period = "all", limit = 50, client, timingContract = SINGLE_START_CONTRACT \} = \{\}\)/
   );
   assert.match(rankingServiceSource, /const PROFILE_XP_COLUMNS = "total_xp, profile_level";/);
   assert.match(
@@ -106,15 +106,14 @@ test("fetchRankings — 시그니처 불변, 프로필 select에 total_xp·profi
   );
 });
 
-test("로비 TOP 3 호출은 그대로다 (결정 3)", () => {
-  for (const period of ["daily", "weekly", "all"]) {
-    assert.match(mainPageSource, new RegExp(`fetchRankings\\(\\{ period: "${period}", limit: 3 \\}\\)`));
-  }
-  assert.equal(mainPageSource.includes("fetchXpRankings"), false);
+test("로비 TOP 3는 코스 기록 / 주간 gameplay XP / 누적 XP를 분리한다", () => {
+  assert.match(mainPageSource, /fetchRankings\(\{ period: "daily", limit: 3 \}\)/);
+  assert.match(mainPageSource, /fetchExplorerXpRankings\(\{ weekly: true, limit: 3 \}\)/);
+  assert.match(mainPageSource, /fetchExplorerXpRankings\(\{ limit: 3 \}\)/);
 });
 
-test("RankingPage — XP 탭은 fetchXpRankings를 쓰고 빈 상태를 보여 준다", () => {
-  assert.match(rankingPageSource, /fetchXpRankings\(\{ limit: 50 \}\)/);
+test("RankingPage — XP 탭은 서버 순위 API를 쓰고 빈 상태를 보여 준다", () => {
+  assert.match(rankingPageSource, /fetchExplorerXpRankings\(\{ weekly: period === "weekly", limit: 50 \}\)/);
   assert.match(rankingPageSource, /아직 XP를 얻은 탐험가가 없습니다/);
   assert.match(rankingPageSource, /level: row\.level/);
   assert.match(rankingPageSource, /level: record\.level \?\? null/);

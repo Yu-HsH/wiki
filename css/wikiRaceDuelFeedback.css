@@ -1,0 +1,148 @@
+/* Duel only. A reserved lane keeps stamps off article links and dock labels. */
+.wr-duel-feedback-lane { height: 80px; flex: 0 0 80px; min-width: 0; padding: 8px 16px; box-sizing: border-box; background: var(--wr-paper-2); border-bottom: 1px dashed var(--wr-divider); display: grid; grid-template-columns: minmax(0,1fr) 64px; align-items: center; gap: 10px; }
+.wr-duel-feedback-stack { grid-column: 1; grid-row: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; pointer-events: none; height: 100%; min-width: 0; }
+.wr-duel-feedback-lane .wr-duel-feedback-fallback { position: static; inset: auto; transform: none; grid-column: 1; grid-row: 1; justify-self: end; box-sizing: border-box; width: min(420px,100%); margin: 0; padding: 8px 12px; background: var(--wr-paper); color: var(--wr-blue); border: 1px solid var(--wr-blue); border-radius: 8px; font: 13px/1.2 var(--wr-font-body); overflow-wrap: anywhere; pointer-events: none; animation: none; }
+.wr-duel-feedback, .wr-duel-impact { --feedback-color: var(--wr-blue); color: var(--feedback-color); pointer-events: none; }
+.wr-duel-feedback[data-tone="coral"], .wr-duel-impact[data-tone="coral"] { --feedback-color: var(--wr-coral); }
+.wr-duel-feedback[data-tone="teal"], .wr-duel-impact[data-tone="teal"] { --feedback-color: var(--wr-teal); }
+.wr-duel-feedback { position: relative; display: flex; align-items: center; gap: 10px; box-sizing: border-box; width: min(420px,100%); height: 64px; padding: 7px 14px 7px 10px; border: 2px solid currentColor; border-radius: 8px 14px 10px 6px; background: var(--wr-paper); box-shadow: 2px 2px 0 var(--wr-divider); font-family: var(--wr-font-body); }
+.wr-duel-feedback::after { content: ''; position: absolute; inset: 4px; border: 1px dashed currentColor; opacity: .35; border-radius: inherit; }
+.wr-duel-feedback-symbol { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; }
+.wr-duel-feedback-symbol svg { width: 100%; height: 100%; }
+.wr-duel-feedback[data-kind="block"] .wr-duel-feedback-symbol,
+.wr-duel-feedback[data-kind="reflect"] .wr-duel-feedback-symbol { width: 64px; height: 48px; flex-basis: 64px; }
+.wr-duel-feedback-copy { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.wr-duel-feedback-copy strong { font-size: 15px; line-height: 1.1; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.wr-duel-feedback-copy small { color: var(--wr-ink-2); font-size: 11px; line-height: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; }
+.wr-duel-feedback-rays { position: absolute; inset: -8px; border: 2px solid currentColor; border-radius: inherit; opacity: 0; }
+.wr-race--duel .wr-duel-article { position: relative; min-width: 0; isolation: isolate; }
+.wr-duel-impact-layer { position: absolute; inset: 72px 0 auto; height: 210px; pointer-events: none; z-index: 22; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.wr-duel-impact { position: relative; display: grid; place-items: center; width: 112px; height: 112px; flex: 0 0 112px; border-radius: 50%; background: color-mix(in srgb, var(--feedback-color) 10%, transparent); }
+.wr-duel-impact .wr-duel-feedback-symbol { width: 72px; height: 72px; }
+.wr-duel-impact[data-motif="seal"] { border: 2px dashed currentColor; border-radius: 10px; }
+.wr-duel-impact[data-motif="move"], .wr-duel-impact[data-motif="rewind"] { background: linear-gradient(90deg,transparent,color-mix(in srgb,var(--feedback-color) 12%,transparent)); border-radius: 6px; }
+.wr-race--duel .duel-item-slot[data-feedback-kind] { outline: 2px solid var(--wr-blue); outline-offset: -3px; }
+.wr-race--duel .duel-item-slot[data-feedback-tone="coral"] { outline-color: var(--wr-coral); }
+.wr-race--duel .duel-item-slot[data-feedback-tone="teal"] { outline-color: var(--wr-teal); }
+.wr-race--duel .duel-item-slot[data-feedback-kind] { opacity: 1; }
+.wr-duel-slot-signal { display: block; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: rgb(50 104 168 / 9%); }
+.wr-duel-slot-signal svg { position: absolute; width: 32px; height: 32px; right: 4px; top: 4px; }
+.duel-item-slot[data-feedback-tone="coral"] .wr-duel-slot-signal { color: var(--wr-coral); background: rgb(214 103 82 / 9%); }
+.duel-item-slot[data-feedback-tone="teal"] .wr-duel-slot-signal { color: var(--wr-teal); background: rgb(39 135 125 / 9%); }
+.duel-item-slot[data-feedback-tone="blue"] .wr-duel-slot-signal { color: var(--wr-blue); }
+.wr-race--duel .duel-item-slot { position: relative; }
+.wr-race--duel .duel-item-bar { min-width: 0; }
+.wr-race--duel .wr-race-dock-hint:empty { display: none; }
+/* Preserve the actual blind-overlay in WikiViewer, with a static paper/ink treatment. */
+.wr-race--duel .blind-overlay { position: absolute; inset: 0; background: rgb(36 52 48 / 96%); animation: none; }
+.wr-race--duel .blind-text { color: var(--wr-paper); border: 1px dashed var(--wr-coral); border-radius: 8px; padding: 12px 18px; }
+.wr-duel-projectile { stroke: var(--wr-coral); stroke-width: 5; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.wr-duel-contact-spark { stroke: var(--wr-teal); stroke-width: 3.5; opacity: 0; }
+.wr-duel-reflect-trail { stroke: var(--wr-teal); stroke-width: 4; opacity: 0; }
+.wr-duel-paper-leaf { transform-box: fill-box; transform-origin: left center; }
+.wr-duel-recent { grid-column: 2; grid-row: 1; align-self: stretch; display: grid; align-items: center; }
+.wr-duel-recent-toggle { min-height: 44px; padding: 6px; border: 1px solid var(--wr-frame); border-radius: 8px; background: var(--wr-paper); color: var(--wr-blue); cursor: pointer; font: 12px var(--wr-font-body); }
+.wr-duel-recent-toggle:disabled { color: var(--wr-ink-3); cursor: default; }
+.wr-duel-recent-toggle:focus-visible, .wr-duel-recent-panel button:focus-visible { outline: 2px solid var(--wr-blue); outline-offset: 2px; }
+/* The panel has its own row in the reserved space; it pushes content only on explicit opening. */
+.wr-duel-recent-panel { grid-column: 1 / -1; background: var(--wr-paper); border: 1px solid var(--wr-frame); border-radius: 8px; padding: 8px 12px; color: var(--wr-ink); }
+.wr-duel-feedback-lane:has(.wr-duel-recent-panel) { height: auto; flex-basis: auto; min-height: 80px; grid-template-rows: 64px auto; }
+.wr-duel-recent:has(.wr-duel-recent-panel) { display: contents; }
+.wr-duel-recent:has(.wr-duel-recent-panel) > .wr-duel-recent-toggle { grid-column: 2; grid-row: 1; align-self: center; }
+.wr-duel-recent-panel header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wr-duel-recent-panel button { min-height: 44px; padding: 6px 12px; border: 1px solid var(--wr-frame); border-radius: 6px; background: var(--wr-paper-2); color: var(--wr-blue); cursor: pointer; }
+.wr-duel-recent-panel ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.wr-duel-recent-panel ol { height: 156px; grid-template-rows: repeat(3,48px); gap: 4px; }
+.wr-duel-recent-panel li { box-sizing: border-box; overflow: hidden; overflow-wrap: anywhere; }
+.wr-duel-recent-panel li { border-left: 3px solid var(--wr-blue); padding: 3px 10px; display: flex; flex-direction: column; font-size: 13px; line-height: 1.1; }
+.wr-duel-recent-panel li[data-tone="coral"] { border-color: var(--wr-coral); }
+.wr-duel-recent-panel li[data-tone="teal"] { border-color: var(--wr-teal); }
+.wr-duel-recent-panel small { color: var(--wr-ink-2); font-size: 11px; line-height: 12px; }
+.wr-duel-article[data-motion] { overflow-x: clip; }
+/* Keep functional panels below the live notice, instead of hiding either panel links or text. */
+.wr-race--duel .duel-item-index { top: max(calc(var(--race-top) + 16px), var(--duel-feedback-bottom, 0px)); }
+.wr-race--duel .game-search-panel { top: max(calc(var(--race-top) + 12px), calc(var(--duel-feedback-bottom, 0px) + 8px)); }
+.wr-race--duel .duel-item-preview { max-height: min(50vh, calc(100dvh - var(--duel-feedback-bottom, 0px) - var(--race-dock-h) - 24px)); }
+@media (max-width: 760px) {
+  .wr-race--duel .duel-item-index { top: var(--duel-feedback-bottom, 0px); bottom: var(--race-dock-h); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Text stays readable; only the accepted event's symbol reacts for 650ms. */
+  .wr-duel-feedback[data-active="true"] .wr-duel-feedback-rays { animation: wr-duel-ring 600ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="ink"] .wr-duel-feedback-symbol { animation: wr-duel-ink 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="seal"] .wr-duel-feedback-symbol { animation: wr-duel-seal 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="shield"][data-kind="use"] .wr-duel-feedback-symbol { animation: wr-duel-shield-arm 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-shield-face { animation: wr-duel-shield-catch 650ms linear; }
+  .wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-feedback-symbol { animation: wr-duel-shield-settle 650ms linear; }
+  .wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-projectile { animation: wr-duel-deflect 650ms linear; }
+  .wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-contact-spark,
+  .wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-contact-spark { animation: wr-duel-contact 650ms linear; }
+  .wr-duel-feedback[data-active="true"][data-motif="reflect"] .wr-duel-feedback-symbol { animation: wr-duel-reflect 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-projectile { animation: wr-duel-return-shot 650ms linear; }
+  .wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-reflect-trail { animation: wr-duel-return-trail 650ms linear; }
+  .wr-duel-feedback[data-active="true"][data-motif="move"] .wr-duel-feedback-symbol { animation: wr-duel-direction 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="rewind"] .wr-duel-feedback-symbol { animation: wr-duel-rewind 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="rewind"] .wr-duel-paper-leaf { animation: wr-duel-leaf-back 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="return"] .wr-duel-feedback-symbol { animation: wr-duel-backstep 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="compass"] .wr-duel-feedback-symbol { animation: wr-duel-compass 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="search"] .wr-duel-feedback-symbol { animation: wr-duel-find 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="preview"] .wr-duel-feedback-symbol { animation: wr-duel-peek 650ms ease-out; }
+  .wr-duel-feedback[data-active="true"][data-motif="index"] .wr-duel-feedback-symbol { animation: wr-duel-index 650ms ease-out; }
+  .wr-duel-impact[data-motif="ink"] .wr-duel-feedback-symbol { animation: wr-duel-ink 600ms ease-out; }
+  .wr-duel-impact[data-motif="ink"] { width: 100%; height: 170px; border-radius: 0; background: radial-gradient(ellipse at 40% 45%,rgb(36 52 48 / 55%),transparent 65%); animation: wr-duel-ink-spread 650ms ease-out both; }
+  .wr-duel-article[data-impact-ink="true"] .blind-overlay::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 40% 45%,var(--wr-coral),transparent 62%); animation: wr-duel-ink-spread 650ms ease-out both; }
+  .wr-duel-impact[data-motif="seal"] .wr-duel-feedback-symbol { animation: wr-duel-seal 600ms ease-out; }
+  .wr-duel-impact[data-motif="move"] .wr-duel-feedback-symbol, .wr-duel-impact[data-motif="rewind"] .wr-duel-feedback-symbol { animation: wr-duel-direction 600ms ease-out; }
+  .wr-duel-slot-signal { animation: wr-duel-ring 650ms ease-out; }
+  .wr-race--duel .wr-duel-article[data-impact-seal="true"] .article-content a.duel-item-censored { animation: wr-duel-sealed-link 550ms ease-out; }
+  .wr-duel-article[data-motion="move"] .current-page-card { animation: wr-duel-page-forward 650ms ease-out; }
+  .wr-duel-article[data-motion="rewind"] .current-page-card { animation: wr-duel-page-rewind 650ms ease-out; transform-origin: left center; }
+  .wr-duel-article[data-motion="rewind"] .current-page-card { position: relative; }
+  .wr-duel-article[data-motion="rewind"] .current-page-card::after { content: ''; position: absolute; left: 0; top: 0; width: 44%; height: min(190px,100%); background: linear-gradient(90deg,var(--wr-paper),var(--wr-paper-2)); border-right: 2px solid var(--wr-frame); box-shadow: 7px 3px 9px rgb(36 52 48 / 18%); transform-origin: left center; pointer-events: none; animation: wr-duel-leaf-back 650ms ease-out both; }
+  .wr-duel-article[data-motion="return"] .current-page-card { animation: wr-duel-page-back 650ms ease-out; }
+  .wr-duel-article[data-motion="compass"] .current-page-card { animation: wr-duel-page-arrive 650ms ease-out; }
+  .wr-race-dock[data-feedback-feature="index"] .duel-item-index,
+  .wr-race-dock[data-feedback-feature="preview"] .duel-item-preview,
+  .wr-duel-article[data-feature="search"] .game-search-panel { animation: wr-duel-feature 650ms ease-out; }
+}
+@keyframes wr-duel-stamp { 0% { opacity: 0; transform: translateY(12px) scale(.8) rotate(-6deg); } 25% { opacity: 1; transform: translateY(0) scale(1.05) rotate(2deg); } 45%,80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-4px); } }
+@keyframes wr-duel-ring { 0% { opacity: .8; transform: scale(.88); } 100% { opacity: 0; transform: scale(1.2); } }
+@keyframes wr-duel-ink { 0% { transform: scale(.2); } 35% { transform: scale(1.3) rotate(12deg); } 100% { transform: scale(1); } }
+@keyframes wr-duel-seal { 0% { transform: translateY(-24px) rotate(-12deg); } 35% { transform: translateY(3px) rotate(3deg); } 100% { transform: none; } }
+@keyframes wr-duel-direction { 0% { transform: translateX(-38px); opacity: 0; } 35%,70% { transform: none; opacity: 1; } 100% { transform: translateX(28px); opacity: 0; } }
+@keyframes wr-duel-sealed-link { 25%,50% { box-shadow: 0 0 0 4px rgb(214 103 82 / 24%); outline: 1px dashed var(--wr-coral); outline-offset: 2px; background-color: rgb(214 103 82 / 18%); } }
+@keyframes wr-duel-shield-arm { 0% { transform: scale(.7); } 40% { transform: scale(1.12); } 100% { transform: none; } }
+@keyframes wr-duel-shield-catch { 0%,27% { transform: none; } 38% { transform: translateX(-5px) rotate(-7deg); } 60%,100% { transform: none; } }
+@keyframes wr-duel-shield-settle { 0%,24%,70%,100% { transform: none; } 38% { transform: scale(1.06); } }
+@keyframes wr-duel-deflect { 0% { opacity: 0; transform: translateX(6px); } 12% { opacity: 1; transform: translateX(6px); } 32% { opacity: 1; transform: translateX(-5px); } 45% { opacity: 1; transform: translate(-2px,-5px) rotate(-25deg); } 78% { opacity: 1; transform: translate(6px,-22px) rotate(-55deg); } 94%,100% { opacity: 0; transform: translate(6px,-22px) rotate(-55deg); } }
+@keyframes wr-duel-contact { 0%,25% { opacity: 0; } 32%,45% { opacity: 1; } 60%,100% { opacity: 0; } }
+@keyframes wr-duel-reflect { 0% { transform: rotate(-35deg); } 40% { transform: rotate(20deg); } 70%,100% { transform: none; } }
+@keyframes wr-duel-return-shot { 0% { opacity: 0; transform: translateX(6px); } 12% { opacity: 1; transform: translateX(6px); } 32% { opacity: 1; transform: translateX(-10px); } 42% { opacity: 1; transform: translateX(-10px) scaleX(-1); } 82% { opacity: 1; transform: translateX(4px) scaleX(-1); } 98%,100% { opacity: 0; transform: translateX(6px) scaleX(-1); } }
+@keyframes wr-duel-return-trail { 0%,38% { opacity: 0; } 50%,76% { opacity: 1; } 95%,100% { opacity: 0; } }
+@keyframes wr-duel-rewind { 0% { transform: translateX(7px); } 45% { transform: translateX(-6px); } 100% { transform: none; } }
+@keyframes wr-duel-leaf-back { 0% { opacity: .8; transform: perspective(500px) rotateY(0); } 40% { opacity: .9; transform: perspective(500px) rotateY(-100deg); } 75% { opacity: .25; transform: perspective(500px) rotateY(-155deg); } 100% { opacity: 0; transform: perspective(500px) rotateY(-170deg); } }
+@keyframes wr-duel-backstep { 0% { transform: translateX(22px); } 40% { transform: translateX(-8px); } 100% { transform: none; } }
+@keyframes wr-duel-compass { 0% { transform: rotate(-90deg); } 55% { transform: rotate(15deg); } 100% { transform: none; } }
+@keyframes wr-duel-find { 0% { transform: translate(-8px,8px); } 35% { transform: translate(6px,-6px); } 100% { transform: none; } }
+@keyframes wr-duel-peek { 0% { transform: scaleY(.2); } 45% { transform: scaleY(1.1); } 100% { transform: none; } }
+@keyframes wr-duel-index { 0% { clip-path: inset(0 0 100%); } 65%,100% { clip-path: inset(0); } }
+@keyframes wr-duel-page-forward { 0% { transform: translateX(22px); opacity: .65; } 70%,100% { transform: none; opacity: 1; } }
+@keyframes wr-duel-page-rewind { 0% { transform: perspective(1000px) rotateY(-18deg) translateX(-32px); opacity: .78; } 75%,100% { transform: none; opacity: 1; } }
+@keyframes wr-duel-page-back { 0% { transform: translateX(-16px); } 100% { transform: none; } }
+@keyframes wr-duel-page-arrive { 0% { opacity: .6; } 100% { opacity: 1; } }
+@keyframes wr-duel-feature { 25% { outline: 2px solid var(--wr-blue); outline-offset: 2px; } }
+@keyframes wr-duel-ink-spread { 0% { opacity: .55; clip-path: circle(3% at 40% 45%); } 65% { opacity: .18; clip-path: circle(85% at 40% 45%); } 100% { opacity: 0; clip-path: circle(100%); } }
+@media (max-width: 760px) {
+  .wr-duel-feedback-lane { height: 72px; flex-basis: 72px; padding: 6px 12px; }
+  .wr-duel-feedback-stack { justify-content: center; gap: 4px; }
+  /* Keep the most recent stamp as the single mobile focal point during a burst. */
+  .wr-duel-feedback:not(:last-child) { display: none; }
+  .wr-duel-feedback { padding: 6px 8px; gap: 8px; height: 58px; max-width: 100%; }
+  .wr-duel-feedback-symbol { width: 42px; height: 42px; flex-basis: 42px; }
+  .wr-duel-feedback-copy strong { font-size: 13px; }
+  .wr-duel-impact-layer { top: 82px; height: 120px; }
+  .wr-duel-impact { width: 84px; height: 84px; flex-basis: 84px; }
+  .wr-duel-impact .wr-duel-feedback-symbol { width: 58px; height: 58px; }
+  .wr-duel-impact-layer { display: none; }
+  .wr-duel-feedback-lane:has(.wr-duel-recent-panel) { min-height: 72px; grid-template-rows: 58px auto; }
+}

@@ -63,6 +63,6 @@ test("SF-A2: the waiting room applies only the latest players read", () => {
   const room = read("pages/RoomPage.jsx");
   assert.match(room, /return readId === playersReadRef\.current \? rows : null;/);
   const realtime = room.slice(room.indexOf('table: "room_players"'), room.indexOf(".subscribe("));
-  assert.match(realtime, /await readLatestPlayers\(\);\s*if \(latestPlayers\) setPlayers\(latestPlayers\);/);
+  assert.match(realtime, /await readLatestPlayers\("player-event"\);\s*if \(cancelled\) return;\s*if \(latestPlayers\) setPlayers\(latestPlayers\);/);
   assert.doesNotMatch(realtime, /fetchRoomPlayers\(/);
 });

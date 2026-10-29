@@ -1,0 +1,356 @@
+/* Approved Round 4 and user-reviewed END geometry, scoped to React cinematic stages. */
+.wr-cinematic-stage{ line-height:normal; font-size:16px; --blue:#3268a8; --teal:#27877d; --gold:#c79a32; --coral:#d66752; --ink:#243430; --muted:#51625a; --canvas:#e4ebdd; --paper:#fcfcf7; --line:#aebba5; --shadow:0 24px 70px #24343024; font-family:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif; color:var(--ink)}
+.wr-cinematic-stage *{ box-sizing:border-box}
+.wr-cinematic-stage :is(h1,h2,h3,p){ margin:0}
+.wr-cinematic-stage svg{ display:block}
+.wr-cinematic-stage img{ max-width:100%}
+.wr-cinematic-stage button{ min-height:44px; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); padding:8px 14px; font:inherit; cursor:pointer}
+.wr-cinematic-stage button:focus-visible{ outline:3px solid var(--blue); outline-offset:3px}
+.wr-cinematic-stage{ width:100%; height:100dvh; min-height:680px; position:relative; overflow:hidden; isolation:isolate; background:radial-gradient(ellipse at 50% 43%,#faf9ef 0%,#e4ebdd 70%)}
+.wr-cinematic-stage::before{ content:""; position:absolute; inset:0; z-index:-1; opacity:.38; background-image:linear-gradient(#aebba536 1px,transparent 1px),linear-gradient(90deg,#aebba536 1px,transparent 1px); background-size:72px 72px; mask-image:radial-gradient(ellipse,#0000 10%,#000 75%)}
+.wr-cinematic-stage .stage-bottom{ position:absolute; left:clamp(16px,3vw,44px); right:clamp(16px,3vw,44px); display:flex; justify-content:space-between; align-items:center; gap:12px; z-index:30}
+.wr-cinematic-stage .stage-bottom{ bottom:22px; font-size:12px; color:var(--muted)}
+.wr-cinematic-stage .stage-bottom #phase{ max-width:65%; line-height:1.4}
+.wr-cinematic-stage .stage-bottom button{ background:transparent}
+.wr-cinematic-stage .world{ position:absolute; inset:95px 0 90px; display:flex; align-items:center; justify-content:center; perspective:1600px}
+.wr-cinematic-stage .paper{ background:var(--paper); border:1px solid var(--line); box-shadow:var(--shadow); border-radius:8px; position:relative}
+.wr-cinematic-stage .paper::after{ content:""; position:absolute; inset:12px; border:1px dashed #aebba56b; border-radius:3px; pointer-events:none}
+.wr-cinematic-stage .field-map{ position:absolute; inset:-40px 0; pointer-events:none; opacity:.46; z-index:-1; width:100%; height:calc(100% + 80px); fill:none; stroke:#aebba5; stroke-width:1.1}
+.wr-cinematic-stage .seal{ border:4px double currentColor; border-radius:50%; height:116px; width:116px; display:grid; align-content:center; text-align:center; color:var(--teal); transform:rotate(-11deg); background:#fcfcf7e8; box-shadow:0 0 0 5px #fcfcf78a}
+.wr-cinematic-stage .seal span{ font-size:10px; letter-spacing:2px}
+.wr-cinematic-stage .seal strong{ font-size:26px; line-height:1.3}
+.wr-cinematic-stage .seal small{ font-size:9px; letter-spacing:2px}
+.wr-cinematic-stage .route-text{ min-width:0; overflow-wrap:anywhere; word-break:keep-all}
+.wr-cinematic-stage .course-title{ font-weight:800; line-height:1.35; font-size:clamp(25px,3.6vw,48px); overflow-wrap:anywhere; word-break:keep-all; color:var(--blue)}
+.wr-cinematic-stage .course-title.gold{ color:#9c741b}
+.wr-cinematic-stage.long .course-title{ font-size:clamp(18px,2.5vw,32px); line-height:1.5}
+.wr-cinematic-stage .course-caption{ font-size:11px; letter-spacing:2px; color:var(--muted); display:block; margin-bottom:14px}
+.wr-cinematic-stage .ink-particles{ position:absolute; inset:0; pointer-events:none}
+.wr-cinematic-stage .ink-particles i{ position:absolute; left:50%; top:45%; width:12px; height:7px; background:var(--gold); border-radius:1px}
+.wr-cinematic-stage .ring{ position:absolute; width:210px; height:210px; border:2px solid var(--gold); border-radius:50%; left:calc(50% - 105px); top:calc(45% - 105px); pointer-events:none; opacity:0}
+.wr-cinematic-stage .duel-composition{ width:min(1160px,94%); position:relative; height:480px; display:flex; align-items:flex-start; justify-content:space-between; padding-top:35px; margin-top:55px}
+.wr-cinematic-stage .duel-player{ width:39%; height:245px; position:relative; z-index:3; padding:30px 30px 25px; display:flex; align-items:center; gap:22px; background:var(--paper); border:1px solid var(--line); border-top:7px solid var(--blue); border-radius:5px; box-shadow:var(--shadow)}
+.wr-cinematic-stage .duel-player.right{ border-top-color:var(--coral); flex-direction:row-reverse; text-align:right}
+.wr-cinematic-stage .avatar-big{ width:112px; height:112px; flex-shrink:0; border-radius:50%; border:6px solid var(--paper); outline:2px solid var(--blue); overflow:hidden; box-shadow:0 10px 22px #2434301f}
+.wr-cinematic-stage .avatar-big img{ width:100%; height:100%; object-fit:cover}
+.wr-cinematic-stage .duel-player.right .avatar-big{ outline-color:var(--coral)}
+.wr-cinematic-stage .duel-player h2{ font-size:clamp(22px,2.7vw,35px); overflow-wrap:anywhere; line-height:1.3}
+.wr-cinematic-stage .duel-player small{ font-size:10px; letter-spacing:2px; color:var(--muted); display:block; margin-bottom:12px}
+.wr-cinematic-stage .duel-player .title-equipped{ font-size:12px; color:var(--teal); margin-top:10px}
+.wr-cinematic-stage .duel-vs{ position:absolute; left:40%; top:40px; width:20%; height:235px; display:flex; align-items:center; justify-content:center; z-index:8; font:italic 900 116px/1 Georgia,serif; color:var(--ink); text-shadow:4px 4px #c79a3270}
+.wr-cinematic-stage .duel-slash{ position:absolute; left:50%; top:5px; width:2px; height:270px; background:var(--gold); transform:rotate(18deg); z-index:1}
+.wr-cinematic-stage .duel-course{ position:absolute; left:12%; right:12%; top:322px; display:grid; grid-template-columns:1fr 60px 1fr; align-items:center; gap:20px; background:var(--paper); border:1px solid var(--line); border-bottom:5px solid var(--gold); padding:22px 30px; box-shadow:0 12px 25px #24343013; z-index:10}
+.wr-cinematic-stage .duel-course .course-title{ font-size:clamp(24px,2.6vw,37px)}
+.wr-cinematic-stage .duel-course .course-caption{ margin-bottom:7px}
+.wr-cinematic-stage .course-arrow{ font:50px/1 Georgia,serif; color:var(--teal); text-align:center}
+.wr-cinematic-stage .duel-composition .ink-particles{ z-index:9}
+.wr-cinematic-stage .duel-composition .ink-particles i{ top:29%}
+.wr-cinematic-stage .duel-composition .ring{ top:calc(29% - 105px)}
+.wr-cinematic-stage .group-composition{ width:min(1080px,92%); position:relative; margin-top:52px}
+.wr-cinematic-stage .roster{ display:grid; grid-template-columns:repeat(var(--count),minmax(0,1fr)); gap:12px; width:min(790px,100%); margin:0 auto 35px; position:relative; z-index:4}
+.wr-cinematic-stage .roster-person{ text-align:center; min-width:0}
+.wr-cinematic-stage .roster-person .avatar{ width:70px; height:70px; border-radius:50%; overflow:hidden; border:5px solid var(--paper); outline:1px solid var(--line); box-shadow:0 8px 12px #24343018; margin:0 auto 12px}
+.wr-cinematic-stage .roster-person .avatar img{ width:100%; height:100%}
+.wr-cinematic-stage .roster-person strong{ font-size:13px; display:block; overflow-wrap:anywhere; line-height:1.3}
+.wr-cinematic-stage .reel-machine{ position:relative; padding:32px 36px 35px; border:1px solid var(--line); border-radius:12px; background:linear-gradient(150deg,#fbfaf0,#e9eddf); box-shadow:var(--shadow)}
+.wr-cinematic-stage .reels{ display:grid; grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr); align-items:center; gap:18px}
+.wr-cinematic-stage .reel-label{ display:flex; justify-content:space-between; font-size:11px; color:var(--blue); font-weight:700; letter-spacing:1px; padding:8px 5px 12px}
+.wr-cinematic-stage .reel-box:last-child .reel-label{ color:#927018}
+.wr-cinematic-stage .lock-state{ color:var(--muted); font-weight:400; font-size:10px}
+.wr-cinematic-stage .reel-window{ height:208px; position:relative; overflow:hidden; border:2px solid var(--blue); border-radius:5px; background:#edf2e7; box-shadow:inset 0 12px 25px #24343019}
+.wr-cinematic-stage .reel-box:last-child .reel-window{ border-color:var(--gold)}
+.wr-cinematic-stage .reel-strip{ position:absolute; width:100%; left:0; top:0; will-change:transform}
+.wr-cinematic-stage .reel-back{ height:208px; display:grid; place-items:center; background:repeating-linear-gradient(45deg,#e1e8d6 0,#e1e8d6 12px,#f2f4e8 13px,#f2f4e8 25px); border-block:4px solid #faf8e8}
+.wr-cinematic-stage .reel-back img{ width:150px; height:86px; opacity:.65}
+.wr-cinematic-stage .reel-back .back-symbol{ width:90px; height:90px; border:1px solid #aebba5; border-radius:50%; font:italic 58px Georgia,serif; color:#71856d; display:grid; place-items:center}
+.wr-cinematic-stage .reel-final{ position:absolute; inset:0; padding:30px 24px; background:var(--paper); display:flex; justify-content:center; flex-direction:column; z-index:3}
+.wr-cinematic-stage .reel-final .course-title{ font-size:clamp(25px,3vw,40px)}
+.wr-cinematic-stage .reel-shade{ position:absolute; inset:0; z-index:5; box-shadow:inset 0 18px 18px #24343012,inset 0 -18px 18px #2434300c; pointer-events:none}
+.wr-cinematic-stage .reel-flash{ position:absolute; inset:0; z-index:6; background:#e6eef7; opacity:0; pointer-events:none}
+.wr-cinematic-stage .reel-box:last-child .reel-flash{ background:#f3df9b}
+.wr-cinematic-stage .group-connection{ width:100%; height:30px; margin-top:8px}
+.wr-cinematic-stage .departure{ font-size:22px; font-weight:900; letter-spacing:4px; text-align:center; color:var(--teal); margin-top:23px}
+.wr-cinematic-stage.eight .roster{ gap:6px}
+.wr-cinematic-stage.eight .roster-person .avatar{ width:60px; height:60px}
+.wr-cinematic-stage.eight .roster-person strong{ font-size:12px}
+.wr-cinematic-stage .result-board{ width:min(1110px,92%); height:515px; padding:32px 40px; position:relative; margin-top:42px}
+.wr-cinematic-stage .board-heading{ text-align:center}
+.wr-cinematic-stage .board-heading h2{ font-size:25px; margin-top:10px}
+.wr-cinematic-stage .board-binding{ position:absolute; top:-13px; left:13%; right:13%; height:28px; display:flex; justify-content:space-between}
+.wr-cinematic-stage .board-binding i{ width:13px; height:28px; border:3px solid #5c7064; border-radius:8px; background:linear-gradient(90deg,#aebba5,#f7f7eb,#aebba5)}
+.wr-cinematic-stage .podium{ display:grid; grid-template-columns:1fr 1.2fr 1fr; gap:25px; align-items:end; margin-top:35px; padding-inline:40px; height:250px}
+.wr-cinematic-stage .podium-slot{ position:relative; min-width:0; text-align:center; align-self:stretch; display:flex; flex-direction:column; justify-content:flex-end}
+.wr-cinematic-stage .podium-rank{ font:italic 60px/1 Georgia,serif; color:var(--blue); position:absolute; top:0; left:10px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-rank{ color:#a07b20; font-size:80px; top:-28px}
+.wr-cinematic-stage .podium-slot[data-rank="3"] .podium-rank{ color:#ac7561}
+.wr-cinematic-stage .podium-person{ position:relative; text-align:center}
+.wr-cinematic-stage .podium-avatar{ width:80px; height:80px; border:5px solid var(--paper); outline:2px solid var(--line); border-radius:50%; overflow:hidden; margin:0 auto 12px; box-shadow:0 8px 15px #24343018}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-avatar{ width:106px; height:106px; outline:3px solid var(--gold)}
+.wr-cinematic-stage .podium-avatar img{ width:100%; height:100%}
+.wr-cinematic-stage .podium-person strong{ display:block; overflow-wrap:anywhere; font-size:18px}
+.wr-cinematic-stage .podium-person small{ font-size:11px; color:var(--muted); display:block; margin:6px 0 12px}
+.wr-cinematic-stage .podium-person .tied-names{ font-size:14px}
+.wr-cinematic-stage .podium-plinth{ height:42px; background:#e6eef7; border:1px solid #3268a850; border-radius:5px 5px 0 0; font-size:11px; letter-spacing:2px; display:grid; place-items:center; color:var(--blue)}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-plinth{ background:#f7efd9; border-color:#c79a3280; color:#8d6918; height:60px}
+.wr-cinematic-stage .podium-slot[data-rank="3"] .podium-plinth{ background:#f5e8de; border-color:#d6675250; color:#9b5d40; height:32px}
+.wr-cinematic-stage .my-record{ border-top:1px dashed var(--line); margin-top:20px; padding-top:15px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:14px}
+.wr-cinematic-stage .my-record span:first-child{ font-weight:800; color:var(--teal)}
+.wr-cinematic-stage .result-transition{ display:flex; justify-content:space-between; gap:20px; align-items:center; font-size:11px; color:var(--muted); margin-top:13px}
+.wr-cinematic-stage .result-transition button{ font-size:12px; background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.wr-cinematic-stage .result-board .ink-particles{ z-index:10}
+.wr-cinematic-stage .result-board .ink-particles i{ top:35%}
+.wr-cinematic-stage .single-finish{ width:min(1000px,92%); height:490px; position:relative; margin-top:45px}
+.wr-cinematic-stage .finish-node{ text-align:center; min-width:0}
+.wr-cinematic-stage .finish-node i{ display:block; width:42px; height:42px; border-radius:50%; border:3px solid var(--teal); background:var(--paper); margin:0 auto 13px; position:relative; font-style:normal; font-size:20px; line-height:36px; color:var(--teal)}
+.wr-cinematic-stage .finish-node:last-child i{ border-color:var(--gold); background:#f7efd9; color:#8d6918}
+.wr-cinematic-stage .finish-node strong{ font-size:13px; line-height:1.4; display:block; overflow-wrap:anywhere}
+.wr-cinematic-stage .finish-sheet{ position:absolute; top:110px; left:0; right:0; height:355px; padding:40px 45px}
+.wr-cinematic-stage .finish-sheet h2{ font:700 37px/1.3 Georgia,"Malgun Gothic",serif; margin-top:14px}
+.wr-cinematic-stage .finish-sheet .seal{ position:absolute; right:55px; top:35px; color:var(--teal); width:130px; height:130px}
+.wr-cinematic-stage .finish-stats{ display:flex; gap:65px; margin-top:40px; border-top:1px dashed var(--line); padding-top:20px}
+.wr-cinematic-stage .finish-stats small{ font-size:11px; letter-spacing:2px; color:var(--muted); display:block}
+.wr-cinematic-stage .finish-stats strong{ display:block; font-size:30px; margin-top:8px}@media(max-width:700px){
+.wr-cinematic-stage{ min-height:750px}
+.wr-cinematic-stage .world{ inset:94px 0 84px}
+.wr-cinematic-stage .stage-bottom{ bottom:18px; font-size:11px}
+.wr-cinematic-stage .stage-bottom button{ font-size:11px; padding:8px 10px}
+.wr-cinematic-stage .field-map{ opacity:.38}
+.wr-cinematic-stage .course-title{ font-size:27px}
+.wr-cinematic-stage .course-caption{ font-size:10px; margin-bottom:10px; letter-spacing:1px}
+.wr-cinematic-stage.long .course-title{ font-size:18px}
+.wr-cinematic-stage .duel-composition{ width:calc(100% - 28px); height:485px; display:block; margin-top:65px; padding-top:5px}
+.wr-cinematic-stage .duel-player{ width:85%; height:148px; padding:18px 20px; gap:18px; position:absolute; left:0; top:0; border-top-width:5px}
+.wr-cinematic-stage .duel-player.right{ left:auto; right:0; top:180px}
+.wr-cinematic-stage .avatar-big{ width:76px; height:76px; border-width:4px}
+.wr-cinematic-stage .duel-player h2{ font-size:24px}
+.wr-cinematic-stage .duel-player small{ font-size:9px; margin-bottom:8px}
+.wr-cinematic-stage .duel-player .title-equipped{ font-size:10px; margin-top:6px}
+.wr-cinematic-stage .duel-vs{ left:38%; top:108px; width:24%; height:116px; font-size:75px}
+.wr-cinematic-stage .duel-slash{ top:60px; height:200px; left:50%; transform:rotate(60deg)}
+.wr-cinematic-stage .duel-course{ left:0; right:0; top:362px; grid-template-columns:1fr 24px 1fr; gap:9px; padding:17px 16px}
+.wr-cinematic-stage .duel-course .course-title{ font-size:24px}
+.wr-cinematic-stage .duel-course .course-caption{ font-size:9px}
+.wr-cinematic-stage .duel-course .course-arrow{ font-size:27px}
+.wr-cinematic-stage.long .duel-course{ top:354px; padding:12px; gap:7px}
+.wr-cinematic-stage.long .duel-course .course-title{ font-size:16px; line-height:1.45}
+.wr-cinematic-stage .duel-composition .ink-particles i{ top:33%}
+.wr-cinematic-stage .duel-composition .ring{ top:calc(33% - 105px)}
+.wr-cinematic-stage .group-composition{ width:calc(100% - 28px); margin-top:70px}
+.wr-cinematic-stage .roster{ gap:10px; margin-bottom:25px}
+.wr-cinematic-stage .roster-person .avatar{ width:55px; height:55px; border-width:4px; margin-bottom:9px}
+.wr-cinematic-stage .roster-person strong{ font-size:11px}
+.wr-cinematic-stage.eight .roster{ grid-template-columns:repeat(4,minmax(0,1fr)); row-gap:15px; margin-bottom:20px}
+.wr-cinematic-stage.eight .roster-person .avatar{ width:45px; height:45px; margin-bottom:6px}
+.wr-cinematic-stage.eight .roster-person strong{ font-size:10px}
+.wr-cinematic-stage.eight .group-composition{ margin-top:80px}
+.wr-cinematic-stage .reel-machine{ padding:27px 12px 16px}
+.wr-cinematic-stage .reels{ grid-template-columns:minmax(0,1fr); gap:10px}
+.wr-cinematic-stage .reel-window,.wr-cinematic-stage .reel-back{ height:113px}
+.wr-cinematic-stage .reel-label{ padding:3px 2px 7px; font-size:10px}
+.wr-cinematic-stage .reel-back img{ height:80px}
+.wr-cinematic-stage .reel-back .back-symbol{ width:65px; height:65px; font-size:40px}
+.wr-cinematic-stage .reel-final{ padding:16px 18px}
+.wr-cinematic-stage .reel-final .course-title{ font-size:27px}
+.wr-cinematic-stage .reels>.course-arrow{ display:none}
+.wr-cinematic-stage .lock-state{ font-size:9px}
+.wr-cinematic-stage .group-connection{ height:18px; margin-top:0}
+.wr-cinematic-stage .departure{ font-size:19px; letter-spacing:2px; margin-top:16px}
+.wr-cinematic-stage.long .reel-final .course-title{ font-size:17px}
+.wr-cinematic-stage.eight .reel-label{ padding-bottom:5px}
+.wr-cinematic-stage.eight .reels{ gap:8px}
+.wr-cinematic-stage .result-board{ width:calc(100% - 28px); height:480px; padding:26px 16px; margin-top:67px}
+.wr-cinematic-stage .board-heading h2{ font-size:20px; margin-top:8px}
+.wr-cinematic-stage .podium{ gap:9px; padding-inline:0; margin-top:30px; height:215px; grid-template-columns:1fr 1.2fr 1fr}
+.wr-cinematic-stage .podium-rank{ font-size:43px; left:1px; top:1px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-rank{ font-size:65px; top:-23px}
+.wr-cinematic-stage .podium-avatar{ width:57px; height:57px; border-width:3px; margin-bottom:10px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-avatar{ width:72px; height:72px; outline-width:2px}
+.wr-cinematic-stage .podium-person strong{ font-size:13px}
+.wr-cinematic-stage .podium-person small{ font-size:9px; line-height:1.5; margin:5px 0 10px}
+.wr-cinematic-stage .podium-plinth{ height:37px; font-size:9px; letter-spacing:1px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-plinth{ height:56px}
+.wr-cinematic-stage .podium-person .tied-names{ font-size:10px}
+.wr-cinematic-stage .my-record{ margin-top:20px; font-size:12px; padding-top:15px; align-items:flex-start; flex-direction:column; gap:8px}
+.wr-cinematic-stage .result-transition{ margin-top:16px; font-size:10px; gap:8px}
+.wr-cinematic-stage .result-transition button{ font-size:10px; padding:8px 10px}
+.wr-cinematic-stage .single-finish{ width:calc(100% - 28px); height:500px; margin-top:65px}
+.wr-cinematic-stage .finish-node strong{ font-size:11px}
+.wr-cinematic-stage .finish-node i{ width:34px; height:34px; font-size:16px; line-height:28px; margin-bottom:12px}
+.wr-cinematic-stage .finish-sheet{ top:112px; height:361px; padding:28px 24px}
+.wr-cinematic-stage .finish-sheet h2{ font-size:27px; max-width:65%; margin-top:13px}
+.wr-cinematic-stage .finish-sheet .seal{ right:18px; top:39px; width:92px; height:92px; border-width:3px}
+.wr-cinematic-stage .finish-sheet .seal strong{ font-size:23px}
+.wr-cinematic-stage .finish-sheet .seal span{ font-size:8px}
+.wr-cinematic-stage .finish-sheet .seal small{ font-size:7px}
+.wr-cinematic-stage .finish-stats{ gap:42px; margin-top:32px; padding-top:19px}
+.wr-cinematic-stage .finish-stats small{ font-size:10px}
+.wr-cinematic-stage .finish-stats strong{ font-size:27px}
+.wr-cinematic-stage.long .finish-node strong{ font-size:9px}
+.wr-cinematic-stage.long .finish-sheet h2{ font-size:24px}
+}@media(max-width:700px){
+.wr-cinematic-stage .finish-sheet{ height:380px}}@media(min-width:701px){
+.wr-cinematic-stage .finish-sheet{ height:390px}}
+.wr-cinematic-stage .duel-composition .ink-particles i,.wr-cinematic-stage .result-board .ink-particles i{ width:23px; height:13px; box-shadow:2px 3px 0 #24343030}
+.wr-cinematic-stage .ink-particles i:nth-child(3n){ width:14px; height:24px; clip-path:polygon(0 0,100% 15%,80% 100%,10% 80%)}
+.wr-cinematic-stage .ink-particles i:nth-child(4n){ width:26px; height:26px; border-radius:50%; clip-path:polygon(45% 0,60% 30%,100% 25%,75% 60%,95% 95%,50% 80%,10% 100%,25% 55%,0 20%,35% 30%)}
+.wr-cinematic-stage .duel-composition .ring{ border-width:8px; border-style:dashed}
+.wr-cinematic-stage .duel-course{ transform-origin:center; perspective:700px}
+.wr-cinematic-stage .duel-player{ will-change:transform}
+.wr-cinematic-stage .podium{ height:280px; margin-top:25px; grid-template-columns:1fr 1.35fr 1fr}
+.wr-cinematic-stage .result-board{ height:550px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-avatar{ width:120px; height:120px; border-color:#f4d680; outline:4px solid #c79a32}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-plinth{ height:100px; background:linear-gradient(110deg,#b27d22,#f6d478 40%,#d4a442 70%,#a77924); border:2px solid #9c741b; box-shadow:inset 0 6px 0 #ffeac0; color:#50381f; font-weight:900}@media(max-width:700px){
+.wr-cinematic-stage .podium{ height:250px; margin-top:28px}
+.wr-cinematic-stage .result-board{ height:520px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-avatar{ width:82px; height:82px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-plinth{ height:82px; font-size:9px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-rank{ top:-16px; font-size:60px}}
+.wr-cinematic-stage .stage-bottom{ justify-content:flex-end}
+.wr-cinematic-stage .seal strong{ font-size:30px}
+.wr-cinematic-stage .duel-composition{ width:min(1320px,96%); height:550px; margin-top:0; padding-top:25px}
+.wr-cinematic-stage .duel-player{ width:44%; height:310px; padding:34px; gap:27px; border-top-width:9px}
+.wr-cinematic-stage .avatar-big{ width:144px; height:144px; border-width:7px}
+.wr-cinematic-stage .duel-player h2{ font-size:40px}
+.wr-cinematic-stage .duel-vs{ left:32%; width:36%; top:15px; height:310px; font-size:190px; z-index:9}
+.wr-cinematic-stage .duel-slash{ width:5px; top:0; height:330px}
+.wr-cinematic-stage .duel-course{ top:380px; left:10%; right:10%; padding:24px 32px}
+.wr-cinematic-stage .duel-composition .ink-particles{ z-index:7}
+.wr-cinematic-stage .duel-composition .ink-particles i{ top:31%; width:27px; height:16px}
+.wr-cinematic-stage .duel-composition .ring{ top:calc(31% - 165px); left:calc(50% - 165px); width:330px; height:330px; border-width:7px; z-index:2}
+.wr-cinematic-stage .group-composition{ margin-top:0}
+.wr-cinematic-stage .roster{ margin-bottom:30px}
+.wr-cinematic-stage .reel-machine{ padding:22px 30px 23px}
+.wr-cinematic-stage .reel-back{ background:#e6ecdf; border-block:5px solid #fcfcf7; position:relative}
+.wr-cinematic-stage .reel-back::after{ content:""; position:absolute; inset:9px; border:2px solid #aebba580; border-radius:3px}
+.wr-cinematic-stage .reel-back img{ width:185px; height:155px; opacity:1}
+.wr-cinematic-stage .reel-back.motif-0 img{ width:230px; height:145px}
+.wr-cinematic-stage .reel-back.motif-1,.wr-cinematic-stage .reel-back.motif-4{ background:#dce8ed}
+.wr-cinematic-stage .reel-back.motif-2,.wr-cinematic-stage .reel-back.motif-5{ background:#f3e9c8}
+.wr-cinematic-stage .reel-back.motif-3{ background:#e0e9ce}
+.wr-cinematic-stage .reel-lock-frame{ position:absolute; inset:4px; border:4px solid #3268a8; z-index:7; pointer-events:none; clip-path:polygon(0 0,24% 0,24% 5%,5% 5%,5% 24%,0 24%,0 0,100% 0,100% 24%,95% 24%,95% 5%,76% 5%,76% 0,100% 0,100% 100%,76% 100%,76% 95%,95% 95%,95% 76%,100% 76%,100% 100%,0 100%,0 76%,5% 76%,5% 95%,24% 95%,24% 100%,0 100%)}
+.wr-cinematic-stage .reel-box:last-child .reel-lock-frame{ border-color:#a77924}
+.wr-cinematic-stage .reel-final .course-caption{ margin-bottom:12px}
+.wr-cinematic-stage .departure{ margin-top:18px}
+.wr-cinematic-stage .lock-state{ font-size:15px; font-weight:bold}
+.wr-cinematic-stage .podium-person{ z-index:4}
+.wr-cinematic-stage .result-board .ink-particles{ z-index:2}
+.wr-cinematic-stage .result-board .ink-particles i{ top:28%; width:12px; height:8px}
+.wr-cinematic-stage .result-board .ring{ top:calc(28% - 105px)}
+.wr-cinematic-stage .result-transition{ justify-content:flex-end}
+.wr-cinematic-stage .board-heading h2{ margin-top:0}
+.wr-cinematic-stage .finish-sheet h2{ margin-top:28px}@media(max-width:700px){
+.wr-cinematic-stage .duel-composition{ width:calc(100% - 20px); height:550px; margin-top:0; padding-top:0}
+.wr-cinematic-stage .duel-player{ width:96%; height:190px; top:0; padding:22px; gap:20px; border-top-width:7px}
+.wr-cinematic-stage .duel-player.right{ top:220px}
+.wr-cinematic-stage .avatar-big{ width:92px; height:92px; border-width:5px}
+.wr-cinematic-stage .duel-player h2{ font-size:29px}
+.wr-cinematic-stage .duel-vs{ left:23%; width:54%; top:135px; height:165px; font-size:128px}
+.wr-cinematic-stage .duel-slash{ top:90px; height:235px}
+.wr-cinematic-stage .duel-course{ top:440px; left:0; right:0; padding:20px 16px}
+.wr-cinematic-stage .duel-composition .ink-particles i{ top:39%; width:22px; height:13px}
+.wr-cinematic-stage .duel-composition .ring{ top:calc(39% - 130px); left:calc(50% - 130px); width:260px; height:260px}
+.wr-cinematic-stage.long .duel-course{ top:430px; padding:16px}
+.wr-cinematic-stage .group-composition{ margin-top:0}
+.wr-cinematic-stage.eight .group-composition{ margin-top:0}
+.wr-cinematic-stage .roster{ margin-bottom:24px}
+.wr-cinematic-stage .reel-machine{ padding:14px 12px 18px}
+.wr-cinematic-stage .reel-back img{ width:105px; height:92px}
+.wr-cinematic-stage .reel-back.motif-0 img{ width:190px; height:96px}
+.wr-cinematic-stage .reel-label{ font-size:11px}
+.wr-cinematic-stage .reel-lock-frame{ border-width:3px}
+.wr-cinematic-stage .podium{ grid-template-columns:1fr 1.2fr 1fr; gap:12px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-avatar{ width:78px; height:78px; outline-width:2px}
+.wr-cinematic-stage .podium-slot[data-rank="1"] .podium-plinth{ height:78px}
+.wr-cinematic-stage .podium-rank{ left:0}
+.wr-cinematic-stage .podium-person strong{ font-size:13px}
+.wr-cinematic-stage .podium-person small{ font-size:10px; color:#3e5148}
+.wr-cinematic-stage .podium-person .tied-names{ font-size:10px}
+.wr-cinematic-stage .finish-sheet h2{ margin-top:30px}}@media(min-width:701px) and (max-width:1000px){
+.wr-cinematic-stage .duel-player{ padding:24px; gap:16px}
+.wr-cinematic-stage .avatar-big{ width:108px; height:108px}
+.wr-cinematic-stage .duel-player h2{ font-size:28px}
+.wr-cinematic-stage .duel-vs{ font-size:155px}}
+.wr-cinematic-stage .ceremony-page{ height:100%; transform-origin:center bottom}
+.wr-cinematic-stage.long .podium-person strong{ font-size:14px; line-height:1.35}@media(max-width:700px){
+.wr-cinematic-stage.long .roster-person strong{ font-size:10px; line-height:1.25}
+.wr-cinematic-stage.long .podium-person strong{ font-size:10px}
+.wr-cinematic-stage.long .podium{ height:285px; margin-top:24px}
+.wr-cinematic-stage.long .result-board{ height:570px}
+.wr-cinematic-stage.long .my-record{ font-size:11px}}@media(min-width:701px) and (max-width:1000px){
+.wr-cinematic-stage.long .reel-final .course-title{ font-size:22px}
+.wr-cinematic-stage.long .reel-final{ padding:25px 18px}}
+.wr-cinematic-stage .single-finish{ height:510px; margin-top:24px}
+.wr-cinematic-stage .single-finish .finish-sheet{ top:0; height:auto; min-height:490px; padding:30px 40px}
+.wr-cinematic-stage .single-finish .finish-sheet h2{ font-size:28px; margin:0 0 32px}
+.wr-cinematic-stage .single-finish .finish-sheet .seal{ width:76px; height:76px; top:21px; right:32px}
+.wr-cinematic-stage .single-finish .seal strong{ font-size:22px}
+.wr-cinematic-stage .finish-endpoints{ display:grid; grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr); gap:20px; align-items:start}
+.wr-cinematic-stage .finish-arrow{ align-self:center; font-size:25px; color:var(--teal)}
+.wr-cinematic-stage .finish-node small{ display:block; font-size:12px; color:var(--muted); margin:8px 0}
+.wr-cinematic-stage .finish-node strong{ font-size:25px; line-height:1.4; overflow-wrap:anywhere}
+.wr-cinematic-stage.long .finish-node strong{ font-size:19px}
+.wr-cinematic-stage .single-finish .finish-stats{ margin-top:26px; gap:40px; display:grid; grid-template-columns:1fr 1fr}
+.wr-cinematic-stage .finish-actions{ margin-top:24px; display:flex; justify-content:flex-end}
+.wr-cinematic-stage .finish-actions button{ font-size:13px; background:transparent}@media(max-width:700px){
+.wr-cinematic-stage .single-finish{ height:520px; margin-top:15px}
+.wr-cinematic-stage .single-finish .finish-sheet{ min-height:480px; padding:25px 22px}
+.wr-cinematic-stage .single-finish .finish-sheet h2{ margin-bottom:40px; font-size:25px}
+.wr-cinematic-stage .single-finish .finish-sheet .seal{ width:62px; height:62px; top:18px; right:22px}
+.wr-cinematic-stage .single-finish .seal strong{ font-size:18px}
+.wr-cinematic-stage .finish-endpoints{ gap:8px; grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr)}
+.wr-cinematic-stage .finish-node strong{ font-size:22px}
+.wr-cinematic-stage.long .finish-node strong{ font-size:16px}
+.wr-cinematic-stage .finish-node small{ font-size:10px}
+.wr-cinematic-stage .single-finish .finish-stats{ gap:15px; margin-top:25px}
+.wr-cinematic-stage .single-finish .finish-stats strong{ font-size:26px}
+.wr-cinematic-stage .single-finish .finish-stats small{ font-size:10px; letter-spacing:0}
+.wr-cinematic-stage .finish-actions{ margin-top:22px}}
+.wr-cinematic-stage .single-finish .finish-node strong{ display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:6; overflow:hidden}
+.wr-cinematic-stage[data-scene="group-end"] .podium-slot[data-rank="1"] .podium-rank{ position:static; display:block; font-size:76px; line-height:1; margin:0 0 10px}
+.wr-cinematic-stage[data-scene="group-end"] .podium-slot[data-rank="1"] .podium-plinth{ height:24px; min-height:0; background:transparent; border:0; border-radius:0; box-shadow:none; letter-spacing:1px; color:#8d6918}@media(max-width:700px){
+.wr-cinematic-stage[data-scene="group-end"] .podium-slot[data-rank="1"] .podium-rank{ font-size:52px; margin-bottom:8px}
+.wr-cinematic-stage[data-scene="group-end"] .podium-slot[data-rank="1"] .podium-plinth{ height:22px}}
+/* No presentation rule changes server phase clocks, claims or reward mounts. */
+.wr-cinematic-stage.wr-start-overlay{ position:fixed; inset:0; width:100%; max-width:none; margin:0; padding:0; display:block; border:0; border-radius:0; z-index:1000}
+.wr-cinematic-stage[hidden]{ display:none!important}
+.wr-cinematic-stage h2:focus{outline:none}
+.wr-cinematic-stage .pcard-avatar{ width:100%; height:100%; min-width:0; border:0; border-radius:inherit; outline:0; box-shadow:none; background:transparent; padding:0}
+.wr-cinematic-stage .profile-avatar img{ width:100%; height:100%; object-fit:cover}
+.wr-cinematic-stage ul.roster{ padding:0; list-style:none}
+.wr-cinematic-stage .roster-person{ display:block; border:0; background:transparent; padding:0; box-shadow:none; margin:0; min-width:0}
+.wr-cinematic-stage .stage-bottom{ bottom:-68px}
+.wr-cinematic-stage .course-title{ display:block}
+.wr-cinematic-stage .duel-player .title-equipped{ display:block}
+.wr-page.wr-race.wr-cinematic-result.is-cinematic-cover{ padding:0; background:var(--wr-canvas)}
+.wr-cinematic-result.is-cinematic-cover .wr-result-frame{ max-width:none; width:100%; padding:0; border:0; border-radius:0; box-shadow:none}
+.wr-cinematic-result .wr-cinematic-stage{ width:100vw; max-width:none; margin-left:calc(50% - 50vw); padding:0; border:0; border-radius:0; box-shadow:none}
+.wr-cinematic-result.is-cinematic-cover .wr-result-card{ background:transparent; border:0; box-shadow:none; padding:0; max-width:940px; margin-inline:auto}
+.wr-cinematic-result.is-cinematic-cover .wr-result-card::before,.wr-cinematic-result.is-cinematic-cover .wr-result-card::after{ display:none}
+.wr-cinematic-result.is-cinematic-cover :is(.wr-result-head,.wr-result-stats,.wr-result-route,.wr-rrank,.wr-standings){ display:none}
+.wr-cinematic-result .wr-rcard{ margin-top:0}
+.wr-cinematic-result.is-cinematic-cover .wr-result-actions{ display:none}
+.wr-cinematic-stage :is(h1,h2,h3){ font-family:inherit}
+.wr-cinematic-stage .podium-slot[data-rank="2"]{ order:1; grid-column:1}
+.wr-cinematic-stage .podium-slot[data-rank="1"]{ order:2; grid-column:2}
+.wr-cinematic-stage .podium-slot[data-rank="3"]{ order:3; grid-column:3}
+.wr-cinematic-result.is-journal-arrival :is(.wr-result-head,.wr-result-stats,.wr-journal-seal,.wr-standings-list .wr-srow){ animation:none}
+.wr-cinematic-result.is-cinematic-records-transition .wr-result-card{ animation:wr-cinematic-records-enter 400ms ease-out both}
+@keyframes wr-cinematic-records-enter{
+from{ opacity:0; transform:translateY(18px)}
+to{ opacity:1; transform:none}}
+@media(max-width:700px){
+.wr-cinematic-stage .stage-bottom{ bottom:-66px}}
+@media(prefers-reduced-motion:reduce){
+.wr-cinematic-stage *{ animation:none!important; transition:none!important; scroll-behavior:auto!important}}
+
+
+/* Single finish decorates one canonical heading; no second sheet or fullscreen stage. */
+.wr-result--single.is-single-celebrating .wr-result-head{visibility:hidden}
+.wr-single-finish-moment{position:absolute;inset:4px 0 auto;height:122px;z-index:2;overflow:hidden;pointer-events:none;color:var(--wr-gold)}
+.wr-single-finish-moment h2{position:absolute;left:32px;top:22px;margin:0;font:600 72px/1 var(--wr-font-heading);transform-origin:left center;white-space:nowrap}
+.wr-race .wr-single-finish-moment h2:focus{outline:none}
+.wr-single-finish-moment .finish-stamp{position:absolute;top:12px;right:40px;width:64px;height:64px;border:3px double var(--wr-gold);border-radius:50%;display:grid;place-items:center;background:#fbf4dd;font:600 20px/1 var(--wr-font-heading);transform-origin:center;box-shadow:0 0 14px #c79a3222}
+.wr-single-finish-moment .finish-impact{position:absolute;top:7px;right:35px;width:74px;height:74px;border:2px solid var(--wr-gold);border-radius:50%;opacity:0}
+.wr-single-finish-moment .wr-cinematic-skip{position:absolute;right:20px;bottom:0;min-height:44px;padding:4px 12px;pointer-events:auto;background:transparent;border:0;border-radius:4px;box-shadow:none;font-size:12px;color:var(--wr-ink-2)}
+@media(max-width:700px){.wr-single-finish-moment{height:122px}.wr-single-finish-moment h2{left:18px;top:27px;font-size:56px}.wr-single-finish-moment .finish-stamp{right:27px;top:10px;width:58px;height:58px;font-size:18px}.wr-single-finish-moment .finish-impact{right:22px;top:5px;width:68px;height:68px}}
+@media(prefers-reduced-motion:reduce){.wr-single-finish-moment{display:none}}

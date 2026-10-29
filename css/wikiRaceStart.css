@@ -1,0 +1,41 @@
+/* Start presentation only: existing phase timers and full-screen input shield stay intact. */
+.wr-page.wr-start-overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; overflow-y: auto; background: rgb(228 235 221 / 94%); color: var(--wr-ink); isolation: isolate; }
+.wr-start-overlay::before, .wr-start-overlay::after { content: none; }
+.vs-journal, .countdown-journal { width: min(760px, 100%); padding: 28px; border: 1px solid var(--wr-frame); border-top: 4px double var(--wr-frame); border-radius: 14px; background: var(--wr-paper); box-shadow: var(--wr-shadow-shell); text-align: center; margin: auto; }
+.wr-start-kicker { display: block; margin: 0 0 10px; font: 600 12px/1.5 var(--wr-font-heading); color: var(--wr-ink-2); }
+.vs-heading { margin: 0 0 24px; font: 600 25px/1.4 var(--wr-font-heading); }
+.vs-players { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 20px; align-items: center; }
+.wr-start-overlay .vs-card { width: auto; min-width: 0; padding: 18px 12px; background: var(--wr-paper-2); border: 1px dashed var(--wr-divider); border-radius: 10px; box-shadow: none; animation: none; }
+.wr-start-overlay .vs-avatar { width: 52px; height: 52px; font-size: 22px; background: var(--wr-teal-bg); color: var(--wr-teal); margin-bottom: 8px; }
+.wr-start-overlay .vs-name { margin: 0; font-size: 16px; color: var(--wr-ink); overflow-wrap: anywhere; }
+.wr-start-overlay .vs-text { font: 600 26px/1 var(--wr-font-heading); color: var(--wr-ink-3); text-shadow: none; animation: none; }
+.vs-course { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 16px; padding-top: 20px; margin-top: 24px; border-top: 1px dashed var(--wr-divider); text-align: left; }
+.vs-course > div { min-width: 0; }
+.vs-course div > span { display: block; font-size: 12px; color: var(--wr-ink-2); margin-bottom: 6px; }
+.vs-course strong { display: block; font-size: 17px; overflow-wrap: anywhere; }
+.vs-course-start { color: var(--wr-blue); }
+.vs-course-target, .vs-course-arrow { color: var(--wr-gold); }
+.vs-course-arrow { align-self: center; }
+.vs-start-note, .countdown-note { font-size: 12px; color: var(--wr-ink-2); margin: 20px 0 0; }
+.countdown-journal { width: min(360px,100%); }
+.wr-start-overlay .countdown-number { color: var(--wr-teal); font: 600 88px/1.2 var(--wr-font-heading); margin: 18px 0; }
+.countdown-note { display: block; }
+.wiki-nav-item { border: 0; background: transparent; padding: 0; color: inherit; }
+.wiki-nav-item:focus-visible { outline: 2px solid var(--wr-blue, #3268A8); outline-offset: 2px; }
+@media (max-width:760px) {
+  .wr-page.wr-start-overlay { padding: 16px; }
+  .vs-journal, .countdown-journal { padding: 20px 16px; }
+  .vs-heading { font-size: 21px; }
+  .vs-players { gap: 10px; }
+  .wr-start-overlay .vs-card { padding: 14px 8px; }
+  .vs-course { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .vs-course-arrow { transform: rotate(90deg); justify-self: center; }
+  .wr-race .wiki-nav-rail { position: static; transform: none; width: 100%; max-height: none; display: flex; flex-direction: row; justify-content: flex-start; overflow-x: auto; padding: 0 8px; gap: 4px; border: 1px dashed var(--wr-frame); border-radius: 8px; background: var(--wr-paper-2); box-shadow: none; backdrop-filter: none; }
+  .wr-race .wiki-nav-item { width: 44px; height: 44px; flex: 0 0 44px; }
+}
+@media (prefers-reduced-motion:no-preference) {
+  .vs-journal { animation: wr-appear 220ms ease-out; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .wr-start-overlay *, .vs-journal { animation: none !important; transition: none !important; }
+}

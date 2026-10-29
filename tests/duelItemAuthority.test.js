@@ -779,7 +779,7 @@ test("P5 — 미리보기 본문을 컴포넌트가 스스로 가져오지 않�
     assert.equal(call.test(barSource.replace(/\/\*[\s\S]*?\*\//g, "")), false, String(call));
   }
   // 대신 부모가 내려 준 것을 그린다.
-  assert.match(barSource, /entries\[selectedTitle\]/);
+  assert.match(barSource, /entries\[selectedPageId\]/);
 });
 
 test("P5 — 범위 안에서 실제로 보여 주는 것: 제목·남은 횟수·카운트다운·봉인", () => {
@@ -793,15 +793,15 @@ test("P5 — 요약이 없는 상태에도 빈 칸이 아니라 안내가 나온
   assert.match(barSource, /요약 연결은 준비 중입니다/);
 });
 
-test("P5 — 부채 2건이 파일에 등재돼 있고 ①은 닫힌 것으로 기록돼 있다", () => {
+test("P5 — 서버 권위 연결과 3회 표시 계약이 기록돼 있다", () => {
   // 부채가 조용히 사라지지 않게 고정한다. `random_teleport` 부채의 선례와 같은 방식이다.
   // **닫힌 부채도 지우지 않는다** — 왜 그렇게 돼 있는지가 기록으로 남아야 한다.
-  assert.match(barSource, /부채 ① 닫힘/, "요약 본문 연결 — P7이 닫았다");
-  assert.match(barSource, /부채 ②/, "maxPreviews 서버 권위 부재 — v4 범위로 열려 있다");
+  assert.match(barSource, /서버 권위 연결/, "요약은 부모의 서버 서비스에서 받는다");
+  assert.match(barSource, /서버 권위/, "횟수는 서버 기록에서 받는다");
   assert.match(barSource, /maxPreviews/);
 });
 
-test("P5 — ⚠ maxPreviews에 서버 권위가 없다는 것이 사실이다 (실측)", () => {
+test("P5 — 역사적 v3 기본 migration의 카탈로그와 3회 밸런스는 보존된다", () => {
   // 부채 ②의 근거. 서버가 미리보기를 세는 순간 이 테스트가 깨지고, 그때
   // 클라이언트 제한을 서버 값으로 바꿔야 한다.
   // "preview"가 migration에 나오는 곳은 카탈로그의 `link_preview` **아이템 ID 하나뿐**이다.
@@ -866,33 +866,19 @@ test("P7 — 아이템 안내를 카탈로그에서 만든다 (베끼지 않는�
   assert.deepEqual([...shown].sort(), [...MULTI_ITEM_IDS].sort());
 });
 
-test("P7 — 부모가 요약을 가져와 entries를 채운다 (부채 ①)", () => {
+test("P7 — 부모는 서버 미리보기 서비스를 사용하며 직접 Wikipedia로 우회하지 않는다", () => {
   const pageSource = read("pages/MultiplayerGamePage.jsx");
-
-  // ① 요약은 위키백과 REST에서 온다. **새 RPC가 없다** — 부채 ①의 전제였다.
-  assert.match(pageSource, /fetchPageSummary\(/);
-  const rpcCalls = [...pageSource.matchAll(/supabase\.rpc\(\s*"([a-z_0-9]+)"/g)];
-  assert.deepEqual(rpcCalls, [], "미리보기 때문에 새 RPC가 생기면 안 된다");
-
-  // ② abort를 부모가 든다. HUD로 내려가지 않게 하는 것이 P5의 배정 이유였다.
-  assert.match(pageSource, /AbortController\(/);
-  assert.match(pageSource, /isAbortError\(/);
-
-  // ③ 세는 대상은 `loading`과 `ready`뿐이다. 요약을 못 가져온 클릭(`unavailable`)은
-  //    한도를 깎지 않는다 — 6c가 `usedPreviews`를 올리지 않은 이유와 같은 규칙이다.
-  const [counter] = pageSource.match(/const countSpentPreviews[\s\S]*?\.length;/) || [];
-  assert.ok(counter, "countSpentPreviews를 찾지 못했다");
-  assert.match(counter, /"loading"/);
-  assert.match(counter, /"ready"/);
-  assert.doesNotMatch(counter, /"unavailable"/);
+  assert.match(pageSource, /fetchDuelPreview\(/);
+  assert.doesNotMatch(pageSource, /fetchPageSummary\(/);
+  assert.match(pageSource, /previewGenerationRef/);
+  assert.match(pageSource, /refreshDuelItemState\(/);
 });
 
-test("P7 — 부채 ②는 여전히 열려 있다 (maxPreviews는 카탈로그 값이다)", () => {
-  // 부채 ①을 닫았다고 ②가 닫힌 것이 아니다. 한도는 아직 클라이언트만 세고,
-  // 그 사실을 고정하는 것이 위의 migration 검사다.
-  assert.equal(getDuelItem("link_preview").maxPreviews, 3);
+test("P7 — 3회 표시가 서버 성공/예약 원장에서 온다", () => {
   const pageSource = read("pages/MultiplayerGamePage.jsx");
-  assert.match(pageSource, /item\.maxPreviews/, "한도는 카탈로그에서 읽는다 — 서버가 아니다");
+  assert.equal(getDuelItem("link_preview").maxPreviews, 3);
+  assert.match(pageSource, /previewPanelFromState\(outcome\.previewState\)/);
+  assert.doesNotMatch(pageSource, /item\.maxPreviews/);
 });
 
 /**

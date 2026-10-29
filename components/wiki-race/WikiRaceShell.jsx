@@ -33,7 +33,12 @@ export function ExpeditionTrail() {
 }
 
 export default function WikiRaceShell({ user, level, onLogout, onNavigate, view = "home", children }) {
-  return <div className={`wr-page wr-${view}`}><div className="wr-shell">
+  return <div className={`wr-page wr-${view}`}>
+    {view === "home" && <div className="wr-home-side-art" aria-hidden="true">
+      <span className="wr-home-side-art-left" />
+      <span className="wr-home-side-art-right" />
+    </div>}
+    <div className="wr-shell">
     <a className="wr-skip-link" href="#wr-content">본문 바로가기</a>
     <WikiRaceHeader user={user} level={level} onLogout={onLogout} onNavigate={onNavigate} />
     <main id="wr-content">{children}</main>

@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import useLobbyAudio from "../hooks/useLobbyAudio.js";
+import { audioManager } from "../services/audioManager.js";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
@@ -39,11 +41,13 @@ export default function GroupRoomPage() {
     const { roomId } = useParams();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
+    const observeLobbyAudio = useLobbyAudio('group', roomId, user?.id);
 
     const [room, setRoom] = useState(null);
     const [players, setPlayers] = useState([]);
     const [pending, setPending] = useState(true);
     const [submitError, setSubmitError] = useState("");
+    const [connectionStatus, setConnectionStatus] = useState("CONNECTING");
     const [starting, setStarting] = useState(false);
 
     const [keywordInput, setKeywordInput] = useState("");
@@ -119,6 +123,7 @@ export default function GroupRoomPage() {
                 }
 
                 const playerData = await fetchGroupRoomPlayers(roomId);
+                observeLobbyAudio({ room: roomData, players: playerData });
 
                 setRoom(roomData);
                 setPlayers(playerData);
@@ -138,6 +143,7 @@ export default function GroupRoomPage() {
 
     useEffect(() => {
         if (!roomId || !supabase) return;
+        let cancelled = false;
 
         const channel = supabase
             .channel(`group-room:${roomId}`)
@@ -152,6 +158,7 @@ export default function GroupRoomPage() {
                 async () => {
                     try {
                         const latestRoom = await fetchGroupRoom(roomId);
+                        observeLobbyAudio({ room: latestRoom }, true);
                         setRoom(latestRoom);
                     } catch (error) {
                         console.error("group room refresh failed:", error);
@@ -169,15 +176,22 @@ export default function GroupRoomPage() {
                 async () => {
                     try {
                         const latestPlayers = await fetchGroupRoomPlayers(roomId);
+                        observeLobbyAudio({ players: latestPlayers }, true);
                         setPlayers(latestPlayers);
                     } catch (error) {
                         console.error("group players refresh failed:", error);
                     }
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                if (cancelled) return;
+                setConnectionStatus(status);
+                // First state after a reconnect is a quiet baseline; no extra RPC for audio.
+                if (status !== 'SUBSCRIBED') observeLobbyAudio.reset();
+            });
 
         return () => {
+            cancelled = true;
             supabase.removeChannel(channel);
         };
     }, [roomId]);
@@ -243,6 +257,7 @@ export default function GroupRoomPage() {
             return;
         }
 
+        const requestSound = audioManager.action('group-ready');
         try {
             setSubmitError("");
 
@@ -259,10 +274,13 @@ export default function GroupRoomPage() {
                 selectedPageId: selectedPage.pageId,
                 selectedRevisionId: selectedPage.revisionId,
             });
+            requestSound(null);
 
             const latestPlayers = await fetchGroupRoomPlayers(roomId);
+            observeLobbyAudio({ players: latestPlayers }, true);
             setPlayers(latestPlayers);
         } catch (error) {
+            requestSound('denied');
             setSubmitError(
                 error instanceof Error ? error.message : "준비 완료에 실패했습니다."
             );
@@ -272,13 +290,17 @@ export default function GroupRoomPage() {
     const handleUnready = async () => {
         if (!roomId || !user?.id) return;
 
+        const requestSound = audioManager.action('group-unready');
         try {
             setSubmitError("");
             await unreadyGroupPlayer(roomId);
+            requestSound(null);
 
             const latestPlayers = await fetchGroupRoomPlayers(roomId);
+            observeLobbyAudio({ players: latestPlayers }, true);
             setPlayers(latestPlayers);
         } catch (error) {
+            requestSound('denied');
             setSubmitError(
                 error instanceof Error ? error.message : "준비 해제에 실패했습니다."
             );
@@ -288,11 +310,13 @@ export default function GroupRoomPage() {
     const handleStart = async () => {
         if (!roomId) return;
 
+        const requestSound = audioManager.action('group-start');
         try {
             setStarting(true);
             setSubmitError("");
             await startGroupRoomGame(roomId);
         } catch (error) {
+            requestSound('denied');
             setSubmitError(
                 error instanceof Error ? error.message : "단체모드 시작에 실패했습니다."
             );
@@ -444,6 +468,11 @@ export default function GroupRoomPage() {
                 <span className="wr-head-code"><span className="wr-head-code-label">코드</span><CopyCodeButton code={roomCode} compact /></span>
                 <span className="wr-rule-strip">{GROUP_RULES}</span>
             </LobbyHeader>
+            <div className="wr-room-briefing">
+                <span className="wr-kicker">단체 브리핑 · 모두 같은 문서 코스</span>
+                <p>내 후보 선택 → READY → 전원 준비 후 방장 시작. 완주하면 개인 결과를 확인하고 관전할 수 있으며, 경기 종료 후 전체 결과가 확정됩니다.</p>
+                <p className="wr-room-sync" role="status">{connectionStatus === "SUBSCRIBED" ? "실시간 알림 수신 중 · 참가자와 준비 상태는 서버 정보로 표시합니다." : "실시간 연결 확인 중 · 연결이 돌아오지 않으면 새로고침해 방에 재접속하세요."}</p>
+            </div>
 
             {hostNotice && (
                 <p className="wr-host-notice" role="status" key={`${hostNotice.from}-${hostNotice.to}`}>

@@ -1,0 +1,36 @@
+/* Ported from the approved 2026-10-13 prototype. Scoped exclusively to Duel END. */
+.wr-duel-end{--de-ink:#243430;--de-muted:#596d61;--de-paper:#fbfcf7;--de-accent:#c79a32;--de-frame:#aebba5;position:fixed;inset:0;z-index:2100;display:grid;place-items:center;overflow:auto;isolation:isolate;background:#e4ebdd;color:var(--de-ink);font:15px/1.5 "Malgun Gothic",system-ui,sans-serif}
+.wr-duel-end *{box-sizing:border-box}
+.wr-de-terrain{position:absolute;inset:0;width:100%;height:100%;z-index:-1;fill:none;stroke:#aebba5;stroke-width:1;opacity:.5;pointer-events:none}
+.wr-de-arena{position:relative;width:min(1320px,calc(100% - 40px));height:580px;perspective:1400px;flex-shrink:0}
+.wr-de-kicker{position:absolute;top:48px;width:100%;text-align:center;font-size:12px;letter-spacing:.2em;color:var(--de-muted)}
+.wr-de-player{position:absolute;top:132px;left:60px;width:350px;height:348px;padding:26px;display:flex;align-items:center;flex-direction:column;background:var(--de-paper);border:1px solid var(--de-frame);border-radius:12px 24px 12px 12px;box-shadow:inset 0 0 0 6px var(--de-paper),inset 0 0 0 7px #aebba544,0 20px 35px #24343016;transform-origin:center;min-width:0}
+.wr-de-player[data-own=false]{left:auto;right:60px}
+.wr-duel-end:not([data-kind=forfeit]) .wr-de-player[data-front=true]{box-shadow:inset 0 0 0 1px #c79a32,0 16px 35px #c79a3225}
+.wr-de-player-label{position:absolute;top:18px;left:22px;font-size:12px;color:var(--de-muted)}
+.wr-de-avatar{width:136px;height:136px;flex-shrink:0;margin:8px 0 12px;padding:5px;border:2px solid var(--de-frame);border-radius:50%;background:#eff3e9;box-shadow:0 7px 15px #24343012;display:grid;place-items:center}
+.wr-de-avatar .pcard-avatar{width:100%;height:100%;font-size:48px}
+.wr-de-equipped{font-size:11px;color:var(--de-muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wr-de-player h3{font:600 29px/1.3 Georgia,"Noto Serif KR","Malgun Gothic",serif;margin:6px 0 14px;max-width:100%;overflow-wrap:anywhere;text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wr-de-state{font-size:12px;letter-spacing:.08em;text-align:center}
+.wr-de-verdict{position:absolute;left:32%;width:36%;top:177px;text-align:center;z-index:3;transform-origin:center;opacity:0}
+.wr-de-verdict h2{font:700 110px/1 Georgia,"Noto Serif KR","Malgun Gothic",serif;color:var(--de-accent);margin:0;white-space:nowrap;text-shadow:0 4px 0 #fbfcf7aa;outline:none}
+.wr-de-verdict p{font-size:13px;color:var(--de-muted);margin:14px 0 0}
+.wr-de-seal{position:absolute;top:340px;left:calc(50% - 42px);width:84px;height:84px;display:grid;place-items:center;border:4px double var(--de-accent);border-radius:50%;color:var(--de-accent);background:#fbf4dd;z-index:4;font:600 22px/1 Georgia,"Malgun Gothic",serif;opacity:0}
+.wr-de-ring{position:absolute;top:316px;left:calc(50% - 65px);width:130px;height:130px;border:2px solid var(--de-accent);border-radius:50%;opacity:0;pointer-events:none}
+.wr-de-ink i{position:absolute;left:50%;top:365px;width:12px;height:7px;border-radius:2px;background:var(--de-accent);opacity:0;z-index:2;pointer-events:none}
+.wr-de-description{position:absolute;top:490px;width:100%;padding:0 10px;text-align:center;font-size:12px;color:var(--de-muted)}
+.wr-de-skip{position:absolute;bottom:12px;right:30px;min-height:44px;padding:10px 14px;background:var(--de-paper);color:var(--de-ink);border:1px solid var(--de-frame);border-radius:6px;font:inherit;font-size:12px;cursor:pointer}
+.wr-de-skip:focus-visible{outline:3px solid #3268a8;outline-offset:3px}
+.wr-duel-end[data-kind=loss]{--de-accent:#3268a8}
+.wr-duel-end[data-kind=loss] .wr-de-verdict h2{font-size:94px}
+.wr-duel-end[data-kind=loss] .wr-de-seal{background:#e7edf7}
+.wr-duel-end[data-kind=forfeit]{--de-accent:#596d61}
+.wr-duel-end[data-kind=forfeit] .wr-de-verdict{top:195px}
+.wr-duel-end[data-kind=forfeit] .wr-de-verdict h2{font-size:66px}
+.wr-duel-end[data-kind=forfeit] .wr-de-seal{border-color:var(--de-frame);background:var(--de-paper);font-size:16px}
+[data-duel-end-records][hidden]{display:none!important}
+@media(max-width:1000px) and (min-width:701px){.wr-de-player{width:29%;left:2%;padding:24px 14px}.wr-de-player[data-own=false]{left:auto;right:2%}.wr-de-verdict h2{font-size:82px}.wr-duel-end[data-kind=loss] .wr-de-verdict h2{font-size:74px}.wr-de-avatar{width:112px;height:112px}.wr-de-player h3{font-size:24px}.wr-duel-end[data-kind=forfeit] .wr-de-verdict{left:20%;width:60%}}
+@media(max-width:700px){.wr-de-arena{width:calc(100% - 24px);height:510px}.wr-de-kicker{top:0;margin:0;font-size:10px}.wr-de-player{top:154px;left:0;width:calc(50% - 9px);height:224px;padding:18px 10px;border-radius:9px 18px 9px 9px}.wr-de-player[data-own=false]{left:auto;right:0}.wr-de-player-label{top:12px;left:14px;font-size:10px}.wr-de-avatar{width:84px;height:84px;margin-top:10px;margin-bottom:8px;padding:3px}.wr-de-avatar .pcard-avatar{font-size:32px}.wr-de-equipped{font-size:9px}.wr-de-player h3{font-size:22px;margin:5px 0 8px}.wr-de-state{font-size:10px;letter-spacing:0}.wr-de-verdict{top:38px;left:0;width:100%}.wr-de-verdict h2{font-size:76px}.wr-de-verdict p{font-size:11px;margin-top:6px}.wr-de-seal{top:350px;width:62px;height:62px;left:calc(50% - 31px);font-size:18px}.wr-de-ring{top:335px;width:90px;height:90px;left:calc(50% - 45px)}.wr-de-ink i{top:378px;width:8px;height:5px}.wr-de-skip{bottom:0;right:0}.wr-de-description{top:414px;font-size:11px}.wr-duel-end[data-kind=loss] .wr-de-verdict h2{font-size:68px}.wr-duel-end[data-kind=forfeit] .wr-de-verdict{top:54px}.wr-duel-end[data-kind=forfeit] .wr-de-verdict h2{font-size:52px}.wr-duel-end[data-kind=forfeit] .wr-de-seal{font-size:13px}}
+@media(max-height:540px){.wr-duel-end{place-items:start center}}
+@media(prefers-reduced-motion:reduce){.wr-duel-end *{animation:none!important;transition:none!important;transform:none!important}.wr-de-verdict,.wr-de-seal{opacity:1!important}.wr-de-ring,.wr-de-ink{display:none}}

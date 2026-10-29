@@ -7,13 +7,13 @@ import { buildResultXpView } from "../utils/xpResultDisplay.js";
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const sql = read("supabase/migrations/20261006000303_single_run_mode_xp_v1.sql");
 
-async function guestCreate(runMode, targetTitle = "Target") {
+async function guestCreate(runMode, targetTitle = "Target", startTitle = "Start", startId = "s") {
   let handler;
   let inserted;
   const db = { from(table) {
     const query = {
-      select() { return this; }, eq() { return this; },
-      async maybeSingle() { return { data: table === "daily_challenges" ? { target_title: "Target" } : table === "wiki_pages" ? { canonical_title: "Target" } : null, error: null }; },
+      select() { return this; }, eq(column, value) { if (column === "page_id") this.pageId = value; return this; },
+      async maybeSingle() { return { data: table === "daily_challenges" ? { start_title: "Start", target_title: "Target" } : table === "wiki_pages" ? { canonical_title: this.pageId === "s" ? "Start" : "Target" } : null, error: null }; },
       insert(row) { inserted = row; return this; },
       async single() { return { data: inserted, error: null }; },
     };
@@ -22,7 +22,7 @@ async function guestCreate(runMode, targetTitle = "Target") {
   const source = read("supabase/functions/single-run/index.ts").replace(/^import[^\n]*\n/, "");
   const compiled = transformSync(source, { loader: "ts", format: "cjs" }).code;
   new Function("createClient", "Deno", compiled)(() => db, { env: { get: () => "local-unit-test" }, serve: fn => { handler = fn; } });
-  const response = await handler(new Request("http://localhost/single-run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", guestToken: "g".repeat(64), run: { runId: "unit-run", runMode, start: { pageId: "s", revisionId: "1", title: "Start" }, target: { pageId: "t", title: targetTitle } } }) }));
+  const response = await handler(new Request("http://localhost/single-run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", guestToken: "g".repeat(64), run: { runId: "unit-run", runMode, start: { pageId: startId, revisionId: "1", title: startTitle }, target: { pageId: "t", title: targetTitle } } }) }));
   return { response, body: await response.json(), inserted };
 }
 
@@ -42,6 +42,15 @@ test("guest create rejects unknown mode and mismatched daily course before INSER
     const outcome = await guestCreate(mode, target);
     assert.equal(outcome.response.status, 400);
     assert.equal(outcome.body.code, code);
+    assert.equal(outcome.inserted, undefined);
+  }
+});
+
+test("guest daily rejects forged start title and forged page identity", async () => {
+  for (const [title, id] of [["Fake", "s"], ["Start", "t"]]) {
+    const outcome = await guestCreate("daily", "Target", title, id);
+    assert.equal(outcome.response.status, 400);
+    assert.equal(outcome.body.code, "DAILY_COURSE_MISMATCH");
     assert.equal(outcome.inserted, undefined);
   }
 });

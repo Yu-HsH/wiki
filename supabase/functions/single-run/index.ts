@@ -28,6 +28,10 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return invalid("METHOD_NOT_ALLOWED", 405);
   try {
     const body = await req.json();
+    if (["allocate", "reserve_start", "start", "snapshot_v1", "leave_v1", "document"].includes(String(body?.action))) {
+      const { handleSingleStart } = await import("./start.mjs");
+      return await handleSingleStart(req, body, { db, url: URL, serviceKey: SERVICE_ROLE_KEY, json, sha256 });
+    }
     const token = String(body?.guestToken || "");
     if (token.length < 32) return invalid("GUEST_TOKEN_REQUIRED");
     const tokenHash = await sha256(token);
@@ -45,12 +49,17 @@ Deno.serve(async (req) => {
       let dailyDate: string | null = null;
       if (runMode === "daily") {
         dailyDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-        const { data: challenge, error: challengeError } = await db.from("daily_challenges").select("target_title").eq("challenge_date", dailyDate).maybeSingle();
+        const { data: challenge, error: challengeError } = await db.from("daily_challenges").select("start_title, target_title").eq("challenge_date", dailyDate).maybeSingle();
         if (challengeError) throw challengeError;
         const { data: page, error: pageError } = await db.from("wiki_pages").select("canonical_title").eq("page_id", String(run.target.pageId)).maybeSingle();
         if (pageError) throw pageError;
+        const { data: startPage, error: startError } = await db.from("wiki_pages").select("canonical_title").eq("page_id", String(run.start.pageId)).maybeSingle();
+        if (startError) throw startError;
         const normalize = (title: string) => title.replaceAll("_", " ").trim().toLowerCase();
-        if (!challenge || !page || normalize(page.canonical_title) !== normalize(challenge.target_title)
+        if (!challenge?.start_title || !page || !startPage
+          || normalize(startPage.canonical_title) !== normalize(challenge.start_title)
+          || normalize(run.start.canonicalTitle || run.start.title || "") !== normalize(challenge.start_title)
+          || normalize(page.canonical_title) !== normalize(challenge.target_title)
           || normalize(run.target.canonicalTitle || run.target.title || "") !== normalize(challenge.target_title)) return invalid("DAILY_COURSE_MISMATCH");
       }
       const { data, error } = await db.from("single_game_runs").insert({
@@ -111,6 +120,7 @@ Deno.serve(async (req) => {
     return invalid("UNSUPPORTED_ACTION");
   } catch (error) {
     console.error("single-run failed", error);
-    return json({ ok: false, code: "SINGLE_RUN_FAILED", message: error instanceof Error ? error.message : String(error) }, 502);
+    const contractMissing = error && typeof error === 'object' && 'code' in error && error.code === 'PGRST202';
+    return json({ ok: false, code: contractMissing ? 'SERVER_CONTRACT_UNAVAILABLE' : 'SINGLE_RUN_FAILED' }, contractMissing ? 503 : 502);
   }
 });

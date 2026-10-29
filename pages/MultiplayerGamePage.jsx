@@ -1,3 +1,9 @@
+import useRaceMotion from "../hooks/useRaceMotion.js";
+import useGameAudio from "../hooks/useGameAudio.js";
+import { audioManager } from "../services/audioManager.js";
+import useDuelFeedback from "../hooks/useDuelFeedback.js";
+import DuelItemFeedback, { DuelFeedbackSymbol, DuelRecentEvents, DuelFeedbackLane } from "../components/DuelItemFeedback.jsx";
+import { selectLiveBlindExpiry } from "../utils/duelFeedback.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -14,11 +20,12 @@ import {
 
 import {
   fetchPageData,
-  fetchPageSummary,
   formatDuration,
   normalizeTitle,
 } from "../services/wikiService";
 import { isAbortError } from "../utils/latestRequest";
+import { mergePreviewPanel, previewPanelFromState } from "../utils/duelPreview.js";
+import { createRequestId } from "../utils/serverAuthority.js";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 
 import { supabase } from "../supabaseClient";
@@ -37,6 +44,8 @@ import {
   ResultXpRow,
 } from "../components/wiki-race/result/ResultParts.jsx";
 import { buildDuelOutcomeView } from "../utils/resultPresentation.js";
+import { buildDuelEndScene } from "../utils/duelEndPresentation.js";
+import DuelEndSequence from "../components/cinematic/DuelEndSequence.jsx";
 import FinishEffect from "../components/FinishEffect.jsx";
 import useMatchExpression from "../hooks/useMatchExpression.js";
 import { trackEvent } from "../services/analyticsService";
@@ -61,6 +70,7 @@ import {
 import {
   ensureDuelItemGrant,
   fetchDuelItemState,
+  fetchDuelPreview,
   normalizeDuelItemEvent,
   useDuelItem,
 } from "../services/duelItemService";
@@ -71,6 +81,7 @@ import {
   ConnectionDot,
   HudArrow,
   HudBrand,
+  MobileRouteNotes,
   HudDoc,
   HudExit,
   HudStat,
@@ -113,7 +124,15 @@ const DUEL_ITEM_RESULT_MESSAGE = Object.freeze({
 
 export default function MultiplayerGamePage() {
   const { roomId } = useParams();
+  const { user } = useAuth();
+  // A different room/account owns different result guards, requests and cinematic timers.
+  return <DuelGameSession key={`${roomId}:${user?.id || ""}`} />;
+}
+
+function DuelGameSession() {
+  const { roomId } = useParams();
   const navigate = useNavigate();
+  const [moveMotion, approveMoveMotion] = useRaceMotion();
   const { user } = useAuth();
 
   const PHASE = {
@@ -156,9 +175,15 @@ export default function MultiplayerGamePage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   // Phase 3 표시 전용: 마지막 heartbeat RPC 성공 여부. 판정·복구는 기존 heartbeat/finalizer가 한다.
   const [ownConnectionOk, setOwnConnectionOk] = useState(true);
+  useGameAudio({ identity: `duel:${roomId}:${user?.id}`, route: `/multiplayer/game/${roomId}`,
+    playing: phase === PHASE.PLAYING && !pending && !recovery && !leaving,
+    connection: phase === PHASE.PLAYING && !pending && !recovery && ownConnectionOk ? 'ok'
+      : !ownConnectionOk || recovery?.mode === 'retryable' ? 'lost' : null,
+    ended: room?.status === 'finished' || leaving || [PHASE.SUCCESS, PHASE.OPPONENT_WIN].includes(phase) });
   const startedAtRef = useRef(null);
   const playStartTrackedRef = useRef(false);
   const recoveryGenerationRef = useRef(0);
+  const startRereadRef = useRef({ generation: -1, roomId: null, attempts: 0 });
   const recoverGameRef = useRef(null);
   const gameChannelRef = useRef(null);
   const eventChannelRef = useRef(null);
@@ -169,6 +194,8 @@ export default function MultiplayerGamePage() {
    * 신호는 결과 화면을 덮지 못한다 (`recoverGame` 첫 줄과 두 채널의 상태 콜백).
    */
   const resultShownRef = useRef(false);
+  const resultRecoveredRef = useRef(false);
+  const [endPlayersReady, setEndPlayersReady] = useState(false);
   const handleRoomFinishedRef = useRef(null);
 
   /**
@@ -190,6 +217,10 @@ export default function MultiplayerGamePage() {
     () => players.find((p) => p.user_id !== user?.id),
     [players, user?.id]
   );
+  const duelFeedback = useDuelFeedback({ roomId, userId: user?.id,
+    opponentId: opponentPlayer?.user_id,
+    enabled: phase === PHASE.PLAYING && room?.status === "playing" && !leaving,
+  });
 
   /**
    * 화면 연출 상태만 남는다. **`immuneUntil`이 사라졌다** — 면역은 클라이언트가
@@ -204,6 +235,7 @@ export default function MultiplayerGamePage() {
   const [inventory, setInventory] = useState([]);
   const [highlightRequestId, setHighlightRequestId] = useState(0);
   const [searchAvailable, setSearchAvailable] = useState(false);
+  const [searchPermit, setSearchPermit] = useState(null);
   const [historyStack, setHistoryStack] = useState([]);
   const [floatingMessage, setFloatingMessage] = useState("");
   const [miniGame, setMiniGame] = useState(null);
@@ -247,7 +279,6 @@ export default function MultiplayerGamePage() {
   }, [storageKey]);
 
   const [itemCooldownUntil, setItemCooldownUntil] = useState(0);
-  const [itemEffect, setItemEffect] = useState(null);
 
   /**
    * 서버가 준 아이템 상태. **어느 것도 localStorage에서 오지 않는다.**
@@ -289,17 +320,37 @@ export default function MultiplayerGamePage() {
    * 것보다 낫고, 서비스의 `toClientTime`이 그렇게 굴러간다.
    */
   const clockSkewRef = useRef(null);
+  const itemStateServerNowRef = useRef(null);
 
   /** 미리보기 창 하나에 붙는 취소 핸들. 창을 닫으면 진행 중인 요약이 전부 끊긴다. */
   const previewAbortRef = useRef(null);
+  const previewGenerationRef = useRef(0);
+  const previewRequestsRef = useRef(new Map());
+  const closeLinkPreview = useCallback(() => {
+    previewGenerationRef.current += 1;
+    previewAbortRef.current?.abort();
+    previewAbortRef.current = null;
+    previewRequestsRef.current.clear();
+    setLinkPreview(null);
+  }, []);
 
   const applyDuelItemState = useCallback((itemState) => {
+    // Concurrent notifications can return state reads in reverse order.
+    if (Number.isFinite(itemState.serverNow)) {
+      if (itemStateServerNowRef.current != null && itemState.serverNow < itemStateServerNowRef.current) return;
+      itemStateServerNowRef.current = itemState.serverNow;
+    }
     clockSkewRef.current = itemState.clockSkewMs;
     setUseItems(itemState.useItems);
     setInventory(itemState.inventory);
     setItemCooldownUntil(itemState.cooldownUntil ?? 0);
     setActiveEffects(itemState.activeEffects);
     setPendingDefenses(itemState.pendingDefenses);
+    setLinkPreview(prev => {
+      if (!prev) return prev; // F5/reconnect state never opens a panel.
+      const state = itemState.previewStates?.find(s => s.itemEventId === prev.itemEventId);
+      return state ? mergePreviewPanel(prev, state) : null;
+    });
   }, []);
 
   /**
@@ -315,13 +366,8 @@ export default function MultiplayerGamePage() {
     }
   }, [roomId, applyDuelItemState]);
 
-  const showItemEffect = (text) => {
-    setItemEffect(text);
-    setTimeout(() => setItemEffect(null), 1200);
-  };
   const commonTargetTitle = players.find((player) => player.user_id === room?.host_user_id)?.target_title || "";
   const myTargetTitle = commonTargetTitle;
-  const opponentTargetTitle = commonTargetTitle;
 
   const targetForViewer = useMemo(
     () => ({
@@ -332,9 +378,25 @@ export default function MultiplayerGamePage() {
     [myTargetTitle]
   );
 
+  const messageTimer = useRef(null);
+  useEffect(() => {
+    const clear = () => {
+      if (document.visibilityState !== "visible") {
+        clearTimeout(messageTimer.current);
+        setFloatingMessage("");
+      }
+    };
+    document.addEventListener("visibilitychange", clear);
+    return () => { clearTimeout(messageTimer.current); document.removeEventListener("visibilitychange", clear); };
+  }, []);
+  useEffect(() => {
+    if (phase !== PHASE.PLAYING) { clearTimeout(messageTimer.current); setFloatingMessage(""); }
+  }, [phase]);
   const showMessage = (message) => {
+    if (document.visibilityState !== "visible" || resultShownRef.current) return;
+    clearTimeout(messageTimer.current);
     setFloatingMessage(message);
-    setTimeout(() => setFloatingMessage(""), 1800);
+    messageTimer.current = setTimeout(() => setFloatingMessage(""), 1800);
   };
 
   /*
@@ -347,29 +409,18 @@ export default function MultiplayerGamePage() {
    */
 
   /**
-   * 시야 방해를 건다. **막을지 말지를 여기서 정하지 않는다** — 서버가 방어를 보고
-   * `blocked`·`reflected`로 답하며, 이 함수는 `applied`가 온 뒤에만 불린다.
-   *
-   * 창을 서버가 준 만료 시각으로 연다. 카탈로그의 4초와 같은 값이지만, 둘이 갈라지면
-   * **원장에 남은 쪽이 맞다.**
+   * 먹물의 지속 표시만 서버 activeEffects로 맞춘다. 복구는 정적으로 표시하고,
+   * 중첩 시 마지막 만료까지 유지한다. 스냅샷에서 빠지면 즉시 가림을 해제한다.
    */
-  const applyBlind = (expiresAt = null) => {
-    setStatus((prev) => ({
-      ...prev,
-      blind: true,
-    }));
-
-    const holdMs = expiresAt != null
-      ? Math.max(0, expiresAt - Date.now())
-      : getDuelItem("blind")?.duration ?? 4000;
-
-    setTimeout(() => {
-      setStatus((prev) => ({
-        ...prev,
-        blind: false,
-      }));
-    }, holdMs);
-  };
+  // Static server state drives the existing document mask, including F5/overlap/expiry.
+  // No duration fallback, and no old event can bring back an expired blind.
+  useEffect(() => {
+    const expiry = phase === PHASE.PLAYING ? selectLiveBlindExpiry(activeEffects, Date.now()) : null;
+    setStatus(prev => ({ ...prev, blind: expiry != null }));
+    if (expiry == null) return undefined;
+    const timer = setTimeout(() => setStatus(prev => ({ ...prev, blind: false })), Math.max(0, expiry - Date.now()));
+    return () => clearTimeout(timer);
+  }, [activeEffects, phase]);
 
   useEffect(() => {
     if (!roomId || !user?.id || !supabase) return;
@@ -398,6 +449,7 @@ export default function MultiplayerGamePage() {
           if (relation === "stale") return;
           try {
             const latestRoom = await fetchRoom(roomId);
+            if (resultShownRef.current) return;
             setRoom(latestRoom);
             if (latestRoom.status === "finished") {
               handleRoomFinishedRef.current?.(latestRoom);
@@ -474,6 +526,7 @@ export default function MultiplayerGamePage() {
     if (resultShownRef.current) return;
 
     const generation = recoveryGenerationRef.current + 1;
+    closeLinkPreview();
     recoveryGenerationRef.current = generation;
     setPending(true);
     setPhase(PHASE.LOADING);
@@ -574,6 +627,7 @@ export default function MultiplayerGamePage() {
       setPlayers(authoritativePlayers);
 
       if (session.outcome === "finished") {
+        resultRecoveredRef.current = true;
         // F5/결과 재진입도 서버에 저장된 종료 사유와 참가자 기록으로 복구한다.
         if (handleRoomFinishedRef.current?.(session.room, { fromRecovery: true, resultPlayers: session.players })) {
           return;
@@ -590,6 +644,7 @@ export default function MultiplayerGamePage() {
       }
 
       const saved = loadLocalGameState();
+      resultRecoveredRef.current = false;
       const serverPath = Array.isArray(session.me.path_titles)
         ? session.me.path_titles.filter(Boolean)
         : [];
@@ -708,6 +763,51 @@ export default function MultiplayerGamePage() {
     };
   }, [recoverGame]);
 
+  // A missed starting→playing notification must not leave first entry without a reread.
+  // Bounded reads only: no initialization/grant/move writes and no replayed START.
+  useEffect(() => {
+    const initialized = !!myPlayer?.start_title && !!myPlayer?.current_title
+      && !!opponentPlayer?.start_title && !!opponentPlayer?.current_title;
+    if (phase !== PHASE.LOADING || pending || recovery || !roomId || !user?.id
+      || !["starting", "playing"].includes(room?.status)
+      || (room.status === "playing" && initialized)) return undefined;
+    let cancelled = false, timer;
+    const generation = recoveryGenerationRef.current;
+    if (startRereadRef.current.generation !== generation || startRereadRef.current.roomId !== roomId) {
+      startRereadRef.current = { generation, roomId, attempts: 0 };
+    }
+    const readWindow = startRereadRef.current;
+    const refresh = async () => {
+      if (cancelled || generation !== recoveryGenerationRef.current || resultShownRef.current || readWindow.attempts >= 6) return;
+      // A hidden tab issues no reads and spends no credits. The existing visible
+      // recovery handler starts a fresh generation when the tab returns.
+      if (document.visibilityState !== "visible") return;
+      readWindow.attempts += 1;
+      try {
+        if (document.visibilityState === "visible") {
+          const [freshRoom, freshPlayers] = await Promise.all([fetchRoom(roomId), fetchRoomPlayers(roomId)]);
+          if (cancelled || generation !== recoveryGenerationRef.current || resultShownRef.current) return;
+          setRoom(prev => classifyRealtimeVersion(prev?.state_version, freshRoom?.state_version) === "stale" ? prev : freshRoom);
+          setPlayers(prev => freshPlayers.map(row => {
+            const known = prev.find(p => p.user_id === row.user_id);
+            return known && classifyRealtimeVersion(known.progress_version, row.progress_version) === "stale"
+              ? known : { ...known, ...row };
+          }));
+          if (!["starting", "playing"].includes(freshRoom?.status)
+            || (freshRoom.status === "playing" && freshPlayers.length === 2
+              && freshPlayers.every(p => p.start_title && p.current_title))) return;
+        }
+      } catch (error) {
+        // Existing recovery UI remains available after the bounded window.
+        console.warn("duel start transition reread failed:", error);
+      }
+      if (!cancelled && readWindow.attempts < 6) timer = setTimeout(refresh, 1000);
+    };
+    timer = setTimeout(refresh, 500);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [phase, pending, recovery, room?.status, roomId, user?.id,
+    myPlayer?.start_title, myPlayer?.current_title, opponentPlayer?.start_title, opponentPlayer?.current_title]);
+
   useEffect(() => {
     if (!room || !myPlayer || !opponentPlayer) return;
 
@@ -791,12 +891,20 @@ export default function MultiplayerGamePage() {
    * 여기서 직접 끈다. 무효화된 복구는 자기 `finally`에서 그것을 끄지 않으므로,
    * 끄지 않으면 결과 화면 위에 복구 패널이 남는다.
    */
-  const settleIntoResult = (nextPhase) => {
+  const settleIntoResult = (nextPhase, finishedRoom = roomRef.current) => {
     if (resultShownRef.current) return false;
+    if (!buildDuelResultPresentation(finishedRoom, playersRef.current, user?.id)) return false;
     resultShownRef.current = true;
     recoveryGenerationRef.current += 1;
 
     clearLocalGameState();
+    closeLinkPreview();
+    closeLinkIndex();
+    setSearchAvailable(false);
+    setSearchPermit(null);
+    setActiveEffects([]);
+    setPendingDefenses([]);
+    setMiniGame(null);
     setRecovery(null);
     setPending(false);
     setIsPageLoading(false);
@@ -805,8 +913,8 @@ export default function MultiplayerGamePage() {
     return true;
   };
 
-  const enterSolvedState = () => {
-    if (!settleIntoResult(PHASE.SUCCESS)) return;
+  const enterSolvedState = (finishedRoom) => {
+    if (!settleIntoResult(PHASE.SUCCESS, finishedRoom)) return;
   };
 
   /**
@@ -823,12 +931,22 @@ export default function MultiplayerGamePage() {
     const winnerUserId = finishedRoom?.winner_user_id;
     const result = buildDuelResultPresentation(finishedRoom, resultPlayers || playersRef.current || [], user?.id);
     if (result) {
+      if (resultShownRef.current) return true;
+      if (resultPlayers) playersRef.current = resultPlayers;
+      roomRef.current = finishedRoom;
       setRoom(finishedRoom);
-      if (finishedRoom?.finished_reason === "normal_finish" && winnerUserId === user?.id) enterSolvedState();
-      else if (result.isWinner) enterSolvedState();
-      else enterOpponentWinState();
+      setEndPlayersReady(finishedRoom.finished_reason !== "forfeit" || Boolean(resultPlayers));
+      if (finishedRoom?.finished_reason === "normal_finish" && winnerUserId === user?.id) enterSolvedState(finishedRoom);
+      else if (result.isWinner) enterSolvedState(finishedRoom);
+      else enterOpponentWinState(finishedRoom);
       // 종료 후 공개되는 상대 경로도 마스킹 RPC에서 다시 읽는다.
-      fetchRoomPlayers(roomId).then(setPlayers).catch((error) => console.error("결과 경로 조회 실패", error));
+      const resultGeneration = recoveryGenerationRef.current;
+      fetchRoomPlayers(roomId).then(rows => {
+        if (resultGeneration === recoveryGenerationRef.current) { setPlayers(rows); setEndPlayersReady(true); }
+      }).catch((error) => {
+        console.error("결과 경로 조회 실패", error);
+        if (resultGeneration === recoveryGenerationRef.current) setEndPlayersReady(true);
+      });
       return true;
     }
     if (!fromRecovery) recoverGameRef.current?.();
@@ -898,6 +1016,7 @@ export default function MultiplayerGamePage() {
         eventType,
       });
       const updatedPlayer = moveResponse.player;
+      closeLinkPreview(); // A confirmed move ends the activation even when the page ID repeats.
       const authoritativeTitle = updatedPlayer?.current_title || nextPage.title;
       const requestedPageId = String(nextPage?.pageId ?? "");
       const authoritativePageId = String(updatedPlayer?.current_page_id ?? "");
@@ -912,6 +1031,9 @@ export default function MultiplayerGamePage() {
       const solved = hasSolved(updatedPlayer);
       if (moveResponse.room) setRoom(moveResponse.room);
 
+      if (updatedPlayer?.progress_version != null) {
+        approveMoveMotion(`${roomId}:${user.id}:${updatedPlayer.progress_version}`, nextPath.length > (myLatestRow?.path_titles?.length ?? nextPath.length));
+      }
       setPageData(renderedPage);
       setHistoryStack(nextPath.slice(0, -1));
       setPlayers((prev) => prev.map((player) =>
@@ -919,7 +1041,9 @@ export default function MultiplayerGamePage() {
       ));
 
       if (solved) {
-        enterSolvedState();
+        handleRoomFinishedRef.current?.(moveResponse.room, {
+          resultPlayers: playersRef.current.map(player => player.user_id === user.id ? updatedPlayer : player),
+        });
       } else {
         saveLocalGameState({
           currentTitle: renderedPage.title,
@@ -931,6 +1055,13 @@ export default function MultiplayerGamePage() {
       }
       return true;
     } catch (err) {
+      if (resultShownRef.current) return true;
+      if (err?.code === "LINK_CENSORED") {
+        // A normal server rule rejection is not a lost/fatal game session.
+        showMessage(err.message);
+        await refreshDuelItemState();
+        return false;
+      }
       const normalized = normalizeOnlineGameError(
         err,
         "문서 또는 진행 상태를 일시적으로 저장하지 못했습니다."
@@ -969,6 +1100,7 @@ export default function MultiplayerGamePage() {
         normalizeTitle(pageDataRef.current?.title || "");
 
     if (movedAway) {
+      closeLinkPreview();
       setIsPageLoading(true);
       setIsLoading(true);
       try {
@@ -988,7 +1120,7 @@ export default function MultiplayerGamePage() {
     if (nextPath.length > 0) setHistoryStack(nextPath.slice(0, -1));
 
     if (hasSolved(me)) {
-      enterSolvedState();
+      handleRoomFinishedRef.current?.(await fetchRoom(roomId));
       return;
     }
 
@@ -1055,11 +1187,13 @@ export default function MultiplayerGamePage() {
     try {
       const latestPlayers = await fetchRoomPlayers(roomId);
       setPlayers(latestPlayers);
-      await applyMyAuthoritativeRow(
-        latestPlayers.find((player) => player.user_id === user.id)
-      );
+      const me = latestPlayers.find((player) => player.user_id === user.id);
+      if (!me) return false;
+      await applyMyAuthoritativeRow(me);
+      return true;
     } catch (error) {
       console.error("duel item move resync failed:", error);
+      return false;
     }
   };
 
@@ -1070,7 +1204,9 @@ export default function MultiplayerGamePage() {
    */
   const applyLocalItemEffect = (item, outcome) => {
     if (item.id === "search_once") {
-      setSearchAvailable(true);
+      const expiresAt = outcome.effectExpiresAt;
+      setSearchPermit(Number.isFinite(expiresAt) ? { expiresAt, openedOnTitle: pageDataRef.current?.title || "" } : null);
+      setSearchAvailable(Number.isFinite(expiresAt) && expiresAt > Date.now());
       return;
     }
 
@@ -1083,30 +1219,11 @@ export default function MultiplayerGamePage() {
     }
 
     if (item.id === "link_preview") {
-      // 14b — 본문·색인과 같은 선택 함수를 쓴다 (만료된 검열은 빼고).
-      const censored = new Set(
-        selectCensoredTitles(activeEffects, Date.now()).map((title) => normalizeTitle(title))
-      );
-
-      previewAbortRef.current?.abort();
+      closeLinkPreview();
+      const panel = previewPanelFromState(outcome.previewState);
+      if (!panel || panel.expiresAt <= Date.now()) return;
       previewAbortRef.current = new AbortController();
-
-      setLinkPreview({
-        active: true,
-        expiresAt: outcome.effectExpiresAt,
-        // `pageData.links`는 제목 문자열 배열이다 (`wikiService`의 `dedupeTitles`).
-        candidates: (pageDataRef.current?.links || [])
-          .filter(Boolean)
-          .map((title) => ({
-            title,
-            censored: censored.has(normalizeTitle(title)),
-          })),
-        entries: {},
-        selectedTitle: null,
-        usedPreviews: 0,
-        // 서버 권위가 없는 값이다 — 부채 ②. 카탈로그 정의에서 읽는다.
-        maxPreviews: item.maxPreviews ?? 3,
-      });
+      setLinkPreview(panel);
     }
   };
 
@@ -1127,6 +1244,8 @@ export default function MultiplayerGamePage() {
     const item = inventory.find((entry) => entry.grantId === grantId);
     if (!item) return;
 
+    const previewGeneration = previewGenerationRef.current;
+    const requestSound = audioManager.action('duel-item');
     setPendingGrantId(grantId);
     setItemFailure(null);
 
@@ -1135,7 +1254,9 @@ export default function MultiplayerGamePage() {
       clockSkewRef.current = outcome.clockSkewMs;
 
       if (!outcome.ok) {
+        requestSound('denied');
         setItemFailure(outcome.failure);
+        duelFeedback.fail(item, grantId, outcome.failure?.message || "사용 실패");
         if (outcome.code === "STATE_VERSION_CONFLICT") recoverGameRef.current?.();
         if (outcome.code === "ITEM_STATE_UNKNOWN") {
           await refreshDuelItemState();
@@ -1144,9 +1265,16 @@ export default function MultiplayerGamePage() {
         return;
       }
 
+      requestSound(null); // A later refresh failure must not sound like a rejected committed use.
       setItemCooldownUntil(outcome.cooldownUntil ?? 0);
-      showItemEffect(item.name);
-      showMessage(
+      // A confirmed move's stamp shares the render that installs its authoritative document.
+      // Slow/hidden/recovered results still pass through the existing freshness gate.
+      await syncAfterItemUse(outcome);
+      duelFeedback.emit({ ...outcome, itemId: outcome.itemId || item.id,
+        actorUserId: user?.id, serverTimestamp: outcome.serverNow },
+        { own: true, grantId, skewMs: outcome.clockSkewMs });
+      // Preserve the old textual fallback for incomplete responses, without claiming a hit.
+      if (!outcome.itemEventId) showMessage(
         (item.id === "random_teleport" && outcome.result === DUEL_ITEM_RESULT.APPLIED
           ? "랜덤 문서로 이동했습니다."
           : DUEL_ITEM_RESULT_MESSAGE[outcome.result]) ||
@@ -1154,115 +1282,99 @@ export default function MultiplayerGamePage() {
       );
 
       if (outcome.result === DUEL_ITEM_RESULT.APPLIED) {
-        applyLocalItemEffect(item, outcome);
-      } else if (outcome.result === DUEL_ITEM_RESULT.REFLECTED) {
-        // 반사는 시전자에게 되돌아온다 — **내가 맞는다.** 서버는 이미 그렇게 기록했고
-        // (`activeEffects`에 내 이름으로 남는다), 화면 연출만 여기서 맞춘다.
-        if ((outcome.itemId || item.id) === "blind") {
-          applyBlind(outcome.effectExpiresAt);
-        }
+        if (item.id !== "link_preview" || previewGeneration === previewGenerationRef.current) applyLocalItemEffect(item, outcome);
       }
 
-      await syncAfterItemUse(outcome);
       // 슬롯의 `used`와 지속효과·보호 대기는 서버 행에서만 온다. HUD는 낙관적으로
       // 칠하지 않으므로 응답 뒤에 새 상태를 내려 준다.
       await refreshDuelItemState();
     } catch (error) {
       // 여기까지 오는 것은 세션·호출 오류 6종과 전송 오류뿐이다 (경기 중 판정은 봉투다).
       console.error("duel item use failed:", error);
+      requestSound('denied');
+      duelFeedback.fail(item, grantId, "사용 확인 실패");
       showMessage(error?.message || "아이템을 사용하지 못했습니다.");
     } finally {
       setPendingGrantId(null);
     }
   };
 
-  /**
-   * 소진된 미리보기 수. **`entries`에서 매번 다시 센다** — 따로 든 카운터는 실패
-   * 처리와 어긋나기 시작한다. `loading`은 예약이고 `ready`는 확정이며,
-   * `unavailable`은 세지 않는다.
-   */
-  const countSpentPreviews = (entries) =>
-    Object.values(entries || {}).filter(
-      (entry) => entry?.status === "loading" || entry?.status === "ready"
-    ).length;
-
-  const closeLinkPreview = useCallback(() => {
-    previewAbortRef.current?.abort();
-    previewAbortRef.current = null;
-    setLinkPreview(null);
-  }, []);
-
-  /**
-   * 부채 ① — 연결 문서 첫 문장 `[P7에서 닫음, 2026-09-04]`
-   *
-   * 확정 스펙 §5.5의 "첫 문장"은 `fetchPageSummary`의 `extract`다. **위키백과 REST를
-   * 부르며 우리 Supabase가 아니다** — 새 RPC는 없다. P5가 컴포넌트에서 부르지 않은
-   * 이유가 abort·중복요청을 컴포넌트가 갖게 되기 때문이었고, 그래서 그 셋을 이미
-   * 들고 있는 이 화면으로 왔다.
-   *
-   * **횟수는 보여 준 것만 센다.** 6c가 `usedPreviews`를 올리지 않은 이유가 그것이었고
-   * 여기서도 같다 — 요약을 못 가져오면 `unavailable`로 두고, 세는 대상에서 빠지므로
-   * 횟수가 저절로 돌아온다. 이미 본 링크를 다시 눌러도 늘지 않는다.
-   *
-   * ⚠ 이 한도는 여전히 **클라이언트만 센다** — 부채 ②는 열려 있고 v4 범위다.
-   */
-  const handlePreviewLink = async (title) => {
-    if (!title) return;
-
-    // 진행 여부를 updater 안에서 정한다. 현재 상태를 안전하게 읽는 방법이 이것뿐이고,
-    // updater 자체는 순수하다 (플래그는 한 방향으로만 켜진다).
-    let shouldFetch = false;
-
-    setLinkPreview((prev) => {
-      if (!prev?.active) return prev;
-
-      const existing = prev.entries[title];
-      const alreadyHave =
-        existing?.status === "ready" || existing?.status === "loading";
-      const exhausted = countSpentPreviews(prev.entries) >= prev.maxPreviews;
-
-      // 이미 가진 것과 한도 초과는 선택만 옮긴다. HUD도 막지만, 막는 쪽이 하나뿐이면
-      // 그것이 틀렸을 때 한도가 사라진다.
-      if (alreadyHave || exhausted) return { ...prev, selectedTitle: title };
-
-      shouldFetch = true;
-      const entries = { ...prev.entries, [title]: { status: "loading" } };
-      return {
-        ...prev,
-        selectedTitle: title,
-        entries,
-        usedPreviews: countSpentPreviews(entries),
-      };
-    });
-
-    if (!shouldFetch) return;
-
+  // Server state counts success/reservations. Local loading only suppresses duplicate clicks.
+  const handlePreviewLink = async (pageId) => {
+    const panel = linkPreview;
+    if (!pageId || !panel?.active || panel.expiresAt <= Date.now()) return;
+    const candidate = panel.candidates.find(c => c.pageId === pageId);
+    if (!candidate || candidate.censored) return;
+    const key = panel.itemEventId + ":" + pageId;
+    if (previewRequestsRef.current.get(key)?.pending) return;
+    const generation = previewGenerationRef.current;
     const controller = previewAbortRef.current;
-
-    const settle = (entry) => setLinkPreview((prev) => {
-      // 창이 닫혔거나 다시 열렸으면 늦게 온 응답을 버린다.
-      if (!prev?.active || prev.entries[title]?.status !== "loading") return prev;
-      const entries = { ...prev.entries, [title]: entry };
-      return { ...prev, entries, usedPreviews: countSpentPreviews(entries) };
-    });
-
+    const requestId = previewRequestsRef.current.get(key)?.requestId || createRequestId();
+    previewRequestsRef.current.set(key, { requestId, pending: true });
+    setLinkPreview(prev => prev?.itemEventId === panel.itemEventId ? {
+      ...prev, selectedPageId: pageId,
+      entries: { ...prev.entries, [pageId]: prev.entries[pageId]?.status === "ready"
+        ? prev.entries[pageId] : { status: "loading" } },
+    } : prev);
+    const current = () => generation === previewGenerationRef.current && !controller?.signal.aborted;
     try {
-      const summary = await fetchPageSummary(title, { signal: controller?.signal });
-      if (controller?.signal?.aborted) return;
-      settle({
-        status: "ready",
-        extract: summary.extract || "",
-        description: summary.description || "",
-        thumbnailUrl: summary.thumbnailUrl || null,
-      });
+      const outcome = await fetchDuelPreview({ roomId, itemEventId: panel.itemEventId,
+        targetPageId: pageId, requestId, signal: controller?.signal });
+      if (!current()) return;
+      if (outcome.previewState) setLinkPreview(prev => mergePreviewPanel(prev, outcome.previewState));
+      if (outcome.code === "PREVIEW_LIMIT_REACHED") showMessage("서로 다른 문서는 최대 3개까지 미리볼 수 있습니다.");
+      if (outcome.code === "LINK_CENSORED") showMessage("지금 봉인된 링크입니다.");
+      if (["PREVIEW_SOURCE_CHANGED", "PREVIEW_EXPIRED", "GAME_NOT_ACTIVE"].includes(outcome.code)) {
+        closeLinkPreview();
+      } else if (outcome.code === "PREVIEW_STATE_UNKNOWN" || !outcome.previewState) {
+        await refreshDuelItemState();
+      }
     } catch (error) {
-      if (isAbortError(error)) return;
-      console.error("link preview summary failed:", error);
-      settle({ status: "unavailable" });
+      if (!current() || isAbortError(error)) return;
+      // Transport failure can follow a committed success: read the ledger, never refund locally.
+      await refreshDuelItemState();
+    } finally {
+      if (current()) previewRequestsRef.current.set(key, { requestId, pending: false });
     }
   };
 
   const handleClosePreview = () => closeLinkPreview();
+
+  useEffect(() => {
+    if (!linkPreview) return;
+    if (phase !== PHASE.PLAYING || String(myPlayer?.current_page_id || "") !== linkPreview.sourcePageId
+      || String(myPlayer?.current_revision_id || "") !== linkPreview.sourceRevisionId) {
+      closeLinkPreview();
+      return;
+    }
+    void refreshDuelItemState();
+  }, [phase, myPlayer?.progress_version, myPlayer?.current_page_id, myPlayer?.current_revision_id, linkPreview?.itemEventId, censorClock]);
+
+  useEffect(() => {
+    if (!linkPreview) previewAbortRef.current?.abort();
+  }, [linkPreview]);
+
+  useEffect(() => {
+    const leases = Object.values(linkPreview?.entries || {}).filter(e => e.status === "loading" && Number.isFinite(e.leaseUntil));
+    if (!leases.length) return undefined;
+    const timer = setTimeout(() => void refreshDuelItemState(), Math.max(0, Math.min(...leases.map(e => e.leaseUntil)) - Date.now()) + 25);
+    return () => clearTimeout(timer);
+  }, [linkPreview?.entries, refreshDuelItemState]);
+
+  // The existing server expiry is already converted to client time by the item service.
+  // No duration fallback and no search panel restoration from F5 snapshots.
+  useEffect(() => {
+    if (!searchPermit) return undefined;
+    const clear = () => { setSearchAvailable(false); setSearchPermit(null); };
+    if (phase !== PHASE.PLAYING
+      || normalizeTitle(pageData?.title || "") !== normalizeTitle(searchPermit.openedOnTitle)
+      || searchPermit.expiresAt <= Date.now()) {
+      clear();
+      return undefined;
+    }
+    const timer = setTimeout(clear, searchPermit.expiresAt - Date.now());
+    return () => clearTimeout(timer);
+  }, [searchPermit, pageData?.title, phase]);
 
   /**
    * 15초 창이 끝나면 패널을 닫는다. HUD는 남은 시간을 그리기만 하므로, 0이 된 뒤에도
@@ -1357,6 +1469,7 @@ export default function MultiplayerGamePage() {
    * 갖는다** — 서버는 적용, 내 화면은 방어. 지금은 판정이 하나다.
    */
   const handleDuelItemEvent = async (payload) => {
+    if (resultShownRef.current) return;
     const incoming = normalizeDuelItemEvent(payload, {
       skewMs: clockSkewRef.current,
     });
@@ -1371,9 +1484,6 @@ export default function MultiplayerGamePage() {
       return;
     }
 
-    const itemName = getDuelItem(incoming.itemId)?.name
-      || incoming.itemId
-      || "아이템";
     const iAmTarget = !!incoming.targetUserId && incoming.targetUserId === user?.id;
 
     /**
@@ -1386,41 +1496,13 @@ export default function MultiplayerGamePage() {
       ? incoming.metadata.rewoundUserIds
       : [];
     const iWasRewound = !iAmTarget && !!user?.id && rewoundUserIds.includes(user.id);
-
-    switch (incoming.result) {
-      case DUEL_ITEM_RESULT.APPLIED:
-        if (iAmTarget || iWasRewound) {
-          if (iAmTarget && incoming.itemId === "blind") applyBlind(incoming.effectExpiresAt);
-          showMessage(`상대가 ${itemName}을(를) 사용했습니다!`);
-        }
-        break;
-
-      case DUEL_ITEM_RESULT.BLOCKED:
-        showMessage(
-          iAmTarget
-            ? `방어 성공! ${itemName}을(를) 막았습니다`
-            : `상대가 ${itemName}을(를) 막았습니다`
-        );
-        break;
-
-      case DUEL_ITEM_RESULT.REFLECTED:
-        showMessage(
-          iAmTarget
-            ? `반사 성공! ${itemName}이(가) 되돌아갔습니다`
-            : `${itemName}이(가) 반사됐습니다`
-        );
-        break;
-
-      case DUEL_ITEM_RESULT.VOID:
-        break;
-
-      default:
-        break;
-    }
-
     // 이동은 서버가 이미 했다. 내 행이 움직였을 때만 화면을 맞춘다.
     if ((incoming.moveEventId && iAmTarget) || iWasRewound) {
-      await resyncFromServerMove();
+      closeLinkPreview();
+      const synchronized = await resyncFromServerMove();
+      if (synchronized) duelFeedback.emit(incoming, { skewMs: clockSkewRef.current });
+    } else {
+      duelFeedback.emit(incoming, { skewMs: clockSkewRef.current });
     }
 
     // 지속효과·보호 대기·슬롯은 전부 서버 행에서 온다 — 봉인된 링크 목록도 여기 있다.
@@ -1648,8 +1730,8 @@ export default function MultiplayerGamePage() {
     return () => clearTimeout(timer);
   }, [miniGame]);
 
-  function enterOpponentWinState() {
-    if (!settleIntoResult(PHASE.OPPONENT_WIN)) return;
+  function enterOpponentWinState(finishedRoom) {
+    if (!settleIntoResult(PHASE.OPPONENT_WIN, finishedRoom)) return;
   }
 
   useEffect(() => {
@@ -1658,8 +1740,12 @@ export default function MultiplayerGamePage() {
     // 끝난 방에 새로 들어온 경우는 복구가 fatal 안내를 그린다 (recoverGame의 finished 분기).
     if (!reachedPlayingRef.current) return;
 
-    enterOpponentWinState();
-    // enterOpponentWinState는 매 렌더 새로 만들어지지만 한 번만 성립한다 (resultShownRef).
+    // A player row can arrive before the finalized room. Read the server verdict, never infer loss.
+    let cancelled = false;
+    fetchRoom(roomId).then(latestRoom => {
+      if (!cancelled && latestRoom?.status === "finished") handleRoomFinishedRef.current?.(latestRoom);
+    }).catch(error => console.error("종료 판정 조회 실패", error));
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     opponentPlayer?.has_finished,
@@ -1706,6 +1792,7 @@ export default function MultiplayerGamePage() {
   };
 
   const { requestExit, dialog: exitDialog } = useExitGuard({
+    message: '지금 나가면 즉시 기권패하며, 이번 경기에서 본인이 받는 보상은 0 XP입니다. 상대는 기권승으로 처리됩니다. 계속 플레이하려면 계속하기를 눌러 주세요.',
     enabled:
       phase === PHASE.VS_INTRO ||
       phase === PHASE.COUNTDOWN ||
@@ -1755,6 +1842,7 @@ export default function MultiplayerGamePage() {
   // Phase 4 결과 표시 — 승패·사유는 방이 확정한 값만 읽는다 (buildDuelResultPresentation).
   const duelResult = isResult ? buildDuelResultPresentation(room, players, user?.id) : null;
   const duelOutcome = isResult ? buildDuelOutcomeView({ room, presentation: duelResult, phaseWon: phase === PHASE.SUCCESS }) : null;
+  const duelEndScene = isResult ? buildDuelEndScene(room, players, user?.id) : null;
   const duelElapsed = isResult ? getDuelResultElapsedSeconds(room, myPlayer) : null;
   const pathOf = (player) => (Array.isArray(player?.path_titles) ? player.path_titles.filter(Boolean) : []);
   const opponentReached = room?.finished_reason === "normal_finish" && Boolean(opponentPlayer?.user_id) && room?.winner_user_id === opponentPlayer.user_id;
@@ -1766,10 +1854,14 @@ export default function MultiplayerGamePage() {
       {isPageLoading && <PageLoadingOverlay />}
       {phase === PHASE.VS_INTRO && (
         <VsIntroOverlay
+          sceneKey={roomId}
+          startedAt={room?.started_at}
+          myPlayer={myPlayer}
+          opponentPlayer={opponentPlayer}
           myName={myPlayer?.nickname_snapshot || "나"}
           opponentName={opponentPlayer?.nickname_snapshot || "상대"}
-          myTarget={myTargetTitle}
-          opponentTarget={opponentTargetTitle}
+          startTitle={myPlayer?.start_title}
+          targetTitle={commonTargetTitle}
           myInitial={(myPlayer?.nickname_snapshot || "나")
             .charAt(0)
             .toUpperCase()}
@@ -1781,6 +1873,7 @@ export default function MultiplayerGamePage() {
 
       {phase === PHASE.COUNTDOWN && (
         <CountdownOverlay
+          sceneKey={roomId} mode="duel"
           onComplete={() => {
             saveLocalGameState({ enteredPlaying: true });
             setPhase(PHASE.PLAYING);
@@ -1788,7 +1881,7 @@ export default function MultiplayerGamePage() {
         />
       )}
 
-      <RaceFrame mode="duel" strip label="1:1 대전" inert={isResult}>
+      <RaceFrame motion={moveMotion} mode="duel" strip label="1:1 대전" inert={isResult}>
         <RaceHud>
           <HudBrand mode="1:1" sub={useItems ? "아이템" : "일반"} />
           <HudDoc kind="current" label="현재 문서" title={currentTitle} />
@@ -1804,6 +1897,9 @@ export default function MultiplayerGamePage() {
               <Pill tone="coral" icon="link" key={`censor-${censorEffect.itemEventId}`}>
                 링크 검열 피격 · {secondsLeft(censorEffect.expiresAt)}s
               </Pill>
+            )}
+            {isPlaying && status.blind && (
+              <Pill tone="coral">먹물 피격 · {secondsLeft(selectLiveBlindExpiry(activeEffects, nowMs))}s</Pill>
             )}
             {isPlaying && liveDefense && (
               <Pill tone="teal" key={`guard-${liveDefense.itemEventId}`}>
@@ -1843,6 +1939,11 @@ export default function MultiplayerGamePage() {
           </span>
         </div>
 
+        {isPlaying && useItems && <DuelFeedbackLane>
+          {!duelFeedback.notices.length && floatingMessage && <div className="floating-message wr-duel-feedback-fallback" role="status" aria-live="polite">{floatingMessage}</div>}
+          <DuelItemFeedback cues={duelFeedback.cues} notices={duelFeedback.notices} />
+          <DuelRecentEvents events={duelFeedback.recent} />
+        </DuelFeedbackLane>}
         <div className="wr-race-body">
           <aside className="wr-race-side">
             <RouteRail
@@ -1854,6 +1955,12 @@ export default function MultiplayerGamePage() {
             />
           </aside>
           <main className="wr-race-main">
+            <MobileRouteNotes path={Array.isArray(myPlayer?.path_titles) ? myPlayer.path_titles : []} startTitle={myPlayer?.start_title} />
+            <div className="wr-duel-article"
+              data-impact-ink={duelFeedback.cues.some(c => c.kind === 'hit' && c.motif === 'ink') ? 'true' : undefined}
+              data-feature={duelFeedback.cues.filter(c => c.kind === 'use' && ['search','preview','index'].includes(c.motif)).at(-1)?.motif}
+              data-motion={duelFeedback.cues.filter(c => c.articleMotion).at(-1)?.articleMotion}
+              data-impact-seal={duelFeedback.cues.some(c => c.kind === "hit" && c.motif === "seal") ? "true" : undefined}>
             <WikiViewer
               target={targetForViewer}
               currentTitle={currentTitle}
@@ -1870,17 +1977,21 @@ export default function MultiplayerGamePage() {
               blindActive={status.blind}
               highlightRequestId={highlightRequestId}
               searchAvailable={searchAvailable}
+              searchExpiresAt={searchPermit?.expiresAt ?? 0}
               onConsumeSearch={() => setSearchAvailable(false)}
               status={status}
               showTargetBrief={false}
             />
+            <DuelItemFeedback cues={duelFeedback.cues} article />
+            </div>
           </main>
         </div>
 
         {/* 아이템전만 dock을 둔다. 일반전은 빈 아이템 칸을 그리지 않고 높이를 본문에 돌려준다 */}
         {isPlaying && useItems && (
-          <div className="wr-race-dock">
+          <div className="wr-race-dock" data-feedback-feature={duelFeedback.cues.filter(c => c.kind === 'use' && ['search','preview','index'].includes(c.motif)).at(-1)?.motif}>
             <DuelItemBar
+              feedbackCues={duelFeedback.cues.map(cue => ({ ...cue, symbol: <DuelFeedbackSymbol motif={cue.motif} /> }))}
               inventory={inventory}
               useItems={useItems}
               phaseReady={room?.status === "playing" && !myPlayer?.has_finished}
@@ -1913,15 +2024,10 @@ export default function MultiplayerGamePage() {
       {isPlaying && (
         <>
           <EffectOverlay
-            blindActive={status.blind}
-            floatingMessage={floatingMessage}
-            immune={pendingDefenses.length > 0}
+            blindActive={false}
+            floatingMessage={useItems ? "" : floatingMessage}
+            immune={false}
           />
-          {itemEffect && (
-            <div className="item-effect-pop" role="status">
-              <span>{itemEffect}</span>
-            </div>
-          )}
           {miniGame && (
             <div className="mini-game-overlay">
               <div className="mini-game-card">
@@ -1939,8 +2045,11 @@ export default function MultiplayerGamePage() {
 
       {/* 결과 — Phase 4 RESULT (Freeze 07). 자동 이동 없음 · 나가기는 "게임 로비로 이동"만 */}
       {(phase === PHASE.SUCCESS || phase === PHASE.OPPONENT_WIN) && (
-        <ResultScreen mode="duel" tone={duelOutcome.tone} layer="overlay" titleId="wr-duel-result-title" testId="duel-result">
-          <ResultScene mascot={duelOutcome.mascot} reached={duelOutcome.reached} celebration={duelOutcome.celebration} destination={commonTargetTitle || null} />
+        <DuelEndSequence key={`${roomId}:${user?.id}`} identity={`scene:end:duel:${roomId}:${user?.id}`}
+          scene={duelEndScene} ready={endPlayersReady} eligible={reachedPlayingRef.current && !resultRecoveredRef.current}
+          myPlayer={myPlayer} opponentPlayer={opponentPlayer}>
+        <ResultScreen mode="duel" tone={duelOutcome.tone} layer="overlay" titleId="wr-duel-result-title" resultKey={roomId} motionEligible={false} confirmed={room?.status === "finished"} testId="duel-result">
+          <ResultScene reached={duelOutcome.reached} celebration={duelOutcome.celebration} destination={commonTargetTitle || null} recordedAt={room?.finished_at} />
           <ResultCard>
             <ResultOutcome
               kicker={duelOutcome.kicker}
@@ -1990,6 +2099,7 @@ export default function MultiplayerGamePage() {
             </ResultActions>
           </ResultCard>
         </ResultScreen>
+        </DuelEndSequence>
       )}
 
       {pageData && <ScrollToTopButton />}

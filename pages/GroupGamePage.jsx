@@ -1,4 +1,9 @@
+import useRaceMotion from "../hooks/useRaceMotion.js";
+import useGameAudio from "../hooks/useGameAudio.js";
+import { audioManager } from "../services/audioManager.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { traceGroupResult as trace } from "../utils/groupResultTrace.js";
+import { createGroupSnapshotGuard } from "../utils/groupSnapshotGuard.js";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { supabase } from "../supabaseClient";
@@ -129,6 +134,7 @@ export default function GroupGamePage() {
     const { roomId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+  const [moveMotion, approveMoveMotion] = useRaceMotion();
     const { user } = useAuth();
 
     const initialEntryRef = useRef(null);
@@ -141,6 +147,8 @@ export default function GroupGamePage() {
     }
 
     const [phase, setPhase] = useState(initialEntryRef.current.phase);
+    const resultRecoveredRef = useRef(false);
+    const finalResultRecoveredRef = useRef(false);
     const [room, setRoom] = useState(null);
     const [players, setPlayers] = useState([]);
     const [results, setResults] = useState([]);
@@ -171,6 +179,10 @@ export default function GroupGamePage() {
         getGroupLoadingState(initialEntryRef.current.phase)
     );
     const [leaving, setLeaving] = useState(false);
+    useGameAudio({ identity: `group:${roomId}:${user?.id}`, route: `/multiplayer/group/game/${roomId}`,
+        playing: phase === GROUP_GAME_PHASE.PLAYING && !recovery && !leaving,
+        connection: phase === GROUP_GAME_PHASE.PLAYING && !recovery ? 'ok' : recovery?.mode === 'retryable' ? 'lost' : null,
+        ended: room?.status === 'finished' || leaving || [GROUP_GAME_PHASE.FINISHED, GROUP_GAME_PHASE.SPECTATING, GROUP_GAME_PHASE.ENDED].includes(phase) });
     const [connectionVersion, setConnectionVersion] = useState(0);
     const [selectedSpectatorId, setSelectedSpectatorId] = useState(null);
     const [spectatorPage, setSpectatorPage] = useState(null);
@@ -205,6 +217,18 @@ export default function GroupGamePage() {
 
     const roomRef = useRef(null);
     const playersRef = useRef([]);
+    const diagnosticReadRef = useRef(0);
+    const snapshotGuardRef = useRef(null);
+    if (!snapshotGuardRef.current) snapshotGuardRef.current = createGroupSnapshotGuard();
+    const resultReadErrorRef = useRef(false);
+    const leavingRef = useRef(false);
+    const recoveringRef = useRef(false);
+    const [resultReadError, setResultReadError] = useState(false);
+
+    useEffect(() => {
+        trace("ui-state", { phase, status: room?.status, version: room?.state_version, results: results.length,
+            players: players.map((p, slot) => ({ slot, status: p.player_status, rank: p.rank, version: p.progress_version })) });
+    }, [phase, room, players, results]);
 
     useEffect(() => {
         roomRef.current = room;
@@ -366,19 +390,32 @@ export default function GroupGamePage() {
     }, []);
 
     const fetchGroupRoomSnapshot = useCallback(async () => {
+        const read = ++diagnosticReadRef.current;
+        trace("snapshot-start", { read });
         const [roomData, playerData] = await Promise.all([
             fetchGroupRoom(roomId),
             fetchGroupRoomPlayers(roomId),
         ]);
 
+        trace("snapshot-end", { read, status: roomData.status, version: roomData.state_version,
+            players: playerData.map((p, slot) => ({ slot, status: p.player_status, rank: p.rank, version: p.progress_version })) });
         return { room: roomData, players: playerData };
     }, [roomId]);
 
     const showFinalGroupRoom = useCallback(async (finishedRoom) => {
+        const read = snapshotGuardRef.current.begin();
+        trace("final-results-start", { read });
         const [latestPlayers, latestResults] = await Promise.all([
             fetchGroupRoomPlayers(roomId),
             fetchGroupResults(roomId),
         ]);
+        if (!snapshotGuardRef.current.accept(read, finishedRoom, latestPlayers)) {
+            trace("discard-response", { read, source: "finalizer" });
+            return finishedRoom;
+        }
+        trace("final-results-end", { read, count: latestResults.length });
+        roomRef.current = finishedRoom;
+        playersRef.current = latestPlayers;
 
         setRoom(finishedRoom);
         setPlayers(latestPlayers);
@@ -426,6 +463,7 @@ export default function GroupGamePage() {
                     return showFinalGroupRoom(latestRoom);
                 }
 
+                if (roomRef.current?.status === "finished" || leavingRef.current) return roomRef.current;
                 setRoom(latestRoom);
                 setRemainingSeconds(getGroupRemainingSeconds(latestRoom));
                 return latestRoom;
@@ -438,6 +476,7 @@ export default function GroupGamePage() {
         try {
             return await request;
         } catch (error) {
+            if (roomRef.current?.status === "finished" || leavingRef.current) return roomRef.current;
             const normalized = normalizeOnlineGameError(
                 error,
                 "경기 종료 상태를 서버에 반영하지 못했습니다."
@@ -457,7 +496,8 @@ export default function GroupGamePage() {
     ]);
 
     const recoverGame = useCallback(async (entryPhase = GROUP_GAME_PHASE.RECOVERING) => {
-        if (!roomId || !user?.id) return;
+        if (!roomId || !user?.id || leavingRef.current) return;
+        recoveringRef.current = true;
 
         setTarget((previous) => previous.sourceRoomId === roomId
             ? previous
@@ -470,6 +510,7 @@ export default function GroupGamePage() {
 
         const generation = recoveryGenerationRef.current + 1;
         recoveryGenerationRef.current = generation;
+        const read = snapshotGuardRef.current.begin();
         const loadingState = getGroupLoadingState(entryPhase);
         setPhase(loadingState.phase);
         setRecovery({
@@ -525,6 +566,12 @@ export default function GroupGamePage() {
             }
 
             const { session, page } = restored;
+            if (!snapshotGuardRef.current.accept(read, session.room, session.players)) {
+                trace("discard-response", { read, source: "recovery" });
+                return;
+            }
+            roomRef.current = session.room;
+            playersRef.current = session.players;
             setRoom(session.room);
             setPlayers(session.players);
             setStartTitle(session.room.group_start_title || "");
@@ -535,9 +582,16 @@ export default function GroupGamePage() {
             }
 
             if (session.outcome !== "active") {
+                resultRecoveredRef.current = true;
+                finalResultRecoveredRef.current = session.outcome === "ended";
                 finishedRef.current = true;
-                const latestResults = await fetchGroupResults(roomId).catch(() => []);
-                if (recoveryGenerationRef.current !== generation) return;
+                trace("recovery-results-start", { read, status: session.room.status });
+                const latestResults = await fetchGroupResults(roomId);
+                if (recoveryGenerationRef.current !== generation || !snapshotGuardRef.current.isCurrent(read)) {
+                    trace("discard-response", { read, source: "recovery-results" });
+                    return;
+                }
+                trace("recovery-results-end", { read, count: latestResults.length });
 
                 const restoredPhase = getRestoredGroupPhase(session, saved);
                 setResults(latestResults);
@@ -559,6 +613,8 @@ export default function GroupGamePage() {
 
             const restoredPhase = getRestoredGroupPhase(session, saved);
             const enteredPlaying = restoredPhase === GROUP_GAME_PHASE.PLAYING;
+            resultRecoveredRef.current = false;
+            finalResultRecoveredRef.current = false;
 
             setCurrentTitle(page.title);
             setCurrentSummary(page.summary);
@@ -583,7 +639,7 @@ export default function GroupGamePage() {
             setPhase(restoredPhase);
             setConnectionVersion((prev) => prev + 1);
         } catch (error) {
-            if (recoveryGenerationRef.current !== generation) return;
+            if (recoveryGenerationRef.current !== generation || !snapshotGuardRef.current.isCurrent(read)) return;
             const normalized = normalizeOnlineGameError(
                 error,
                 "일시적으로 게임 연결을 복구하지 못했습니다."
@@ -600,6 +656,8 @@ export default function GroupGamePage() {
                 // Phase 3 표시 전용: 리타이어(PARTICIPANT_INACTIVE)를 중립 집계 화면으로 구분한다.
                 code: normalized.code,
             });
+        } finally {
+            if (recoveryGenerationRef.current === generation) recoveringRef.current = false;
         }
     }, [
         roomId,
@@ -613,7 +671,17 @@ export default function GroupGamePage() {
     ]);
 
     const refreshRoomState = useCallback(async () => {
-        let snapshot = await fetchGroupRoomSnapshot();
+        if (leavingRef.current || recoveringRef.current) return;
+        const read = snapshotGuardRef.current.begin();
+        trace("refresh-start", { read });
+        let snapshot = await fetchGroupRoomSnapshot().catch(error => {
+            if (!snapshotGuardRef.current.isCurrent(read)) {
+                trace("discard-error", { read, source: "snapshot" });
+                return null;
+            }
+            throw error;
+        });
+        if (!snapshot) return;
 
         if (
             isGroupRoomExpired(snapshot.room)
@@ -628,6 +696,12 @@ export default function GroupGamePage() {
             players: snapshot.players,
             userId: user.id,
         });
+        if (!snapshotGuardRef.current.accept(read, session.room, session.players)) {
+            trace("discard-response", { read, source: "snapshot" });
+            return;
+        }
+        roomRef.current = session.room;
+        playersRef.current = session.players;
 
         setRoom(session.room);
         setPlayers(session.players);
@@ -653,7 +727,19 @@ export default function GroupGamePage() {
 
         if (session.outcome !== "active") {
             finishedRef.current = true;
-            const latestResults = await fetchGroupResults(roomId).catch(() => []);
+            trace("results-start", { read, status: session.room.status });
+            const latestResults = await fetchGroupResults(roomId).catch(error => {
+                if (!snapshotGuardRef.current.isCurrent(read)) {
+                    trace("discard-error", { read, source: "results" });
+                    return null;
+                }
+                throw error;
+            });
+            if (!snapshotGuardRef.current.isCurrent(read)) {
+                trace("discard-response", { read, source: "results" });
+                return;
+            }
+            trace("results-end", { read, status: session.room.status, count: latestResults.length });
             setResults(latestResults);
             const restoredPhase = getRestoredGroupPhase(session, loadLocalGameState() || {});
             saveLocalGameState({
@@ -743,6 +829,8 @@ export default function GroupGamePage() {
     ]);
 
     useEffect(() => () => {
+        snapshotGuardRef.current.cancel();
+        recoveryGenerationRef.current += 1;
         targetSummaryRequestRef.current?.cancel();
         spectatorPageRequestRef.current?.cancel();
     }, []);
@@ -767,6 +855,7 @@ export default function GroupGamePage() {
                     filter: `id=eq.${roomId}`,
                 },
                 async (payload) => {
+                    trace("realtime-event", { table: "game_rooms", status: payload?.new?.status, version: payload?.new?.state_version });
                     const incoming = payload?.new?.state_version;
                     const relation = incoming == null
                         ? "next"
@@ -789,6 +878,7 @@ export default function GroupGamePage() {
                     filter: `room_id=eq.${roomId}`,
                 },
                 async (payload) => {
+                    trace("realtime-event", { table: "room_players", status: payload?.new?.player_status, version: payload?.new?.progress_version });
                     const incoming = payload?.new?.progress_version;
                     const playerId = payload?.new?.user_id;
                     const current = playersRef.current.find((player) => player.user_id === playerId);
@@ -823,8 +913,13 @@ export default function GroupGamePage() {
 
         realtimeChannelRef.current = channel;
         channel.subscribe((status, error) => {
+            trace("subscription", { status });
             if (realtimeChannelRef.current !== channel) return;
+            if (status === "SUBSCRIBED" && initialValidationCompletedRef.current && roomRef.current?.status !== "finished") {
+                void refreshRoomState().catch(() => { resultReadErrorRef.current = true; setResultReadError(true); });
+            }
             if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+                if (roomRef.current?.status === "finished" || leavingRef.current) return;
                 console.error("group game realtime disconnected:", status, error);
                 setPhase(GROUP_GAME_PHASE.RECOVERING);
                 setRecovery({
@@ -845,6 +940,7 @@ export default function GroupGamePage() {
     useEffect(() => {
         const handleReconnectOpportunity = () => recoverGame();
         const handleVisibility = () => {
+            trace("visibility", { state: document.visibilityState });
             if (document.visibilityState === "visible") recoverGame();
         };
 
@@ -856,6 +952,52 @@ export default function GroupGamePage() {
             document.removeEventListener("visibilitychange", handleVisibility);
         };
     }, [recoverGame]);
+
+    // Evidence: missed final changes leave Result A waiting forever. Only reconcile
+    // personal result/watch states; one scheduled request at a time, paused hidden/
+    // offline, stopped on final result, leave or unmount. Failures back off to 30s.
+    useEffect(() => {
+        if (![GROUP_GAME_PHASE.FINISHED, GROUP_GAME_PHASE.SPECTATING].includes(phase) || leaving) return;
+        let stopped = false, busy = false, timer, failures = 0;
+        const check = async (source) => {
+            clearTimeout(timer);
+            if (stopped || busy || leavingRef.current) return;
+            if (document.visibilityState === "hidden" || !navigator.onLine) return;
+            busy = true;
+            trace("reconcile-start", { source });
+            try {
+                await refreshRoomState();
+                failures = 0;
+                resultReadErrorRef.current = false;
+                if (!stopped) setResultReadError(false);
+            } catch {
+                failures++;
+                resultReadErrorRef.current = true;
+                if (!stopped) setResultReadError(true);
+                trace("reconcile-error", { source });
+            } finally {
+                busy = false;
+                if (!stopped && !leavingRef.current && roomRef.current?.status !== "finished") {
+                    timer = setTimeout(() => check("interval"), Math.min(30000, 3000 * 2 ** Math.min(failures, 4)));
+                } else if (!stopped && resultReadErrorRef.current) {
+                    // A finished room whose results read failed still needs a read.
+                    timer = setTimeout(() => check("results-retry"), Math.min(30000, 3000 * 2 ** Math.min(failures, 4)));
+                }
+            }
+        };
+        const resume = () => { if (document.visibilityState === "visible") void check("resume"); };
+        timer = setTimeout(() => check("interval"), 3000);
+        window.addEventListener("focus", resume);
+        window.addEventListener("online", resume);
+        document.addEventListener("visibilitychange", resume);
+        return () => {
+            stopped = true; clearTimeout(timer);
+            window.removeEventListener("focus", resume);
+            window.removeEventListener("online", resume);
+            document.removeEventListener("visibilitychange", resume);
+            trace("reconcile-stop");
+        };
+    }, [phase, leaving, refreshRoomState]);
 
     useEffect(() => {
         if (timerRef.current) clearInterval(timerRef.current);
@@ -1116,6 +1258,7 @@ export default function GroupGamePage() {
         })) return;
 
         moveInFlightRef.current = true;
+        snapshotGuardRef.current.cancel();
         setIsLoading(true);
 
         try {
@@ -1135,7 +1278,11 @@ export default function GroupGamePage() {
                 nextPage: page,
                 clickedRawTitle: nextTitle,
             });
-            if (serverMove.room) setRoom(serverMove.room);
+            if (serverMove.room && roomRef.current?.status !== "finished") {
+                snapshotGuardRef.current.cancel();
+                roomRef.current = serverMove.room;
+                setRoom(serverMove.room);
+            }
             const serverPlayer = serverMove.player || {};
             const nextClickCount = Number(serverPlayer.move_count) || 0;
             const newPath = Array.isArray(serverPlayer.path_titles) && serverPlayer.path_titles.length
@@ -1156,9 +1303,14 @@ export default function GroupGamePage() {
             setLinks(page.links);
             setQuickLinks(page.quickLinks);
             setPathTitles(newPath);
+            if (serverPlayer.progress_version != null) {
+                approveMoveMotion(`${roomId}:${serverPlayer.user_id}:${serverPlayer.progress_version}`, newPath.length > pathTitles.length);
+            }
             setClickCount(nextClickCount);
 
             if (solved) {
+                trace("personal-finish", { rank: serverPlayer.rank, status: serverMove.room?.status });
+                void audioManager.play('personalArrival', { key: `group-personal:${roomId}:${user?.id}` });
                 finishedRef.current = true;
                 saveLocalGameState({
                     currentTitle: serverPlayer.current_title || page.title,
@@ -1203,6 +1355,8 @@ export default function GroupGamePage() {
     const handleReturnToLobby = async (retireReason = "forfeited") => {
         if (leaving) return;
         setLeaving(true);
+        leavingRef.current = true;
+        snapshotGuardRef.current.cancel();
         recoveryGenerationRef.current += 1;
 
         if (timerRef.current) clearInterval(timerRef.current);
@@ -1231,6 +1385,7 @@ export default function GroupGamePage() {
                     "게임 상태를 확인하지 못해 나갈 수 없습니다."
                 );
                 setLeaving(false);
+                leavingRef.current = false;
                 setRecovery({
                     mode: normalized.recoverable ? "retryable" : "fatal",
                     message: normalized.message,
@@ -1255,6 +1410,7 @@ export default function GroupGamePage() {
         } catch (error) {
             console.error("leave group game failed:", error);
             setLeaving(false);
+            leavingRef.current = false;
             setPhase(GROUP_GAME_PHASE.RECOVERING);
             setRecovery({
                 mode: "retryable",
@@ -1323,7 +1479,7 @@ export default function GroupGamePage() {
         // 리타이어 — 관전·반응 없이 중립 집계 화면. 기존 recoverGame이 방 종료를 확인하면 최종 결과로 간다.
         return (
             <>
-                <RaceFrame mode="group" label="그룹 레이스">
+                <RaceFrame motion={moveMotion} mode="group" label="그룹 레이스">
                     <RaceHud>
                         <HudBrand mode="그룹" />
                         <HudStatus>
@@ -1379,6 +1535,9 @@ export default function GroupGamePage() {
             <>
                 {exitDialog}
                 <GroupResultA
+                    resultKey={`${roomId}:${user?.id}`}
+                    motionEligible={!resultRecoveredRef.current}
+                    syncMessage={resultReadError ? "서버 결과를 확인하지 못했습니다. 연결이 돌아오면 다시 확인합니다." : room?.status === "finished" ? "경기는 종료됐습니다. 서버가 확정한 최종 결과를 불러오고 있습니다." : "최종 순위는 경기가 끝난 뒤 확정됩니다. 서버 상태를 주기적으로 확인합니다."}
                     result={myResult}
                     size={players.length}
                     finishedCount={rosterCounts.finished}
@@ -1493,7 +1652,7 @@ export default function GroupGamePage() {
         return (
             <>
                 {exitDialog}
-                <RaceFrame mode="group" tabs label="그룹 관전">
+                <RaceFrame motion={moveMotion} mode="group" tabs label="그룹 관전">
                     <RaceHud>
                         <HudBrand mode="그룹" />
                         <div className="wr-hud-cell wr-hud-record">
@@ -1597,8 +1756,8 @@ export default function GroupGamePage() {
         return (
             <>
                 {exitDialog}
-                <ResultScreen mode="group" tone={outcome.tone} layer="page" titleId="wr-group-result-title" focusKey={view} testId="group-final-result">
-                    <ResultScene mascot={outcome.mascot} reached={!ownRetired && Boolean(ownResult)} celebration={outcome.celebration} destination={goalTitle || null} />
+                <ResultScreen mode="group" cinematic="group" tone={outcome.tone} layer="page" titleId="wr-group-result-title" focusKey={view} resultKey={roomId} motionEligible={!finalResultRecoveredRef.current && view !== "retired"} confirmed={room?.status === "finished" && results.length > 0} testId="group-final-result">
+                    <ResultScene variant="group-final" podiumRows={standingRows.filter(row => results.some(result => result.user_id === row.userId && result.result_status === "finished"))} reached={!ownRetired && Boolean(ownResult)} celebration={outcome.celebration} destination={goalTitle || null} recordedAt={room?.finished_at} />
                     <ResultCard>
                         <ResultOutcome
                             kicker={outcome.kicker}
@@ -1614,11 +1773,6 @@ export default function GroupGamePage() {
                                 { label: "공통 코스", wide: true, value: <ResultCourse start={courseStart} target={goalTitle} /> },
                             ]}
                         />
-                        {ownResult ? (
-                            <ResultXpRow>
-                                <ResultXp scope="group" userId={user?.id} sourceId={ownResultRowId} roomId={roomId} tone="light" />
-                            </ResultXpRow>
-                        ) : null}
                         {view === "retired" ? (
                             <ResultRoute
                                 title="내 경로"
@@ -1631,6 +1785,11 @@ export default function GroupGamePage() {
                                 ? <p className="wr-result-row" role="status">최종 결과를 불러오는 중입니다.</p>
                                 : <GroupStandings rows={standingRows} finishedCount={standingCounts.finished} retiredCount={standingCounts.retired} />
                         )}
+                        {ownResult ? (
+                            <ResultXpRow>
+                                <ResultXp scope="group" userId={user?.id} sourceId={ownResultRowId} roomId={roomId} tone="light" />
+                            </ResultXpRow>
+                        ) : null}
                         <ResultActions>
                             {view === "retired" && (
                                 <button type="button" className="wr-race-btn wr-race-btn--primary wr-race-btn--lg" onClick={() => setFinalStandingsOpen(true)}>
@@ -1665,6 +1824,10 @@ export default function GroupGamePage() {
             {phase === GROUP_GAME_PHASE.PICKING && (
                 <GroupPickOverlay
                     candidates={candidates}
+                    players={players.filter((player) => !isGroupPlayerInactive(player))}
+                    sceneKey={roomId}
+                    startedAt={room?.started_at}
+                    motionEligible={initialEntryRef.current.phase === GROUP_GAME_PHASE.INITIALIZING}
                     startTitle={room?.group_start_title}
                     targetTitle={room?.group_target_title}
                     onComplete={() => setPhase(GROUP_GAME_PHASE.COUNTDOWN)}
@@ -1673,11 +1836,12 @@ export default function GroupGamePage() {
 
             {phase === GROUP_GAME_PHASE.COUNTDOWN && (
                 <CountdownOverlay
+                    sceneKey={roomId} mode="group"
                     onComplete={handleCountdownComplete}
                 />
             )}
 
-            <RaceFrame mode="group" label="그룹 레이스">
+            <RaceFrame motion={moveMotion} mode="group" label="그룹 레이스">
                 <RaceHud>
                     <HudBrand mode="그룹" />
                     <HudDoc kind="current" label="현재 문서" title={currentTitle} />

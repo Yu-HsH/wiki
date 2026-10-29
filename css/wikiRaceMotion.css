@@ -27,3 +27,30 @@
   .wr-page *, .wr-page *::before, .wr-page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .wr-page .wr-vignette, .wr-page .wr-play-launcher, .wr-page .daily-btn { transform: none !important; }
 }
+
+/* Approved movement only. The article DOM, scroll and input stay untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  .wr-race[data-move-motion="a"] .wr-hud-doc--current .wr-hud-doc-value,
+  .wr-race[data-move-motion="a"][data-route-added="true"] .wr-route-step:last-child,
+  .wr-race[data-move-motion="a"][data-route-added="true"] .wr-mobile-route-notes .wr-chain-chip:last-child { animation: wr-approved-a 300ms ease-out; }
+  .wr-race[data-move-motion="b"] .wr-hud-doc--current .wr-hud-doc-value,
+  .wr-race[data-move-motion="b"][data-route-added="true"] .wr-route-step:last-child,
+  .wr-race[data-move-motion="b"][data-route-added="true"] .wr-mobile-route-notes .wr-chain-chip:last-child { animation: wr-approved-b 300ms ease-out; }
+}
+@keyframes wr-approved-a { from { opacity: .55; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+@keyframes wr-approved-b { from { opacity: .55; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .wr-race .item-card:not(:disabled), .wr-race .duel-item-slot:not(:disabled) { transition: transform 150ms ease-out; }
+  .wr-race .item-card:not(:disabled):active, .wr-race .duel-item-slot:not(:disabled):active { transform: translateY(1px); }
+}
+
+/* A brief HUD accent from the confirmed item event; no effect lifetime changes. */
+@media (prefers-reduced-motion: no-preference) {
+  .wr-race[data-item-tone="attack"] { --wr-reaction-color: var(--wr-coral, #cb695a); }
+  .wr-race[data-item-tone="defense"], .wr-race[data-item-tone="explore"] { --wr-reaction-color: var(--wr-teal); }
+  .wr-race[data-item-motion="a"] .wr-hud-status { animation: wr-reaction-a 300ms ease-out; }
+  .wr-race[data-item-motion="b"] .wr-hud-status { animation: wr-reaction-b 300ms ease-out; }
+}
+@keyframes wr-reaction-a { from { opacity: .6; color: var(--wr-reaction-color); transform: translateY(2px); } to { opacity: 1; transform: none; } }
+@keyframes wr-reaction-b { from { opacity: .6; color: var(--wr-reaction-color); transform: translateY(2px); } to { opacity: 1; transform: none; } }

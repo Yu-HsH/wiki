@@ -30,6 +30,7 @@ export default function WikiViewer({
   onLinkClick,
   timerLabel = "진행 시간", // eslint-disable-line no-unused-vars
   searchAvailable = false,
+  searchExpiresAt = null, // Duel-only server deadline; Single/Group keep their existing contract.
   onConsumeSearch,
   highlightRequestId = 0,
   status = {},
@@ -272,7 +273,15 @@ export default function WikiViewer({
   // 관전(읽기 전용) 화면: 링크는 이동하지 않는다 (Freeze 06 — "링크를 눌러도 이동하지 않습니다").
   // 마우스·키보드 모두 실행되지 않도록 탭 순서에서도 뺀다.
   useEffect(() => {
-    if (!readOnly || !articleRef.current) return undefined;
+    if (!articleRef.current) return undefined;
+    if (!readOnly) {
+      // The reserved Single reuses the prefetched DOM when countdown ends.
+      // Restore native link semantics removed during read-only preparation.
+      articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((link) => {
+        link.setAttribute("href", "#");
+      });
+      return undefined;
+    }
 
     articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((link) => {
       link.removeAttribute("href");
@@ -366,6 +375,10 @@ export default function WikiViewer({
 
   const handleGameSearch = useCallback(() => {
     if (!articleRef.current) return;
+    if (Number.isFinite(searchExpiresAt) && (!searchAvailable || searchExpiresAt <= Date.now())) {
+      setSearchMessage("검색 사용 가능 시간이 끝났거나 이미 사용했습니다.");
+      return;
+    }
 
     const query = searchQuery.trim();
     if (!query) {
@@ -389,7 +402,7 @@ export default function WikiViewer({
 
     setSearchMessage(`"${query}" ${count}개 발견`);
     onConsumeSearch?.();
-  }, [searchQuery, clearSearchHighlights, onConsumeSearch]);
+  }, [searchQuery, clearSearchHighlights, onConsumeSearch, searchAvailable, searchExpiresAt]);
 
   const handleCloseSearchPanel = useCallback(() => {
     setSearchPanelOpen(false);
@@ -397,6 +410,16 @@ export default function WikiViewer({
     setSearchMessage("");
     clearSearchHighlights();
   }, [clearSearchHighlights]);
+  useEffect(() => {
+    if (!Number.isFinite(searchExpiresAt)) return undefined;
+    const remaining = searchExpiresAt - Date.now();
+    const close = () => {
+      setSearchPanelOpen(false); setSearchQuery(""); setSearchMessage(""); clearSearchHighlights();
+    };
+    if (remaining <= 0) { close(); return undefined; }
+    const timer = setTimeout(close, remaining);
+    return () => clearTimeout(timer);
+  }, [searchExpiresAt, clearSearchHighlights]);
   useEffect(() => {
     setSearchPanelOpen(false);
     setSearchQuery("");
@@ -427,7 +450,7 @@ export default function WikiViewer({
       {/* 단축키 사용 시 토스트 안내 */}
       {showFindToast && (
         <div className="wiki-find-block-toast" role="status">
-          찾기 기능은 사용할 수 없습니다. 오른쪽 목차 막대를 이용해 주세요.
+          찾기 기능은 사용할 수 없습니다. 문서 목차를 이용해 주세요.
         </div>
       )}
 
@@ -435,7 +458,9 @@ export default function WikiViewer({
       {headings.length > 0 && (
         <nav className="wiki-nav-rail" aria-label="문서 목차">
           {headings.map((h) => (
-            <div
+            <button
+              type="button"
+              aria-label={`목차: ${h.text}`}
               key={h.id}
               className={`wiki-nav-item ${activeId === h.id ? 'active' : ''}`}
               onClick={() => scrollToHeading(h.id)}
@@ -450,7 +475,7 @@ export default function WikiViewer({
               onMouseLeave={() => setHoveredHeading(null)}
             >
               <div className={`wiki-nav-dot level-${h.level}`} />
-            </div>
+            </button>
           ))}
         </nav>
       )}

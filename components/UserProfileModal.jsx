@@ -19,6 +19,8 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
     const [rewardCard, setRewardCard] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
+    const [detailError, setDetailError] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -31,6 +33,9 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
         let isMounted = true;
         setLoading(true);
         setError(false);
+        setDetailError(false);
+        setProfile(null);
+        setStats(null);
         setXpSummary(null);
         setRewardCard(null);
 
@@ -38,9 +43,9 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
             fetchPublicProfile(userId),
             fetchAllProfileStats(userId),
             // 진행도는 부가 정보다 — 실패해도 프로필은 연다. 레벨은 profile_level이 채운다.
-            fetchXpSummary(userId).catch(() => null),
+            fetchXpSummary(userId).catch(error => { console.error('공개 프로필 XP 조회 실패:', error); if (isMounted) setDetailError(true); return null; }),
             // 장착 상태도 부가 정보다 — 실패하면 legacy·이니셜 표시로 남는다 (17b).
-            fetchProfileCard(userId).catch(() => null)
+            fetchProfileCard(userId).catch(error => { console.error('공개 프로필 보상 조회 실패:', error); if (isMounted) setDetailError(true); return null; })
         ]).then(([profileData, statsData, xpData, rewardData]) => {
             if (isMounted) {
                 setProfile(profileData);
@@ -58,7 +63,7 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
         });
 
         return () => { isMounted = false; };
-    }, [userId, isOpen]);
+    }, [userId, isOpen, reloadKey]);
 
     if (!isOpen) return null;
 
@@ -88,6 +93,7 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                 ) : error ? (
                     <div className="user-profile-modal-content">
                         <p style={{ textAlign: "center", marginTop: "2rem", color: "red" }}>프로필을 불러오는데 실패했습니다.</p>
+                        <button type="button" className="app-btn app-btn-ghost" onClick={() => setReloadKey(value => value + 1)}>프로필 다시 불러오기</button>
                     </div>
                 ) : (
                     <div className="user-profile-modal-content">
@@ -113,6 +119,7 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                         </div>
 
                         <XpProgress summary={xpSummary} />
+                        {detailError && <p role="alert">일부 프로필 정보를 불러오지 못했습니다. <button type="button" className="text-btn" onClick={() => setReloadKey(value => value + 1)}>다시 불러오기</button></p>}
 
                         <div className="user-profile-modal-stats">
                             <div className="stat-box">
@@ -120,8 +127,9 @@ export default function UserProfileModal({ userId, isOpen, onClose }) {
                                 <strong>{stats?.single?.totalWins || 0}회</strong>
                             </div>
                             <div className="stat-box">
-                                <span>최고 기록</span>
+                                <span>새 기준 최고 기록</span>
                                 <strong>{formatTime(stats?.single?.bestTime)}</strong>
+                                <small>이전 기록 {formatTime(stats?.single?.previousBestTime)}</small>
                             </div>
                             <div className="stat-box">
                                 <span>1vs1 승률</span>

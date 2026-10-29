@@ -23,7 +23,7 @@ test("daily course starts unknown — the fallback is not the initial state", ()
 });
 
 test("the button is disabled and guarded until the course is loaded", () => {
-  assert.match(dailyBlock, /disabled=\{!dailyChallenge\}/);
+  assert.match(dailyBlock, /disabled=\{!dailyChallenge \|\| !dailyChallenge.startTitle/);
   assert.match(dailyBlock, /if \(!dailyChallenge\) return;/);
   const guard = dailyBlock.indexOf("if (!dailyChallenge) return;");
   const nav = dailyBlock.indexOf('navigate("/game"');
@@ -34,9 +34,12 @@ test("keyword and target are the same loaded value", () => {
   assert.match(dailyBlock, /keyword: dailyChallenge\.keyword,\s*targetTitle: dailyChallenge\.keyword,/);
 });
 
-test("loading copy is shown in place of the keyword, the hint waits", () => {
-  assert.match(dailyBlock, /dailyChallenge\?\.keyword \?\? "오늘의 탐험을 불러오는 중…"/);
-  assert.match(dailyBlock, /\{dailyChallenge && <p className="daily-hint">/);
+test("loading and unverified courses have explicit status; only verified courses show the hint and route", () => {
+  assert.match(dailyBlock, /!dailyCourseAvailable && <p className="daily-keyword" role="status"/);
+  assert.match(dailyBlock, /오늘의 공식 코스를 확인하지 못했습니다/);
+  assert.match(dailyBlock, /오늘의 탐험을 불러오는 중…/);
+  assert.match(dailyBlock, /\{dailyChallenge && dailyCourseAvailable && <p className="daily-hint">/);
+  assert.match(dailyBlock, /\{dailyChallenge && dailyCourseAvailable && <div className="daily-course"/);
   assert.match(dailyBlock, /aria-busy=\{!dailyChallenge\}/);
 });
 

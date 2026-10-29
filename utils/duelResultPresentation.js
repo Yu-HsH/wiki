@@ -6,7 +6,7 @@ export function buildDuelResultPresentation(room, players = [], userId) {
   const isWinner = room.winner_user_id === userId;
   const label = getDuelResultLabel({ finishedReason: room.finished_reason, isWinner });
   if (!label) return null;
-  if (room.finished_reason !== "cancelled" && !room.winner_user_id) return null;
+  if (room.finished_reason !== "cancelled" && (!room.winner_user_id || !players.some(p => p.user_id === room.winner_user_id))) return null;
   const loser = players.find((p) => p.user_id !== room.winner_user_id);
   const disconnected = loser?.retire_reason === "disconnected_timeout";
   const description = room.finished_reason === "normal_finish"

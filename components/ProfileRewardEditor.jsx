@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import ProfileCard from "./ProfileCard.jsx";
 import {
   MATCH_EXPRESSION_SLOTS,
   PROFILE_CARD_SLOTS,
@@ -11,7 +13,8 @@ import {
   fetchOwnMatchExpression,
   unequipProfileReward,
 } from "../services/profileRewardService.js";
-import { pathColor } from "../utils/rewardTokens.js";
+import { pathColor, frameTier, finishTier } from "../utils/rewardTokens.js";
+import { audioManager } from "../services/audioManager.js";
 
 /**
  * 프로필 꾸미기 — 장착 편집 (트랙 17b, C5 §4 "프로필 = 장착 편집 진입점").
@@ -34,10 +37,11 @@ import { pathColor } from "../utils/rewardTokens.js";
  * @param {(equipment: Array) => void} props.onEquipment
  * @param {boolean} [props.loading]
  */
-export default function ProfileRewardEditor({ card, owned = [], onEquipment, loading = false }) {
+export default function ProfileRewardEditor({ card, owned = [], onEquipment, loading = false, goals = [] }) {
   const [openKey, setOpenKey] = useState(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState("");
   const [matchExpression, setMatchExpression] = useState(() => matchExpressionFromEquipment([]));
 
   const userId = card?.userId ?? null;
@@ -64,14 +68,19 @@ export default function ProfileRewardEditor({ card, owned = [], onEquipment, loa
   }));
 
   const run = async (request) => {
+    const requestSound = audioManager.action('profile-save');
     setPending(true);
     setError("");
+    setFeedback("");
     try {
       const equipment = await request();
+      requestSound('saved');
       onEquipment?.(equipment);
       setMatchExpression(matchExpressionFromEquipment(equipment));
       setOpenKey(null);
+      setFeedback("장착 상태를 저장했습니다. 카드 꾸미기는 위 미리보기에서, 경기 표현은 탐험 중에 확인할 수 있습니다.");
     } catch (requestError) {
+      requestSound('denied');
       setError(equipErrorMessage(requestError?.code));
     } finally {
       setPending(false);
@@ -81,16 +90,17 @@ export default function ProfileRewardEditor({ card, owned = [], onEquipment, loa
   const renderRow = (row) => {
     const { current } = row;
     const choices = owned.filter((reward) => reward.kind === row.slot);
+    const locked = goals.filter(r => r.kind === row.slot && !owned.some(o => o.rewardId === r.rewardId));
     const isOpen = openKey === row.slot;
     const panelId = `preward-panel-${row.slot}`;
 
     return (
-      <li key={row.slot} className="preward-row">
+      <li key={row.slot} className={`preward-row${current ? " preward-row--equipped" : " preward-row--empty"}`}>
         <div className="preward-row-head">
           <span className="preward-label">{row.label}</span>
           <span className="preward-current">
             {current ? current.displayName : "비어 있음"}
-            {current?.retired && <span className="preward-tag">은퇴</span>}
+            {current?.retired && <span className="preward-tag">은퇴</span>}<small className="preward-ownership">{current ? "장착 중" : choices.length ? `보유 ${choices.length}개 · 선택 가능` : "미보유 · 업적에서 보상 확인"}</small>
           </span>
           <button
             type="button"
@@ -130,13 +140,17 @@ export default function ProfileRewardEditor({ card, owned = [], onEquipment, loa
                     <>
                       {/* 경로 색상은 노드 테두리로만 보여 준다 (DESIGN-SYSTEM §1.1 — 면 채움 없음) */}
                       {swatch && <span className="preward-swatch" style={{ borderColor: swatch }} aria-hidden="true" />}
+                      {row.slot === "frame" && <span className={`preward-preview preward-preview--${frameTier(reward) || "default"}`} aria-label="프레임 미리보기">◎</span>}
+                      {row.slot === "finish_effect" && <span className={`preward-preview preward-preview--${finishTier(reward) || "default"}`} aria-label="완주 효과 단계 미리보기">✦</span>}
+                      {row.slot === "background" && <span aria-hidden="true"><ProfileCard card={{ ...card, background: reward }} size="sm" density="full" /></span>}
                       <span>{reward.displayName}</span>
                     </>
                   )}
-                  {selected && <span className="preward-tag">장착 중</span>}
+                  <span className="preward-tag">{selected ? "장착 중" : "보유 · 장착 가능"}</span>
                 </button>
               );
             })}
+            {locked.length > 0 && <div className="preward-goals"><p className="wr-kicker">다음 수집 목표 · 미보유</p>{locked.map((reward,i) => <div key={`${reward.rewardId}-${i}`} className="preward-locked"><strong>{reward.displayName}</strong><small>{reward.achievementName} · {reward.condition}</small>{Number.isFinite(reward.current) && Number.isFinite(reward.threshold) && <small>진행 {reward.current} / 목표 {reward.threshold}</small>}<Link to="/achievements">도감에서 획득 목표 확인 →</Link></div>)}</div>}
             {current && (
               <button
                 type="button"
@@ -154,8 +168,9 @@ export default function ProfileRewardEditor({ card, owned = [], onEquipment, loa
   };
 
   return (
-    <details className="preward">
-      <summary className="preward-summary">프로필 꾸미기</summary>
+    <details className="preward" open>
+      <summary className="preward-summary">수집 보상 · 프로필 꾸미기</summary><p className="preward-guide">아이콘·칭호·프레임·배경은 위 카드에 반영됩니다. 보유한 보상을 선택하면 서버가 확인한 장착 상태로 미리보기가 바뀝니다.</p>
+      <p className="preward-guide">아직 비어 있는 슬롯이 있나요? <Link to="/achievements">발견 도감에서 다음 보상 살펴보기 →</Link></p>
 
       {loading ? (
         <p className="preward-muted">보유 보상을 불러오는 중...</p>
@@ -164,9 +179,12 @@ export default function ProfileRewardEditor({ card, owned = [], onEquipment, loa
           <ul className="preward-rows">{cardRows.map(renderRow)}</ul>
           <p className="preward-group-label">경기 표현</p>
           <ul className="preward-rows">{matchRows.map(renderRow)}</ul>
+          <p className="preward-guide">완주 효과는 목표에 도착했을 때, 경로 색상은 탐험 경로에 반영됩니다.</p>
         </>
       )}
 
+      {pending && <p className="preward-guide" role="status">장착 상태를 저장하는 중…</p>}
+      {feedback && <p className="preward-feedback" role="status">{feedback} <a href="#profile-card-preview">저장된 카드 보기 ↑</a></p>}
       {error && (
         <p className="auth-error preward-error" role="alert">
           {error}

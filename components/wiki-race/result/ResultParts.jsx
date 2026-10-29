@@ -1,57 +1,90 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Pill, RaceIcon, RouteChain } from "../race/RaceParts.jsx";
+import { formatRecordDate } from "../../../utils/resultJournal.js";
+import useSceneSequence from "../../../hooks/useSceneSequence.js";
+import { CinematicContext, GroupEndCinematic } from "../../cinematic/CinematicParts.jsx";
+import { groupPodiumGroups } from "../../../utils/cinematicPresentation.js";
+import { audioManager } from '../../../services/audioManager.js';
+import useResultAudio from '../../../hooks/useResultAudio.js';
+import { DuelEndRecordsVisible } from '../../cinematic/DuelEndVisibility.js';
 
 // Phase 4 RESULT presentation parts (Freeze 07 · 08). No data access, no game logic —
 // pages own every handler, subscription and server-authoritative value and pass display
 // state in. XP and achievements stay inside the existing `ResultXp` (mounted once per view
 // by the page) — these parts only frame it.
 
-const MASCOTS = Object.freeze({
-  win: "/assets/wiki-race/explorer-win.png",
-  lose: "/assets/wiki-race/explorer-lose.png",
-});
-
 /**
  * Result root. `layer="overlay"` is a modal dialog over the (inert) race shell;
  * `layer="page"` is a normal page. The outcome heading receives focus when the
  * result appears and whenever `focusKey` changes (e.g. Result C → B).
  */
-export function ResultScreen({ mode, tone, layer = "page", titleId, focusKey = null, testId, children }) {
+export function ResultScreen({ mode, tone, layer = "page", titleId, focusKey = null, resultKey = null, motionEligible = true, confirmed = true, cinematic = null, testId, children }) {
   const rootRef = useRef(null);
+  const [skippedKey, setSkippedKey] = useState(null);
+  const entrance = useSceneSequence(resultKey && `sheet:${mode}:${resultKey}`, {
+    eligible: motionEligible, confirmed, duration: cinematic === "group" ? 6200 : cinematic === "single" ? 1800 : 1100,
+    stopped: Boolean(resultKey && skippedKey === resultKey),
+  });
+  const [folded, setFolded] = useState(false);
   useEffect(() => {
-    const heading = titleId ? rootRef.current?.querySelector(`#${titleId}`) : null;
-    heading?.focus({ preventScroll: true });
-  }, [titleId, focusKey]);
+    setFolded(false);
+    if (!entrance || cinematic !== "group") return undefined;
+    const timer = setTimeout(() => setFolded(true), 5250);
+    return () => clearTimeout(timer);
+  }, [entrance, cinematic, resultKey]);
+  const hasPodium = React.Children.toArray(children).some(child => child?.props?.variant === "group-final" && groupPodiumGroups(child.props.podiumRows || []).length);
+  useEffect(() => {
+    // Reduced motion removes the decoration, not a newly confirmed result's audio.
+    // Share the exact normal-scene key so changing the preference cannot replay it.
+    if (!resultKey || !confirmed || !motionEligible || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (cinematic === 'single') void audioManager.play('finish', { key: `single-result:${mode}:${resultKey}:arrival` });
+    else if (cinematic === 'group' && hasPodium) void audioManager.play('finish', { key: `group-result:${mode}:${resultKey}:rank-1` });
+  }, [resultKey, confirmed, motionEligible, cinematic, mode, hasPodium]);
+  const phase = entrance && cinematic === "single" ? "single" : entrance && cinematic === "group" && hasPodium && !folded ? "ceremony" : "records";
+  const duelRecordsVisible = useContext(DuelEndRecordsVisible);
+  useResultAudio(`result:${mode}:${resultKey || titleId}`, phase === 'records' && duelRecordsVisible, confirmed);
+  const skip = () => {
+    audioManager.stopEffects();
+    setSkippedKey(resultKey);
+    requestAnimationFrame(() => {
+      const heading = rootRef.current?.querySelector(`#${titleId}`);
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+  };
+  useEffect(() => {
+    const heading = phase === "records" ? titleId && rootRef.current?.querySelector(`#${titleId}`) : rootRef.current?.querySelector('.wr-cinematic-stage h2,.wr-single-finish-moment h2');
+    // Announce the visible heading; auto-transition must not steal focus from reward controls.
+    const usingResultControl = rootRef.current?.contains(document.activeElement) && document.activeElement?.matches('button,a,input,select,textarea');
+    if (!usingResultControl) heading?.focus({ preventScroll: true });
+  }, [titleId, focusKey, phase]);
 
   // `wr-race` brings the Phase 3 resets (headings, lists, focus ring, sr-only) — same as Result A.
-  const className = `wr-page wr-race wr-result wr-result--${mode} wr-result--${tone} wr-result-layer--${layer}`;
+  const className = `wr-page wr-race wr-result wr-result--${mode} wr-result--${tone} wr-result-layer--${layer}${entrance ? " is-journal-arrival" : ""}${cinematic ? " wr-cinematic-result" : ""}${phase === "single" ? " is-single-celebrating" : phase === "ceremony" ? " is-cinematic-cover" : entrance && cinematic === "group" ? " is-cinematic-records-transition" : ""}`;
+  const attributes = { "data-cinematic-scene": cinematic ? `${cinematic}-end` : undefined, "data-cinematic-phase": phase, "data-cinematic-duration": cinematic === "group" ? 6200 : cinematic === "single" ? 1800 : undefined };
   if (layer === "overlay") {
-    return <div ref={rootRef} className={className} role="dialog" aria-modal="true" aria-labelledby={titleId} data-testid={testId}>
-      <div className="wr-result-frame">{children}</div>
+    return <div ref={rootRef} className={className} {...attributes} role="dialog" aria-modal="true" aria-labelledby={titleId} data-testid={testId}>
+      <CinematicContext.Provider value={{ active: entrance, phase, skip, identity: `${mode}:${resultKey}`, audioEligible: motionEligible && confirmed }}><div className="wr-result-frame">{children}</div></CinematicContext.Provider>
     </div>;
   }
-  return <div ref={rootRef} className={className} data-testid={testId}>
-    <main className="wr-result-frame" aria-labelledby={titleId}>{children}</main>
+  return <div ref={rootRef} className={className} {...attributes} data-testid={testId}>
+    <CinematicContext.Provider value={{ active: entrance, phase, skip, identity: `${mode}:${resultKey}`, audioEligible: motionEligible && confirmed }}><main className="wr-result-frame" aria-labelledby={titleId}>{children}</main></CinematicContext.Provider>
   </div>;
 }
 
 /**
- * Decorative destination scene: trail to the summit flag and the approved mascot.
- * `reached` fills the summit; `celebration` is "full" | "dots" | "none" (no motion data).
+ * Decorative journal cover. Date comes only from a supplied server timestamp.
+ * `reached` labels goal arrival; outcome semantics stay in ResultOutcome.
  */
-export function ResultScene({ mascot = null, reached = false, celebration = "none", destination = null }) {
+export function ResultScene({ reached = false, celebration = "none", destination = null, recordedAt = null, variant = "record", podiumRows = [] }) {
+  const { active } = useContext(CinematicContext);
+  const date = formatRecordDate(recordedAt);
+  if (variant === "group-final" && active && groupPodiumGroups(podiumRows).length) return <GroupEndCinematic rows={podiumRows} />;
+  if (variant === "group-final" && reached && !active) return null;
   return <div className={`wr-rscene ${reached ? "is-reached" : ""} wr-rscene--${celebration}`} aria-hidden="true">
-    {destination && <span className="wr-rscene-dest"><span className="wr-hud-label">DESTINATION · 목표 문서</span><b>{destination}</b></span>}
-    <svg className="wr-rscene-trail" viewBox="0 0 640 120" preserveAspectRatio="none" focusable="false">
-      <path className="wr-rscene-path" d="M20 108 C 150 104, 210 70, 320 74 S 520 40, 600 26" />
-      {reached && <path className="wr-rscene-walked" d="M20 108 C 150 104, 210 70, 320 74 S 520 40, 600 26" />}
-    </svg>
-    <svg className="wr-rscene-flag" viewBox="0 0 28 40" width="28" height="40" focusable="false">
-      <circle cx="8" cy="34" r="5.5" className="wr-rscene-summit" />
-      <path d="M8 34V4" stroke="#6B5238" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M8 4h16l-4 4.5 4 4.5H8z" fill="#C79A32" />
-    </svg>
-    {mascot && MASCOTS[mascot] && <img className={`wr-rscene-mascot wr-rscene-mascot--${mascot}`} src={MASCOTS[mascot]} alt="" />}
+    <span className="wr-journal-heading"><small>EXPLORER'S FIELD JOURNAL</small><strong>{variant === "group-final" ? "원정대 전체 기록" : "탐험 기록지"}</strong>{date && <span>{date} · 서버 기록</span>}</span>
+    {destination && <span className="wr-rscene-dest"><span className="wr-hud-label">목표 문서</span><b>{destination}</b></span>}
+    <span className={`wr-journal-seal ${reached ? "is-complete" : ""}`}>{variant === "group-final" ? "전체 순위 기록" : reached ? "목표 도달" : "결과 기록"}</span>
   </div>;
 }
 
@@ -91,9 +124,9 @@ export function ResultCourse({ start, target }) {
 }
 
 /** XP row — wraps the page's single `ResultXp` mount (ledger + reveal stay its authority). */
-export function ResultXpRow({ children }) {
+export function ResultXpRow({ children, label = "XP 획득 · 서버 지급 기록" }) {
   return <section className="wr-result-row wr-rxp-row" aria-label="이번 결과 XP와 업적">
-    <span className="wr-hud-label">XP 획득</span>
+    <span className="wr-hud-label">{label}</span>
     {children}
   </section>;
 }
@@ -139,7 +172,7 @@ export function GroupStandings({ rows = [], finishedCount = 0, retiredCount = 0,
       <span>순위</span><span>탐험가</span><span>시간</span><span>이동</span><span>상태</span>
     </div>
     <ol className="wr-standings-list">
-      {rows.map((row) => <li key={row.key} className={`wr-srow ${row.isMe ? "is-me" : ""} ${row.retired ? "is-retired" : ""} ${row.isWinner ? "is-winner" : ""}`} aria-current={row.isMe ? "true" : undefined}>
+      {rows.map((row, index) => <li key={row.key} style={{ "--scene-order": index }} className={`wr-srow ${row.isMe ? "is-me" : ""} ${row.retired ? "is-retired" : ""} ${row.isWinner ? "is-winner" : ""}`} aria-current={row.isMe ? "true" : undefined}>
         <span className="wr-srow-rank">{row.rank === null
           ? <><span aria-hidden="true">–</span><span className="wr-sr-only">순위 없음</span></>
           : <>{row.rank}<span className="wr-sr-only">위</span></>}</span>

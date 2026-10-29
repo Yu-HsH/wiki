@@ -94,6 +94,7 @@ function createFakeClient(rows) {
           state.filters.push(["eq", column, value]);
           return builder;
         },
+        is(column, value) { state.filters.push(['is', column, value]); return builder; },
         lt(column, value) {
           state.filters.push(["lt", column, value]);
           return builder;
@@ -120,6 +121,7 @@ function createFakeClient(rows) {
         let result = rows.filter((row) =>
           state.filters.every(([operator, column, value]) => {
             if (operator === "eq") return row[column] === value;
+            if (operator === 'is') return (row[column] ?? null) === value;
             if (operator === "lt") return compareValues(row[column], value) < 0;
             return true;
           })
@@ -213,6 +215,17 @@ test("(1) 순위는 서버 count가 센 값이다 — 나보다 앞선 기록 �
   assert.equal(result.rank, 3);
   assert.equal(result.totalCount, 4);
   assert.equal(result.record.id, "rec-mine");
+});
+
+test('신규 결과의 목록과 순위 집계는 더 빠른 이전 기록을 제외한다', async () => {
+  const rows = [...RECORDS, { ...RECORDS[2], id:'new-one',run_id:'new-run',elapsed_seconds:50,timing_contract:'single_reserved_prefetch_v1' },
+    { ...RECORDS[0], id:'new-fast',run_id:'new-fast-run',elapsed_seconds:49,timing_contract:'single_reserved_prefetch_v1' }];
+  const client=createFakeClient(rows);
+  const result=await fetchSingleRunResult({runId:'new-run',client});
+  assert.equal(result.rank,2);assert.equal(result.totalCount,2);
+  assert.ok(client.calls.filter(call=>call.head).every(call=>call.filters.some(filter=>filter[1]==='timing_contract'&&filter[2]==='single_reserved_prefetch_v1')));
+  const previous=await fetchSingleRunResult({runId:'run-mine',client:createFakeClient(rows)});
+  assert.equal(previous.totalCount,4);
 });
 
 test("(1) 순위 계산이 head count 쿼리로 서버에서 일어난다", async () => {
@@ -340,11 +353,12 @@ test("(2) 프로필 전적이 결과 화면과 같은 조회 경로를 지난다
 
   assert.equal(statsColumns, resultColumns);
   assert.equal(stats.totalWins, 2);
-  assert.equal(stats.bestTime, 45);
+  assert.equal(stats.bestTime, null);
+  assert.equal(stats.previousBestTime, 45);
   assert.equal(stats.bestClicks, 7);
 
   // 프로필이 최고 기록으로 보는 값과 결과 화면이 표시하는 값이 같은 행에서 나온다.
-  assert.equal(stats.bestTime, result.record.elapsedSeconds);
+  assert.equal(stats.previousBestTime, result.record.elapsedSeconds);
 });
 
 test("(2) fetchAllProfileStats의 반환 형태는 바뀌지 않는다", async () => {

@@ -67,19 +67,10 @@ import {
  * 그리고 **지금 봉인된 링크 표시**(`link_censorship`의 `metadata.censoredTitles`).
  * 마지막 것은 요약 없이도 15초 창에서 바로 쓸모가 있다 — 눌러 봐야 막힌 링크를 미리 안다.
  *
- * **부채 ① 닫힘** `[P7, 2026-09-04]` — `linkPreview.entries`를 부모가 채운다.
- *   `pages/MultiplayerGamePage.jsx`의 `handlePreviewLink`가 `fetchPageSummary`를 부르고
- *   `{status, extract, description, thumbnailUrl}`을 내려 준다. **이 컴포넌트는 그대로다**
- *   — 여전히 fetch를 갖지 않고 받은 것을 그린다. 위 1·2가 그 이유였고 바뀌지 않았다.
- *   횟수는 `ready`·`loading`만 세므로 요약을 못 가져온 클릭은 한도를 깎지 않는다.
- *
- * **부채 ② ⚠ `maxPreviews: 3`에 서버 권위가 없다.** `data/duelItems.js`에만 있는 값이고
- *   migration에는 미리보기 카운터가 아예 없다 — 카탈로그 행(`:79`)이
- *   `(duration_ms 15000, charges 0)`뿐이다. 즉 **이 3회 제한은 클라이언트만 세고 서버는
- *   모른다.** 확정 스펙 §5.1이 아이템 권위를 서버에 두기로 한 것과 어긋나는 유일한
- *   잔여 지점이다. 서버가 세게 하려면 원장에 미리보기 행을 남기는 RPC가 필요하고
- *   그것은 v4 범위다. **지금은 표시상의 제한이며 우회가 가능하다.**
- *   (같은 성격의 선례: `random_teleport` 부채 — `data/duelItems.js` 머리말.)
+ * **서버 권위 연결** [2026-10-14]: 부모의 fetchDuelPreview가 Edge/DB 예약·성공 결과를
+ * 받는다. 이 HUD는 canonical page ID로 선택하고 서버 성공/예약 횟수를 표시한다.
+ * 조회 실패는 성공으로 표시하지 않고, 같은 목적지 성공 기록은 추가 소비하지 않는다.
+ * 문서 이동/F5/재연결 닫힘은 부모가 관리한다. HUD에는 fetch/서버 승인 권한이 없다.
  * ──────────────────────────────────────────────────────────── */
 
 const ROLE_ICONS = Object.freeze({
@@ -113,6 +104,7 @@ function useTicker(active) {
 }
 
 export default function DuelItemBar({
+    feedbackCues = [],
     inventory = [],
     useItems = true,
     phaseReady = false,
@@ -238,6 +230,7 @@ export default function DuelItemBar({
                     <DuelItemSlot
                         key={item?.instanceId ?? `empty-${index}`}
                         item={item}
+                        feedback={feedbackCues.find(cue => cue.grantId === item?.grantId)}
                         slotIndex={index}
                         // 대기 중에는 전체를 잠근다. 쿨타임이 공통이라 두 번째 클릭은
                         // 어차피 ITEM_COOLDOWN으로 거부된다 — 미리 막는 편이 조용하다.
@@ -289,7 +282,7 @@ export default function DuelItemBar({
  * 슬롯 하나
  * ──────────────────────────────────────────────────────────── */
 
-function DuelItemSlot({ item, slotIndex, locked, pending, usable, active = false, onUseItem }) {
+function DuelItemSlot({ item, slotIndex, locked, pending, usable, active = false, feedback = null, onUseItem }) {
     if (!item) {
         return (
             <div
@@ -317,6 +310,8 @@ function DuelItemSlot({ item, slotIndex, locked, pending, usable, active = false
             type="button"
             className={classes}
             data-slot={slotIndex}
+            data-feedback-kind={feedback?.kind}
+            data-feedback-tone={feedback?.tone}
             // 대기 중인 슬롯 자신도 disabled다 — 같은 슬롯 두 번 누르기를 막는다.
             disabled={!usable || locked}
             onClick={() => onUseItem?.(item.grantId)}
@@ -325,6 +320,7 @@ function DuelItemSlot({ item, slotIndex, locked, pending, usable, active = false
                 active ? "사용 중" : item.used ? "사용됨" : pending ? "서버 확인 중" : usable && !locked ? "사용 가능" : "지금 사용할 수 없음"
             }`}
         >
+            {feedback && <span key={feedback.id} className="wr-duel-slot-signal" aria-hidden="true">{feedback.symbol}</span>}
             <span className="duel-item-slot__icon" aria-hidden="true">
                 {ROLE_ICONS[role] || "✦"}
             </span>
@@ -432,13 +428,15 @@ function DuelLinkPreviewPanel({ linkPreview, now, onPreviewLink, onClosePreview 
         candidates = [],
         entries = {},
         selectedTitle = null,
+        selectedPageId = selectedTitle,
         usedPreviews = 0,
+        reservedPreviews = 0,
         maxPreviews = 3,
     } = linkPreview;
 
     const remainingMs = expiresAt == null ? null : Math.max(0, expiresAt - now);
-    const remainingPreviews = Math.max(0, maxPreviews - usedPreviews);
-    const selected = selectedTitle ? entries[selectedTitle] : null;
+    const remainingPreviews = Math.max(0, maxPreviews - usedPreviews - reservedPreviews);
+    const selected = selectedPageId ? entries[selectedPageId] : null;
 
     return (
         <section className="duel-item-preview" aria-label="링크 미리보기">
@@ -463,14 +461,15 @@ function DuelLinkPreviewPanel({ linkPreview, now, onPreviewLink, onClosePreview 
             <ul className="duel-item-preview__links">
                 {candidates.map((candidate) => {
                     const title = candidate.title;
-                    const entry = entries[title];
-                    const isSelected = title === selectedTitle;
+                    const pageId = candidate.pageId || title;
+                    const entry = entries[pageId];
+                    const isSelected = pageId === selectedPageId;
                     // 이미 본 링크는 남은 횟수를 다시 쓰지 않는다.
-                    const seen = entry != null;
+                    const seen = entry?.status === "ready";
                     const exhausted = remainingPreviews <= 0 && !seen;
 
                     return (
-                        <li key={title}>
+                        <li key={pageId}>
                             <button
                                 type="button"
                                 className={[
@@ -483,7 +482,7 @@ function DuelLinkPreviewPanel({ linkPreview, now, onPreviewLink, onClosePreview 
                                     .filter(Boolean)
                                     .join(" ")}
                                 disabled={candidate.censored || exhausted}
-                                onClick={() => onPreviewLink?.(title)}
+                                onClick={() => onPreviewLink?.(pageId)}
                                 title={
                                     candidate.censored
                                         ? "지금 봉인된 링크입니다"
@@ -507,20 +506,20 @@ function DuelLinkPreviewPanel({ linkPreview, now, onPreviewLink, onClosePreview 
             </ul>
 
             <div className="duel-item-preview__body">
-                {!selectedTitle && (
+                {!selectedPageId && (
                     <p className="duel-item-preview__placeholder">
                         링크를 눌러 첫 문장을 확인하세요.
                     </p>
                 )}
-                {selectedTitle && selected?.status === "loading" && (
+                {selectedPageId && selected?.status === "loading" && (
                     <p className="duel-item-preview__placeholder">불러오는 중…</p>
                 )}
-                {selectedTitle && selected?.status === "unavailable" && (
+                {selectedPageId && selected?.status === "unavailable" && (
                     <p className="duel-item-preview__placeholder">
                         요약을 불러오지 못했습니다.
                     </p>
                 )}
-                {selectedTitle && selected?.status === "ready" && (
+                {selectedPageId && selected?.status === "ready" && (
                     <>
                         {selected.description && (
                             <p className="duel-item-preview__desc">{selected.description}</p>
@@ -528,7 +527,7 @@ function DuelLinkPreviewPanel({ linkPreview, now, onPreviewLink, onClosePreview 
                         <p className="duel-item-preview__extract">{selected.extract}</p>
                     </>
                 )}
-                {selectedTitle && selected == null && (
+                {selectedPageId && selected == null && (
                     // 부모가 아직 entries에 아무것도 넣지 않은 상태. 부채 ①이 닫히기
                     // 전까지 실제로 보이는 화면이므로 빈 칸으로 두지 않는다.
                     <p className="duel-item-preview__placeholder">

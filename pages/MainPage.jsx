@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
-import { fetchUserStats, fetchRankings } from "../rankingService";
-import WikiRaceShell, { ExplorerAvatar } from "../components/wiki-race/WikiRaceShell";
+import { fetchSingleGameRecords, fetchRankings } from "../rankingService";
+import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import ExpeditionHero from "../components/wiki-race/ExpeditionHero";
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog";
 import PlayPage from "./PlayPage";
 import AdBanner from "../components/AdBanner";
 import { searchWikiTitleCandidates } from "../services/wikiService";
 import { fetchAllProfileStats } from "../services/profileStatsService";
+import { serviceErrorMessage } from "../utils/serviceError.js";
 import { fetchXpSummary } from "../services/xpService";
 import { fetchMyAchievements } from "../services/achievementService";
 import {
@@ -17,6 +18,12 @@ import {
   shouldShowAchievementNotice,
 } from "../utils/achievementDisplay";
 import { fetchTodayDailyChallenge, getFallbackDailyChallenge } from "../services/dailyChallengeService";
+import "../css/wikiRaceHome.css";
+import ProfileCard from "../components/ProfileCard";
+import useProfileCards from "../hooks/useProfileCards.js";
+import { buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
+import WikiHighlights from "../components/WikiHighlights";
+import { fetchExplorerXpRankings } from "../rankingService";
 import { trackEvent } from "../services/analyticsService";
 
 /**
@@ -70,6 +77,7 @@ export default function MainPage({ view = "home" }) {
     all: [],
   });
 
+  const rewardCards = useProfileCards(view === "home" ? [...Object.values(rankingTabs).flat().map(row => row.userId), ...(!user.isGuest ? [user.id] : [])] : []);
   const [rankingView, setRankingView] = useState("today");
   // 헤더의 Lv. 표시. 게스트는 XP가 없으므로 항상 null이다 (15 §2).
   const [headerLevel, setHeaderLevel] = useState(null);
@@ -86,6 +94,9 @@ export default function MainPage({ view = "home" }) {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [rankingErrors, setRankingErrors] = useState({});
+  const [reloadKey, setReloadKey] = useState(0);
+  const [statsSummaryError, setStatsSummaryError] = useState(false);
   const [showKeywordModal, setShowKeywordModal] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -94,6 +105,7 @@ export default function MainPage({ view = "home" }) {
   // 조회가 끝나기 전에는 코스가 없다. fallback을 초기값으로 두면 조회 전 클릭이 fallback 코스로
   // 게임을 시작하고, 그 완주는 오늘 코스가 아닌 목표 지정(15 XP)으로 분류된다 (15c 스모크 실측).
   const [dailyChallenge, setDailyChallenge] = useState(null);
+  const dailyCourseAvailable = Boolean(dailyChallenge?.startTitle && (!isSupabaseConfigured || dailyChallenge.source === "supabase"));
 
   // ⬇️ 검색 실행 핸들러 수정
   const handleSearchKeyword = async () => {
@@ -125,31 +137,46 @@ export default function MainPage({ view = "home" }) {
       try {
         setLoading(true);
         setError("");
-        const [data, todayRankings, weeklyRankings, allRankings, detailedStats] = await Promise.all([
-          fetchUserStats(user.id),
-          fetchRankings({ period: "daily", limit: 3 }),
-          fetchRankings({ period: "weekly", limit: 3 }),
-          fetchRankings({ period: "all", limit: 3 }),
+        const [records, todayRankings, weeklyRankings, allRankings, detailedStats] = await Promise.allSettled([
+          (user.isGuest ? Promise.resolve([]) : fetchSingleGameRecords({ userId: user.id })).then(records => ({ gamesPlayed: records.length, bestTime: records[0]?.elapsedSeconds ?? null, recentRecords: records.slice(0, 5) })),
+          user.isGuest ? [] : fetchRankings({ period: "daily", limit: 3 }),
+          user.isGuest ? [] : fetchExplorerXpRankings({ weekly: true, limit: 3 }),
+          user.isGuest ? [] : fetchExplorerXpRankings({ limit: 3 }),
           fetchAllProfileStats(user.id)
         ]);
+        for (const [label, result] of Object.entries({ records, todayRankings, weeklyRankings, allRankings, detailedStats })) {
+          if (result.status === 'rejected') console.error(`HOME ${label} 조회 실패:`, result.reason);
+        }
 
         if (!cancelled) {
-          setStats({ ...data, detailed: detailedStats });
+          // HOME의 각 정보는 독립적이다. 한 랭킹 장애로 성공한 내 기록까지 지우지 않는다.
+          setStats({
+            ...(records.status === "fulfilled" ? records.value : { gamesPlayed: 0, bestTime: null, recentRecords: [] }),
+            detailed: detailedStats.status === "fulfilled" ? detailedStats.value : null,
+          });
+          setError(records.status === "rejected" ? "탐험 기록을 불러오지 못했습니다. 잠시 후 다시 확인해 주세요." : "");
+          setStatsSummaryError(detailedStats.status === "rejected");
           setRankingTabs({
-            today: todayRankings,
-            weekly: weeklyRankings,
-            all: allRankings,
+            today: todayRankings.status === "fulfilled" ? todayRankings.value.slice(0, 3) : [],
+            weekly: weeklyRankings.status === "fulfilled" ? weeklyRankings.value.filter(row => row.rank <= 3).slice(0, 3) : [],
+            all: allRankings.status === "fulfilled" ? allRankings.value.filter(row => row.rank <= 3).slice(0, 3) : [],
+          });
+          setRankingErrors({
+            today: todayRankings.status === "rejected",
+            weekly: weeklyRankings.status === "rejected",
+            all: allRankings.status === "rejected",
           });
         }
       } catch (e) {
-        if (!cancelled) setError(e?.message || "통계를 불러오지 못했습니다.");
+        console.error('HOME 통계 조회 실패:', e);
+        if (!cancelled) setError(serviceErrorMessage(e, '통계'));
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     load();
     return () => { cancelled = true; };
-  }, [user.id]);
+  }, [user.id, user.isGuest, reloadKey]);
 
   useEffect(() => {
     if (user.isGuest) {
@@ -234,25 +261,11 @@ export default function MainPage({ view = "home" }) {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    const order = ["today", "weekly", "all"];
-
-    const timer = setInterval(() => {
-      setRankingView((prev) => {
-        const currentIndex = order.indexOf(prev);
-        return order[(currentIndex + 1) % order.length];
-      });
-    }, 5000);
-
-    return () => clearInterval(timer);
-  }, []);
-
   const handleLogout = async () => {
     await logout();
     navigate("/");
   };
 
-  const rankMedal = (i) => String(i + 1).padStart(2, "0");
 
   return (
     <WikiRaceShell user={user} level={headerLevel} onLogout={handleLogout} view={view}>
@@ -279,7 +292,7 @@ export default function MainPage({ view = "home" }) {
             onSingle={() => { setKeyword(""); setShowKeywordModal(true); }}
             onMultiplayer={(mode) => navigate(`/multiplayer?mode=${mode}`)}
           />
-        ) : <ExpeditionHero onPlay={() => navigate("/play")} />}
+        ) : <ExpeditionHero notebook onPlay={() => navigate("/play")} />}
 
         {/* ── 키워드 입력 및 검색 모달 ── */}
         {showKeywordModal && (
@@ -383,24 +396,30 @@ export default function MainPage({ view = "home" }) {
         )}
 
         {/* ── 오늘의 도전 ── */}
-        <section className="dashboard-card daily-card" aria-busy={!dailyChallenge}>
+        <section className="dashboard-card daily-card" aria-busy={!dailyChallenge} aria-label="오늘의 도전">
           <div className="daily-head">
-            <span className="daily-badge">TODAY’S RACE · 오늘의 탐험</span>
-            <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}</span>
+            <h2 className="daily-badge">오늘의 도전</h2>
+            <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" })}</span>
           </div>
-          <p className="daily-keyword">{dailyChallenge?.keyword ?? "오늘의 탐험을 불러오는 중…"}</p>
-          {dailyChallenge && <p className="daily-hint">{dailyChallenge.hint}</p>}
+          {!dailyCourseAvailable && <p className="daily-keyword" role="status">{dailyChallenge ? "오늘의 공식 코스를 확인하지 못했습니다." : "오늘의 탐험을 불러오는 중…"}</p>}
+          {dailyChallenge && dailyCourseAvailable && <p className="daily-hint">{dailyChallenge.hint}</p>}
+          {dailyChallenge && dailyCourseAvailable && <div className="daily-course" aria-label="오늘의 탐험 경로">
+            <span className="daily-endpoint"><small>시작 문서</small><strong>{dailyChallenge.startTitle || "공식 시작 문서 확인 필요"}</strong></span><span className="daily-direction" aria-hidden="true">→</span><span className="daily-endpoint"><small>목표 문서</small><strong>{dailyChallenge.keyword}</strong></span>
+          </div>}
           <button
             type="button"
             className="app-btn app-btn-primary daily-btn"
-            disabled={!dailyChallenge}
+            disabled={!dailyChallenge || !dailyChallenge.startTitle || (isSupabaseConfigured && dailyChallenge.source !== "supabase")}
             onClick={() => {
               if (!dailyChallenge) return;
+              if (!dailyChallenge.startTitle || (isSupabaseConfigured && dailyChallenge.source !== "supabase")) return;
               navigate("/game", {
                 state: {
                   mode: "daily",
                   keyword: dailyChallenge.keyword,
                   targetTitle: dailyChallenge.keyword,
+                  startTitle: dailyChallenge.startTitle,
+                  challengeDate: dailyChallenge.challengeDate,
                 },
               });
             }}
@@ -411,11 +430,11 @@ export default function MainPage({ view = "home" }) {
 
         {view === "home" && <>
         <div className="wr-explorer-featured">
-          <section className="wr-my-explorer"><p className="wr-kicker">MY EXPLORER · 내 탐험가</p><div className="wr-explorer-identity"><ExplorerAvatar size={84} /><div><h2>{user.displayName}</h2><p>{user.isGuest ? "게스트 탐험가" : headerLevel !== null ? `Lv.${headerLevel}` : "레벨을 확인하지 못했습니다"}</p></div></div>
+          <section className="wr-my-explorer" aria-labelledby="wr-explorer-heading"><h2 id="wr-explorer-heading">내 탐험가</h2><div className="wr-explorer-identity"><ProfileCard size="lg" density="full" card={mergeRewardSlots(buildProfileCard({ userId: user.id, nickname: user.displayName, level: headerLevel, source: "live" }), rewardCards[user.id])} /></div>
           {user.isGuest ? <p>로그인하면 탐험 기록과 XP가 저장됩니다.</p> : xpSummary && <div className="wr-xp"><span>누적 {xpSummary.totalXp} XP</span><progress aria-label="현재 레벨 XP" value={xpSummary.currentLevelXp} max={xpSummary.nextLevelXp || 1} /><small>{xpSummary.currentLevelXp} / {xpSummary.nextLevelXp} XP</small></div>}
           {!user.isGuest && <div className="wr-explorer-links"><Link to="/profile">프로필 보기 →</Link><Link to="/achievements">업적 보기 →</Link></div>}
         </section>
-        <section className="dashboard-card weekly-card"><p className="wr-kicker">BASE CAMP RANKING</p>
+        <section className="dashboard-card weekly-card" aria-label="탐험 랭킹">
           <div className="recent-head">
             <div>
               <h2>
@@ -424,12 +443,13 @@ export default function MainPage({ view = "home" }) {
                   ? "오늘 TOP 3"
                   : rankingView === "weekly"
                     ? "이번 주 TOP 3"
-                    : "전체 TOP 3"}
+                    : "탐험가 레벨 TOP 3"}
               </h2>
 
               <div className="ranking-tabs">
                 <button
                   type="button"
+                  aria-pressed={rankingView === "today"}
                   className={rankingView === "today" ? "active" : ""}
                   onClick={() => setRankingView("today")}
                 >
@@ -437,6 +457,7 @@ export default function MainPage({ view = "home" }) {
                 </button>
                 <button
                   type="button"
+                  aria-pressed={rankingView === "weekly"}
                   className={rankingView === "weekly" ? "active" : ""}
                   onClick={() => setRankingView("weekly")}
                 >
@@ -444,10 +465,11 @@ export default function MainPage({ view = "home" }) {
                 </button>
                 <button
                   type="button"
+                  aria-pressed={rankingView === "all"}
                   className={rankingView === "all" ? "active" : ""}
                   onClick={() => setRankingView("all")}
                 >
-                  전체
+                  레벨
                 </button>
               </div>
             </div>
@@ -462,7 +484,13 @@ export default function MainPage({ view = "home" }) {
             )}
           </div>
 
-          {rankingTabs[rankingView].length === 0 ? (
+          {user.isGuest ? (
+            <p className="dashboard-muted">로그인하면 전체 랭킹을 볼 수 있어요.</p>
+          ) : loading ? (
+            <p className="dashboard-muted" role="status">랭킹을 불러오는 중…</p>
+          ) : rankingErrors[rankingView] ? (
+            <p className="dashboard-muted" role="status">랭킹을 불러오지 못했습니다. <button type="button" className="text-btn" onClick={() => setReloadKey(value => value + 1)}>랭킹 다시 불러오기</button></p>
+          ) : rankingTabs[rankingView].length === 0 ? (
             <p className="dashboard-muted">
               {rankingView === "today"
                 ? "오늘 기록이 아직 없습니다."
@@ -473,27 +501,21 @@ export default function MainPage({ view = "home" }) {
           ) : (
             <ol className="weekly-list ranking-rotate-list">
               {rankingTabs[rankingView].map((r, i) => (
-                <li key={r.id ?? `${rankingView}-${i}`} className="weekly-item">
-                  <span className="wi-medal">{rankMedal(i)}</span>
-                  <span className="wi-name">{r.playerName}</span>
+                <li key={r.id ?? `${rankingView}-${i}`} className="weekly-item" data-rank={r.rank || i + 1}>
+                  <span className="wi-medal" aria-label={`순위 ${r.rank || i + 1}위`}>{String(r.rank || i + 1).padStart(2, "0")}</span>
+                  <ProfileCard size="sm" density="full" card={mergeRewardSlots(buildProfileCard({ userId: r.userId, nickname: r.nickname || r.playerName, level: r.level, legacyImageUrl: r.profileImageUrl, source: "live" }), rewardCards[r.userId])} />
                   <span className="wi-target">{r.targetTitle}</span>
-                  <span className="wi-time">{formatDuration(r.elapsedSeconds)}</span>
+                  <span className="wi-time">{rankingView === "today" ? formatDuration(r.elapsedSeconds) : `${r.rankingXp} XP`}</span>
                 </li>
               ))}
             </ol>
           )}
 
-          {user.isGuest && (
-            <p className="dashboard-muted">
-              로그인하면 전체 랭킹을 볼 수 있어요.
-            </p>
-          )}
         </section>
 
         </div>
         {/* ── 최근 기록 (최대 3개) ── */}
         <section className="dashboard-card recent-card">
-          <img className="wr-recent-route" src="/assets/wiki-race/mini-route.png" alt="" />
           <div className="recent-head">
             <h2>최근 탐험</h2>
             {!user.isGuest && (
@@ -502,20 +524,25 @@ export default function MainPage({ view = "home" }) {
               </button>
             )}
           </div>
-          {error && <p className="app-error">{error}</p>}
+          {error && <div role="alert"><p className="app-error">{error}</p><button type="button" className="app-btn app-btn-ghost" onClick={() => setReloadKey(value => value + 1)}>탐험 기록 다시 불러오기</button></div>}
           {!error && user.isGuest && (
             <p className="dashboard-muted">
               게스트 모드입니다. 기록 저장과 개인 통계는 로그인 후 이용할 수 있어요.
             </p>
           )}
-          {!error && !user.isGuest && stats.recentRecords.length === 0 && (
+          {!error && !user.isGuest && loading && <p className="dashboard-muted" role="status">탐험 기록을 불러오는 중…</p>}
+          {!error && !loading && !user.isGuest && stats.recentRecords.length === 0 && (
             <p className="dashboard-muted">첫 플레이를 시작해 기록을 남겨보세요.</p>
           )}
           {!user.isGuest && stats.recentRecords.length > 0 && (
             <ul className="recent-list">
               {stats.recentRecords.slice(0, 3).map((record, index) => (
                 <li key={`${record.createdAt}-${index}`} className="recent-item">
-                  <span className="ri-title">{record.targetTitle}</span>
+                  <div className="wr-record-route">
+                    {record.startTitle && <><a href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(record.startTitle)}`} target="_blank" rel="noopener noreferrer"><small>시작 문서</small>{record.startTitle}</a><span aria-hidden="true">→</span></>}
+                    <a className="ri-title" href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(record.targetTitle)}`} target="_blank" rel="noopener noreferrer"><small>목표 문서</small>{record.targetTitle}</a>
+                    {record.pathTitles?.length > 0 && <details className="wr-record-path"><summary>기록된 경로 · {record.pathTitles.length}개 문서</summary><ol>{record.pathTitles.map((title, step) => <li key={step}><a href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(title)}`} target="_blank" rel="noopener noreferrer">{title}</a></li>)}</ol></details>}
+                  </div>
                   <span className="ri-time">{formatDuration(record.elapsedSeconds)}</span>
                   <span className="ri-clicks">{record.clickCount}회 클릭</span>
                   <span className="ri-date">{formatDate(record.createdAt)}</span>
@@ -525,31 +552,33 @@ export default function MainPage({ view = "home" }) {
           )}
         </section>
 
-        <section className="wr-base-board"><p className="wr-kicker">BASE CAMP BOARD · 탐험 기록판</p>
+        <section className="wr-base-board" aria-labelledby="wr-board-heading"><h2 id="wr-board-heading">탐험 기록판</h2>
+        {(error || statsSummaryError) && <p className="dashboard-muted" role="status">일부 전적을 불러오지 못했습니다. <button type="button" className="text-btn" onClick={() => setReloadKey(value => value + 1)}>전적 다시 불러오기</button></p>}
         {/* ── 통계 그리드 (종합 전적) ── */}
         <section className="dashboard-grid">
           <article className="dashboard-card">
             <p className="card-label">싱글 플레이</p>
-            <p className="card-value">{loading ? "…" : stats.gamesPlayed > 0 ? `${stats.gamesPlayed}회` : "-"}</p>
+            <p className="card-value">{loading ? "…" : error ? "-" : stats.gamesPlayed > 0 ? `${stats.gamesPlayed}회` : "-"}</p>
             <p className="card-sub-label">최고: {formatDuration(stats.bestTime)}</p>
           </article>
           <article className="dashboard-card">
             <p className="card-label">1 VS 1 대전</p>
             <p className="card-value">
-              {loading ? "…" : user.isGuest ? "-" : `${stats.detailed?.pvp?.wins || 0}승 ${stats.detailed?.pvp?.losses || 0}패`}
+              {loading ? "…" : user.isGuest || statsSummaryError ? "-" : `${stats.detailed?.pvp?.wins || 0}승 ${stats.detailed?.pvp?.losses || 0}패`}
             </p>
-            <p className="card-sub-label">승률: {stats.detailed?.pvp?.winRate || 0}%</p>
+            <p className="card-sub-label">승률: {loading || statsSummaryError ? '-' : `${stats.detailed?.pvp?.winRate || 0}%`}</p>
           </article>
           <article className="dashboard-card">
             <p className="card-label">그룹 레이스</p>
             <p className="card-value">
-              {loading ? "…" : user.isGuest ? "-" : `${(stats.detailed?.group?.first || 0) + (stats.detailed?.group?.second || 0) + (stats.detailed?.group?.third || 0)}회`}
+              {loading ? "…" : user.isGuest || statsSummaryError ? "-" : `${(stats.detailed?.group?.first || 0) + (stats.detailed?.group?.second || 0) + (stats.detailed?.group?.third || 0)}회`}
             </p>
-            <p className="card-sub-label">1등: {stats.detailed?.group?.first || 0}회</p>
+            <p className="card-sub-label">1등: {loading || statsSummaryError ? '-' : `${stats.detailed?.group?.first || 0}회`}</p>
           </article>
         </section>
 
 <div className="wr-board-links"><Link to="/guide">플레이 가이드 →</Link><button type="button" onClick={() => setShowHelp(true)}>게임 설명 →</button><img src="/assets/wiki-race/gear-cluster.png" height="54" alt="" /></div></section>
+        <WikiHighlights />
         </>}
         {/* ── 도움말 모달 ── */}
         {showHelp && (
@@ -588,8 +617,8 @@ export default function MainPage({ view = "home" }) {
 
                 <h3>4. 랭킹</h3>
                 <ul>
-                  <li>오늘 / 이번 주 / 전체 랭킹을 확인할 수 있습니다.</li>
-                  <li>기록은 도착 시간과 클릭 수를 기준으로 비교됩니다.</li>
+                  <li>오늘의 탐험은 같은 시작·목표 코스의 개인 최고 기록을 비교합니다.</li>
+                  <li>주간 탐험가는 경기 XP만, 탐험가 레벨은 누적 XP를 비교합니다.</li>
                 </ul>
               </div>
             </ExpeditionDialog>

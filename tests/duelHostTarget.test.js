@@ -60,6 +60,7 @@ test("14c 목표/시작은 snapshot 반환 identity를 사용하고 진행 중 S
 test("14c 게임의 양쪽 목표는 host_user_id의 동일한 공통 목표다", () => {
   assert.match(game, /player\.user_id === room\?\.host_user_id/);
   assert.match(game, /myTargetTitle = commonTargetTitle/);
-  assert.match(game, /opponentTargetTitle = commonTargetTitle/);
+  assert.match(game, /targetTitle=\{commonTargetTitle\}/);
+  assert.match(game, /startTitle=\{myPlayer\?\.start_title\}/);
   assert.doesNotMatch(game, /myTargetTitle = opponentPlayer\?\.target_title/);
 });

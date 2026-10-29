@@ -4,6 +4,7 @@ import { NAME_FALLBACK, buildProfileCard } from "../../../utils/profileCard.js";
 import { formatDuration } from "../../../services/wikiService";
 import { PARTICIPANT_STATE, isReactionFresh } from "../../../utils/groupRacePresentation.js";
 import { ConnectionDot, HudTimer, Pill, RaceIcon, RouteChain } from "./RaceParts";
+import useSceneSequence from "../../../hooks/useSceneSequence.js";
 
 // Phase 3 그룹 RACE/관전 표시 부품. 데이터·핸들러는 GroupGamePage가 넘긴다.
 // 경기 중 화면은 프로필 카드 조회를 하지 않는다 — 방 스냅샷의 닉네임/이미지만 쓴다.
@@ -109,9 +110,9 @@ export function RouteCompare({ entries, myUserId, watchedId, onWatch, startTitle
     </div>
     <div>
       {resolved.map(({ player, state }) => <div className="wr-compare-row" key={player.user_id}>
-        <span className="wr-prow-rank">{state === PARTICIPANT_STATE.FINISHED ? `${player.rank ?? "–"}위` : "–"}</span>
-        <span><strong>{nameOf(player)}{player.user_id === myUserId ? " · 나" : ""}</strong><small>{[timeOf(player), movesOf(player)].filter(Boolean).join(" · ")}</small></span>
-        <span>{state === PARTICIPANT_STATE.FINISHED ? <span className="wr-prow-state is-done"><span className="wr-done-glyph" aria-hidden="true">✓</span>완주</span> : <Pill tone="neutral" filled>리타이어</Pill>}</span>
+        <span className="wr-compare-rank">{state === PARTICIPANT_STATE.FINISHED ? `${player.rank ?? "–"}위` : "–"}</span>
+        <span className="wr-compare-player"><strong>{nameOf(player)}{player.user_id === myUserId ? " · 나" : ""}</strong><small>{timeOf(player) && <><span>{timeOf(player)}</span>{' · '}</>}<span>{movesOf(player)}</span></small></span>
+        <span className="wr-compare-state">{state === PARTICIPANT_STATE.FINISHED ? <span className="wr-prow-state is-done"><span className="wr-done-glyph" aria-hidden="true">✓</span>완주</span> : <Pill tone="neutral" filled>리타이어</Pill>}</span>
         <RouteChain path={Array.isArray(player.path_titles) ? player.path_titles : []} reachedTarget={state === PARTICIPANT_STATE.FINISHED} />
       </div>)}
       {resolved.length === 0 && <p className="wr-reaction-note">아직 결과가 확정된 참가자가 없습니다.</p>}
@@ -188,14 +189,16 @@ export function GroupSheet({ deadline, meLabel, counts, open, onToggle, status, 
  * 그룹은 진행 중 수와 남은 마감만. 다른 참가자의 순위는 보이지 않는다.
  * 관전하기를 눌러야 관전으로 들어간다. 경기가 최종 확정되면 기존 흐름이 B(최종 결과)로 옮긴다.
  */
-export function GroupResultA({ result, size, finishedCount, pendingCount, deadline, startTitle, targetTitle, path, onSpectate, onLeave, leaving, routeOpen, onToggleRoute }) {
+export function GroupResultA({ result, size, finishedCount, pendingCount, deadline, startTitle, targetTitle, path, onSpectate, onLeave, leaving, routeOpen, onToggleRoute, syncMessage, resultKey = null, motionEligible = true }) {
+  const sequence = useSceneSequence(resultKey && `sheet:group-personal:${resultKey}`, { eligible: motionEligible, confirmed: Boolean(result?.has_finished || result?.result_status === "finished" || Number.isInteger(result?.rank)) });
   const rank = Number.isInteger(result?.rank) ? result.rank : null;
   const time = Number.isFinite(result?.elapsed_seconds) ? formatDuration(result.elapsed_seconds) : "확정 중";
   const moves = Number.isFinite(result?.move_count) ? `${result.move_count}회` : "확정 중";
-  return <div className="wr-page wr-race wr-result-a">
+  return <div className={`wr-page wr-race wr-result-a${sequence ? " is-personal-sequence" : ""}`}>
     <main className="wr-result-a-frame" aria-labelledby="wr-result-a-title">
       <div className={`wr-result-a-scene ${rank === 1 ? "is-first" : rank && rank <= 3 ? "is-podium" : ""}`} aria-hidden="true">
-        <img src="/assets/wiki-race/explorer-win.png" alt="" height="118" />
+        <span className="wr-journal-heading"><small>MY FIELD NOTES</small><strong>개인 탐험 기록</strong></span>
+        <span className="wr-journal-seal is-complete">개인 완주</span>
       </div>
       <section className="wr-result-card">
         <header className="wr-result-row wr-result-head">
@@ -210,7 +213,7 @@ export function GroupResultA({ result, size, finishedCount, pendingCount, deadli
           <RaceIcon name="group" size={18} />
           <div>
             <strong>{pendingCount > 0 ? `그룹 경기 진행 중 · 완주 ${finishedCount} / ${size}` : "모든 참가자의 결과를 확인하고 있습니다"}</strong>
-            <small>최종 순위는 경기가 끝난 뒤 확정됩니다</small>
+            <small>{syncMessage || "최종 순위는 경기가 끝난 뒤 확정됩니다"}</small>
           </div>
           {deadline.state !== "ended" && <span className="wr-result-deadline">
             <span className="wr-result-deadline-value"><RaceIcon name="timer" size={14} />{formatDuration(deadline.seconds)}</span>

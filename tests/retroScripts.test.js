@@ -49,7 +49,9 @@ test("16b-r: SQL Editor safe — no psql meta-commands, the report is the last s
   for (const source of [dryRun, apply]) {
     assert.doesNotMatch(source, /^\s*\\/m, "no \\set / \\if / \\echo");
     assert.doesNotMatch(source, /^\s*(begin|commit|rollback)\s*;/im, "no statement-level transaction control after the report");
-    const statements = source.trim().split(/;\s*$/m).filter((part) => part.trim() && !/^\s*(--[^\n]*\n?\s*)*$/.test(part));
+    const statements = source.trim().split(/;\s*$/m).filter((part) =>
+      part.trim() && !part.split(/\r?\n/).every((line) => !line.trim() || line.trimStart().startsWith("--"))
+    );
     assert.match(statements.at(-1), /select \* from pg_temp\.retro_16b_r\((true|false)\)/);
   }
 });

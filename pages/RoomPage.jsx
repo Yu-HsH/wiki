@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import useLobbyAudio from "../hooks/useLobbyAudio.js";
+import { audioManager } from "../services/audioManager.js";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   fetchRoom,
@@ -46,6 +48,7 @@ export default function RoomPage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const observeLobbyAudio = useLobbyAudio('duel', roomId, user?.id);
 
   // ----------------------------
   // 기본 상태
@@ -54,6 +57,8 @@ export default function RoomPage() {
   const [players, setPlayers] = useState([]);
   const [pending, setPending] = useState(true);
   const [submitError, setSubmitError] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState("CONNECTING");
+  const [syncFailed, setSyncFailed] = useState(false);
 
   // 입력 / 선택 상태 분리
   const [keywordInput, setKeywordInput] = useState("");
@@ -70,9 +75,26 @@ export default function RoomPage() {
   // 참가자 읽기 세대. 이벤트마다 다시 읽으므로 응답이 순서를 바꿔 도착할 수 있다 —
   // 마지막에 시작한 읽기만 화면에 쓴다 (SF-A2: RPC 읽기가 그 창을 넓혔다).
   const playersReadRef = useRef(0);
-  const readLatestPlayers = async () => {
+  const roomReadRef = useRef(0);
+  // Development opt-in. Counts/status only: never rows, names, headers or tokens.
+  const trace = (event, fields = {}) => {
+    if (import.meta.env.DEV && localStorage.getItem("wiki-race-duel-debug") === "1") {
+      console.debug("[duel-lobby]", JSON.stringify({ at: Math.round(performance.now()), event, ...fields }));
+    }
+  };
+  const readLatestRoom = async (source = "refresh") => {
+    const readId = ++roomReadRef.current;
+    trace("room-read-start", { source, readId });
+    const data = await fetchRoom(roomId);
+    trace("room-read-end", { source, readId, accepted: readId === roomReadRef.current, status: data.status });
+    return readId === roomReadRef.current ? data : null;
+  };
+  const readLatestPlayers = async (source = "refresh") => {
     const readId = ++playersReadRef.current;
+    trace("roster-read-start", { source, readId });
     const rows = await fetchRoomPlayers(roomId);
+    trace("roster-read-end", { source, readId, accepted: readId === playersReadRef.current, count: rows.length, targets: rows.filter(p => p.target_title && p.target_page_id).length });
+    trace("channel-registry", { source, count: supabase.getChannels().filter(c => c.topic === `realtime:room:${roomId}`).length });
     return readId === playersReadRef.current ? rows : null;
   };
 
@@ -93,6 +115,7 @@ export default function RoomPage() {
   // 초기 로드
   // ----------------------------
   useEffect(() => {
+    let cancelled = false;
     const loadRoom = async () => {
       if (!roomId || !user?.id) return;
 
@@ -100,27 +123,36 @@ export default function RoomPage() {
         setPending(true);
         setSubmitError("");
 
+        trace("initial-start");
+        const roomReadId = ++roomReadRef.current;
         const roomData = await fetchRoom(roomId);
+        if (cancelled) return;
 
         // waiting 방에 직접 진입한 guest면 join 시도
         if (roomData.status === "waiting") {
-          await joinRoom(roomId, user.id).catch(() => { });
+          trace("join-start");
+          await joinRoom(roomId, user.id).then(() => trace("join-end", { ok: true })).catch(() => trace("join-end", { ok: false }));
         }
+        if (cancelled) return;
 
-        const playerData = await fetchRoomPlayers(roomId);
+        const playerData = await readLatestPlayers("initial");
 
-        setRoom(roomData);
-        setPlayers(playerData);
+        if (!cancelled) {
+          observeLobbyAudio({ room: roomReadId === roomReadRef.current ? roomData : null, players: playerData });
+          if (roomReadId === roomReadRef.current) setRoom(roomData);
+          if (playerData) setPlayers(playerData);
+        }
       } catch (error) {
-        setSubmitError(
+        if (!cancelled) setSubmitError(
           error instanceof Error ? error.message : "방 정보를 불러오지 못했습니다."
         );
       } finally {
-        setPending(false);
+        if (!cancelled) setPending(false);
       }
     };
 
     initialLoadRef.current = loadRoom();
+    return () => { cancelled = true; ++playersReadRef.current; ++roomReadRef.current; };
   }, [roomId, user?.id]);
 
   // ----------------------------
@@ -128,6 +160,7 @@ export default function RoomPage() {
   // ----------------------------
   useEffect(() => {
     if (!roomId || !supabase) return;
+    let cancelled = false;
 
     const channel = supabase
       .channel(`room:${roomId}`)
@@ -140,9 +173,13 @@ export default function RoomPage() {
           filter: `id=eq.${roomId}`,
         },
         async () => {
+          if (cancelled) return;
+          trace("realtime-event", { table: "game_rooms" });
           try {
-            const latestRoom = await fetchRoom(roomId);
-            setRoom(latestRoom);
+            const latestRoom = await readLatestRoom("room-event");
+            if (cancelled) return;
+            if (latestRoom) setRoom(latestRoom);
+            if (latestRoom) observeLobbyAudio({ room: latestRoom }, true);
           } catch (error) {
             console.error("game_rooms realtime refresh failed:", error);
           }
@@ -157,23 +194,33 @@ export default function RoomPage() {
           filter: `room_id=eq.${roomId}`,
         },
         async () => {
+          if (cancelled) return;
+          trace("realtime-event", { table: "room_players" });
           try {
-            const latestPlayers = await readLatestPlayers();
+            const latestPlayers = await readLatestPlayers("player-event");
+            if (cancelled) return;
             if (latestPlayers) setPlayers(latestPlayers);
+            if (latestPlayers) observeLobbyAudio({ players: latestPlayers }, true);
           } catch (error) {
             console.error("room_players realtime refresh failed:", error);
           }
         }
       )
       .subscribe(async (status) => {
+        if (cancelled) return;
+        trace("subscription", { status });
+        setConnectionStatus(status);
+        if (status !== "SUBSCRIBED") observeLobbyAudio.reset();
         if (status !== "SUBSCRIBED") return;
         // Join/target changes can occur between the initial SELECT and socket
         // subscription. Refresh once when connected (also on reconnect).
         try {
           const [latestRoom, latestPlayers] = await Promise.all([
-            fetchRoom(roomId), readLatestPlayers(),
+            readLatestRoom("subscribed"), readLatestPlayers("subscribed"),
           ]);
-          setRoom(latestRoom);
+          if (cancelled) return;
+          observeLobbyAudio({ room: latestRoom, players: latestPlayers });
+          if (latestRoom) setRoom(latestRoom);
           if (latestPlayers) setPlayers(latestPlayers);
         } catch (error) {
           console.error("room subscription refresh failed:", error);
@@ -181,9 +228,50 @@ export default function RoomPage() {
       });
 
     return () => {
+      cancelled = true;
+      ++playersReadRef.current;
+      ++roomReadRef.current;
       supabase.removeChannel(channel);
     };
   }, [roomId]);
+
+  // A subscribed socket can miss a join/target event. Reconcile waiting state
+  // through the same authorized reads, regardless of socket status. No game
+  // decisions or participant rows are synthesized on the client.
+  useEffect(() => {
+    if (room?.status !== "waiting") return undefined;
+    let cancelled = false;
+    let reading = false;
+    const refresh = async (source) => {
+      if (cancelled || reading || document.visibilityState === "hidden") return;
+      reading = true;
+      try {
+        const [latestRoom, latestPlayers] = await Promise.all([
+          readLatestRoom(source), readLatestPlayers(source),
+        ]);
+        if (!cancelled) {
+          observeLobbyAudio({ room: latestRoom, players: latestPlayers });
+          if (latestRoom) setRoom(latestRoom);
+          if (latestPlayers) setPlayers(latestPlayers);
+          setSyncFailed(false);
+        }
+      } catch {
+        if (!cancelled) setSyncFailed(true);
+        trace("reconcile-error", { source });
+      } finally { reading = false; }
+    };
+    const onFocus = () => { void refresh("focus"); };
+    const onVisible = () => { if (document.visibilityState === "visible") void refresh("visible"); };
+    const timer = window.setInterval(() => { void refresh("reconcile"); }, 3000);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [roomId, room?.status]);
 
   // ----------------------------
   // players 기반 파생값
@@ -217,6 +305,9 @@ export default function RoomPage() {
   const canStart = isHost && hasGuest && hasHostTarget && room?.status === "waiting"
     && !savingTarget && !isSearching && !starting && !targetSaveFailed;
   const targetBusy = savingTarget || isSearching || starting;
+  useEffect(() => {
+    trace("ui-state", { count: players.length, isHost, hasGuest, hasHostTarget, canStart, status: room?.status ?? null, pending, savingTarget });
+  }, [players, isHost, hasGuest, hasHostTarget, canStart, room?.status, pending, savingTarget]);
 
   // ----------------------------
   // DB -> 로컬 입력값 동기화
@@ -290,6 +381,7 @@ export default function RoomPage() {
     if (!isHost || room?.status !== "waiting" || !roomId || lobbyActionRef.current) return;
     lobbyActionRef.current = true;
     setSavingTarget(true);
+    const requestSound = audioManager.action('duel-target');
     try {
       setSubmitError("");
       const targetPage = await fetchPageSummary(item.title);
@@ -299,15 +391,20 @@ export default function RoomPage() {
         pageId: targetIdentity.pageId,
         revisionId: targetIdentity.revisionId,
       });
+      // A read begun before this committed write must not restore the old target.
+      ++playersReadRef.current;
+      trace("target-saved");
       setPlayers((previous) => previous.map((player) =>
         player.user_id === savedPlayer.user_id ? savedPlayer : player
       ));
+      observeLobbyAudio({ players: players.map(player => player.user_id === savedPlayer.user_id ? savedPlayer : player) }, true);
       setSelectedTargetTitle(savedPlayer.target_title);
       setKeywordInput(savedPlayer.target_title);
       setTargetSuggestions([]);
       setTargetSaveFailed(false);
     } catch (error) {
       setTargetSaveFailed(true);
+      requestSound('denied');
       setSubmitError(
         error?.message || "목표 문서 저장에 실패했습니다. 다시 선택해주세요."
       );
@@ -323,6 +420,7 @@ export default function RoomPage() {
   const handleStartGame = async () => {
     if (!canStart || !roomId || !user?.id || lobbyActionRef.current) return;
     lobbyActionRef.current = true;
+    const requestSound = audioManager.action('duel-start');
 
     try {
       setSubmitError("");
@@ -340,6 +438,7 @@ export default function RoomPage() {
       await startRoomGame(roomId, user.id, startIdentity);
     } catch (error) {
       console.error("startRoomGame failed:", error);
+      requestSound('denied');
       setSubmitError(
         error?.message || "게임 시작에 실패했습니다."
       );
@@ -422,8 +521,11 @@ export default function RoomPage() {
   const nonHostPlayer = players.find((player) => player.user_id !== room?.host_user_id);
   const showTargetSearch = isHost && isWaiting && (!hasHostTarget || changingTarget);
   const statusText = !isHost
-    ? hostPlayer ? "두 탐험가 입장" : "상대를 기다리는 중"
-    : !hasGuest && !hasHostTarget ? "상대 대기 · 목표 문서 미선택"
+    ? players.length === 2 && hostPlayer ? "두 탐험가 입장" : "상대를 기다리는 중"
+    : targetSaveFailed ? "목표 저장 실패 · 목표를 다시 선택하세요"
+      : savingTarget ? "목표 문서 저장 중 · 저장 후 시작할 수 있습니다"
+        : isSearching ? "목표 문서 검색 중 · 검색 결과에서 선택하세요"
+          : !hasGuest && !hasHostTarget ? "상대 대기 · 목표 문서 미선택"
       : !hasGuest ? "상대를 기다리는 중 · 입장하면 시작할 수 있습니다"
         : !hasHostTarget ? "상대 입장 · 목표 문서를 선택하면 시작할 수 있습니다"
           : "상대가 입장했습니다 · 시작할 수 있습니다";
@@ -478,6 +580,11 @@ export default function RoomPage() {
   return (
     <LobbyShell user={user} onLogout={handleLogout} onNavigate={handleNavigateAway} mode="duel">
       <LobbyHeader kicker="1:1 DUEL · 대기실" title="1:1 대기실" onLeave={handleLeaveRoom} />
+      <div className="wr-room-briefing">
+        <span className="wr-kicker">대결 브리핑 · 같은 목표를 향한 링크 탐험</span>
+        <p>{isHost ? "목표 문서를 검색해 선택하면 서버에 저장됩니다. 상대 입장과 목표 확정 후 게임 시작을 누르세요." : "방장이 고른 목표를 확인하세요. 두 명이 모이면 방장이 시작합니다."}</p>
+        <p className="wr-room-sync" role="status">{syncFailed ? "최신 방 정보 확인 실패 · 마지막 확인 상태를 표시하고 있습니다. 연결을 확인하세요. 3초마다 재확인합니다." : connectionStatus === "SUBSCRIBED" ? "실시간 알림 수신 중 · 대기 중 방 정보를 3초마다 다시 확인합니다." : "실시간 연결 확인 중 · 대기 중 서버 재조회로 상태를 확인합니다."}</p>
+      </div>
 
       <div className="wr-duel-stage">
         <h2 className="wr-visually-hidden">참가자</h2>

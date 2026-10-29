@@ -136,7 +136,7 @@ test("duel outcome view follows the server presentation (no client winner)", () 
 /* ── Wiring: one ResultXp per view, Result A stays XP/achievement-free, C → B keeps one mount ── */
 
 test("wiring: group final result mounts ResultXp once; Result A has none", () => {
-  const page = read("pages/GroupGamePage.jsx");
+  const page = read("pages/GroupGamePage.jsx").replace(/\r\n/g, "\n");
   assert.equal((page.match(/<ResultXp\s/g) || []).length, 1, "only the final result view");
   const ended = page.slice(
     page.indexOf("\n    if (phase === GROUP_GAME_PHASE.ENDED) {\n"),
@@ -147,8 +147,8 @@ test("wiring: group final result mounts ResultXp once; Result A has none", () =>
   assert.match(ended, /const view = ownRetired && !finalStandingsOpen \? "retired" : "standings";/);
   assert.match(ended, /최종 결과 보기 →/);
   assert.doesNotMatch(ended, /관전하기/, "no spectator action on C/B");
-  // XP slot sits before the C/B-specific section so React keeps the same instance across C → B.
-  assert.ok(ended.indexOf("<ResultXp") < ended.indexOf('view === "retired" ? ('));
+  // A stable sibling after the C/B branch keeps one instance and lets ranks precede rewards.
+  assert.match(ended, /<GroupStandings[\s\S]*?\)\}\s*\{ownResult \? \(\s*<ResultXpRow>/);
   assert.doesNotMatch(ended, /재대결/, "no rematch — production has no rematch contract");
 
   const parts = read("components/wiki-race/race/GroupRaceParts.jsx");

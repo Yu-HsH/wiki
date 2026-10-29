@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test",
+    "test": "node --test tests/*.test.js",
     "build": "vite build",
     "preview": "vite preview",
     "supabase:start": "node scripts/supabase-start-pinned.mjs",

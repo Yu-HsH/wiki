@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img">
+<defs>
+ <linearGradient id="paper" x2=".7" y2="1"><stop stop-color="#FFF9EB"/><stop offset="1" stop-color="#EDE2C7"/></linearGradient>
+ <linearGradient id="metal"><stop stop-color="#E2C46E"/><stop offset=".55" stop-color="#B98A12"/><stop offset="1" stop-color="#846628"/></linearGradient>
+ <filter id="shadow" x="-.2" y="-.2" width="1.5" height="1.5"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#243430" flood-opacity=".16"/></filter>
+</defs>
+<g transform="rotate(-10 128 128)" filter="url(#shadow)">
+<circle cx="128" cy="128" r="105" fill="#FFF9EB" fill-opacity=".85" stroke="#36593D" stroke-width="9"/>
+<circle cx="128" cy="128" r="92" fill="none" stroke="#36593D" stroke-width="3.5" stroke-dasharray="7 8"/>
+<circle cx="128" cy="128" r="78" fill="none" stroke="#36593D" stroke-width="4"/>
+<path d="M79 111Q107 99 128 116Q149 99 177 111L177 156Q148 147 128 165Q108 147 79 156Z" fill="none" stroke="#36593D" stroke-width="7" stroke-linejoin="round"/>
+<path d="M128 117v48 M84 123q22 -6 38 4 M134 127q16 -9 36 -4" stroke="#36593D" stroke-width="4" fill="none" stroke-linecap="round"/>
+<path d="M128 52l5 14 15 1 -12 9 4 15 -12 -9 -12 9 4 -15 -12 -9 15 -1z" fill="#36593D"/>
+<path d="M68 180h120 M83 192h90" stroke="#36593D" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+<circle cx="53" cy="128" r="5" fill="#36593D"/><circle cx="203" cy="128" r="5" fill="#36593D"/>
+</g>
+</svg>

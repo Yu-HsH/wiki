@@ -1,4 +1,7 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import useRaceMotion from "../hooks/useRaceMotion.js";
+import useGameAudio from "../hooks/useGameAudio.js";
+import { audioManager } from "../services/audioManager.js";
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import {
@@ -9,12 +12,12 @@ import {
   normalizeTitle,
 } from "../services/wikiService";
 
-import CountdownOverlay from "../components/CountdownOverlay";
 import SuccessOverlay from "../components/SuccessOverlay";
 import WikiViewer from "../components/WikiViewer";
 import {
   HudArrow,
   HudBrand,
+  MobileRouteNotes,
   HudDoc,
   HudExit,
   HudStat,
@@ -26,7 +29,7 @@ import {
   RouteRail,
 } from "../components/wiki-race/race/RaceParts";
 import ScrollToTopButton from "../components/ScrollToTopButton";
-import { isSupabaseConfigured, supabase } from "../supabaseClient";
+import { isSupabaseConfigured } from "../supabaseClient";
 import { useAuth } from "../authContext";
 import { trackEvent } from "../services/analyticsService";
 import { createLatestRequestManager, isAbortError } from "../utils/latestRequest";
@@ -52,29 +55,15 @@ import {
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { createPendingRequestStore } from "../utils/serverAuthority";
 import { useExitGuard } from "../components/ExitGuard";
+import { fetchTodayDailyChallenge } from "../services/dailyChallengeService";
+import { requireDailyCourse } from "../utils/dailyCourse";
+import SingleStartCinematic, { LegacySingleStartCinematic } from "../components/cinematic/SingleStartCinematic.jsx";
+import { requestSingleStart, normalizeSinglePreparedPage } from "../services/singleStartService.js";
+import { SINGLE_START_CONTRACT, isReservedSingle, createSingleServerClock, singleServerElapsed } from "../utils/singleStart.js";
 
-
-const pickDifficulty = () => {
-  const r = Math.random();
-  if (r < 0.5) return "easy";
-  if (r < 0.9) return "medium";
-  return "hard";
-};
-
-const fetchAiTargetTitle = async () => {
-  const difficulty = pickDifficulty();
-  const { data, error } = await supabase.functions.invoke("target-level", {
-    body: { difficulty },
-  });
-
-  if (error) throw error;
-  if (!data || data.length === 0) throw new Error("No data returned");
-
-  const randomIndex = Math.floor(Math.random() * data.length);
-  return data[randomIndex].title;
-};
 
 const PHASE = {
+  PREPARING: "PREPARING",
   SELECTING: "SELECTING",
   COUNTDOWN: "COUNTDOWN",
   PLAYING: "PLAYING",
@@ -90,11 +79,12 @@ export default function GamePage({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [moveMotion, approveMoveMotion] = useRaceMotion();
   const { user } = useAuth();
   const isGuestGame = Boolean(user?.isGuest || guestRecovery);
 
   const [phase, setPhase] = useState(PHASE.SELECTING);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isPageLoading, setIsPageLoading] = useState(false);
 
@@ -120,15 +110,23 @@ export default function GamePage({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [clickCount, setClickCount] = useState(0);
   const [serverRun, setServerRun] = useState(null);
+  useGameAudio({ identity: `single:${serverRun?.id || 'pending'}:${user?.id || 'guest'}`, route: '/game',
+    playing: phase === PHASE.PLAYING,
+    ended: phase === PHASE.SUCCESS || ['completed', 'expired', 'abandoned'].includes(serverRun?.status) });
 
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const autoStarted = useRef(false);
   const restoredFromStorageRef = useRef(false);
+  const resultRecoveredRef = useRef(false);
   const playStartTrackedRef = useRef(false);
   const moveInFlightRef = useRef(false);
   const pageRequestManagerRef = useRef(createLatestRequestManager());
   const serverRunRef = useRef(null);
+  const reservedClockRef = useRef(() => Date.now());
+  const preparedRootRef = useRef(null);
+  const reservePendingRef = useRef(false);
+  const [visibilityEpoch, setVisibilityEpoch] = useState(0);
   const pendingRequestStoreRef = useRef(null);
   if (!pendingRequestStoreRef.current) {
     pendingRequestStoreRef.current = createPendingRequestStore(
@@ -281,7 +279,18 @@ export default function GamePage({
   // 타이머
   // ----------------------------
   useEffect(() => {
+    const visible = () => { if (!document.hidden) setVisibilityEpoch(value => value + 1); };
+    document.addEventListener('visibilitychange', visible);
+    return () => document.removeEventListener('visibilitychange', visible);
+  }, []);
+
+  useEffect(() => {
     if (phase === PHASE.PLAYING) {
+      if (isReservedSingle(serverRunRef.current)) {
+        const update = () => setElapsedSeconds(singleServerElapsed(serverRunRef.current, reservedClockRef.current()));
+        update(); timerRef.current = setInterval(update, 200);
+        return () => clearInterval(timerRef.current);
+      }
       startTimeRef.current = Date.now() - elapsedSeconds * 1000;
 
       timerRef.current = setInterval(() => {
@@ -310,6 +319,20 @@ export default function GamePage({
     (reachedTitle, targetTitle, timeSec, clicks, finalPath, serverFinalized = false) => {
       setPhase(PHASE.SUCCESS);
       clearSingleGameState();
+      // Members retain only recovery state; the server remains the result/XP authority.
+      if (!isGuestGame && serverFinalized && serverRunRef.current?.id) {
+        saveLocalGameState({
+          phase: PHASE.SUCCESS,
+          serverRunId: serverRunRef.current.id,
+          target: { title: targetTitle, mode: serverRunRef.current.run_mode },
+          ...(isReservedSingle(serverRunRef.current) ? { timingContract: SINGLE_START_CONTRACT } : {}),
+          startTitle,
+          currentTitle: reachedTitle,
+          pathTitles: finalPath,
+          elapsedSeconds: timeSec,
+          clickCount: clicks,
+        });
+      }
 
       if (onGameComplete) {
         onGameComplete({
@@ -323,13 +346,17 @@ export default function GamePage({
         });
       }
     },
-    [onGameComplete, startTitle, clearSingleGameState]
+    [onGameComplete, startTitle, clearSingleGameState, isGuestGame, saveLocalGameState]
   );
 
   const handleGiveUp = useCallback(async () => {
     pageRequestManagerRef.current.cancel();
     const activeRun = serverRunRef.current;
-    if (isSupabaseConfigured && activeRun?.status === "active") {
+    if (isReservedSingle(activeRun) && ['prepared','scheduled','active'].includes(activeRun.status)) {
+      try {
+        await requestSingleStart('leave_v1', { isGuest: isGuestGame, guestToken: loadLocalGameState()?.guestToken, runId: activeRun.id });
+      } catch (failure) { setError(failure.message); return; }
+    } else if (isSupabaseConfigured && activeRun?.status === "active") {
       try {
         if (isGuestGame) {
           await invokeGuestSingleRun("leave", {
@@ -384,6 +411,7 @@ export default function GamePage({
 
         let authoritativeMove = null;
         const activeRun = serverRunRef.current;
+        if (isReservedSingle(activeRun) && activeRun.status !== 'active') throw new Error('서버에서 탐험 시작 상태를 확인해주세요.');
         if (isSupabaseConfigured && activeRun?.status === "active") {
           await ensureWikiSnapshot(page);
           const pendingMutation = pendingRequestStoreRef.current.begin({
@@ -429,6 +457,9 @@ export default function GamePage({
         const newPath = authoritativeMove?.run?.path_title_snapshots || [...pathTitles, page.title];
         const nextClickCount = authoritativeMove?.run?.move_count ?? clickCount + 1;
         setPathTitles(newPath);
+        if (authoritativeMove?.run?.id && authoritativeMove.run.state_version != null) {
+          approveMoveMotion(`${authoritativeMove.run.id}:${authoritativeMove.run.state_version}`, newPath.length > pathTitles.length);
+        }
 
         saveLocalGameState({
           phase: PHASE.PLAYING,
@@ -449,10 +480,13 @@ export default function GamePage({
 
         const serverSolved = authoritativeMove?.run?.status === "completed";
         if (serverSolved || (!authoritativeMove && checkWin(page.title, target.title))) {
+          const finalElapsed = isReservedSingle(authoritativeMove?.run)
+            ? singleServerElapsed(authoritativeMove.run, reservedClockRef.current()) : elapsedSeconds;
+          setElapsedSeconds(finalElapsed);
           handleWin(
             page.title,
             target.title,
-            elapsedSeconds,
+            finalElapsed,
             authoritativeMove?.run?.move_count ?? clickCount + 1,
             newPath,
             Boolean(authoritativeMove)
@@ -495,6 +529,11 @@ export default function GamePage({
     mode: "single",
     links,
     targetTitle: target.title,
+    // These two support effects are owned locally by the existing Single hook.
+    // Movement audio continues to wait for handleMove's accepted server response.
+    onLocalItemApplied: item => {
+      void audioManager.play('itemReveal', { key: `single-support:${serverRun?.id || 'guest'}:${item.instanceId}` });
+    },
     onMove: async (title) => {
       await handleMove(title);
     },
@@ -513,14 +552,137 @@ export default function GamePage({
     }
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleReservedDue = useCallback(() => {
+    const run = serverRunRef.current;
+    if (!isReservedSingle(run) || !run.scheduled_start_at || reservedClockRef.current() < Date.parse(run.scheduled_start_at)) return;
+    if (!playStartTrackedRef.current) {
+      playStartTrackedRef.current = true;
+      trackEvent('play_start', { user, mode: 'single', targetTitle: run.target_title_snapshot });
+    }
+    const optimistic = { ...run, status: 'active', started_at: run.scheduled_start_at };
+    setAuthoritativeRun(optimistic);
+    setElapsedSeconds(singleServerElapsed(optimistic, reservedClockRef.current()));
+    saveLocalGameState({ phase: PHASE.PLAYING, startedAt: Date.parse(run.scheduled_start_at) });
+    setPhase(PHASE.PLAYING);
+    // Reservation is the grant. Do not add a final network round trip to the cover.
+    requestSingleStart('start', { isGuest: isGuestGame, guestToken: loadLocalGameState()?.guestToken, runId: run.id }).then(response => {
+      const current = serverRunRef.current;
+      if (current?.id !== run.id || ['completed','abandoned','expired'].includes(current.status)
+        || Number(response.run.state_version) < Number(current.state_version)) return;
+      if (response.run.status === 'active') setAuthoritativeRun(response.run);
+      else if (['expired','abandoned'].includes(response.run.status)) { setAuthoritativeRun(response.run); setPhase(PHASE.PREPARING); setError('종료된 탐험입니다. 새 탐험을 준비해주세요.'); }
+    }).catch(() => { /* The first move / recovery resolves the same immutable server reservation. */ });
+  }, [isGuestGame, loadLocalGameState, saveLocalGameState, setAuthoritativeRun, user]);
+
+  const prepareReservedGame = useCallback(async (saved, setup = {}) => {
+    const request = pageRequestManagerRef.current.begin();
+    let session = saved;
+    if (saved) restoredFromStorageRef.current = true;
+    setPhase(PHASE.PREPARING); setIsLoading(true); setError('');
+    try {
+      if (!session) {
+        session = { timingContract: SINGLE_START_CONTRACT, allocationRequestId: crypto.randomUUID(), phase: PHASE.PREPARING,
+          guestToken: isGuestGame ? crypto.randomUUID()+crypto.randomUUID() : undefined,
+          target: { mode: setup.mode, title: setup.targetTitle || '', requestedKeyword: setup.keyword || '' } };
+        saveLocalGameState(session);
+        if (loadLocalGameState()?.allocationRequestId !== session.allocationRequestId) throw new Error('복구 정보를 저장할 수 없습니다. 브라우저 저장소를 허용해주세요.');
+      }
+      const owner = { isGuest: isGuestGame, guestToken: session.guestToken };
+      let response;
+      if (session.serverRunId) response = await requestSingleStart('snapshot_v1', { ...owner, runId: session.serverRunId });
+      else {
+        response = await requestSingleStart('allocate', { ...owner, requestId: session.allocationRequestId, mode: session.target.mode, customTarget: session.target.mode === 'random' ? undefined : session.target.title });
+        while (response.code === 'ALLOCATION_PENDING') {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
+          response = await requestSingleStart('allocate', { ...owner, requestId: session.allocationRequestId, mode: session.target.mode, customTarget: session.target.mode === 'random' ? undefined : session.target.title });
+        }
+      }
+      if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
+      let run = response.run;
+      if (!isReservedSingle(run)) throw new Error('서버 시작 계약을 확인하지 못했습니다.');
+      reservedClockRef.current = createSingleServerClock(response.server_now);
+      setAuthoritativeRun(run);
+      saveLocalGameState({ serverRunId: run.id, target: { ...session.target, title: run.target_title_snapshot, mode: run.run_mode }, phase: PHASE.PREPARING });
+      setTarget({ ...session.target, title: run.target_title_snapshot, mode: run.run_mode, pageId: run.target_page_id });
+      setStartTitle(run.start_title_snapshot); setCurrentTitle(run.current_title_snapshot);
+      if (run.status === 'active') run = await replayPendingMutation(run, session, request.signal);
+      if (run.status === 'completed') {
+        resultRecoveredRef.current = true;
+        if (isGuestGame) clearSingleGameState();
+        else saveLocalGameState({ phase: PHASE.SUCCESS, serverRunId: run.id, timingContract: SINGLE_START_CONTRACT,
+          target: { title: run.target_title_snapshot, mode: run.run_mode }, startTitle: run.start_title_snapshot,
+          currentTitle: run.current_title_snapshot, pathTitles: run.path_title_snapshots, clickCount: run.move_count,
+          elapsedSeconds: singleServerElapsed(run, reservedClockRef.current()) });
+        setPathTitles(run.path_title_snapshots); setClickCount(run.move_count);
+        setElapsedSeconds(singleServerElapsed(run, reservedClockRef.current())); setPhase(PHASE.SUCCESS); return;
+      }
+      if (['expired','abandoned'].includes(run.status)) throw new Error('준비 기한이 지났거나 종료된 탐험입니다. 로비에서 새 탐험을 시작해주세요.');
+      const documentResponse = await requestSingleStart('document', { ...owner, runId: run.id });
+      if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
+      run = documentResponse.run;
+      if (!documentResponse.page || !['prepared','scheduled','active'].includes(run.status)) throw new Error('문서 준비 중 탐험이 만료됐습니다.');
+      const page = normalizeSinglePreparedPage(documentResponse.page);
+      setAuthoritativeRun(run); reservedClockRef.current = createSingleServerClock(documentResponse.server_now);
+      setCurrentTitle(page.title); setCurrentSummary(page.summary); setCurrentDocumentHtml(page.documentHtml);
+      setLinks(page.links); setQuickLinks(page.quickLinks); setPathTitles(run.path_title_snapshots); setClickCount(run.move_count);
+      setElapsedSeconds(singleServerElapsed(run, reservedClockRef.current()));
+      saveLocalGameState({ phase: run.status === 'active' ? PHASE.PLAYING : run.status === 'scheduled' ? PHASE.COUNTDOWN : PHASE.PREPARING,
+        timingContract: SINGLE_START_CONTRACT, allocationRequestId: session.allocationRequestId, guestToken: session.guestToken,
+        serverRunId: run.id, serverStateVersion: run.state_version, startTitle: run.start_title_snapshot, currentTitle: page.title,
+        pathTitles: run.path_title_snapshots, clickCount: run.move_count, elapsedSeconds: singleServerElapsed(run, reservedClockRef.current()),
+        ...(run.scheduled_start_at ? { startedAt: Date.parse(run.scheduled_start_at) } : {}) });
+      if (run.status === 'active') setPhase(PHASE.PLAYING);
+      else if (run.status === 'scheduled') setPhase(PHASE.COUNTDOWN);
+    } catch (failure) {
+      if (pageRequestManagerRef.current.isCurrent(request.id)) setError(failure.message || '탐험을 준비하지 못했습니다.');
+    } finally {
+      if (pageRequestManagerRef.current.isCurrent(request.id)) { setIsLoading(false); pageRequestManagerRef.current.complete(request.id); }
+    }
+  }, [isGuestGame, clearSingleGameState, loadLocalGameState, replayPendingMutation, saveLocalGameState, setAuthoritativeRun]);
+
+  useLayoutEffect(() => {
+    if (phase !== PHASE.PREPARING || isLoading || !currentDocumentHtml || !preparedRootRef.current || serverRun?.status !== 'prepared'
+      || !isReservedSingle(serverRun) || error || document.hidden || reservePendingRef.current) return;
+    let cancelled = false, first, second;
+    const reserve = async () => {
+      if (cancelled || document.hidden) return;
+      reservePendingRef.current = true;
+      try {
+        const response = await requestSingleStart('reserve_start', { isGuest: isGuestGame, guestToken: loadLocalGameState()?.guestToken, runId: serverRun.id });
+        if (cancelled || serverRunRef.current?.id !== serverRun.id) return;
+        if (!['scheduled','active'].includes(response.run.status)) throw new Error('준비 기한이 지났습니다. 로비에서 다시 시작해주세요.');
+        setAuthoritativeRun(response.run); reservedClockRef.current = createSingleServerClock(response.server_now);
+        saveLocalGameState({ phase: PHASE.COUNTDOWN, startedAt: Date.parse(response.run.scheduled_start_at) });
+        setPhase(PHASE.COUNTDOWN);
+      } catch (failure) { if (!cancelled) setError(failure.message); }
+      finally { reservePendingRef.current = false; }
+    };
+    // Actual article DOM commit + layout and essential fonts precede reservation.
+    Promise.resolve(document.fonts?.ready).then(() => { if (!cancelled) first = requestAnimationFrame(() => { second = requestAnimationFrame(reserve); }); });
+    return () => { cancelled = true; cancelAnimationFrame(first); cancelAnimationFrame(second); };
+  }, [phase, isLoading, currentDocumentHtml, serverRun?.id, serverRun?.status, error, visibilityEpoch, isGuestGame, loadLocalGameState, saveLocalGameState, setAuthoritativeRun]);
+
   // ----------------------------
   // 게임 준비 로직
   // ----------------------------
   const handleSetupComplete = useCallback(
-    async ({ mode, keyword }) => {
+    async ({ mode, keyword, targetTitle: requestedTarget }) => {
       clearSingleGameState();
       if (!isGuestGame) {
         clearGuestSingleGameProgress();
+      }
+
+      // New random creation requires server allocation; legacy saved runs still
+      // use the existing recovery path below without changing their time basis.
+      if (mode === 'random' && !isSupabaseConfigured) {
+        setPhase(PHASE.PREPARING);
+        setError('싱글 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      if (isSupabaseConfigured && ['random','custom','daily'].includes(mode)) {
+        await prepareReservedGame(null, { mode, keyword, targetTitle: requestedTarget || location.state?.targetTitle || '' });
+        return;
       }
 
       const request = pageRequestManagerRef.current.begin();
@@ -528,10 +690,16 @@ export default function GamePage({
       setError("");
 
       try {
-        let start = await fetchRandomTitle();
+        let start;
         let targetTitle = "";
 
-        if (mode === "custom" || mode === "daily") {
+        if (mode === "daily") {
+          // Re-read at game creation: navigation state can be stale or forged.
+          const course = requireDailyCourse(await fetchTodayDailyChallenge(), { online: isSupabaseConfigured });
+          start = course.startTitle;
+          targetTitle = course.targetTitle;
+        } else if (mode === "custom" || mode === "daily") {
+          start = await fetchRandomTitle();
           const state = location.state || {};
           targetTitle = state.targetTitle;
 
@@ -546,28 +714,17 @@ export default function GamePage({
               new Set([normalizeTitle(targetTitle)])
             );
           }
-        } else {
-          try {
-            targetTitle = await fetchAiTargetTitle();
-          } catch (err) {
-            console.error("AI Target fetch failed:", err);
-            targetTitle = await fetchDistinctRandomTitle(
-              new Set([normalizeTitle(start)])
-            );
-          }
-
-          if (normalizeTitle(start) === normalizeTitle(targetTitle)) {
-            start = await fetchDistinctRandomTitle(
-              new Set([normalizeTitle(targetTitle)])
-            );
-          }
-        }
+        } else throw new Error('지원하지 않는 싱글 모드입니다.');
 
         const [targetSummaryData, startPage] = await Promise.all([
           fetchSummary(targetTitle, { signal: request.signal }),
           fetchPageData(start, { signal: request.signal }),
         ]);
         if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
+        if (mode === "daily" && isSupabaseConfigured &&
+            (!startPage.pageId || !startPage.revisionId || !targetSummaryData.pageId)) {
+          throw new Error("오늘 코스의 문서 ID를 확인하지 못했습니다. 다시 시도해주세요.");
+        }
 
         setStartTitle(startPage.title);
         setTarget({
@@ -641,6 +798,7 @@ export default function GamePage({
         }
       } catch (e) {
         if (!isAbortError(e) && pageRequestManagerRef.current.isCurrent(request.id)) {
+          clearSingleGameState();
           setError(e.message || "게임을 준비하는 중 오류가 발생했습니다.");
         }
       } finally {
@@ -658,6 +816,7 @@ export default function GamePage({
       isGuestGame,
       location.state,
       saveLocalGameState,
+      prepareReservedGame,
     ]
   );
 
@@ -667,8 +826,18 @@ export default function GamePage({
   useEffect(() => {
     if (autoStarted.current) return;
 
-    const saved = loadLocalGameState();
+    let saved = loadLocalGameState();
     const state = location.state;
+    if (saved?.timingContract === SINGLE_START_CONTRACT && !(saved.phase === PHASE.SUCCESS && state?.mode)) {
+      autoStarted.current = true; restoredFromStorageRef.current = true; playStartTrackedRef.current = true;
+      prepareReservedGame(saved); window.history.replaceState({}, document.title); return;
+    }
+    // An explicit new request replaces a completed result, while active runs
+    // still retain the existing recovery priority.
+    if (saved?.phase === PHASE.SUCCESS && state?.mode) {
+      clearSingleGameState();
+      saved = null;
+    }
 
     // 게스트가 메인 화면에서 새 게임을 요청했다면 이전 진행보다 새 요청을 우선합니다.
     if (isGuestGame && !guestRecovery && state?.mode) {
@@ -702,8 +871,14 @@ export default function GamePage({
             return;
           }
           if (authoritative?.status === "completed") {
-            clearSingleGameState();
-            navigate(LOBBY_PATH, { replace: true });
+            resultRecoveredRef.current = true;
+            setStartTitle(authoritative.start_title_snapshot);
+            setTarget({ title: authoritative.target_title_snapshot, pageId: authoritative.target_page_id });
+            setCurrentTitle(authoritative.current_title_snapshot);
+            setPathTitles(authoritative.path_title_snapshots || []);
+            setClickCount(authoritative.move_count);
+            setElapsedSeconds(saved.elapsedSeconds || 0);
+            setPhase(PHASE.SUCCESS);
             return;
           }
           const restoredTitle = authoritative?.current_title_snapshot || saved.currentTitle;
@@ -713,6 +888,7 @@ export default function GamePage({
 
           setTarget({
             ...saved.target,
+            title: authoritative?.target_title_snapshot || saved.target.title,
             pageId: authoritative?.target_page_id || saved.target?.pageId || null,
             revisionId: authoritative?.target_revision_id || saved.target?.revisionId || null,
           });
@@ -787,9 +963,11 @@ export default function GamePage({
     location.state,
     navigate,
     saveLocalGameState,
+    prepareReservedGame,
   ]);
 
   const showRace =
+    (phase === PHASE.PREPARING && isReservedSingle(serverRun) && Boolean(currentDocumentHtml)) ||
     phase === PHASE.PLAYING ||
     phase === PHASE.COUNTDOWN ||
     phase === PHASE.SUCCESS;
@@ -800,19 +978,20 @@ export default function GamePage({
       {isPageLoading && <PageLoadingOverlay />}
 
       {/* SELECTING 단계의 로딩 UI / 폴백 */}
-      {phase === PHASE.SELECTING && (
-        <RaceFrame mode="single" label="싱글 탐험">
+      {(phase === PHASE.SELECTING || phase === PHASE.PREPARING) && (
+        <RaceFrame motion={moveMotion} mode="single" label="싱글 탐험">
           <RaceHud>
             <HudBrand mode="싱글" />
           </RaceHud>
-          {hasPresetMode && !error ? (
+          {(hasPresetMode || isLoading || phase === PHASE.PREPARING) && !error ? (
             <RaceHold kicker="SINGLE · 준비" title="위키 문서를 준비하는 중...">
               <p>목표 문서와 시작 문서를 불러오고 있습니다.</p>
             </RaceHold>
           ) : (
             <RaceHold kicker="SINGLE" title="게임을 설정할 수 없습니다.">
               {error && <p className="state-text error" role="alert">{error}</p>}
-              <p>메인 페이지로 이동합니다...</p>
+              <p>{phase === PHASE.PREPARING ? '준비 상태를 다시 확인하거나 로비로 돌아갈 수 있습니다.' : '메인 페이지로 이동합니다...'}</p>
+              {phase === PHASE.PREPARING && <><button onClick={() => prepareReservedGame(loadLocalGameState())}>준비 다시 확인</button><button onClick={handleGiveUp}>로비로 돌아가기</button></>}
             </RaceHold>
           )}
         </RaceFrame>
@@ -820,9 +999,10 @@ export default function GamePage({
 
       {/* 게임 진행 및 성공 화면 */}
       {showRace && (
-        <RaceFrame mode="single" label="싱글 탐험" inert={phase === PHASE.SUCCESS}>
+        <div ref={preparedRootRef} className={phase === PHASE.COUNTDOWN || isReservedSingle(serverRun) && phase === PHASE.PREPARING ? 'wr-single-prefetch' : undefined}>
+        <RaceFrame motion={moveMotion} mode="single" label="싱글 탐험" inert={phase === PHASE.SUCCESS || phase === PHASE.COUNTDOWN || isReservedSingle(serverRun) && phase !== PHASE.PLAYING}>
           <RaceHud>
-            <HudBrand mode="싱글" />
+            <HudBrand mode="싱글" sub={{ random: "랜덤", custom: "목표 지정", daily: "오늘의 코스" }[target.mode]} />
             <HudDoc kind="current" label="현재 문서" title={currentTitle} />
             <HudArrow />
             <HudDoc kind="goal" label="목표 문서" title={target.title} />
@@ -839,6 +1019,7 @@ export default function GamePage({
               <RouteRail path={pathTitles} currentTitle={currentTitle} />
             </aside>
             <main className="wr-race-main">
+              <MobileRouteNotes path={pathTitles} startTitle={startTitle} />
               <WikiViewer
                 target={target}
                 currentTitle={currentTitle}
@@ -851,6 +1032,7 @@ export default function GamePage({
                 clickCount={clickCount}
                 startTitle={startTitle}
                 onLinkClick={handleMove}
+                readOnly={isReservedSingle(serverRun) && phase !== PHASE.PLAYING}
                 highlightRequestId={itemSystem.highlightRequestId}
                 searchAvailable={itemSystem.searchAvailable}
                 onConsumeSearch={itemSystem.consumeSearchAvailable}
@@ -864,13 +1046,14 @@ export default function GamePage({
             <div className="wr-race-dock wr-race-dock--single">
               <ItemBar
                 inventory={itemSystem.inventory}
-                canUseItem={itemSystem.canUseItem}
-                onUseItem={itemSystem.useItem}
+                canUseItem={item => (!isReservedSingle(serverRun) || phase === PHASE.PLAYING) && itemSystem.canUseItem(item)}
+                onUseItem={id => { if (!isReservedSingle(serverRun) || phase === PHASE.PLAYING) itemSystem.useItem(id); }}
               />
               <span className="wr-race-dock-hint">싱글 아이템 · 힌트 표시는 목표 링크를 보장하지 않습니다</span>
             </div>
           )}
         </RaceFrame>
+        </div>
       )}
 
       {useItems && itemSystem && showRace && (
@@ -884,14 +1067,18 @@ export default function GamePage({
       )}
 
       {/* 카운트다운 오버레이 */}
-      {phase === PHASE.COUNTDOWN && (
-        <CountdownOverlay onComplete={handleCountdownComplete} />
+      {phase === PHASE.COUNTDOWN && isReservedSingle(serverRun) && (
+        <SingleStartCinematic run={serverRun} getServerNow={reservedClockRef.current} recovered={restoredFromStorageRef.current} onDue={handleReservedDue} onCancel={handleGiveUp} />
+      )}
+      {phase === PHASE.COUNTDOWN && !isReservedSingle(serverRun) && (
+        <LegacySingleStartCinematic onComplete={handleCountdownComplete} run={serverRun} startTitle={startTitle} targetTitle={target.title} onCancel={handleGiveUp} />
       )}
 
       {/* 결과 화면 — Phase 4 RESULT. 진입 흐름(handleWin)은 기존 그대로 */}
       {phase === PHASE.SUCCESS && (
         <SuccessOverlay
           runId={serverRun?.id ?? null}
+          motionEligible={!resultRecoveredRef.current}
           startTitle={startTitle}
           targetTitle={target.title}
           elapsedSeconds={elapsedSeconds}

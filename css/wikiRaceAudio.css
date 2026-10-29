@@ -1,0 +1,10 @@
+.wr-audio{position:relative;display:flex;justify-content:flex-end;padding:6px max(12px,env(safe-area-inset-right));box-sizing:border-box;min-height:56px;background:#fff9e9;z-index:20000;font:14px/1.5 system-ui,sans-serif;color:#243430}
+.wr-audio button{font:inherit;color:inherit;cursor:pointer;min-height:44px;border:1px solid #8a987e;border-radius:12px;background:#fff9e9;padding:7px 12px}
+.wr-audio-toggle{display:flex;align-items:center;gap:6px;box-shadow:0 2px 10px #20342c20}
+.wr-audio-toggle>span:first-child{font-size:21px}
+.wr-audio-panel{position:absolute;right:12px;top:100%;width:min(280px,calc(100vw - 24px));padding:16px;border:1px solid #8a987e;border-radius:14px;background:#fff9e9;box-shadow:0 8px 32px #20342c38;box-sizing:border-box;max-height:calc(100dvh - 90px);overflow:auto}
+.wr-audio-panel header,.wr-audio-volume>span{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.wr-audio-mute{display:flex;align-items:center;gap:9px;min-height:44px;margin:8px 0}
+.wr-audio-volume{display:block;margin-top:12px}.wr-audio-volume input{width:100%;min-height:44px;margin:0;accent-color:#287066}.wr-audio input[type=checkbox]{width:20px;height:20px;accent-color:#287066}
+.wr-audio :focus-visible{outline:3px solid #2b7fbd;outline-offset:3px}.wr-audio-enable{margin-top:8px;width:100%}
+@media(max-width:760px){.wr-audio{padding-left:max(12px,env(safe-area-inset-left))}}

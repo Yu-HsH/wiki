@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient.js";
 import { fetchSingleGameRecords } from "../rankingService.js";
+import { SINGLE_START_CONTRACT } from "../utils/singleStart.js";
 
 /**
  * 프로필 전적 조회 서비스
@@ -25,15 +26,18 @@ export async function fetchSinglePlayerStats(userId, { client } = {}) {
   try {
     const records = await fetchSingleGameRecords({ userId, client });
     if (records.length === 0) return { ...EMPTY_SINGLE_STATS };
+    const current = records.filter(record => record.timingContract === SINGLE_START_CONTRACT);
+    const previous = records.filter(record => record.timingContract !== SINGLE_START_CONTRACT);
 
     return {
       totalWins: records.length,
-      bestTime: Math.min(...records.map((record) => record.elapsedSeconds)),
+      bestTime: current.length ? Math.min(...current.map(record => record.elapsedSeconds)) : null,
+      previousBestTime: previous.length ? Math.min(...previous.map(record => record.elapsedSeconds)) : null,
       bestClicks: Math.min(...records.map((record) => record.clickCount)),
     };
   } catch (error) {
     console.error("싱글 플레이 전적 조회 오류:", error);
-    return { ...EMPTY_SINGLE_STATS };
+    throw error;
   }
 }
 
@@ -58,7 +62,7 @@ export async function fetch1v1Stats(userId) {
 
   if (winError || lossError) {
     console.error("1vs1 전적 조회 오류:", winError || lossError);
-    return { wins: 0, losses: 0, winRate: 0 };
+    throw winError || lossError;
   }
 
   const total = (wins || 0) + (losses || 0);
@@ -99,7 +103,7 @@ export async function fetchGroupStats(userId) {
     return stats;
   } catch (error) {
     console.error("그룹 모드 전적 조회 오류:", error);
-    return { first: 0, second: 0, third: 0 };
+    throw error;
   }
 }
 
@@ -136,7 +140,7 @@ export async function fetchPublicProfile(userId) {
 
   if (error) {
     console.error("fetchPublicProfile error:", error);
-    return null;
+    throw error;
   }
   return data;
 }

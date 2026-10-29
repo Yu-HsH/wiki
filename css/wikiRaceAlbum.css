@@ -1,0 +1,74 @@
+/* Discovery album only. Category marks and completion labels are UI, never rewards. */
+.wr-achievements .dashboard-header {max-width:1120px;margin-inline:auto}
+.wr-achievements .album-cover {max-width:1088px;margin:12px auto 24px;padding:32px;display:grid;grid-template-columns:1.2fr 1fr;gap:20px 32px;background:var(--wr-paper-2);border-left:8px solid #8b6943;border-radius:4px 18px 18px 4px;color:var(--wr-ink)}
+.wr-achievements .album-kicker {font-size:11px;letter-spacing:.14em;color:#796344;margin:0 0 14px}
+.wr-achievements .album-cover h2 {font-size:clamp(23px,2.6vw,32px);line-height:1.45;margin:0 0 12px}
+.wr-achievements .album-cover p {font-size:14px;line-height:1.8}
+.wr-achievements .album-totals {display:flex;flex-wrap:wrap;gap:22px;align-content:center;margin:0}
+.wr-achievements .album-totals div {min-width:100px}
+.wr-achievements .album-totals dt {font-size:13px;color:var(--wr-ink-2)}
+.wr-achievements .album-totals dd {margin:8px 0 0;font-size:36px;font-weight:800;font-variant-numeric:tabular-nums}
+.wr-achievements .album-totals small {font-size:16px;font-weight:400}
+.wr-achievements .album-cover :is(.album-current,.album-public-note) {grid-column:1/-1;margin:0;overflow-wrap:anywhere}
+.wr-achievements .album-public-note {color:var(--wr-ink-2);font-size:12px!important}
+.wr-achievements .wr-ach-filters {max-width:1088px;margin:0 auto 20px;flex-wrap:wrap}
+.wr-achievements .wr-ach-filters button {min-height:44px;font-size:14px}
+.wr-achievements .ach-section {background:transparent;border:0;box-shadow:none;padding:18px 0 24px;gap:16px;align-items:start}
+.wr-achievements .ach-section-title {display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--wr-frame);padding:0 0 14px;font-size:19px}
+.wr-achievements .ach-section-title small {margin-left:auto;font-size:12px;font-weight:400;color:var(--wr-ink-2)}
+.wr-achievements .album-category-mark {font-size:24px;color:#876a42;width:28px;text-align:center}
+.wr-achievements .album-category-art {width:32px;height:32px;flex:none}
+.wr-achievements .album-complete-art {width:48px;height:48px;flex:none;margin-left:auto;animation:none!important}
+.wr-achievements .album-details-toggle {display:none}
+.wr-achievements .album-card-details {display:grid;gap:10px}
+.wr-achievements .album-next-summary {display:none}
+.album-sr-only {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.wr-achievements .ach-card {min-width:0;padding:22px;gap:10px;border:1px solid #d6c9ac;border-radius:4px 4px 14px 4px;background:#fffaf0;box-shadow:none;overflow-wrap:anywhere;display:flex;flex-direction:column}
+.wr-achievements .ach-card-name {font-size:18px;line-height:1.5}
+.wr-achievements .ach-card-condition {font-size:14px;line-height:1.7}
+.wr-achievements .album-description {margin:0;color:var(--wr-ink-2);font-size:13px;line-height:1.7}
+.wr-achievements .ach-card-state {align-self:flex-start;margin:0 0 4px;font-size:12px;border:0;border-radius:3px;background:#eee7d6;padding:6px 9px}
+.wr-achievements .ach-card[data-state="progress"] .ach-card-state {background:#e3ede1;color:#36593d}
+.wr-achievements .ach-card[data-state="tier"] .ach-card-state {background:#f4e7c3;color:#725921}
+.wr-achievements .ach-card--complete {background:#f3f5e9;border-color:#a6b99c}
+.wr-achievements .ach-card--complete .ach-card-state {border:1px solid #779878;background:transparent;color:#36593d}
+.wr-achievements .ach-earned {padding-left:18px;margin:0;font-size:12px;line-height:1.8;color:var(--wr-ink-2)}
+.wr-achievements .ach-next {margin-top:auto;padding-top:16px;border-top:1px solid #e0d6bf;font-size:14px;line-height:1.6}
+.wr-achievements .album-xp-only {display:block;margin-top:6px;font-size:12px}
+.wr-achievements .album-reward {margin-top:12px;padding:12px;background:#f2eddf;border-radius:4px;display:grid;gap:6px;font-size:13px}
+.wr-achievements .album-reward-label {display:grid;gap:3px}
+.wr-achievements .album-reward strong {color:var(--wr-ink);font-size:14px}
+.wr-achievements .album-reward small {font-size:12px}
+.wr-achievements .album-reward-specimen {padding:8px 0}
+.wr-achievements .album-reward .pcard {max-width:100%;min-width:0}
+.wr-achievements .album-reward :is(.pcard-name,.pcard-title) {white-space:normal;overflow-wrap:anywhere}
+.wr-achievements .album-reward * {animation:none!important}
+.wr-achievements .album-ownership {color:#36593d}
+.wr-achievements .ach-section--hidden {background:#ede8dc;padding:24px;border-radius:4px 14px 14px 4px}
+.wr-achievements .ach-hidden-note {font-size:14px;line-height:1.7;margin:0}
+.wr-achievements .ach-card--hidden-summary {background:transparent;border:0;padding:12px 0}
+.wr-achievements .ach-card--hidden {background:#fffaf0}
+/* Static labels stay static. Only the existing unseen result reveal gets a short stamp motion. */
+.ach-reveal-card .album-reveal-stamp {display:inline-block;font-size:12px;margin-bottom:10px;color:inherit}
+@media(prefers-reduced-motion:no-preference){.ach-reveal-card .album-reveal-stamp{animation:album-stamp 240ms ease-out both}}
+@keyframes album-stamp {from{opacity:0;transform:scale(1.08) translateY(-3px)}to{opacity:1;transform:none}}
+@media(min-width:1200px){.wr-achievements .ach-section{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:601px) and (max-width:1199px){.wr-achievements .ach-section{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-achievements .album-cover{margin-inline:16px}}
+@media(max-width:600px){.wr-achievements .album-cover{grid-template-columns:1fr;padding:24px 20px;margin-inline:16px;gap:16px}.wr-achievements .album-totals{gap:16px}.wr-achievements .album-totals dd{font-size:28px}.wr-achievements .ach-section{grid-template-columns:minmax(0,1fr);padding:18px 0}.wr-achievements .ach-section--hidden{padding:20px}.wr-achievements .ach-card{padding:20px}.wr-achievements .wr-ach-filters{margin-inline:16px}.wr-achievements .album-totals div{min-width:90px}}
+@media(max-width:600px){
+  .wr-achievements .ach-card {gap:8px;padding:18px}
+  .wr-achievements .ach-card-head {order:0}
+  .wr-achievements .ach-card-name {flex:1;min-width:0;font-size:17px}
+  .wr-achievements :is(.ach-card-condition,.album-description) {order:1;font-size:13px;line-height:1.65}
+  .wr-achievements .ach-progress {order:2}
+  .wr-achievements .ach-next {order:3;margin-top:4px;padding-top:10px;font-size:13px}
+  .wr-achievements .album-next-summary {display:block;margin:4px 0 0;color:var(--wr-ink);font-size:13px;line-height:1.6}
+  .wr-achievements .ach-card-state {order:4;font-size:11px;padding:4px 7px;margin:0}
+  .wr-achievements .album-details-toggle {order:5;display:flex;align-items:center;justify-content:space-between;min-height:44px;width:100%;padding:10px 0;border:0;background:transparent;color:#36593d;text-align:left;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+  .wr-achievements .album-details-toggle::after {content:'＋';font-size:18px}
+  .wr-achievements .album-details-toggle[aria-expanded="true"]::after {content:'−'}
+  .wr-achievements .album-details-toggle:focus-visible {outline:2px solid #36593d;outline-offset:3px;border-radius:3px}
+  .wr-achievements .album-card-details {order:6;padding-top:10px;border-top:1px solid #e0d6bf}
+  .wr-achievements .album-card-details:not(.is-expanded) {display:none}
+}
+@media(prefers-reduced-motion:reduce){.wr-achievements *, .ach-reveal-card .album-reveal-stamp{animation:none!important;transition:none!important}}

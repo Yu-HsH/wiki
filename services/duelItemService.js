@@ -238,6 +238,33 @@ function measureSkew(response, receivedAt) {
     return { serverNow, clockSkewMs: serverNow - receivedAt };
 }
 
+export function normalizeDuelPreviewState(row, skewMs = null) {
+    if (!row?.item_event_id || !Array.isArray(row.candidates) || !Array.isArray(row.entries)
+        || row.max !== 3 || !Number.isInteger(row.used) || !Number.isInteger(row.reserved)
+        || row.used < 0 || row.reserved < 0 || row.used + row.reserved > 3) return null;
+    return { itemEventId: row.item_event_id, sourcePageId: row.source_page_id,
+        sourceRevisionId: row.source_revision_id, sourceValid: row.source_valid === true,
+        active: row.active === true, expired: row.expired === true,
+        expiresAt: toClientTime(toEpochMs(row.expires_at), skewMs),
+        used: row.used, reserved: row.reserved, max: row.max, serverNow: toEpochMs(row.server_now),
+        candidates: row.candidates.map(c => ({ pageId: c.page_id, title: c.title, censored: c.censored === true })),
+        entries: row.entries.map(e => ({ pageId: e.page_id, status: e.status,
+            leaseUntil: toClientTime(toEpochMs(e.lease_until), skewMs), summary: e.summary })) };
+}
+
+export async function fetchDuelPreview({ roomId, itemEventId, targetPageId, requestId, signal }) {
+    requireSupabase();
+    const { data, error } = await supabase.functions.invoke("duel-link-preview", {
+        body: { roomId, itemEventId, targetPageId, requestId }, signal,
+    });
+    if (error) throw toDuelItemError(error, "미리보기 결과를 확인하지 못했습니다.");
+    const response = normalizeRpcRow(data);
+    const { serverNow, clockSkewMs } = measureSkew(response, Date.now());
+    return { ok: response?.ok === true, code: response?.code || "PREVIEW_STATE_UNKNOWN",
+        previewState: normalizeDuelPreviewState(response?.preview_state, clockSkewMs),
+        entry: response?.entry ?? null, serverNow, clockSkewMs };
+}
+
 /* ────────────────────────────────────────────────────────────
  * 4. 오류 정규화 — throw되는 것들
  * ──────────────────────────────────────────────────────────── */
@@ -422,6 +449,7 @@ export async function fetchDuelItemState(roomId) {
         activeEffects: effects.map((row) => normalizeEffectRow(row, clockSkewMs)),
         // 아직 안 쓰인 편집 보호·역링크. 소진 여부도 서버가 판정한 결과다.
         pendingDefenses: defenses.map((row) => normalizeEffectRow(row, clockSkewMs)),
+        previewStates: (response?.preview_states || []).map(row => normalizeDuelPreviewState(row, clockSkewMs)).filter(Boolean),
         serverNow,
         clockSkewMs,
         snapshot: response,
@@ -479,6 +507,7 @@ export async function useDuelItem({
         itemId: response.item_id ?? null,
         targetUserId: response.target_user_id ?? null,
         itemEventId: response.item_event_id ?? null,
+        previewState: normalizeDuelPreviewState(response.preview_state, clockSkewMs),
         roomEventId: response.room_event_id ?? null,
         effectExpiresAt: toClientTime(toEpochMs(response.effect_expires_at), clockSkewMs),
         cooldownUntil: toClientTime(toEpochMs(response.cooldown_until), clockSkewMs),

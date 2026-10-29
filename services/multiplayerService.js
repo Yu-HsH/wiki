@@ -169,7 +169,9 @@ export async function applyDuelMoveV2({
     const response = normalizeRpcRow(data);
     if (!response?.ok) {
         const authorityError = new Error(
-            response?.code || "1:1 이동이 서버에서 거부되었습니다."
+            response?.code === "LINK_CENSORED"
+                ? "링크 검열로 봉인된 문서입니다. 검열이 끝난 뒤 다시 이동해 주세요."
+                : response?.code || "1:1 이동이 서버에서 거부되었습니다."
         );
         authorityError.code = response?.code || "DUEL_MOVE_REJECTED";
         authorityError.recoverable = response?.code === "STATE_VERSION_CONFLICT";

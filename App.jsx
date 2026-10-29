@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import AudioControls from "./components/AudioControls.jsx";
 import {
   createBrowserRouter,
   Navigate,
@@ -191,6 +192,7 @@ function SingleGameRoute() {
  */
 function AppRoutes() {
   return (
+    <><AudioControls />
     <Routes>
       {/* 시작 화면 */}
       <Route path="/" element={<IntroPage />} />
@@ -278,7 +280,7 @@ function AppRoutes() {
           </OnlineRoute>
         }
       />
-    </Routes>
+    </Routes></>
   );
 }
 

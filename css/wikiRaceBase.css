@@ -34,6 +34,7 @@
 .wr-page .daily-date, .wr-page .daily-hint { color: var(--wr-ink-2); }
 .wr-page .daily-keyword { font-size: 20px; color: var(--wr-gold); background: none; -webkit-text-fill-color: currentColor; margin: 0; overflow-wrap: anywhere; }
 .wr-page .daily-hint { grid-column: 1; margin: 4px 0 0; }
+.wr-page .daily-course { grid-column: 1; margin: 4px 0 0; color: var(--wr-ink-2); overflow-wrap: anywhere; }
 .wr-page .daily-btn { grid-column: 2; grid-row: 1 / 4; align-self: center; width: auto; background: var(--wr-blue); color: var(--wr-paper); border-radius: var(--wr-radius-control); }
 .wr-page button:disabled { cursor: default; opacity: .55; }
 .wr-explorer-featured { display: grid; grid-template-columns: 330px minmax(0, 1fr); position: relative; }

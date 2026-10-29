@@ -1,0 +1,75 @@
+/* 2차-A only: briefing desks. No HOME/RANKING/PROFILE/RACE/RESULT selectors. */
+.wr-play-heading .wr-entry-lead, .wr-entry .wr-entry-lead { margin: 10px 0 0; color: var(--wr-ink-2); font-size: 14px; line-height: 1.7; }
+.wr-access-note { margin: 0 32px 18px; padding: 10px 14px; border-left: 3px solid var(--wr-blue); color: var(--wr-ink-2); background: var(--wr-paper-2); font-size: 13px; line-height: 1.65; }
+.wr-modes { gap: 14px; padding: 22px 28px; border-top-style: dashed; }
+.wr-modes .wr-mode { padding: 22px; border: 1px solid var(--wr-divider); border-top: 4px solid var(--wr-blue); border-radius: 12px; background: var(--wr-paper); min-height: 480px; }
+.wr-modes .wr-mode:nth-of-type(2) { border-top-color: var(--wr-purple); }
+.wr-modes .wr-mode:nth-of-type(3) { border-top-color: var(--wr-teal); }
+.wr-modes .wr-mode-desc { font-size: 14px; line-height: 1.7; min-height: 48px; }
+.wr-mode-brief { display: block; padding-top: 13px; margin-top: 13px; border-top: 1px dashed var(--wr-divider); font-size: 12px; line-height: 1.75; color: var(--wr-ink-2); }
+.wr-mode-brief strong { display: block; color: var(--wr-ink); margin-bottom: 3px; font-size: 12px; }
+.wr-modes .wr-vignette { margin: 18px 0; }
+.wr-entry.mp-container { width: min(960px, 100%); }
+.wr-entry .mp-mode-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; min-height: 124px; }
+.wr-entry .mp-mode-card > span:last-child { font-size: 13px; line-height: 1.6; color: var(--wr-ink-2); }
+.wr-entry-rules { padding: 16px 20px; background: var(--wr-paper-2); border: 1px dashed var(--wr-frame); border-radius: 10px; color: var(--wr-ink-2); font-size: 14px; line-height: 1.8; }
+.wr-entry .mp-card { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 24px; text-align: left; }
+.wr-entry .mp-card--create { border-top: 4px solid var(--wr-blue); background: var(--wr-paper); }
+.wr-entry .mp-card--join { border-top: 4px solid var(--wr-frame); }
+.wr-entry .mp-card-title, .wr-entry .mp-card-desc { margin: 0; }
+.wr-entry .mp-card-desc { font-size: 14px; line-height: 1.8; }
+.wr-entry .mp-option { min-height: 44px; margin: 0; font-size: 13px; justify-content: flex-start; }
+.wr-entry .mp-card > .mp-action-btn, .wr-entry .mp-join-row { margin-top: auto; }
+.wr-entry .mp-action-btn, .wr-entry .mp-code-input { min-height: 48px; }
+.wr-entry .mp-code-input { width: 100%; flex: 1; font-size: 16px; text-transform: uppercase; }
+.wr-entry .mp-join-row { display: flex; gap: 10px; }
+.wr-entry .mp-action-btn:disabled { opacity: .5; cursor: not-allowed; }
+.wr-entry .wr-entry-help { align-self: flex-start; min-height: 44px; }
+.wr-entry .help-modal { max-height: 90dvh; width: min(620px, calc(100vw - 32px)); color: var(--wr-ink); }
+.wr-entry .help-modal li { margin-bottom: 10px; line-height: 1.8; }
+.wr-entry .help-modal .text-btn { min-width: 44px; min-height: 44px; }
+.wr-room-briefing { padding: 18px 28px; border-bottom: 1px dashed var(--wr-frame); background: var(--wr-paper); }
+.wr-room-briefing > p { margin-top: 8px; font-size: 14px; line-height: 1.75; color: var(--wr-ink-2); }
+.wr-room-briefing .wr-room-sync { font-size: 12px; padding-left: 12px; border-left: 3px solid var(--wr-frame); }
+.wr-room .wr-duel-player, .wr-room .wr-roster-row, .wr-room .wr-host-mark { animation: none; }
+.wr-room .wr-btn, .wr-room .wr-link-btn, .wr-room .wr-name-btn { min-height: 44px; }
+.wr-room .wr-search-field { min-height: 44px; }
+.wr-room .wr-search-field input { font-size: 16px; }
+.wr-room .wr-roster-row { min-width: 0; }
+.wr-room .pcard-name, .wr-room .wr-party-host strong, .wr-room .wr-room-code-value { overflow-wrap: anywhere; white-space: normal; }
+.wr-room .wr-room-code { flex-wrap: wrap; min-width: 0; }
+.wr-room .wr-rule-strip { white-space: normal; }
+.wr-room .wr-start-rules { display: block; line-height: 1.7; }
+.wr-room .wr-duel-player .wr-status { margin-top: auto; }
+.wr-room .wr-lobby-actions { position: static; }
+.wr-room .wr-roster-row .pcard-name { overflow: visible; text-overflow: clip; white-space: normal; }
+.wr-room .wr-party-count, .wr-room .wr-roster-toggle, .wr-room .wr-duel-setup dt { flex-shrink: 0; }
+.wr-room .wr-party-title { min-width: 0; flex: 1; }
+.wr-room .wr-roster-toggle { white-space: nowrap; min-width: 44px; }
+.wr-room .wr-duel-setup dd { min-width: 0; }
+.wr-entry button:focus-visible, .wr-room button:focus-visible, .wr-entry input:focus-visible { outline: 3px solid var(--wr-blue); outline-offset: 3px; }
+@media (max-width: 800px) {
+  .wr-modes { grid-template-columns: minmax(0, 1fr); }
+  .wr-modes .wr-mode { min-height: 0; }
+  .wr-modes .wr-mode-desc { min-height: 0; }
+  .wr-modes .wr-vignette { align-self: flex-start; }
+}
+@media (max-width: 600px) {
+  .wr-play-heading { padding: 20px 18px 14px; align-items: flex-start; }
+  .wr-play-heading img { width: 48px; height: auto; }
+  .wr-play-heading h1 { font-size: 24px; }
+  .wr-access-note { margin-inline: 18px; }
+  .wr-modes { padding: 18px; }
+  .wr-entry.mp-container { padding: 20px 18px; }
+  .wr-entry .mp-mode-card { padding: 14px; }
+  .wr-entry .mp-mode-panel { grid-template-columns: minmax(0, 1fr); }
+  .wr-entry .mp-card { padding: 20px; }
+  .wr-entry .mp-join-row { flex-wrap: wrap; }
+  .wr-entry .mp-join-row button { width: 100%; }
+  .wr-room-briefing { padding: 16px; }
+  .wr-room .wr-lobby-actions > .wr-btn { width: 100%; margin-left: 0; }
+  .wr-room .wr-roster-row .pcard { flex: 1; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-modes *, .wr-entry *, .wr-room * { animation: none !important; transition: none !important; }
+}

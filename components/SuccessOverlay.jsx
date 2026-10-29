@@ -3,10 +3,13 @@ import { useAuth } from "../authContext";
 import { fetchRankings, fetchSingleRunResult } from "../rankingService";
 import { formatDuration } from "../services/wikiService";
 import ResultXp from "./ResultXp.jsx";
-import FinishEffect from "./FinishEffect.jsx";
+import SingleResultRoute from "./cinematic/SingleResultRoute.jsx";
+import { SingleEndCinematic } from "./cinematic/CinematicParts.jsx";
+import { singleCinematicRecord } from "../utils/cinematicPresentation.js";
 import useMatchExpression from "../hooks/useMatchExpression.js";
 import { pathColor } from "../utils/rewardTokens.js";
 import { getSingleResultLabel } from "../utils/resultReasonLabels.js";
+import "../css/wikiRaceSingleResult.css";
 import {
   ResultActions,
   ResultCard,
@@ -40,6 +43,7 @@ export default function SuccessOverlay({
   isGuest = false,
   onNewGame,
   onReturnToLobby,
+  motionEligible = true,
 }) {
   const { user } = useAuth();
   // 경기 표현 (16d 판정 4) — 장착한 경로 색상은 타임라인 선·노드, 완주 효과는 도착 노드. 게스트는 없다
@@ -56,11 +60,14 @@ export default function SuccessOverlay({
 
     const loadResult = async () => {
       setIsLoading(true);
+      setServerResult(null);
+      setServerResultFailed(false);
 
       // 상단 미니 랭킹(표시용)과 내 순위(서버 확정값)는 서로 다른 조회다.
+      const resultRequest = fetchSingleRunResult({ runId });
       const [rankingList, runResult] = await Promise.allSettled([
-        fetchRankings({ limit: 10 }),
-        fetchSingleRunResult({ runId }),
+        resultRequest.then(result => fetchRankings({ limit: 10, timingContract: result?.record?.timingContract ?? null })),
+        resultRequest,
       ]);
 
       if (cancelled) return;
@@ -100,38 +107,46 @@ export default function SuccessOverlay({
   const serverTotalCount = serverResult?.totalCount ?? null;
 
   const completedTerm = getSingleResultLabel("completed")?.term ?? "완주";
-  const courseStart = startTitle || displayPathTitles[0] || "";
+  const courseStart = serverRecord?.startTitle || startTitle || "";
+  const cinematicRecord = !isLoading && singleCinematicRecord(guestView ? {
+    resultStatus: "completed", startTitle: courseStart, targetTitle: displayTargetTitle,
+    elapsedSeconds, clickCount,
+  } : serverRecord);
+  const resultTitle = cinematicRecord ? completedTerm : isLoading ? "결과 확인 중" : serverResultFailed ? "결과 확인 실패" : serverRecord?.resultStatus === "invalid" ? "무효 결과" : "확정 기록 확인 필요";
+  const timingLabel = serverRecord?.timingContract ? '새 시작 기준' : '이전 기록';
   const rankText = guestView
     ? "게스트는 랭킹에 등록되지 않습니다."
     : serverRank
       ? serverTotalCount
-        ? `서버 확정 기록 ${serverTotalCount}건 중 ${serverRank}위입니다`
-        : `서버 확정 순위 ${serverRank}위입니다`
+        ? `${timingLabel} · 서버 확정 기록 ${serverTotalCount}건 중 ${serverRank}위입니다`
+        : `${timingLabel} · 서버 확정 순위 ${serverRank}위입니다`
       : "서버에서 확정된 순위를 아직 불러오지 못했습니다.";
 
   return (
-    <ResultScreen mode="single" tone="win" layer="overlay" titleId="wr-single-result-title" testId="single-result">
-      <ResultScene mascot="win" reached celebration="full" destination={displayTargetTitle} />
+    <ResultScreen mode="single" cinematic="single" tone={cinematicRecord ? "win" : "neutral"} layer="overlay" titleId="wr-single-result-title" resultKey={runId} motionEligible={motionEligible} confirmed={Boolean(cinematicRecord)} testId="single-result">
+      {!cinematicRecord && <ResultScene destination={displayTargetTitle} />}
       <ResultCard>
+        {cinematicRecord && <SingleEndCinematic />}
         <ResultOutcome
-          kicker="EXPEDITION COMPLETE · 완주"
+          kicker={cinematicRecord ? "EXPEDITION COMPLETE · 완주" : "EXPEDITION RECORD · 결과 확인"}
           titleId="wr-single-result-title"
-          title={completedTerm}
+          title={resultTitle}
           meta="싱글 탐험"
-          pill={{ tone: "gold", text: "목표 도달", icon: "flag" }}
+          pill={cinematicRecord ? { tone: "gold", text: "목표 도달", icon: "flag" } : { tone: "neutral", text: resultTitle }}
+          detail={guestView ? "게스트의 로컬 기록입니다. 서버 랭킹에는 등록되지 않습니다." : !cinematicRecord ? "서버가 확정한 완주 기록을 확인한 뒤 완료 표식을 표시합니다." : null}
         />
 
         {/* 기록 ▸ XP ▸ 경로 순서 (패킷 15 §6) */}
         <ResultStats
           items={[
-            { label: "시간", icon: "timer", value: formatDuration(displayElapsedSeconds) },
-            { label: "이동", value: `${displayClickCount}회` },
+            { label: "시간", icon: "timer", value: cinematicRecord ? formatDuration(displayElapsedSeconds) : "–" },
+            { label: "이동", value: cinematicRecord ? `${displayClickCount}회` : "–" },
             { label: "코스", wide: true, value: <ResultCourse start={courseStart} target={displayTargetTitle} /> },
           ]}
         />
 
         {/* 이번 결과 XP — 서버 기록이 확정된 뒤에만 조회한다 */}
-        <ResultXpRow>
+        <ResultXpRow label="클리어 보상 · XP 획득 · 서버 지급 기록">
           {isLoading ? (
             <p className="rxp-note" role="status">XP 지급 정보를 확인하는 중입니다.</p>
           ) : (
@@ -146,29 +161,7 @@ export default function SuccessOverlay({
         </ResultXpRow>
 
         {/* 이동 경로 — 장착한 경로 색상은 노드·선, 완주 효과는 도착 노드 */}
-        <section className="wr-result-row wr-result-route" aria-labelledby="wr-single-route-title">
-          <div className="wr-rroute-head">
-            <h2 id="wr-single-route-title" className="wr-hud-label">MY ROUTE · 이동 경로</h2>
-            <small>{displayPathTitles.length}문서</small>
-          </div>
-          <ol className="wr-tl">
-            {displayPathTitles.map((title, index) => {
-              const isLast = index === displayPathTitles.length - 1;
-              const dot = (
-                <span className="wr-tl-dot">
-                  <span className="wr-tl-dot-inner" style={pathHex ? { background: pathHex } : undefined} />
-                </span>
-              );
-              return (
-                <li key={`${title}-${index}`} className={`wr-tl-item ${isLast ? "is-last" : ""}`}>
-                  {isLast ? <FinishEffect effect={matchExpression.finish_effect}>{dot}</FinishEffect> : dot}
-                  <span className="wr-tl-title" title={title}>{title}</span>
-                  {!isLast && <span className="wr-tl-line" aria-hidden="true" style={pathHex ? { background: pathHex } : undefined} />}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
+        <SingleResultRoute path={displayPathTitles} pathHex={pathHex} finishEffect={matchExpression.finish_effect} completed={Boolean(cinematicRecord)} />
 
         {/* 서버 확정 순위 — 이 화면이 랭킹 목록에서 자기 기록을 찾지 않는다 */}
         <section className="wr-result-row wr-rrank" aria-labelledby="wr-single-rank-title">

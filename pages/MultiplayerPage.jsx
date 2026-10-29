@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../authContext";
 import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
+import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog";
 import {
   createRoom,
   findRoomByCode,
@@ -52,8 +53,10 @@ export default function MultiplayerPage() {
   });
   const [duelRoomCodeInput, setDuelRoomCodeInput] = useState("");
   const [groupRoomCodeInput, setGroupRoomCodeInput] = useState("");
+  const [groupCapacity, setGroupCapacity] = useState(6);
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const submitting = useRef(false);
 
   const [useItems, setUseItems] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
@@ -62,12 +65,14 @@ export default function MultiplayerPage() {
      1vs1 방 생성
      ========================= */
   const handleCreateDuelRoom = async () => {
+    if (submitting.current) return;
     if (!user?.id) {
       setSubmitError("로그인이 필요합니다.");
       return;
     }
 
     try {
+      submitting.current = true;
       setPending(true);
       setSubmitError("");
 
@@ -83,6 +88,7 @@ export default function MultiplayerPage() {
         error instanceof Error ? error.message : "방 생성 실패"
       );
     } finally {
+      submitting.current = false;
       setPending(false);
     }
   };
@@ -91,8 +97,9 @@ export default function MultiplayerPage() {
      1vs1 방 참가
      ========================= */
   const handleJoinDuelRoom = async () => {
+    if (submitting.current) return;
     const code = duelRoomCodeInput.trim().toUpperCase();
-    if (!code) return;
+    if (!code) { setSubmitError("방 코드를 입력해 주세요."); return; }
 
     if (!user?.id) {
       setSubmitError("로그인이 필요합니다.");
@@ -100,6 +107,7 @@ export default function MultiplayerPage() {
     }
 
     try {
+      submitting.current = true;
       setPending(true);
       setSubmitError("");
 
@@ -114,6 +122,7 @@ export default function MultiplayerPage() {
         error instanceof Error ? error.message : "참가 실패"
       );
     } finally {
+      submitting.current = false;
       setPending(false);
     }
   };
@@ -141,8 +150,9 @@ export default function MultiplayerPage() {
           </button>
         </header>
         <div className="wr-entry-title">
-          <p className="wr-kicker">ONLINE · 온라인 대전</p>
+          <p className="wr-kicker">EXPEDITION BOARD · 원정대 준비</p>
           <h1>방 만들기 · 코드로 참가</h1>
+          <p className="wr-entry-lead">함께할 탐험을 고르고, 방 코드를 공유해 같은 대기실에 모이세요.</p>
         </div>
 
         {/* =========================
@@ -154,9 +164,11 @@ export default function MultiplayerPage() {
             className={`mp-mode-card ${selectedMode === "duel" ? "mp-mode-card--active" : ""
               }`}
             aria-pressed={selectedMode === "duel"}
-            onClick={() => setSelectedMode("duel")}
+            aria-label="1 vs 1"
+            disabled={pending}
+            onClick={() => { setSelectedMode("duel"); setSubmitError(""); }}
           >
-            ⚔️ 1 vs 1
+            <span className="wr-kicker">DUEL · 2인</span><strong>1 vs 1</strong><span>공통 목표 · 먼저 도착하면 승리</span>
           </button>
 
           <button
@@ -164,10 +176,15 @@ export default function MultiplayerPage() {
             className={`mp-mode-card ${selectedMode === "group" ? "mp-mode-card--active" : ""
               }`}
             aria-pressed={selectedMode === "group"}
-            onClick={() => setSelectedMode("group")}
+            aria-label="단체모드"
+            disabled={pending}
+            onClick={() => { setSelectedMode("group"); setSubmitError(""); }}
           >
-            👥 단체모드
+            <span className="wr-kicker">GROUP · 3–8인</span><strong>단체모드</strong><span>같은 코스 · 후보 선택 후 READY</span>
           </button>
+        </div>
+        <div className="wr-entry-rules" role="note">
+          {!selectedMode ? "먼저 1:1 또는 단체모드를 선택하세요." : selectedMode === "duel" ? "방장이 목표를 확정합니다. 두 명이 입장하면 방장이 시작하며, 출발 문서는 시작 시 정해집니다. 아이템 사용 여부는 방 생성 시 선택합니다." : "3–8명 · 20분 · 아이템 없음. 각자 후보를 제출하고 READY. 전원 준비·서로 다른 후보 2개 이상일 때 방장이 시작합니다."}
         </div>
 
         {/* =========================
@@ -178,10 +195,10 @@ export default function MultiplayerPage() {
 
             {/* 방 생성 카드 */}
             <div className="mp-card mp-card--create">
-              <div className="mp-card-icon">🎮</div>
+              <div className="wr-kicker">01 · 새 탐험 열기</div>
               <h3 className="mp-card-title">방 만들기</h3>
               <p className="mp-card-desc">
-                새로운 1vs1 방을 생성합니다
+                방장이 되어 목표 문서를 정하고 상대에게 방 코드를 공유하세요.
               </p>
 
               <label className="mp-option">
@@ -190,7 +207,7 @@ export default function MultiplayerPage() {
                   checked={useItems}
                   onChange={(e) => setUseItems(e.target.checked)}
                 />
-                아이템 사용
+                아이템 사용 · 시작 시 {DUEL_SLOT_COUNT}칸
               </label>
 
               <button
@@ -198,34 +215,37 @@ export default function MultiplayerPage() {
                 onClick={handleCreateDuelRoom}
                 disabled={pending}
               >
-                {pending ? <span className="mp-spinner" /> : "방 생성"}
+                {pending ? "처리 중..." : "방 생성"}
               </button>
             </div>
 
             {/* 방 참가 카드 */}
             <div className="mp-card mp-card--join">
-              <div className="mp-card-icon">🔑</div>
+              <div className="wr-kicker">02 · 열린 탐험에 합류</div>
               <h3 className="mp-card-title">방 참가</h3>
               <p className="mp-card-desc">
                 코드를 입력하여 참가합니다
               </p>
 
-              <div className="mp-join-row">
+              <form className="mp-join-row" onSubmit={e => { e.preventDefault(); void handleJoinDuelRoom(); }}>
                 <input
                   className="mp-code-input"
                   value={duelRoomCodeInput}
                   onChange={(e) => setDuelRoomCodeInput(e.target.value)}
                   placeholder="ROOM CODE"
+                  aria-label="1:1 방 코드"
+                  autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                  disabled={pending}
                 />
 
                 <button
                   className="mp-action-btn mp-action-btn--secondary"
-                  onClick={handleJoinDuelRoom}
+                  type="submit"
                   disabled={pending}
                 >
                   참가
                 </button>
-              </div>
+              </form>
             </div>
 
           </div>
@@ -238,79 +258,88 @@ export default function MultiplayerPage() {
           <div className="mp-mode-panel">
 
             {/* 방 생성 */}
-            <div className="mp-card">
-              <div className="mp-card-icon">👥</div>
+            <div className="mp-card mp-card--create">
+              <div className="wr-kicker">01 · 새 탐험 열기</div>
               <h3 className="mp-card-title">단체 방 만들기</h3>
               <p className="mp-card-desc">
-                여러 명이 함께 플레이하는 방을 생성합니다
+                방 생성 후 코드를 공유하세요. 최소 3명이 모여야 시작할 수 있습니다.
               </p>
+              <label className="mp-card-desc">방 정원 (방장 포함){' '}
+                <select aria-label="그룹 방 정원" value={groupCapacity} disabled={pending} onChange={event => setGroupCapacity(Number(event.target.value))}>
+                  {[3, 4, 5, 6, 7, 8].map(count => <option key={count} value={count}>{count}명</option>)}
+                </select>
+              </label>
 
               <button
                 className="mp-action-btn mp-action-btn--primary"
+                disabled={pending}
                 onClick={async () => {
+                  if (submitting.current) return;
                   if (!user?.id) {
                     setSubmitError("로그인이 필요합니다.");
                     return;
                   }
 
                   try {
+                    submitting.current = true;
                     setPending(true);
                     setSubmitError("");
 
-                    const room = await createGroupRoom();
+                    const room = await createGroupRoom({ maxPlayers: groupCapacity });
 
                     navigate(`/multiplayer/group/room/${room.id}`);
                   } catch (error) {
-                    setSubmitError("단체 방 생성 실패");
+                    setSubmitError(error instanceof Error ? error.message : "단체 방 생성 실패");
                   } finally {
+                    submitting.current = false;
                     setPending(false);
                   }
                 }}
               >
-                방 생성
+                {pending ? "처리 중..." : "방 생성"}
               </button>
             </div>
 
             {/* 방 참가 */}
-            <div className="mp-card">
-              <div className="mp-card-icon">🔑</div>
+            <div className="mp-card mp-card--join">
+              <div className="wr-kicker">02 · 열린 탐험에 합류</div>
               <h3 className="mp-card-title">단체 방 참가</h3>
               <p className="mp-card-desc">
                 코드를 입력하여 참가합니다
               </p>
 
-              <div className="mp-join-row">
+              <form className="mp-join-row" onSubmit={async (e) => {
+                e.preventDefault();
+                if (submitting.current) return;
+                const code = groupRoomCodeInput.trim().toUpperCase();
+                if (!code) { setSubmitError("방 코드를 입력해 주세요."); return; }
+                if (!user?.id) { setSubmitError("로그인이 필요합니다."); return; }
+                try {
+                  submitting.current = true; setPending(true); setSubmitError("");
+                  const room = await findGroupRoomByCode(code);
+                  await joinGroupRoom(room.id);
+                  navigate(`/multiplayer/group/room/${room.id}`);
+                } catch (error) {
+                  setSubmitError(error instanceof Error ? error.message : "단체 방 참가 실패");
+                } finally { submitting.current = false; setPending(false); }
+              }}>
                 <input
                   className="mp-code-input"
                   value={groupRoomCodeInput}
                   onChange={(e) => setGroupRoomCodeInput(e.target.value)}
                   placeholder="ROOM CODE"
+                  aria-label="단체 방 코드"
+                  autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                  disabled={pending}
                 />
 
                 <button
                   className="mp-action-btn mp-action-btn--secondary"
-                  onClick={async () => {
-                    const code = groupRoomCodeInput.trim().toUpperCase();
-                    if (!code) return;
-
-                    try {
-                      setPending(true);
-                      setSubmitError("");
-
-                      const room = await findGroupRoomByCode(code);
-                      await joinGroupRoom(room.id);
-
-                      navigate(`/multiplayer/group/room/${room.id}`);
-                    } catch (error) {
-                      setSubmitError("단체 방 참가 실패");
-                    } finally {
-                      setPending(false);
-                    }
-                  }}
+                  type="submit" disabled={pending}
                 >
                   참가
                 </button>
-              </div>
+              </form>
             </div>
 
           </div>
@@ -319,21 +348,20 @@ export default function MultiplayerPage() {
            에러 메시지
         ========================= */}
         {submitError && (
-          <p className="mp-error" role="alert">{submitError}</p>
+          <p className="mp-error" role="alert">{submitError}<br /><small>모드와 코드를 확인하세요. 연결 문제가 있다면 잠시 후 다시 시도하세요.</small></p>
         )}
 
-        {/* 플로팅 도움말 버튼 */}
-        <button type="button" className="help-button floating" onClick={() => setShowHelp(true)} aria-label="게임 설명">
-          ?
+        <button type="button" className="wr-btn wr-btn--secondary wr-entry-help" onClick={() => setShowHelp(true)} aria-label="게임 설명">
+          규칙 · 아이템 안내
         </button>
 
         {/* ── 도움말 모달 ── */}
         {showHelp && (
           <div className="help-backdrop" onClick={() => setShowHelp(false)}>
-            <div className="help-modal" onClick={(e) => e.stopPropagation()}>
+            <ExpeditionDialog className="help-modal" titleId="wr-multiplayer-help-title" onClose={() => setShowHelp(false)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--app-line)", paddingBottom: "0.75rem" }}>
-                <h2 style={{ margin: 0, fontSize: "1.25rem" }}>멀티플레이 안내</h2>
-                <button type="button" className="text-btn" onClick={() => setShowHelp(false)} style={{ fontSize: "1.5rem", lineHeight: 1 }}>
+                <h2 id="wr-multiplayer-help-title" style={{ margin: 0, fontSize: "1.25rem" }}>멀티플레이 안내</h2>
+                <button type="button" className="text-btn" aria-label="안내 닫기" onClick={() => setShowHelp(false)} style={{ fontSize: "1.5rem", lineHeight: 1 }}>
                   &times;
                 </button>
               </div>
@@ -355,8 +383,10 @@ export default function MultiplayerPage() {
                 <h3>2. 그룹모드</h3>
                 <ul>
                   <li>여러 명이 같은 시작 문서와 같은 목표 문서로 경쟁합니다.</li>
-                  <li>목표 문서는 참가자들이 제출한 후보 중 선택됩니다.</li>
-                  <li>정해진 등수 안에 도착하면 성공입니다.</li>
+                  <li>3~8명이 참여하며 제한 시간은 20분입니다. 제출한 후보 중 서로 다른 2개가 출발·목표 문서로 정해집니다.</li>
+                  <li>최소 3명 · 전원 READY · 서로 다른 후보 2개 이상일 때 방장이 시작합니다.</li>
+                  <li>마감 전 목표에 도착하면 4위 이후도 정상 완주로 기록됩니다. 순위에 따라 보상을 받습니다.</li>
+                  <li>3위 완주 후 최대 2분의 추가 시간이 주어지며, 시작 후 20분이 되면 종료됩니다. 전원이 완주하거나 리타이어하면 먼저 종료됩니다.</li>
                   <li>실시간으로 참가자 진행 상황과 순위를 확인 가능합니다.</li>
                   <li>그룹모드는 현재 아이템 없이 순수 레이스 중심입니다.</li>
                 </ul>
@@ -385,7 +415,7 @@ export default function MultiplayerPage() {
                   <li>단, 방을 나가거나 게임이 종료되면 진행 상태가 초기화될 수 있습니다.</li>
                 </ul>
               </div>
-            </div>
+            </ExpeditionDialog>
           </div>
         )}
 

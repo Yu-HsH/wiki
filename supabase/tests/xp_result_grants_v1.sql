@@ -56,8 +56,8 @@ on conflict (snapshot_id, target_page_id) do nothing;
 -- inside this rolled-back transaction.
 delete from public.daily_challenges
  where challenge_date = (now() at time zone 'Asia/Seoul')::date;
-insert into public.daily_challenges (challenge_date, target_title)
-values ((now() at time zone 'Asia/Seoul')::date, 'XR Daily');
+insert into public.daily_challenges (challenge_date, start_title, target_title)
+values ((now() at time zone 'Asia/Seoul')::date, 'XR A', 'XR Daily');
 
 -- ---------------------------------------------------------------------------
 -- Fixture helpers (pg_temp — gone at session end).
@@ -306,10 +306,10 @@ select is((pg_temp.ledger(pg_temp.uid(1), (select id from xr where key = 's4')))
 select is((select count(*)::integer from public.xp_ledger where source_id = (select id from xr where key = 's4')), 1,
   'single: today''s course pays 25 only — never 15 as well (decision 3)');
 
-insert into xr (key, response) values ('s5', pg_temp.play_single(pg_temp.uid(1), 'xr-b', 'xr-d'));
+insert into xr (key, response) values ('s5', pg_temp.play_single(pg_temp.uid(1), 'xr-a', 'xr-d'));
 update xr set id = pg_temp.record_of(response) where key = 's5';
 select is((select count(*)::integer from public.xp_ledger where source_id = (select id from xr where key = 's5')), 0,
-  'single: a second completion of today''s course pays nothing, even from another start');
+  'single: a second completion of the identical daily pair pays nothing');
 
 select is(pg_temp.total(pg_temp.uid(1)), 55::bigint, 'single: 15 + 15 + 25');
 

@@ -4,7 +4,7 @@ export const GUEST_SINGLE_GAME_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const LEGACY_SINGLE_GAME_STORAGE_KEY = "wiki-single-game-state";
 const SINGLE_GAME_ITEMS_STORAGE_KEY = "wiki-single-items";
-const ACTIVE_PHASES = new Set(["COUNTDOWN", "PLAYING"]);
+const ACTIVE_PHASES = new Set(["PREPARING", "COUNTDOWN", "PLAYING"]);
 const FUTURE_CLOCK_SKEW_MS = 60 * 1000;
 
 function getStorage(storage) {
@@ -41,6 +41,7 @@ function parseStoredValue(storage) {
 
 function isInitialGameSnapshot(value) {
   return (
+    value?.timingContract !== 'single_reserved_prefetch_v1' &&
     value?.phase === "COUNTDOWN" &&
     value?.clickCount === 0 &&
     value?.elapsedSeconds === 0 &&
@@ -58,6 +59,12 @@ export function isValidGuestSingleGameSession(value, now = Date.now()) {
   if (!Number.isFinite(value.savedAt)) return false;
   if (value.savedAt > now + FUTURE_CLOCK_SKEW_MS) return false;
   if (now - value.savedAt > GUEST_SINGLE_GAME_MAX_AGE_MS) return false;
+
+  // New server allocations may be persisted before any course/title is known.
+  if (value.timingContract === 'single_reserved_prefetch_v1' && value.phase === 'PREPARING') {
+    return isNonEmptyString(value.allocationRequestId) && isNonEmptyString(value.guestToken)
+      && ['random', 'custom', 'daily'].includes(value.target?.mode);
+  }
 
   if (!isNonEmptyString(value.startTitle)) return false;
   if (!isNonEmptyString(value.currentTitle)) return false;

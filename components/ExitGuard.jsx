@@ -9,7 +9,7 @@ import { useBlocker } from "react-router-dom";
  * 브라우저의 새로고침/탭 닫기는 서버 heartbeat와 F5 복구가 담당하므로
  * 이 컴포넌트는 앱 내부 이동(뒤로가기, 로비 버튼 등)만 처리한다.
  */
-export function useExitGuard({ enabled, onConfirm }) {
+export function useExitGuard({ enabled, onConfirm, message = '지금 나가면 현재 경기에서 이탈 처리됩니다. 새로고침하면 진행 중인 경기로 돌아올 수 있습니다.' }) {
   const bypassRef = useRef(false);
   const blocker = useBlocker(() => enabled && !bypassRef.current);
   const [isOpen, setIsOpen] = useState(false);
@@ -47,7 +47,7 @@ export function useExitGuard({ enabled, onConfirm }) {
         aria-labelledby="exit-guard-title"
       >
         <h2 id="exit-guard-title">게임을 나갈까요?</h2>
-        <p>지금 나가면 현재 경기에서 이탈 처리됩니다. F5 복구와 다른 상태입니다.</p>
+        <p>{message}</p>
         <div className="app-modal-actions">
           <button type="button" className="app-btn app-btn-ghost" onClick={close}>
             계속하기

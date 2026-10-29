@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -57,7 +57,8 @@ async function collectAppSourceFiles(directory = projectRoot) {
   const files = [];
 
   for (const entry of entries) {
-    if ([".git", "dist", "node_modules", "tests"].includes(entry.name)) continue;
+    // .temp is ignored evidence/cache, including immutable copies of historical sources.
+    if ([".git", ".temp", "dist", "node_modules", "tests"].includes(entry.name)) continue;
     const absolutePath = path.join(directory, entry.name);
 
     if (entry.isDirectory()) {
@@ -136,6 +137,26 @@ test("앱 라우팅에서 /main 경로를 사용하지 않는다", async () => {
       forbiddenRoute,
       `${path.relative(projectRoot, sourceFile)}에서 /main 앱 경로를 사용함`
     );
+  }
+});
+
+test("라우팅 감사는 보존한 증거를 제외하지만 실제 앱의 금지 경로는 계속 발견한다", async () => {
+  const base = path.join(projectRoot, ".temp");
+  await mkdir(base, { recursive: true });
+  const root = await mkdtemp(path.join(base, "routing-scope-"));
+  try {
+    await mkdir(path.join(root, "pages"));
+    await mkdir(path.join(root, ".temp"));
+    const appFile = path.join(root, "pages", "InvalidRoute.jsx");
+    const backup = path.join(root, ".temp", "historical-source.js");
+    await writeFile(appFile, 'export const destination = "/main";');
+    await writeFile(backup, 'export const historicalDestination = "/main";');
+    const found = await collectAppSourceFiles(root);
+    assert.deepEqual(found, [appFile]);
+    assert.match(await readFile(found[0], "utf8"), /(["'`])\/main\1/);
+  } finally {
+    assert.ok(path.resolve(root).startsWith(path.resolve(base) + path.sep));
+    await rm(root, { recursive: true });
   }
 });
 

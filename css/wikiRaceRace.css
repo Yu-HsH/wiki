@@ -278,7 +278,11 @@ button.wr-prow:hover { background: var(--wr-paper-2); }
 .wr-compare-head h2 { font: 600 20px/1.1 var(--wr-font-heading); }
 .wr-compare-head small { font-size: 12px; color: var(--wr-ink-2); }
 .wr-compare-row { display: grid; grid-template-columns: 30px minmax(0, 150px) 80px minmax(0, 1fr); gap: 10px; align-items: center; padding: 11px 0; border-top: 1px dashed var(--wr-divider); font-size: 13px; }
-.wr-compare-row strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-compare-row strong { display: block; overflow-wrap: anywhere; }
+.wr-compare-rank { color: var(--wr-ink-2); white-space: nowrap; font-weight: 600; }
+.wr-compare-player { min-width: 0; }
+.wr-compare-player small { display: flex; gap: 4px; flex-wrap: wrap; align-items: baseline; }
+.wr-compare-player small > span, .wr-compare-state { white-space: nowrap; }
 .wr-compare-row small { font-size: 11px; color: var(--wr-ink-2); }
 .wr-compare-active { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px dashed var(--wr-divider); font-size: 13px; flex-wrap: wrap; }
 .wr-compare-active > span:nth-child(2) { color: var(--wr-ink-2); font-size: 12px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -424,6 +428,9 @@ button.wr-prow:hover { background: var(--wr-paper-2); }
   .wr-target-brief { margin: 12px 16px 0; }
   .wr-race .state-text { margin: 10px 16px; }
   .wr-race-dock { overflow-x: auto; }
+  /* Single's existing item menu opens above the dock; horizontal scrolling
+     otherwise clips that popup and prevents touch activation. */
+  .wr-race--single .wr-race-dock { overflow: visible; }
   .wr-race .duel-item-bar { padding: 8px 10px; gap: 8px; border-right: 0; }
   .wr-race .duel-item-bar__head { display: none; }
   .wr-race .duel-item-bar__slots { gap: 6px; }
@@ -440,7 +447,7 @@ button.wr-prow:hover { background: var(--wr-paper-2); }
   .wr-race .duel-item-index__word { width: 100%; min-height: 44px; border: 0 !important; border-radius: 0; padding: 0 14px; font-size: 14px; justify-content: space-between; background: transparent; }
   .wr-race .duel-item-index__censor-note { padding: 6px 14px; }
   .wr-compare { padding: 16px; }
-  .wr-compare-row { grid-template-columns: 26px minmax(0, 1fr) auto; }
+  .wr-compare-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; }
   .wr-compare-row > .wr-chain { grid-column: 1 / -1; }
   .wr-reaction-dock { display: none; }
   .wr-race-hold { padding: 32px 16px 40px; }
