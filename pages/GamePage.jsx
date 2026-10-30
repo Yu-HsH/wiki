@@ -9,6 +9,7 @@ import {
   fetchSummary,
   fetchPageSummary,
   fetchPageData,
+  createWikiMoveTimer,
   normalizeTitle,
 } from "../services/wikiService";
 
@@ -412,12 +413,13 @@ export default function GamePage({
 
   // ----------------------------
   // 문서 이동
-  // ----------------------------
-  const handleMove = useCallback(
+  // ------  const handleMove = useCallback(
     async (nextTitle) => {
       if (phase !== PHASE.PLAYING || isLoading || moveInFlightRef.current) return;
 
       moveInFlightRef.current = true;
+      const wikiTimer = createWikiMoveTimer("single");
+      let failed = false;
       const request = pageRequestManagerRef.current.begin();
       setClickCount((prev) => prev + 1);
       setIsLoading(true);
@@ -426,6 +428,7 @@ export default function GamePage({
 
       try {
         const page = await fetchPageData(nextTitle, { signal: request.signal });
+        wikiTimer.stage("fetch");
         if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
         let authoritativeMove = null;
@@ -433,6 +436,7 @@ export default function GamePage({
         if (isReservedSingle(activeRun) && activeRun.status !== 'active') throw new Error('서버에서 탐험 시작 상태를 확인해주세요.');
         if (isSupabaseConfigured && activeRun?.status === "active") {
           await ensureWikiSnapshot(page);
+          wikiTimer.stage("snapshot");
           const pendingMutation = pendingRequestStoreRef.current.begin({
             runId: activeRun.id,
             mode: "single",
@@ -464,6 +468,7 @@ export default function GamePage({
               correlationId: pendingMutation.correlationId,
             });
           pendingRequestStoreRef.current.clear(pendingMutation.requestId);
+          wikiTimer.stage("moveRpc");
           setAuthoritativeRun(authoritativeMove.run);
         }
 
@@ -507,10 +512,12 @@ export default function GamePage({
           );
         }
       } catch (e) {
+        failed = true;
         if (!isAbortError(e) && pageRequestManagerRef.current.isCurrent(request.id)) {
           setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
         }
       } finally {
+        wikiTimer.finish(failed ? "error" : "complete");
         moveInFlightRef.current = false;
         if (pageRequestManagerRef.current.isCurrent(request.id)) {
           setIsLoading(false);
@@ -533,6 +540,10 @@ export default function GamePage({
       isGuestGame,
       loadLocalGameState,
       setAuthoritativeRun,
+    ]
+  );
+
+tativeRun,
     ]
   );
 
