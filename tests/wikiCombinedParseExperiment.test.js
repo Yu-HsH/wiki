@@ -105,6 +105,33 @@ test("bad combined link metadata never silently loses HTML links",()=>{
   assert.equal(buildCombinedParseLinkData({...input,parsedLinks:[{ns:0,"*":"첫 링크"},{ns:0,"*":"두 번째 링크"}]})?.links.length,2);
 });
 
+test("combined diagnostics count missing candidates without leaking article titles or suppressing fallback", () => {
+  const first = {
+    canonicalTitle: "진단문서",
+    pageId: "500",
+    html: makeHtml(["첫 링크", "두 번째 링크", "세 번째 링크"]),
+    parsedLinks: [{ ns: 0, "*": "첫 링크" }, { ns: 0, "*": "세 번째 링크" }],
+  };
+  const diagnostics = {};
+  assert.equal(buildCombinedParseLinkData(first, diagnostics), null);
+  assert.deepEqual(diagnostics, {
+    reason: "html-candidates-missing-from-parse",
+    parseMetadataCount: 2,
+    ns0LinkCount: 2,
+    htmlCandidateCount: 3,
+    uniqueHtmlCandidateCount: 3,
+    missingMetadataCount: 1,
+  });
+  assert.equal(JSON.stringify(diagnostics).includes("두 번째 링크"), false);
+  const completeDiagnostics = {};
+  const result = buildCombinedParseLinkData({
+    ...first, parsedLinks: [...first.parsedLinks, {ns:0, "*":"두 번째 링크"}]
+  }, completeDiagnostics);
+  assert.ok(result);
+  assert.equal(completeDiagnostics.reason, "complete");
+  assert.equal(completeDiagnostics.missingMetadataCount, 0);
+});
+
 test("combined disabled by default and inaccessible browser storage is safe",()=>{
   const old=globalThis.localStorage;
   try {
