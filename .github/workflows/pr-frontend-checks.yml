@@ -23,6 +23,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Local QA runner syntax
+        run: node --check scripts/public-room-local-verify.mjs
       - name: Unit and regression tests
         run: npm test
       - name: Production frontend build
