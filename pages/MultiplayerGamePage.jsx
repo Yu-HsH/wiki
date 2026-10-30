@@ -20,6 +20,7 @@ import {
 
 import {
   fetchPageData,
+  createWikiMoveTimer,
   fetchPageSummary,
   formatDuration,
   normalizeTitle,
@@ -1005,6 +1006,8 @@ function DuelGameSession() {
     ) return false;
 
     moveInFlightRef.current = true;
+    const wikiTimer = createWikiMoveTimer("duel");
+    let failed = false;
     try {
       setIsPageLoading(true);
       setIsLoading(true);
@@ -1018,7 +1021,9 @@ function DuelGameSession() {
       const nextPage = serverSelectedMove
         ? pageDataRef.current
         : await fetchPageData(nextTitle);
+      wikiTimer.stage("fetch");
       await ensureWikiSnapshot(nextPage);
+      wikiTimer.stage("snapshot");
       if (!serverSelectedMove && eventType === "NORMAL_LINK"
         && normalizeTitle(nextPage.title) === normalizeTitle(pageData?.title || "")) {
         return false;
@@ -1056,6 +1061,7 @@ function DuelGameSession() {
         clickedRawTitle: nextTitle,
         eventType,
       });
+      wikiTimer.stage("moveRpc");
       const updatedPlayer = moveResponse.player;
       closeLinkPreview(); // A confirmed move ends the activation even when the page ID repeats.
       const authoritativeTitle = updatedPlayer?.current_title || nextPage.title;
@@ -1065,6 +1071,7 @@ function DuelGameSession() {
         ? nextPage
         : await fetchPageData(authoritativeTitle);
       await ensureWikiSnapshot(renderedPage);
+      wikiTimer.stage("renderSnapshot");
       const nextMoveCount = Number(updatedPlayer?.move_count) || 0;
       const nextPath = Array.isArray(updatedPlayer?.path_titles)
         ? updatedPlayer.path_titles
@@ -1096,6 +1103,7 @@ function DuelGameSession() {
       }
       return true;
     } catch (err) {
+      failed = true;
       if (resultShownRef.current) return true;
       if (err?.code === "LINK_CENSORED") {
         // A normal server rule rejection is not a lost/fatal game session.
@@ -1116,6 +1124,7 @@ function DuelGameSession() {
       });
       return false;
     } finally {
+      wikiTimer.finish(failed ? "error" : "complete");
       moveInFlightRef.current = false;
       setIsPageLoading(false);
       setIsLoading(false);
