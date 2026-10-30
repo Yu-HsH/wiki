@@ -7,6 +7,15 @@ const duel = readFileSync(new URL("../services/multiplayerService.js", import.me
 const group = readFileSync(new URL("../services/groupMultiplayerService.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../services/publicRoomService.js", import.meta.url), "utf8");
 
+test("migration PL/pgSQL uses complete dollar-quoted blocks", () => {
+  const opens = [...sql.matchAll(/\bas \$\$\n/g)].length;
+  const closes = [...sql.matchAll(/\n\$\$;/g)].length;
+  assert.equal(opens, 6, "all six PL/pgSQL functions use a complete opening");
+  assert.equal(closes, opens, "all opening dollar quotes must be paired");
+  assert.doesNotMatch(sql, /\bas \$\n/);
+  assert.doesNotMatch(sql, /\n\$;/);
+});
+
 test("new and historical rooms remain private unless host opts in", () => {
   assert.match(sql, /is_public boolean not null default false/);
   assert.match(page, /useState\(false\)/);
