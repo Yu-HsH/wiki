@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../authContext";
 import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
+import { getScopedMultiplayerMode, resolveMultiplayerMode } from "../utils/multiplayerModeSelection.js";
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog";
 import {
   createRoom,
@@ -48,10 +49,11 @@ export default function MultiplayerPage() {
   const { user, logout } = useAuth();
 
   const [searchParams] = useSearchParams();
-  const [selectedMode, setSelectedMode] = useState(() => {
-    const mode = searchParams.get("mode");
-    return mode === "duel" || mode === "group" ? mode : null;
-  });
+  // PLAY passes ?mode=duel or ?mode=group: keep this choice fixed on entry.
+  // Only the legacy bare /multiplayer route offers a local mode picker.
+  const routeMode = getScopedMultiplayerMode(searchParams.get("mode"));
+  const [manualMode, setManualMode] = useState(null);
+  const selectedMode = resolveMultiplayerMode(routeMode, manualMode);
   const [duelRoomCodeInput, setDuelRoomCodeInput] = useState("");
   const [groupRoomCodeInput, setGroupRoomCodeInput] = useState("");
   const [groupCapacity, setGroupCapacity] = useState(6);
@@ -197,14 +199,14 @@ export default function MultiplayerPage() {
         </header>
         <div className="wr-entry-title">
           <p className="wr-kicker">EXPEDITION BOARD · 원정대 준비</p>
-          <h1>방 만들기 · 공개방 찾기</h1>
+          <h1>{selectedMode === "duel" ? "1:1" : selectedMode === "group" ? "그룹" : "온라인"} 방 만들기 · 공개방 찾기</h1>
           <p className="wr-entry-lead">공개방 목록에서 합류하거나, 비공개 방 코드를 공유해 함께 탐험하세요.</p>
         </div>
 
         {/* =========================
            모드 선택
         ========================= */}
-        <div className="mp-mode-grid" role="group" aria-label="온라인 모드 선택">
+        {!routeMode && <div className="mp-mode-grid" role="group" aria-label="온라인 모드 선택">
           <button
             type="button"
             className={`mp-mode-card ${selectedMode === "duel" ? "mp-mode-card--active" : ""
@@ -212,7 +214,7 @@ export default function MultiplayerPage() {
             aria-pressed={selectedMode === "duel"}
             aria-label="1 vs 1"
             disabled={pending}
-            onClick={() => { setSelectedMode("duel"); setSubmitError(""); }}
+            onClick={() => { setManualMode("duel"); setSubmitError(""); }}
           >
             <span className="wr-kicker">DUEL · 2인</span><strong>1 vs 1</strong><span>공통 목표 · 먼저 도착하면 승리</span>
           </button>
@@ -224,11 +226,11 @@ export default function MultiplayerPage() {
             aria-pressed={selectedMode === "group"}
             aria-label="단체모드"
             disabled={pending}
-            onClick={() => { setSelectedMode("group"); setSubmitError(""); }}
+            onClick={() => { setManualMode("group"); setSubmitError(""); }}
           >
             <span className="wr-kicker">GROUP · 3–8인</span><strong>단체모드</strong><span>같은 코스 · 후보 선택 후 READY</span>
           </button>
-        </div>
+        </div>}
         <div className="wr-entry-rules" role="note">
           {!selectedMode ? "먼저 1:1 또는 단체모드를 선택하세요." : selectedMode === "duel" ? "방장이 목표를 확정합니다. 두 명이 입장하면 방장이 시작하며, 출발 문서는 시작 시 정해집니다. 아이템 사용 여부는 방 생성 시 선택합니다." : "3–8명 · 20분 · 아이템 없음. 각자 후보를 제출하고 READY. 전원 준비·서로 다른 후보 2개 이상일 때 방장이 시작합니다."}
         </div>
