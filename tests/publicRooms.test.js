@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const sql = readFileSync(new URL("../supabase/migrations/20261030010000_public_room_discovery_v1.sql", import.meta.url), "utf8");
+const cleanup = readFileSync(new URL("../supabase/migrations/20261030010001_public_room_visibility_hardening_v1.sql", import.meta.url), "utf8");
 const page = readFileSync(new URL("../pages/MultiplayerPage.jsx", import.meta.url), "utf8");
 const duel = readFileSync(new URL("../services/multiplayerService.js", import.meta.url), "utf8");
 const group = readFileSync(new URL("../services/groupMultiplayerService.js", import.meta.url), "utf8");
@@ -32,9 +33,10 @@ test("new and historical rooms remain private unless host opts in", () => {
   assert.match(duel, /p_is_public: options\.isPublic \?\? false/);
   assert.match(group, /p_is_public: options\.isPublic \?\? false/);
 });
-test("privacy gate removes old all-waiting RLS policy while retaining joined-room policy", () => {
-  assert.match(sql, /drop policy if exists "Authenticated users can view waiting or joined rooms"/);
-  assert.doesNotMatch(sql, /drop policy if exists "Players can view joined rooms"/);
+test("public discovery migration retains legacy code joins until explicit phase-2 privacy hardening", () => {
+  assert.doesNotMatch(sql, /drop policy if exists "Authenticated users can view waiting or joined rooms"/);
+  assert.match(cleanup, /drop policy if exists "Authenticated users can view waiting or joined rooms"/);
+  assert.doesNotMatch(cleanup, /drop policy if exists "Players can view joined rooms"/);
 });
 test("public listing has a narrow projection, waiting/capacity filter and authenticated gate", () => {
   const start=sql.indexOf("create or replace function public.list_public_waiting_rooms_v1");
