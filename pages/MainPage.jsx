@@ -484,9 +484,11 @@ export default function MainPage({ view = "home" }) {
                 ))}
               </div>
             </div>
-            {!user.isGuest && <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
-              전체 보기 →
-            </button>}
+            {!user.isGuest && (
+              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
+                전체 보기 →
+              </button>
+            )}
           </div>
           {user.isGuest ? (
             <p className="dashboard-muted">로그인하면 전체 랭킹을 볼 수 있어요.</p>
