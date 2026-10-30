@@ -571,7 +571,7 @@ async function fetchPageDataUncached(title, options = {}) {
   const requestOptions = typeof options === "number"
     ? { maxQuickLinks: options }
     : options || {};
-  const { signal, maxQuickLinks = 20 } = requestOptions;
+  const { signal, maxQuickLinks = 20, onDocumentReady } = requestOptions;
   const requestedTitle = normalizeRequestedTitle(title);
   if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
 
@@ -593,7 +593,13 @@ async function fetchPageDataUncached(title, options = {}) {
   const combinedDiagnostics = combinedEnabled ? {} : null;
   const readDocument = async () => {
     if (!restEnabled) {
-      if (!combinedEnabled) return fetchDocumentData(requestedTitle, { signal });
+      if (!combinedEnabled) {
+        const document = await fetchDocumentData(requestedTitle, { signal });
+        if (!signal?.aborted && typeof onDocumentReady === "function") {
+          try { onDocumentReady(document); } catch { /* optional optimization must never block article data */ }
+        }
+        return document;
+      }
       try {
         return await fetchDocumentData(requestedTitle, { signal, includeLinks: true });
       } catch (error) {
@@ -764,7 +770,7 @@ export async function fetchPageData(title, options = {}) {
     : options || {};
   const requestedTitle = normalizeRequestedTitle(title);
   if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
-  const { signal, maxQuickLinks = 20 } = requestOptions;
+  const { signal, maxQuickLinks = 20, onDocumentReady } = requestOptions;
   if (signal?.aborted) {
     const error = new Error("요청이 취소되었습니다.");
     error.name = "AbortError";
@@ -777,6 +783,9 @@ export async function fetchPageData(title, options = {}) {
   if (hit && now < hit.expiresAt) {
     wikiPageCache.delete(key);
     wikiPageCache.set(key, hit);
+    if (typeof onDocumentReady === "function" && !signal?.aborted) {
+      try { onDocumentReady(hit.data); } catch { /* optional optimization */ }
+    }
     return { ...hit.data, requestedTitle };
   }
   if (hit) wikiPageCache.delete(key);
@@ -785,6 +794,9 @@ export async function fetchPageData(title, options = {}) {
   // own request lifecycle, preventing a cancelled solo move from reusing it.
   if (!signal && wikiPageInFlight.has(key)) {
     const page = await wikiPageInFlight.get(key);
+    if (typeof onDocumentReady === "function") {
+      try { onDocumentReady(page); } catch { /* optional optimization */ }
+    }
     return { ...page, requestedTitle };
   }
 
