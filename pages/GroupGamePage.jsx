@@ -1878,6 +1878,7 @@ export default function GroupGamePage() {
                             startTitle={startTitle}
                             timerLabel={deadline.label}
                             onLinkClick={handleMove}
+                            openTargetBriefByDefault
                         />
                     </main>
                 </div>
