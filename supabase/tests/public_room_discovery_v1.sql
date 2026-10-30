@@ -75,5 +75,20 @@ select is(public.join_public_room_v1('00000000-0000-0000-0a12-000000000002'::uui
 select throws_ok($$ select public.join_public_room_v1('00000000-0000-0000-0a12-000000000004'::uuid) $$,
                  'P0001','DUEL_ROOM_FULL','full room capacity rechecked on join');
 
+-- Even the room owner must use the audited create RPC for visibility.
+-- A joined guest has at most the same direct UPDATE rights, never more.
+set local request.jwt.claim.sub = '00000000-0000-0000-0a11-000000000001';
+select throws_ok(
+  $ update public.game_rooms set is_public = true
+     where id = '00000000-0000-0000-0a12-000000000001'::uuid $,
+  'P0001','ROOM_VISIBILITY_RPC_REQUIRED',
+  'joined room host cannot toggle visibility through direct UPDATE');
+select throws_ok(
+  $ insert into public.game_rooms(room_code,host_user_id,mode,status,min_players,max_players,is_public)
+     values ('P2FORG','00000000-0000-0000-0a11-000000000001'::uuid,
+             'duel','waiting',2,2,true) $,
+  'P0001','ROOM_VISIBILITY_RPC_REQUIRED',
+  'authenticated direct insert cannot forge a public room');
+
 select * from finish();
 rollback;
