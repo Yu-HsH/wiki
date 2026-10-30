@@ -40,12 +40,14 @@ export function createWikiSnapshotOverlap({
   if (typeof ensureSnapshot !== "function") throw new TypeError("ensureSnapshot must be a function");
   let pending = null;
   let expected = null;
+  let startedAt = 0;
 
   return {
     onDocumentReady(document) {
       const identity = identityOf(document);
       if (!enabled || signal?.aborted || !identity || pending) return;
       expected = identity;
+      startedAt = typeof performance !== "undefined" ? performance.now() : 0;
       // Attach a rejection handler immediately so that an early server error
       // does not become unhandled while the remaining client links are loading.
       pending = Promise.resolve().then(() => ensureSnapshot(identity));
@@ -53,10 +55,23 @@ export function createWikiSnapshotOverlap({
     },
     async ensure(page) {
       const actual = identityOf(page);
-      if (pending && !signal?.aborted && sameIdentity(expected, actual)) return pending;
-      // Any mismatch/abort takes the original trusted snapshot path.
-      // No optimistic move is ever authorized by the pending result.
-      return ensureSnapshot(page);
+      const usedEarly = Boolean(pending && !signal?.aborted && sameIdentity(expected, actual));
+      const waitStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
+      try {
+        // The server's independently validated snapshot is ALWAYS awaited
+        // before movement authority, even if it was started earlier.
+        return await (usedEarly ? pending : ensureSnapshot(page));
+      } finally {
+        let diagnosticsEnabled = false;
+        try { diagnosticsEnabled = globalThis.localStorage?.getItem("wiki-race-wiki-perf") === "1"; } catch { /* blocked */ }
+        if (enabled && diagnosticsEnabled && waitStartedAt) {
+          console.info("[wiki-overlap-perf]", {
+            usedEarly,
+            leadMs: usedEarly && startedAt ? Math.round(waitStartedAt - startedAt) : 0,
+            waitMs: Math.round(performance.now() - waitStartedAt),
+          });
+        }
+      }
     },
   };
 }
