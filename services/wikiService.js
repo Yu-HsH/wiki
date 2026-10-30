@@ -695,6 +695,15 @@ async function fetchPageDataUncached(title, options = {}) {
   // Opt-in timing counters (no titles, paths or user information) identify slow
   // sequential wiki API pagination vs. DOM sanitation without changing link rules.
   if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
+    if (combinedDiagnostics) {
+      console.info("[wiki-combined-summary] " + [
+        "reason=" + (combinedDiagnostics.reason || "unknown"),
+        "metadata=" + (combinedDiagnostics.parseMetadataCount ?? 0),
+        "htmlCandidates=" + (combinedDiagnostics.uniqueHtmlCandidateCount ?? 0),
+        "missing=" + (combinedDiagnostics.missingMetadataCount ?? 0),
+        "source=" + linkSource,
+      ].join(" "));
+    }
     console.info("[wiki-page-perf]", {
       ...stageMs,
       documentApi: documentData.documentApi === "rest" ? "rest" : combinedEnabled ? "combined" : "parse",
