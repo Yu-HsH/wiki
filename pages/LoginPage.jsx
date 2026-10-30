@@ -113,10 +113,10 @@ function getFriendlyAuthError(error, mode) {
   return `회원가입에 실패했습니다. 이미 사용 중인 아이디이거나 입력값이 올바르지 않습니다.`;
 }
 
-export default function LoginPage({ isEmbedded = false }) {
+export default function LoginPage({ isEmbedded = false, initialMode = "signin" }) {
   const navigate = useNavigate();
   const { loginWithUsername, signUpWithUsername, demoLogin, isSupabaseConfigured, loginAsGuest } = useAuth();
-  const [mode, setMode] = useState("signin");
+  const [mode, setMode] = useState(initialMode === "signup" ? "signup" : "signin");
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [debugError, setDebugError] = useState("");

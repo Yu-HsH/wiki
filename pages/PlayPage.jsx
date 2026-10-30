@@ -21,7 +21,7 @@ export default function PlayPage({ isGuest, onSingle, onMultiplayer }) {
         else if (!isGuest) onMultiplayer(mode.id);
       }}>
         <span className="wr-mode-heading"><span><span className="wr-kicker">{mode.kicker}</span><span className="wr-mode-title">{mode.title}</span></span><span className="wr-mode-ordinal">{mode.ordinal}</span></span>
-        <img className="wr-vignette" src={`/assets/wiki-race/route-${mode.id}.svg`} width="150" height="86" alt="" />
+        <img className="wr-vignette wr65-mode-art" src={`/assets/wiki-race/jungle65/${mode.id === "duel" ? "duel" : mode.id === "group" ? "group" : "solo"}-expedition.webp`} width="480" height="148" alt="" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = `/assets/wiki-race/route-${mode.id}.svg`; }} />
         <span className="wr-mode-desc">{mode.description}</span>
         <span className="wr-mode-brief"><strong>출발과 목표</strong>{mode.course}</span>
         <span className="wr-mode-brief"><strong>준비 순서</strong>{mode.next}</span>

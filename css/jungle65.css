@@ -1,0 +1,295 @@
+/* Wiki Race Jungle 65 — approved visual direction, staged separately from game logic.
+   Do not use on the race HUD. Artwork stays replaceable and retains fallback UI. */
+:root {
+  --wr65-forest: #273b30;
+  --wr65-wood: #795b3e;
+  --wr65-wood-edge: #af936b;
+  --wr65-parchment: #f9f1de;
+  --wr65-gold: #b88d3c;
+  --wr65-blue: #4869aa;
+  --wr65-heading: "Noto Serif CJK KR", "Nanum Myeongjo", Georgia, serif;
+  --wr65-body: "Noto Sans CJK KR", "Nanum Gothic", "Segoe UI", sans-serif;
+}
+
+/* Landing is a single artboard with no application navigation. */
+.intro-page.wr65-intro {
+  background: #152c23;
+  color: #fdf9ee;
+  min-height: 100svh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.wr65-landing-art {
+  position: relative;
+  width: min(100vw, 177.586svh);
+  max-width: 1648px;
+  aspect-ratio: 1648 / 928;
+  flex: none;
+  margin-inline: auto;
+  isolation: isolate;
+}
+.wr65-landing-picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+.wr65-landing-hit {
+  position: absolute;
+  z-index: 2;
+  top: 57.1%;
+  height: 9.6%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: transparent;
+  cursor: pointer;
+  font-size: 0;
+  transition: box-shadow 180ms ease;
+}
+.wr65-landing-hit-login { left: 35.9%; width: 14.6%; }
+.wr65-landing-hit-signup { left: 51.2%; width: 15.1%; }
+.wr65-landing-hit:is(:hover, :focus-visible) {
+  outline: 3px solid #fff4c6;
+  outline-offset: 2px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 6px #2a4d61a6;
+}
+.wr65-landing-hotlinks {
+  position: absolute;
+  z-index: 2;
+  left: 38%;
+  top: 68%;
+  width: 28%;
+  height: 5%;
+  display: flex;
+  gap: 1.5%;
+}
+.wr65-landing-hotlinks a {
+  flex: 1 1 0;
+  color: transparent;
+  font-size: 0;
+  border-radius: 5px;
+}
+.wr65-landing-hotlinks a:focus-visible {
+  outline: 3px solid #fff1b3;
+  outline-offset: 2px;
+}
+.wr65-landing-mobile-controls { display: none; }
+.wr65-landing-fallback {
+  width: 100%;
+  min-height: 100svh;
+  background-position: center;
+  background-size: cover;
+  position: relative;
+}
+.wr65-intro .intro-modal-card {
+  background: #fff9ec;
+  color: #29392e;
+  border-radius: 12px;
+  border: 3px solid #aa8653;
+  box-shadow: 0 0 0 7px #30281966, 0 24px 70px #151d18a8;
+}
+.wr65-intro .intro-modal-backdrop { background: #081c18bb; }
+.wr65-intro .auth-modal-close:focus-visible { outline: 3px solid #d8ae55; }
+
+@media (max-width: 720px) {
+  .intro-page.wr65-intro { justify-content: flex-start; }
+  .wr65-landing-art {
+    width: 100%;
+    aspect-ratio: 1648 / 928;
+    margin-top: clamp(20px, 14svh, 120px);
+  }
+  .wr65-landing-hit, .wr65-landing-hotlinks { display: none; }
+  .wr65-landing-mobile-controls {
+    display: flex;
+    width: min(440px, calc(100% - 28px));
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px auto 24px;
+    position: relative;
+    z-index: 4;
+  }
+  .wr65-landing-mobile-controls > button {
+    min-height: 50px;
+    border-radius: 8px;
+    background: #4164a3;
+    color: white;
+    font: 750 17px/1.2 var(--wr65-body);
+    border: 2px solid #dac18a;
+    box-shadow: 0 4px 0 #253d73;
+    cursor: pointer;
+  }
+  .wr65-landing-mobile-controls > button:nth-child(2) {
+    color: #352b1c;
+    background: #f5e8cb;
+    box-shadow: 0 4px 0 #bca77c;
+  }
+  .wr65-landing-mobile-controls nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 15px;
+    margin-top: 10px;
+  }
+  .wr65-landing-mobile-controls nav a {
+    color: #fff3d8;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+  }
+}
+
+/* Home: artwork already contains a banner title and button. Preserve real
+   navigable button as accessible hotspot only while the art has loaded. */
+.wr-page.wr-home .wr-hero.wr65-jungle-hero {
+  height: auto;
+  aspect-ratio: 1534 / 425;
+  max-height: 420px;
+  min-height: 270px;
+  background: #304e3d;
+  border-bottom: 5px solid #79613e;
+}
+.wr-page.wr-home .wr65-jungle-hero .wr-landscape {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.wr-page.wr-home .wr65-jungle-hero .wr-home-sign,
+.wr-page.wr-home .wr65-jungle-hero .wr-hero-intro { display: none; }
+.wr-page.wr-home .wr65-jungle-hero::after { display: none; }
+.wr-page.wr-home .wr65-jungle-hero .wr-hero-entry {
+  position: absolute;
+  z-index: 3;
+  top: 57%;
+  left: 42%;
+  width: 23%;
+  height: 24%;
+  bottom: auto;
+}
+.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher {
+  width: 100%; height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
+  font-size: 0 !important;
+}
+.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher span { font-size: 0; }
+.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher:is(:hover,:focus-visible) {
+  outline: 3px solid #f2dda1;
+  outline-offset: 0;
+  border-radius: 12px;
+  box-shadow: 0 0 0 6px #213f39a8;
+}
+@media (max-width: 700px) {
+  .wr-page.wr-home .wr-hero.wr65-jungle-hero { min-height: 320px; aspect-ratio: auto; }
+  .wr-page.wr-home .wr65-jungle-hero .wr-landscape { object-position: 40% center; }
+  .wr-page.wr-home .wr65-jungle-hero .wr-hero-entry {
+    top: auto; left: 16px; right: 16px; bottom: 18px;
+    width: auto; height: auto;
+  }
+  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher {
+    color: white;
+    background: #4869aa;
+    border: 2px solid #f5e6b4;
+    min-height: 52px;
+    font-size: 17px !important;
+    box-shadow: 0 4px 0 #294476;
+  }
+  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher span { font-size: inherit; }
+}
+
+/* Approved moderate wooden notebook treatment; single content semantics
+   and existing rankings remain untouched. */
+.wr-page.wr-home .wr-header,
+.wr-page.wr-play .wr-header {
+  background: repeating-linear-gradient(0deg, #66452d 0 3px, #684930 4px 7px, #6b4a30 8px 10px);
+  color: #f9edc8;
+  border-bottom: 4px solid #ad8753;
+}
+.wr-page.wr-home .wr-header a,
+.wr-page.wr-play .wr-header a,
+.wr-page.wr-home .wr-header button,
+.wr-page.wr-play .wr-header button { color: #fff3d2; }
+.wr-page.wr-home .wr-header .active,
+.wr-page.wr-play .wr-header .active { color: #f8d38e; }
+.wr-page.wr-home .daily-card {
+  background: linear-gradient(#fbf4de,#f4ebd1);
+  border-top: 4px solid #a98c5e;
+  border-bottom: 4px solid #9e855b;
+}
+.wr-page.wr-home .daily-course { justify-content: center; text-align: center; }\n.wr-page.wr-home .daily-endpoint { text-align: center; }\n.wr-page.wr-home .daily-card .daily-endpoint strong {
+  font: 750 clamp(19px,2.1vw,30px)/1.25 var(--wr65-heading);
+  color: var(--wr65-forest);
+}
+.wr-page.wr-home .wr-my-explorer { background: #f5f0df; }
+.wr-page.wr-home .weekly-card { background: #f7f1e2; }
+.wr-page.wr-home .wr-my-explorer > h2,
+.wr-page.wr-home .weekly-card h2,
+.wr-page.wr-home .daily-badge { font-family: var(--wr65-heading); }
+.wr-page.wr-home .wr-explorer-featured {
+  border-top: 3px double #a68a60;
+  border-bottom: 3px double #a68a60;
+}
+
+/* PLAY: actual mode rules and routes are retained; only the image slots
+   and the visual frame are replaced. */
+.wr-page.wr-play .wr-modes { gap: 20px; align-items: stretch; }
+.wr-page.wr-play .wr-mode {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fcf7e9, #f5edda);
+  border: 3px solid #a38a5f;
+  box-shadow: inset 0 0 0 4px #f8eed5, 0 7px 12px #3b342721;
+  border-radius: 14px;
+}
+.wr-page.wr-play .wr-mode::before,
+.wr-page.wr-play .wr-mode::after {
+  position: absolute; content: "";
+  top: 13px; width: 13px; height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #f8e5a7, #88652b 72%);
+  border: 1px solid #7d6539;
+  box-shadow: 0 2px 4px #241b1470;
+  pointer-events: none;
+}
+.wr-page.wr-play .wr-mode::before { left: 13px; }
+.wr-page.wr-play .wr-mode::after { right: 13px; }
+.wr-page.wr-play .wr-mode-title {
+  font: 750 clamp(22px,2vw,31px)/1.25 var(--wr65-heading);
+}
+.wr-page.wr-play .wr-vignette.wr65-mode-art {
+  display: block;
+  width: 100%; height: 148px;
+  object-fit: cover;
+  border: 1px solid #cfcbb0;
+  border-radius: 9px;
+}
+.wr-page.wr-play .wr-mode-action {
+  background: linear-gradient(#5c7bc0,#3c5894);
+  border: 2px solid #cfb67b;
+  color: #fff;
+  font-weight: 750;
+  box-shadow: 0 4px 0 #2b4169;
+}
+.wr-page.wr-play .wr-mode:focus-visible {
+  outline: 3px solid #2f6d9f;
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr65-landing-hit, .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher {
+    transition: none;
+  }
+}
