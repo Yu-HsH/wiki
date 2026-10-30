@@ -18,11 +18,11 @@ test("migration PL/pgSQL uses complete dollar-quoted blocks", () => {
 });
 
 test("pgTAP exception assertions use valid dollar quoted statements", () => {
-  assert.doesNotMatch(pgTap, /^\\s*\\$\\s+(?:update|insert|select)\\b/m);
-  assert.doesNotMatch(pgTap, /\\s\\$\\s*,/);
-  assert.match(pgTap, /\\$\\$ update public\\.game_rooms set is_public = true/);
-  assert.match(pgTap, /\\$\\$ insert into public\\.game_rooms/);
-  const tokens = pgTap.match(/\\$\\$/g) ?? [];
+  assert.doesNotMatch(pgTap, /^\s*\$\s+(?:update|insert|select)\b/m);
+  assert.doesNotMatch(pgTap, /\s\$\s*,/);
+  assert.match(pgTap, /\$\$ update public\.game_rooms set is_public = true/);
+  assert.match(pgTap, /\$\$ insert into public\.game_rooms/);
+  const tokens = pgTap.match(/\$\$/g) ?? [];
   assert.equal(tokens.length % 2, 0, "all pgTAP dynamic SQL delimiters must be paired");
 });
 
