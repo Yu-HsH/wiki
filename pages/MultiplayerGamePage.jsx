@@ -30,6 +30,7 @@ import { createTargetSummaryState, getTargetSummaryText, TARGET_SUMMARY_STATUS }
 import { mergePreviewPanel, previewPanelFromState } from "../utils/duelPreview.js";
 import { createRequestId } from "../utils/serverAuthority.js";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
+import { createWikiSnapshotOverlap } from "../services/wikiSnapshotOverlap.js";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
@@ -1007,6 +1008,7 @@ function DuelGameSession() {
 
     moveInFlightRef.current = true;
     const wikiTimer = createWikiMoveTimer("duel");
+    const overlap = createWikiSnapshotOverlap({ ensureSnapshot: ensureWikiSnapshot });
     let failed = false;
     try {
       setIsPageLoading(true);
@@ -1020,9 +1022,9 @@ function DuelGameSession() {
       const serverSelectedMove = ["FORCED_LINK", "RANDOM_TELEPORT"].includes(eventType);
       const nextPage = serverSelectedMove
         ? pageDataRef.current
-        : await fetchPageData(nextTitle);
+        : await fetchPageData(nextTitle, { onDocumentReady: overlap.onDocumentReady });
       wikiTimer.stage("fetch");
-      await ensureWikiSnapshot(nextPage);
+      await overlap.ensure(nextPage);
       wikiTimer.stage("snapshot");
       if (!serverSelectedMove && eventType === "NORMAL_LINK"
         && normalizeTitle(nextPage.title) === normalizeTitle(pageData?.title || "")) {
