@@ -1,0 +1,15 @@
+/* Public waiting-room browser, scoped to the multiplayer entry page. */
+.mp-public-board{margin:24px 0 20px;padding:24px;border:1px solid var(--app-line,#bac7b5);border-radius:14px;background:var(--app-paper,#fcfcf7)}
+.mp-public-board__header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.mp-public-board__header h2{margin:6px 0 8px;font-size:clamp(19px,2.5vw,25px);color:var(--app-ink,#243430)}
+.mp-public-board__header p{margin:0;color:#5d7066;line-height:1.5}
+.mp-public-board__header .mp-action-btn{flex:none}
+.mp-public-board__list{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
+.mp-public-room{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #d8dfd3;border-radius:10px;background:#fff}
+.mp-public-room__detail{display:grid;gap:6px;min-width:0}
+.mp-public-room__detail strong{color:#243430;overflow-wrap:anywhere}
+.mp-public-room__detail span{font-size:13px;color:#586a60}
+.mp-public-room .mp-action-btn{flex:none}
+.mp-public-board__empty{margin:18px 0 0;padding:24px 12px;border:1px dashed #c2cdb9;border-radius:10px;text-align:center;color:#68796a}
+.mp-public-board__error{color:#ac443b;margin:16px 0 0}
+@media(max-width:700px){.mp-public-board{padding:16px}.mp-public-board__header{align-items:flex-start;gap:12px}.mp-public-board__header p{font-size:13px}.mp-public-room{padding:12px;gap:10px}.mp-public-room .mp-action-btn{min-width:80px}}
