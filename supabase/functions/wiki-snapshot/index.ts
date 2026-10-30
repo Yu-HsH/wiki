@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { mapWikiIdentityBatchesOrdered } from "./identityBatchQueue.js";
+import { extractSnapshotBodyLinks, buildSnapshotLinkRows, auditSnapshotLinkRows } from "./snapshotLinkGraph.js";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -47,22 +48,6 @@ function getPage(data: any) {
   const page = Object.values(pages)[0] as any;
   if (!page || page.missing !== undefined) throw new Error("Wikipedia 문서를 찾을 수 없습니다.");
   return page;
-}
-
-function extractBodyLinks(html: string) {
-  const links: { title: string; linkText: string }[] = [];
-  const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(anchorPattern)) {
-    const href = match[1] ?? "";
-    if (!href.startsWith("/wiki/") || href.includes("?")) continue;
-    let raw = href.slice("/wiki/".length).split("#", 1)[0];
-    try { raw = decodeURIComponent(raw); } catch { /* keep raw title */ }
-    const title = normalizeTitle(raw);
-    if (!title || blockedNamespaces.test(title)) continue;
-    const linkText = (match[2] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    links.push({ title, linkText });
-  }
-  return links;
 }
 
 // 본문 링크에는 같은 문서가 여러 번 나온다. identities는 titleKey로 키를 잡으므로 같은 key를
@@ -279,31 +264,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    const bodyLinks = extractBodyLinks(parsedPage?.text?.["*"] ?? "");
+    const bodyLinks = extractSnapshotBodyLinks(parsedPage?.text?.["*"] ?? "");
     const uniqueBodyTitles = uniqueTitles(bodyLinks.map((link) => link.title));
     const identityStartedAt = performance.now();
     const pageIdentities = await fetchPageIdentities(uniqueBodyTitles);
     const identityMs = Math.round(performance.now() - identityStartedAt);
-    const uniqueLinks = new Map<string, any>();
-    for (const bodyLink of bodyLinks) {
-      const identity = pageIdentities.get(titleKey(bodyLink.title));
-      if (!identity) continue;
-      const targetPageId = identity.pageId;
-      if (targetPageId === pageId || uniqueLinks.has(targetPageId)) continue;
-      uniqueLinks.set(targetPageId, {
-        targetPageId,
-        targetTitle: identity.title,
-        linkText: bodyLink.linkText || identity.title,
-      });
+    // Complete stable page-ID graph from the whole pinned HTML, never a
+    // truncated browser or API sample. Redirect aliases collapse by page ID.
+    const links = buildSnapshotLinkRows(bodyLinks, pageIdentities, pageId);
+    const graphAudit = auditSnapshotLinkRows(bodyLinks, pageIdentities, pageId, links);
+    if (graphAudit.missingCount !== 0 ||
+        graphAudit.actualCount !== graphAudit.expectedCount ||
+        graphAudit.samplePresent.some((present) => !present)) {
+      throw new Error("WIKI_SNAPSHOT_LINK_INTEGRITY_FAILED");
     }
-
-    // targetRevisionId는 더 이상 보내지 않는다 (위 주석 참조).
-    // `replace_wiki_snapshot_v2`는 키가 없으면 null로 저장하고, 컬럼은 nullable이다.
-    const links = [...uniqueLinks.values()].map((link) => ({
-      targetPageId: link.targetPageId,
-      targetTitle: link.targetTitle,
-      linkText: link.linkText,
-    }));
     const writeStartedAt = performance.now();
     const { data: snapshotData, error: snapshotError } = await supabase.rpc("replace_wiki_snapshot_v2", {
       p_page_id: pageId,
@@ -333,6 +307,7 @@ Deno.serve(async (req) => {
           uniqueTitleCount: uniqueBodyTitles.length,
           resolvedTitleCount: pageIdentities.size,
           storedLinkCount: links.length,
+          graphAudit,
         }
       } : {}),
       links: links.map((row) => ({
