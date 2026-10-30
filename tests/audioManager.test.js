@@ -43,11 +43,16 @@ test('F5 uses persisted session identities; duplicate realtime responses play on
 });
 test('hidden and route-change decode races discard rather than queue SFX', async () => {
   const host=fakeHost(),m=new AudioManager(host); await m.unlock();
-  let resolve; host.fetch=()=>new Promise(r=>{ resolve=r; });
-  // Use an informational route: /play now starts BGM, while /game also
-  // preloads sounds and would replace the test's pending fetch resolver.
+  let resolve;
+  const inkUrl = AUDIO_ASSETS.ink.url;
+  host.fetch = url => url === inkUrl
+    ? new Promise(r => { resolve = r; })
+    : Promise.resolve({ ok:true, arrayBuffer:async()=>new ArrayBuffer(2) });
+  // Only the ink decode is intentionally unresolved. Later route audio
+  // preloads must not overwrite the resolver under test.
   const pending=m.play('ink',{key:'pending'}); m.setScene('/about');
-  resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)}); assert.equal(await pending,false);
+  resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});
+  assert.equal(await pending,false);
   host.document.hidden=true; assert.equal(await m.play('ink',{key:'hidden'}),false);
   host.document.hidden=false; assert.equal(await m.play('ink',{key:'hidden'}),false);
 });
