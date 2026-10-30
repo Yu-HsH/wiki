@@ -642,7 +642,7 @@ export async function fetchPageData(title, options = {}) {
     throw error;
   }
 
-  const key = `${normalizeTitle(requestedTitle)}|${maxQuickLinks}`;
+  const key = `${normalizeTitle(requestedTitle)}|${maxQuickLinks}|${isRestDocumentExperimentEnabled() ? "rest" : "parse"}`;
   const now = Date.now();
   const hit = wikiPageCache.get(key);
   if (hit && now < hit.expiresAt) {
