@@ -20,10 +20,12 @@ import {
 
 import {
   fetchPageData,
+  fetchPageSummary,
   formatDuration,
   normalizeTitle,
 } from "../services/wikiService";
 import { isAbortError } from "../utils/latestRequest";
+import { createTargetSummaryState, getTargetSummaryText, TARGET_SUMMARY_STATUS } from "../utils/groupTargetSummary.js";
 import { mergePreviewPanel, previewPanelFromState } from "../utils/duelPreview.js";
 import { createRequestId } from "../utils/serverAuthority.js";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
@@ -369,13 +371,52 @@ function DuelGameSession() {
   const commonTargetTitle = players.find((player) => player.user_id === room?.host_user_id)?.target_title || "";
   const myTargetTitle = commonTargetTitle;
 
+  // Only the authoritative host-selected goal is described. This is independent
+  // of the movement RPC and must never delay a move, round start, or heartbeat.
+  const [duelTargetBrief, setDuelTargetBrief] = useState(createTargetSummaryState);
+  const [duelTargetRetryKey, setDuelTargetRetryKey] = useState(0);
+  useEffect(() => {
+    if (!myTargetTitle) {
+      setDuelTargetBrief(createTargetSummaryState());
+      return undefined;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    setDuelTargetBrief(createTargetSummaryState({
+      requestedTitle: myTargetTitle,
+      status: TARGET_SUMMARY_STATUS.LOADING,
+    }));
+    fetchPageSummary(myTargetTitle, { signal: controller.signal })
+      .then((summary) => {
+        if (cancelled) return;
+        const text = getTargetSummaryText(summary);
+        setDuelTargetBrief(createTargetSummaryState({
+          requestedTitle: myTargetTitle,
+          canonicalTitle: summary.canonicalTitle || myTargetTitle,
+          text,
+          status: text ? TARGET_SUMMARY_STATUS.SUCCESS : TARGET_SUMMARY_STATUS.EMPTY,
+        }));
+      })
+      .catch((error) => {
+        if (cancelled || isAbortError(error)) return;
+        setDuelTargetBrief(createTargetSummaryState({
+          requestedTitle: myTargetTitle,
+          status: TARGET_SUMMARY_STATUS.ERROR,
+          error: error?.message || "목표 문서 설명을 불러오지 못했습니다.",
+        }));
+      });
+    return () => { cancelled = true; controller.abort(); };
+  }, [myTargetTitle, duelTargetRetryKey]);
+
   const targetForViewer = useMemo(
     () => ({
       title: myTargetTitle || "목표 문서",
-      summary: "",
-      requestedKeyword: myTargetTitle || "",
+      summary: duelTargetBrief.text,
+      summaryStatus: duelTargetBrief.status,
+      canonicalTitle: duelTargetBrief.canonicalTitle,
+      onSummaryRetry: () => setDuelTargetRetryKey((key) => key + 1),
     }),
-    [myTargetTitle]
+    [myTargetTitle, duelTargetBrief]
   );
 
   const messageTimer = useRef(null);
@@ -1980,7 +2021,8 @@ function DuelGameSession() {
               searchExpiresAt={searchPermit?.expiresAt ?? 0}
               onConsumeSearch={() => setSearchAvailable(false)}
               status={status}
-              showTargetBrief={false}
+              showTargetBrief
+              openTargetBriefByDefault
             />
             <DuelItemFeedback cues={duelFeedback.cues} article />
             </div>
