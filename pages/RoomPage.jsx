@@ -131,11 +131,23 @@ export default function RoomPage() {
         // waiting 방에 직접 진입한 guest면 join 시도
         if (roomData.status === "waiting") {
           trace("join-start");
-          await joinRoom(roomId, user.id).then(() => trace("join-end", { ok: true })).catch(() => trace("join-end", { ok: false }));
+          try {
+            await joinRoom(roomId, user.id);
+            trace("join-end", { ok: true });
+          } catch (error) {
+            trace("join-end", { ok: false });
+            // A stale deep link or full room must not render a fake empty lobby.
+            throw new Error(error instanceof Error ? error.message : "대기실 참가에 실패했습니다.");
+          }
         }
         if (cancelled) return;
 
         const playerData = await readLatestPlayers("initial");
+        if (roomData.status === "waiting" && playerData && !playerData.some(
+          (player) => player.user_id === roomData.host_user_id
+        )) {
+          throw new Error("방장이 떠난 대기실입니다. 방 목록으로 돌아가 다른 방을 선택해 주세요.");
+        }
 
         if (!cancelled) {
           observeLobbyAudio({ room: roomReadId === roomReadRef.current ? roomData : null, players: playerData });
