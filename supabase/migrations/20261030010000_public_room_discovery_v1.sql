@@ -33,10 +33,10 @@ create trigger game_rooms_visibility_guard_v1
   before insert or update of is_public on public.game_rooms
   for each row execute function private.guard_room_visibility_v1();
 
--- Previous wide SELECT policy exposed every WAITING private room to any
--- authenticated user. Joined-room SELECT policy remains untouched.
-drop policy if exists "Authenticated users can view waiting or joined rooms"
-  on public.game_rooms;
+-- Release compatibility phase 1:
+-- Keep the existing waiting-room SELECT policy until the upgraded frontend is
+-- deployed. Old code-join clients still query game_rooms by room_code.
+-- The least-privilege policy cleanup is phase 2, in migration 20261030010001.
 
 -- An explicit code is a capability to discover a room's ID, not its details.
 -- Participant reads still go through existing joined-room SELECT RLS.
