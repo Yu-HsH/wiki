@@ -473,27 +473,53 @@ export function isCombinedParseExperimentEnabled() {
   }
 }
 
-export function buildCombinedParseLinkData(documentData) {
+export function buildCombinedParseLinkData(documentData, diagnostics = null) {
+  const report = (reason, counts = {}) => {
+    if (diagnostics) Object.assign(diagnostics, { reason, ...counts });
+  };
   const links = documentData?.parsedLinks;
-  if (!Array.isArray(links) || !links.length) return null;
+  if (!Array.isArray(links) || !links.length) {
+    report("missing-parse-metadata", { parseMetadataCount: 0 });
+    return null;
+  }
   if (links.some((link) => typeof link?.ns !== "number" ||
-    typeof (link?.["*"] ?? link?.title) !== "string")) return null;
+    typeof (link?.["*"] ?? link?.title) !== "string")) {
+    report("invalid-parse-metadata", { parseMetadataCount: links.length });
+    return null;
+  }
   const normalized = dedupeLinkItems(links.map((link) => ({
     ns: link.ns,
     title: link["*"] ?? link.title,
   })));
-  if (!normalized.length) return null;
+  if (!normalized.length) {
+    report("no-valid-metadata-links", { parseMetadataCount: links.length, ns0LinkCount: 0 });
+    return null;
+  }
 
   const canonical = documentData.canonicalTitle;
   const present = new Set(normalized.map((link) => normalizeTitle(link.title)));
-  // If the complete rendered HTML has any potentially playable article href
-  // missing from the parse metadata, do NOT silently discard that link.
-  // The original complete query+links pagination is then required.
-  const missing = extractHrefsFromHtml(documentData.html)
+  // Never suppress a playable link just because parse metadata omitted it.
+  // Count missing titles for diagnostics, but never include their text in logs.
+  const candidates = extractHrefsFromHtml(documentData.html)
     .map((href) => extractTitleFromWikiHref(href, canonical))
-    .filter(Boolean)
-    .some((title) => !present.has(normalizeTitle(title)));
-  if (missing) return null;
+    .filter(Boolean);
+  const uniqueCandidates = new Set(candidates.map(normalizeTitle));
+  let missingMetadataCount = 0;
+  for (const title of uniqueCandidates) {
+    if (!present.has(title)) missingMetadataCount += 1;
+  }
+  const counts = {
+    parseMetadataCount: links.length,
+    ns0LinkCount: normalized.length,
+    htmlCandidateCount: candidates.length,
+    uniqueHtmlCandidateCount: uniqueCandidates.size,
+    missingMetadataCount,
+  };
+  if (missingMetadataCount) {
+    report("html-candidates-missing-from-parse", counts);
+    return null;
+  }
+  report("complete", counts);
 
   return {
     canonicalTitle: canonical,
@@ -564,6 +590,7 @@ async function fetchPageDataUncached(title, options = {}) {
   let restFallback = null;
   let combinedFallback = null;
   let linkSource = combinedEnabled ? "combined" : "query";
+  const combinedDiagnostics = combinedEnabled ? {} : null;
   const readDocument = async () => {
     if (!restEnabled) {
       if (!combinedEnabled) return fetchDocumentData(requestedTitle, { signal });
@@ -591,7 +618,7 @@ async function fetchPageDataUncached(title, options = {}) {
   let documentData = initialDocumentData;
   let linkData = initialLinkData;
   if (combinedEnabled) {
-    linkData = buildCombinedParseLinkData(documentData);
+    linkData = buildCombinedParseLinkData(documentData, combinedDiagnostics);
     if (!linkData) {
       combinedFallback ||= "incomplete-or-unsafe-links";
       linkSource = "query";
@@ -674,6 +701,7 @@ async function fetchPageDataUncached(title, options = {}) {
       restFallback,
       combinedFallback,
       linkSource,
+      ...(combinedDiagnostics ? { combinedDiagnostics } : {}),
       linkPages: linkData.pageCounts.length,
       links: linkData.links.length,
       htmlBytes: documentData.html.length,
