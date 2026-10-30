@@ -392,7 +392,7 @@ export async function fetchDocumentHtml(title, options) {
   return (await fetchDocumentData(title, options)).html;
 }
 
-export async function fetchPageData(title, options = {}) {
+async function fetchPageDataUncached(title, options = {}) {
   const requestOptions = typeof options === "number"
     ? { maxQuickLinks: options }
     : options || {};
@@ -400,6 +400,7 @@ export async function fetchPageData(title, options = {}) {
   const requestedTitle = normalizeRequestedTitle(title);
   if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
 
+  const apiStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
   const [summaryData, linkData, documentData] = await Promise.all([
     fetchSummary(requestedTitle, { signal }),
     fetchAllLinkPages(requestedTitle, { signal }),
@@ -415,10 +416,23 @@ export async function fetchPageData(title, options = {}) {
     throw new Error("본문과 링크 API의 최종 문서 제목이 일치하지 않습니다.");
   }
 
+  const apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
+  const sanitizeStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
   const sanitized = sanitizeWikiDocument(documentData.html, {
     currentTitle: canonicalTitle,
     apiLinks: linkData.links,
   });
+  // Opt-in timing counters (no titles, paths or user information) identify slow
+  // sequential wiki API pagination vs. DOM sanitation without changing link rules.
+  if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
+    console.debug("[wiki-page-perf]", {
+      linkPages: linkData.pageCounts.length,
+      links: linkData.links.length,
+      htmlBytes: documentData.html.length,
+      apiMs: Math.round(apiElapsedMs),
+      sanitizeMs: Math.round(sanitizeStartedAt ? performance.now() - sanitizeStartedAt : 0),
+    });
+  }
   const links = sanitized.linkTitles;
   const quickLinks = selectDeterministicQuickLinks(links, {
     canonicalTitle,
@@ -447,6 +461,66 @@ export async function fetchPageData(title, options = {}) {
     },
   };
 }
+/**
+ * Short-lived, size-limited, in-memory read cache. No DB authority, page
+ * snapshot, movement validation or link allowlist behavior is changed.
+ * Returning to a recently seen long article avoids repeating expensive
+ * MediaWiki pagination and HTML sanitization. Aborted work is never cached.
+ */
+const WIKI_PAGE_CACHE_TTL_MS = 90_000;
+const WIKI_PAGE_CACHE_MAX_ENTRIES = 4;
+const WIKI_PAGE_CACHE_MAX_HTML_CHARS = 3_000_000;
+const wikiPageCache = new Map();
+const wikiPageInFlight = new Map();
+
+export async function fetchPageData(title, options = {}) {
+  const requestOptions = typeof options === "number"
+    ? { maxQuickLinks: options }
+    : options || {};
+  const requestedTitle = normalizeRequestedTitle(title);
+  if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
+  const { signal, maxQuickLinks = 20 } = requestOptions;
+  if (signal?.aborted) {
+    const error = new Error("요청이 취소되었습니다.");
+    error.name = "AbortError";
+    throw error;
+  }
+
+  const key = `${normalizeTitle(requestedTitle)}|${maxQuickLinks}`;
+  const now = Date.now();
+  const hit = wikiPageCache.get(key);
+  if (hit && now < hit.expiresAt) {
+    wikiPageCache.delete(key);
+    wikiPageCache.set(key, hit);
+    return { ...hit.data, requestedTitle };
+  }
+  if (hit) wikiPageCache.delete(key);
+
+  // Only non-abortable callers coalesce. An AbortController still owns its
+  // own request lifecycle, preventing a cancelled solo move from reusing it.
+  if (!signal && wikiPageInFlight.has(key)) {
+    const page = await wikiPageInFlight.get(key);
+    return { ...page, requestedTitle };
+  }
+
+  const work = fetchPageDataUncached(requestedTitle, requestOptions);
+  if (!signal) wikiPageInFlight.set(key, work);
+  try {
+    const page = await work;
+    if (!signal?.aborted && page.documentHtml.length <= WIKI_PAGE_CACHE_MAX_HTML_CHARS) {
+      wikiPageCache.delete(key);
+      wikiPageCache.set(key, { expiresAt: Date.now() + WIKI_PAGE_CACHE_TTL_MS, data: page });
+      while (wikiPageCache.size > WIKI_PAGE_CACHE_MAX_ENTRIES) {
+        wikiPageCache.delete(wikiPageCache.keys().next().value);
+      }
+    }
+    return page;
+  } finally {
+    if (!signal && wikiPageInFlight.get(key) === work) wikiPageInFlight.delete(key);
+  }
+}
+
+
 export async function resolveWikiTitle(input) {
   const url = `https://ko.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
     input
