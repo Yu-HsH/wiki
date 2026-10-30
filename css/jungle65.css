@@ -230,7 +230,7 @@
   border-top: 4px solid #a98c5e;
   border-bottom: 4px solid #9e855b;
 }
-.wr-page.wr-home .daily-card .daily-endpoint strong {
+.wr-page.wr-home .daily-course { justify-content: center; text-align: center; }\n.wr-page.wr-home .daily-endpoint { text-align: center; }\n.wr-page.wr-home .daily-card .daily-endpoint strong {
   font: 750 clamp(19px,2.1vw,30px)/1.25 var(--wr65-heading);
   color: var(--wr65-forest);
 }
