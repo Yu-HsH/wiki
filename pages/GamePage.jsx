@@ -51,6 +51,7 @@ import {
   leaveAuthenticatedSingleRun,
 } from "../services/singleGameService";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
+import { createWikiSnapshotOverlap } from "../services/wikiSnapshotOverlap.js";
 import { createPendingRequestStore } from "../utils/serverAuthority";
 import { useExitGuard } from "../components/ExitGuard";
 import { fetchTodayDailyChallenge } from "../services/dailyChallengeService";
@@ -422,13 +423,14 @@ export default function GamePage({
       const wikiTimer = createWikiMoveTimer("single");
       let failed = false;
       const request = pageRequestManagerRef.current.begin();
+      const overlap = createWikiSnapshotOverlap({ ensureSnapshot: ensureWikiSnapshot, signal: request.signal });
       setClickCount((prev) => prev + 1);
       setIsLoading(true);
       setIsPageLoading(true);
       setError("");
 
       try {
-        const page = await fetchPageData(nextTitle, { signal: request.signal });
+        const page = await fetchPageData(nextTitle, { signal: request.signal, onDocumentReady: overlap.onDocumentReady });
         wikiTimer.stage("fetch");
         if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
@@ -436,7 +438,7 @@ export default function GamePage({
         const activeRun = serverRunRef.current;
         if (isReservedSingle(activeRun) && activeRun.status !== 'active') throw new Error('서버에서 탐험 시작 상태를 확인해주세요.');
         if (isSupabaseConfigured && activeRun?.status === "active") {
-          await ensureWikiSnapshot(page);
+          await overlap.ensure(page);
           wikiTimer.stage("snapshot");
           const pendingMutation = pendingRequestStoreRef.current.begin({
             runId: activeRun.id,
