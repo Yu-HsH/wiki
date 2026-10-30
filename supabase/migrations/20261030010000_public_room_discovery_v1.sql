@@ -14,7 +14,7 @@ create index if not exists game_rooms_public_waiting_v1_idx
 -- as their definer and are the only supported way to opt in at creation time.
 create or replace function private.guard_room_visibility_v1()
 returns trigger language plpgsql set search_path = ''
-as $
+as $$
 begin
   if current_user in ('authenticated', 'anon') then
     if tg_op = 'INSERT' then
@@ -27,7 +27,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 drop trigger if exists game_rooms_visibility_guard_v1 on public.game_rooms;
 create trigger game_rooms_visibility_guard_v1
   before insert or update of is_public on public.game_rooms
