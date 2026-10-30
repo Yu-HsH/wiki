@@ -20,10 +20,11 @@ export async function createGroupRoom(options = {}) {
         minPlayers = 3,
         finishRankLimit = 3,
     } = options;
-    const { data, error } = await supabase.rpc("create_group_room", {
+    const { data, error } = await supabase.rpc("create_discoverable_group_room_v1", {
         p_max_players: maxPlayers,
         p_min_players: minPlayers,
         p_finish_rank_limit: finishRankLimit,
+        p_is_public: options.isPublic ?? false,
     });
     if (error) throw error;
     return normalizeRpcRow(data);
@@ -33,20 +34,14 @@ export async function findGroupRoomByCode(roomCode) {
     assertSupabase();
     const normalized = roomCode?.trim().toUpperCase();
     if (!normalized) throw new Error("방 코드를 입력해주세요.");
-    const { data, error } = await supabase
-        .from("game_rooms")
-        .select("*")
-        .eq("room_code", normalized)
-        .eq("mode", "group")
-        .maybeSingle();
+    const { data, error } = await supabase.rpc("find_room_by_code_v1", {
+        p_room_code: normalized, p_mode: "group",
+    });
     if (error) throw error;
     if (!data) {
-        throw fatalSessionError(
-            "ROOM_NOT_FOUND",
-            "단체 모드 방이 삭제되었거나 더 이상 접근할 수 없습니다."
-        );
+        throw fatalSessionError("ROOM_NOT_FOUND", "단체 모드 방을 찾을 수 없습니다.");
     }
-    return data;
+    return { id: data };
 }
 
 export async function fetchGroupRoom(roomId) {
