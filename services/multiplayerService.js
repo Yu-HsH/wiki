@@ -14,8 +14,9 @@ function normalizeRpcRow(data) {
 
 export async function createRoom(userId, options = {}) {
     requireSupabase();
-    const { data, error } = await supabase.rpc("create_duel_room_v2", {
+    const { data, error } = await supabase.rpc("create_discoverable_duel_room_v1", {
         p_use_items: options.useItems ?? true,
+        p_is_public: options.isPublic ?? false,
     });
     if (error) throw error;
     return normalizeRpcRow(data);
@@ -23,13 +24,20 @@ export async function createRoom(userId, options = {}) {
 
 export async function findRoomByCode(roomCode) {
     requireSupabase();
-    const { data, error } = await supabase
-        .from("game_rooms")
-        .select("*")
-        .eq("room_code", roomCode.trim().toUpperCase())
-        .single();
+    const { data, error } = await supabase.rpc("find_room_by_code_v1", {
+        p_room_code: roomCode.trim().toUpperCase(), p_mode: "duel",
+    });
     if (error) throw error;
-    return data;
+    return { id: data };
+}
+
+export async function joinDuelRoomByCode(roomCode) {
+    requireSupabase();
+    const { data, error } = await supabase.rpc("join_duel_room_v2", {
+        p_room_code: roomCode.trim().toUpperCase(),
+    });
+    if (error) throw error;
+    return normalizeRpcRow(data);
 }
 
 export async function joinRoom(roomId, userId) {
