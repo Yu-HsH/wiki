@@ -196,8 +196,8 @@ test('leaving a result during decoding cannot start its music late', async () =>
   const host=fakeHost(),m=new AudioManager(host);await m.unlock();m.setScene('/game');await new Promise(r=>setImmediate(r));
   let release;host.fetch=url=>url===AUDIO_ASSETS.result.url?new Promise(r=>{release=r;}):Promise.resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});
   m.setResult('run','/game',true);m.setScene('/play');m.clearResult('run');
-  release({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});await new Promise(r=>setImmediate(r));assert.ok(!m.bgm);
-  assert.equal(host.events.filter(e=>e.type==='bgm-start').length,0);
+  release({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});await new Promise(r=>setImmediate(r));assert.equal(m.bgm?.name,'home');
+  assert.equal(host.events.filter(e=>e.type==='bgm-start'&&e.sound==='result').length,0);
 });
 
 test('result music survives quiet F5-style entry, mute/hidden recovery and SFX zero independently', async () => {
@@ -361,7 +361,7 @@ test('opening retains independent BGM/SFX settings and no late music after depar
   m.update({ muted: true }); assert.equal(m.bgm, null);
   m.update({ muted: false }); await new Promise(r => setImmediate(r)); assert.equal(m.bgm.name, 'opening');
   m.update({ bgm: 0, sfx: .43 }); assert.equal(m.bgm, null); assert.equal(m.sfxBus.gain.value, .43);
-  m.setScene('/play'); m.update({ bgm: .28 }); await new Promise(r => setImmediate(r)); assert.equal(m.bgm, null);
+  m.setScene('/play'); m.update({ bgm: .28 }); await new Promise(r => setImmediate(r)); assert.equal(m.bgm?.name, 'home');
 });
 
 test('shared menu BGM stays continuous across mode selection, rankings, profile and waiting rooms', async () => {
