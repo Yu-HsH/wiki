@@ -1566,99 +1566,147 @@ body {
   margin-bottom: 4px;
 }
 
-/* ── Wiki Viewer Navigation Rail ── */
+/* ── Wiki Viewer Article Contents ──
+ * Compact near-edge tab; hovering within the 18px approach zone, keyboard focus,
+ * or tapping the toggle reveals a readable, hierarchical article outline.
+ * This is navigation within the CURRENT page, never a playable wiki link. */
 .wiki-nav-rail {
   position: fixed;
   top: 50%;
   right: clamp(6px, 1vw, 16px);
   transform: translateY(-50%);
-  z-index: 28;
-
-  width: clamp(28px, 3vw, 42px);
-  max-height: min(62vh, 520px);
-  overflow-y: auto;
-  overflow-x: visible;
-
+  z-index: 38;
+  width: 52px;
+  max-height: min(72vh, 650px);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-
-  padding: 10px 6px;
-  border-radius: 18px;
-
-  background: rgba(18, 26, 45, 0.38);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-
-  scrollbar-width: thin;
+  gap: 4px;
+  padding: 6px;
+  overflow: visible;
+  border: 1px solid #b9c2b2;
+  border-radius: 12px;
+  background: #fcfcf7;
+  box-shadow: 0 8px 26px rgb(36 52 48 / 15%);
+  color: #243430;
+  transition: width 160ms ease, box-shadow 160ms ease;
 }
-
-.wiki-nav-rail::-webkit-scrollbar {
-  width: 4px;
+/* Hovering just beside the rail also opens it. */
+.wiki-nav-rail::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -18px;
+  width: 18px;
 }
-
-.wiki-nav-rail::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
+.wiki-nav-rail:is(:hover, :focus-within, .is-expanded) {
+  width: min(250px, calc(100vw - 24px));
+  box-shadow: 0 12px 36px rgb(36 52 48 / 22%);
 }
-
-/* 크롬/사파리 스크롤바 숨기기 */
-.wiki-nav-rail::-webkit-scrollbar {
-  display: none;
-}
-
-.wiki-nav-item {
-  position: relative;
-  width: 16px;
-  height: 16px;
+.wiki-nav-toggle {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 11px;
+  width: 100%;
+  min-height: 38px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: #f1f2e8;
+  color: #3f574f;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
 }
-
-.wiki-nav-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--app-dim);
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.wiki-nav-toggle:hover,
+.wiki-nav-toggle:focus-visible {
+  background: #e4ecdf;
 }
-
-.wiki-nav-dot.level-2 {
-  width: 8px;
-  height: 8px;
+.wiki-nav-toggle-mark {
+  flex: 0 0 16px;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1;
 }
-
-.wiki-nav-item:hover .wiki-nav-dot,
-.wiki-nav-item.active .wiki-nav-dot {
-  background: var(--app-brand);
-  transform: scale(1.6);
+.wiki-nav-toggle-label { white-space: nowrap; }
+.wiki-nav-section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(61vh, 560px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #afbaa9 transparent;
+  overscroll-behavior: contain;
 }
-
-.wiki-nav-item.active .wiki-nav-dot {
-  background: var(--app-brand-deep);
-}
-
-/* ── Floating Tooltip (Rail 외부에서 렌더링) ── */
-.wiki-nav-floating-tooltip {
-  position: fixed;
-  pointer-events: none;
-  z-index: 10000;
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: rgba(8, 12, 22, 0.95);
-  color: white;
+.wiki-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #59685e;
+  text-align: left;
   font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  transform: translateY(-50%);
-  animation: introModalPop 0.15s ease-out forwards;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.wiki-nav-level-3 { padding-left: 22px; font-size: 11px; }
+.wiki-nav-item:hover,
+.wiki-nav-item:focus-visible {
+  background: #e6eef7;
+  color: #3268a8;
+}
+.wiki-nav-item.active {
+  background: #e6eef7;
+  color: #265b9b;
+  font-weight: 700;
+}
+.wiki-nav-dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 99px;
+  background: #8f9e91;
+}
+.wiki-nav-dot.level-2 { width: 8px; height: 8px; }
+.wiki-nav-item.active .wiki-nav-dot,
+.wiki-nav-item:hover .wiki-nav-dot { background: #3268a8; }
+.wiki-nav-item-label {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.wiki-nav-rail:not(:hover):not(:focus-within):not(.is-expanded) .wiki-nav-item {
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 0;
+}
+.wiki-nav-rail:not(:hover):not(:focus-within):not(.is-expanded) .wiki-nav-toggle {
+  justify-content: center;
+  padding-inline: 0;
+}
+.wiki-nav-rail:not(:hover):not(:focus-within):not(.is-expanded) :is(.wiki-nav-item-label,.wiki-nav-toggle-label) {
+  display: none;
+}
+.wr-race .article-content :is(h2,h3) { scroll-margin-top: 108px; }
+@media (max-width: 900px), (max-height: 700px) {
+  .wiki-nav-rail { right: 5px; top: 52%; max-height: 58vh; width: 42px; padding: 4px; }
+  .wiki-nav-rail:is(:hover,:focus-within,.is-expanded) { width: min(230px, calc(100vw - 16px)); }
+  .wiki-nav-section-list { max-height: 45vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wiki-nav-rail, .wiki-nav-item { transition: none; }
 }
 
 /* ── Find Block Toast ── */
@@ -1675,19 +1723,6 @@ body {
   z-index: 9999;
   box-shadow: 0 8px 24px rgba(202, 42, 70, 0.4);
   animation: introModalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-@media (max-width: 900px),
-(max-height: 700px) {
-  .wiki-nav-rail {
-    right: 6px;
-    width: 30px;
-    max-height: 52vh;
-    padding: 8px 4px;
-    gap: 5px;
-    border-radius: 14px;
-    background: rgba(18, 26, 45, 0.28);
-  }
 }
 
 /* 구글 애드센스 배너 컨테이너 공통 스타일 */
