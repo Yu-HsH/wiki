@@ -26,6 +26,13 @@ test("public listing has a narrow projection, waiting/capacity filter and authen
   for(const field of ["room_id uuid","host_nickname text","current_players bigint","max_players integer"])assert.ok(body.includes(field),field);
   for(const field of ["room_code text","path_titles","user_id uuid","select r.*"])assert.ok(!body.includes(field),field);
 });
+test("legacy member write grants cannot change visibility without an approved RPC", () => {
+  assert.match(sql, /private\\.guard_room_visibility_v1/);
+  assert.match(sql, /before insert or update of is_public/);
+  assert.match(sql, /current_user in \\('authenticated', 'anon'\\)/);
+  assert.match(sql, /ROOM_VISIBILITY_RPC_REQUIRED/);
+});
+
 test("private code lookup and public join use authenticated, narrow RPCs", () => {
   for(const rpc of ["find_room_by_code_v1","create_discoverable_duel_room_v1","create_discoverable_group_room_v1","list_public_waiting_rooms_v1","join_public_room_v1"]){
     assert.ok(sql.includes(`revoke all on function public.${rpc}`),rpc);
