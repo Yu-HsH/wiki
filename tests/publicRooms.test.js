@@ -6,6 +6,7 @@ const page = readFileSync(new URL("../pages/MultiplayerPage.jsx", import.meta.ur
 const duel = readFileSync(new URL("../services/multiplayerService.js", import.meta.url), "utf8");
 const group = readFileSync(new URL("../services/groupMultiplayerService.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../services/publicRoomService.js", import.meta.url), "utf8");
+const pgTap = readFileSync(new URL("../supabase/tests/public_room_discovery_v1.sql", import.meta.url), "utf8");
 
 test("migration PL/pgSQL uses complete dollar-quoted blocks", () => {
   const opens = [...sql.matchAll(/\bas \$\$\n/g)].length;
@@ -14,6 +15,15 @@ test("migration PL/pgSQL uses complete dollar-quoted blocks", () => {
   assert.equal(closes, opens, "all opening dollar quotes must be paired");
   assert.doesNotMatch(sql, /\bas \$\n/);
   assert.doesNotMatch(sql, /\n\$;/);
+});
+
+test("pgTAP exception assertions use valid dollar quoted statements", () => {
+  assert.doesNotMatch(pgTap, /^\\s*\\$\\s+(?:update|insert|select)\\b/m);
+  assert.doesNotMatch(pgTap, /\\s\\$\\s*,/);
+  assert.match(pgTap, /\\$\\$ update public\\.game_rooms set is_public = true/);
+  assert.match(pgTap, /\\$\\$ insert into public\\.game_rooms/);
+  const tokens = pgTap.match(/\\$\\$/g) ?? [];
+  assert.equal(tokens.length % 2, 0, "all pgTAP dynamic SQL delimiters must be paired");
 });
 
 test("new and historical rooms remain private unless host opts in", () => {
