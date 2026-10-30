@@ -261,7 +261,7 @@ function getKSTPeriodStartIso(period) {
   const startKST = new Date(kstNow);
   startKST.setUTCHours(0, 0, 0, 0);
 
-  if (period === "daily") {
+  if (period === "daily" || period === "today_runs") {
     // KST 00:00:00에 해당하는 실제 UTC ISO 문자열 반환
     return new Date(startKST.getTime() - kstOffset).toISOString();
   }
@@ -320,7 +320,7 @@ export async function fetchRankings({ period = "all", limit = 50, client, timing
   // 2. Supabase 서버로부터 랭킹 데이터 조회
   let query = db
     .from("game_records")
-    .select("id, run_id, user_id, player_name, target_title, elapsed_seconds, click_count, path_titles, created_at, timing_contract")
+    .select("id, run_id, user_id, player_name, start_title, target_title, elapsed_seconds, click_count, path_titles, created_at, timing_contract")
     .order("elapsed_seconds", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(limit);
@@ -356,7 +356,7 @@ export async function fetchRankings({ period = "all", limit = 50, client, timing
   const profileMap = Object.fromEntries(profiles.map(p => [p.id, p]));
 
   // 4. 결과 병합
-  return resultRecords.map((record) => {
+  return resultRecords.map((record, index) => {
     const profile = profileMap[record.user_id];
     return {
       id: record.id,
@@ -364,9 +364,11 @@ export async function fetchRankings({ period = "all", limit = 50, client, timing
       timingContract: record.timing_contract ?? null,
       userId: record.user_id,
       playerName: record.player_name,
+      startTitle: record.start_title ?? null,
       targetTitle: record.target_title,
       elapsedSeconds: record.elapsed_seconds,
       clickCount: record.click_count,
+      rank: Number(record.rank ?? index + 1),
       pathTitles: record.path_titles ?? [],
       createdAt: record.created_at,
       profileImageUrl: profile?.profile_image_url || null,
