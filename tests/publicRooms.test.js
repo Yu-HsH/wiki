@@ -27,9 +27,9 @@ test("public listing has a narrow projection, waiting/capacity filter and authen
   for(const field of ["room_code text","path_titles","user_id uuid","select r.*"])assert.ok(!body.includes(field),field);
 });
 test("legacy member write grants cannot change visibility without an approved RPC", () => {
-  assert.match(sql, /private\\.guard_room_visibility_v1/);
+  assert.match(sql, /private\.guard_room_visibility_v1/);
   assert.match(sql, /before insert or update of is_public/);
-  assert.match(sql, /current_user in \\('authenticated', 'anon'\\)/);
+  assert.match(sql, /current_user in \('authenticated', 'anon'\)/);
   assert.match(sql, /ROOM_VISIBILITY_RPC_REQUIRED/);
 });
 
