@@ -7,7 +7,7 @@ import {
   isRestDocumentExperimentEnabled,
 } from "../services/wikiService.js";
 
-function fakeFetch(t, { title, pageId = 321, restTitle = title, restPageId = pageId, restRevision = 765 } = {}) {
+function fakeFetch(t, { title, pageId = 321, restTitle = title, restPageId = pageId, restRevision = 765, restHtml = null } = {}) {
   const originalFetch = globalThis.fetch;
   const originalStorage = globalThis.localStorage;
   const calls = [];
@@ -20,7 +20,7 @@ function fakeFetch(t, { title, pageId = 321, restTitle = title, restPageId = pag
     if (u.pathname.includes("/rest.php/v1/page/")) {
       return Response.json({
         id: restPageId, title: restTitle, latest: { id: restRevision },
-        html: '<section><p><a href="./일본">일본</a> <a href="./파일:그림">차단</a> <a href="./미허용">미허용</a> <a href="https://other.com/wiki/일본">외부</a></p></section>',
+        html: restHtml ?? '<section><p><a href="./일본">일본</a> <a href="./파일:그림">차단</a> <a href="./미허용">미허용</a> <a href="https://other.com/wiki/일본">외부</a></p></section>',
       });
     }
     if (u.pathname.includes("/api/rest_v1/page/summary/")) {
@@ -93,6 +93,15 @@ test("REST page id mismatch forces Action parse fallback", async (t) => {
   const page = await fetchPageData(title);
   assert.equal(page.pageId, "321");
   assert.equal(page.revisionId, "987");
+  assert.equal(urls.filter((u) => u.searchParams.get("action") === "parse").length, 1);
+});
+
+test("REST incompatible markup with zero legal links safely falls back to Action parse", async (t) => {
+  const title = "위키REST링크복원1011";
+  const urls = fakeFetch(t, { title, restHtml: '<p><a href="../wrong">잘못된 내부 링크 형식</a></p>' });
+  const page = await fetchPageData(title);
+  assert.equal(page.revisionId, "987");
+  assert.deepEqual(page.links, ["일본"]);
   assert.equal(urls.filter((u) => u.searchParams.get("action") === "parse").length, 1);
 });
 
