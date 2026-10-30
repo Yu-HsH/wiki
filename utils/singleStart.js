@@ -17,8 +17,24 @@ export function singleServerElapsed(run, serverNow) {
 }
 export function singleStartFrame(milliseconds) {
   const ms = Math.max(0, Math.floor(milliseconds));
-  return { ms, phase: ms < 720 ? 'opening' : ms < 2900 ? 'start' : ms < 4000 ? 'rewind' : ms < 6000 ? 'target' : ms < 8600 ? 'countdown' : 'article',
+  return { ms, phase: ms < 720 ? 'opening' : ms < 2900 ? 'target' : ms < 4000 ? 'rewind' : ms < 6000 ? 'start' : ms < 8600 ? 'countdown' : 'article',
     count: ms < 6000 || ms >= 8600 ? null : ms < 6700 ? '3' : ms < 7400 ? '2' : ms < 8100 ? '1' : '시작!' };
+}
+
+// Physical rewind: formerly turned pages return from the right side to the left.
+ // The first visible page is the goal underneath the stack; the final front page
+ // is the departure document. Return the back sheets before the front sheet.
+export function singleReverseLeafFrame(milliseconds, index) {
+  const order = 2 - index; // back pages first, departure/front page last
+  const start = 2900 + order * 220;
+  const end = 3520 + order * 220;
+  const progress = Math.max(0, Math.min(1, (milliseconds - start) / (end - start)));
+  const smooth = progress * progress * (3 - 2 * progress);
+  return {
+    angle: 180 * (1 - smooth), // right-bound page turns BACK: 180° -> 0°
+    visible: milliseconds >= start,
+    zIndex: 28 - index * 2,
+  };
 }
 
 // Presentation mapping only: the legacy API and 2600ms countdown deadline stay unchanged.

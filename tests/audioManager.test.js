@@ -43,9 +43,16 @@ test('F5 uses persisted session identities; duplicate realtime responses play on
 });
 test('hidden and route-change decode races discard rather than queue SFX', async () => {
   const host=fakeHost(),m=new AudioManager(host); await m.unlock();
-  let resolve; host.fetch=()=>new Promise(r=>{ resolve=r; });
-  const pending=m.play('ink',{key:'pending'}); m.setScene('/play');
-  resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)}); assert.equal(await pending,false);
+  let resolve;
+  const inkUrl = AUDIO_ASSETS.ink.url;
+  host.fetch = url => url === inkUrl
+    ? new Promise(r => { resolve = r; })
+    : Promise.resolve({ ok:true, arrayBuffer:async()=>new ArrayBuffer(2) });
+  // Only the ink decode is intentionally unresolved. Later route audio
+  // preloads must not overwrite the resolver under test.
+  const pending=m.play('ink',{key:'pending'}); m.setScene('/about');
+  resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});
+  assert.equal(await pending,false);
   host.document.hidden=true; assert.equal(await m.play('ink',{key:'hidden'}),false);
   host.document.hidden=false; assert.equal(await m.play('ink',{key:'hidden'}),false);
 });
@@ -189,8 +196,8 @@ test('leaving a result during decoding cannot start its music late', async () =>
   const host=fakeHost(),m=new AudioManager(host);await m.unlock();m.setScene('/game');await new Promise(r=>setImmediate(r));
   let release;host.fetch=url=>url===AUDIO_ASSETS.result.url?new Promise(r=>{release=r;}):Promise.resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});
   m.setResult('run','/game',true);m.setScene('/play');m.clearResult('run');
-  release({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});await new Promise(r=>setImmediate(r));assert.ok(!m.bgm);
-  assert.equal(host.events.filter(e=>e.type==='bgm-start').length,0);
+  release({ok:true,arrayBuffer:async()=>new ArrayBuffer(2)});await new Promise(r=>setImmediate(r));assert.equal(m.bgm?.name,'home');
+  assert.equal(host.events.filter(e=>e.type==='bgm-start'&&e.sound==='result').length,0);
 });
 
 test('result music survives quiet F5-style entry, mute/hidden recovery and SFX zero independently', async () => {
@@ -354,5 +361,20 @@ test('opening retains independent BGM/SFX settings and no late music after depar
   m.update({ muted: true }); assert.equal(m.bgm, null);
   m.update({ muted: false }); await new Promise(r => setImmediate(r)); assert.equal(m.bgm.name, 'opening');
   m.update({ bgm: 0, sfx: .43 }); assert.equal(m.bgm, null); assert.equal(m.sfxBus.gain.value, .43);
-  m.setScene('/play'); m.update({ bgm: .28 }); await new Promise(r => setImmediate(r)); assert.equal(m.bgm, null);
+  m.setScene('/play'); m.update({ bgm: .28 }); await new Promise(r => setImmediate(r)); assert.equal(m.bgm?.name, 'home');
+});
+
+test('shared menu BGM stays continuous across mode selection, rankings, profile and waiting rooms', async () => {
+  const host=fakeHost(), m=new AudioManager(host);await m.unlock();
+  m.setScene('home');await new Promise(r=>setImmediate(r));
+  const voice=m.bgm;
+  for(const path of ['/play','/ranking','/profile','/achievements','/multiplayer','/multiplayer/room/abc','/multiplayer/group/room/def']){
+    m.setScene(path);
+    await new Promise(r=>setImmediate(r));
+    assert.equal(m.bgm,voice, `same music on ${path}`);
+    assert.equal(m.musicName(),'home');
+  }
+  m.setScene('/game');
+  assert.equal(m.musicName(),null);
+  assert.equal(m.bgm,null);
 });

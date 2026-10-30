@@ -17,7 +17,6 @@ const migration = read(
 
 test("그룹 서비스의 변경 작업은 Phase 2C RPC 경로만 사용한다", () => {
   for (const rpc of [
-    "create_group_room",
     "join_group_room",
     "submit_group_target_v2",
     "set_group_ready",
@@ -26,6 +25,10 @@ test("그룹 서비스의 변경 작업은 Phase 2C RPC 경로만 사용한다",
   ]) {
     assert.match(groupService, new RegExp(`rpc\\(["']${rpc}["']`));
   }
+
+  assert.match(groupService, /rpc\(["']create_discoverable_group_room_v1["']/);
+  assert.match(read("supabase/migrations/20261030032252_public_room_discovery_v1.sql"),
+    /public\.create_group_room\(p_max_players,p_min_players,p_finish_rank_limit\)/);
 
   assert.doesNotMatch(
     groupService,
@@ -93,7 +96,8 @@ test("RLS는 group direct write를 닫고 duel도 서버 권위 RPC를 사용한
 
   assert.match(migration, /and mode = 'duel'/);
   assert.match(migration, /room\.mode = 'duel'/);
-  assert.match(duelService, /rpc\("create_duel_room_v2"/);
+  assert.match(duelService, /rpc\("create_discoverable_duel_room_v1"/);
+  assert.match(read("supabase/migrations/20261030032252_public_room_discovery_v1.sql"), /public\.create_duel_room_v2/);
   assert.match(duelService, /rpc\("join_duel_room_v2"/);
   assert.match(duelService, /apply_duel_move_v2/);
   assert.match(duelService, /apply_duel_swap_v2/);

@@ -1,9 +1,4 @@
 import React from "react";
-import { SINGLE_ITEM_IDS } from "../data/itemPools";
-import { ITEM_DEFS } from "../data/items";
-
-const singleItemNames = SINGLE_ITEM_IDS.map(id => ITEM_DEFS.find(item => item.id === id)?.name).filter(Boolean).join(" · ");
-
 const modes = [
   { id: "solo", ordinal: "01", kicker: "혼자 · SOLO", title: "싱글 탐험", description: "나만의 속도로 문서 속 링크를 따라 목표에 도착하세요.", course: "랜덤 코스 또는 직접 고른 목표. 오늘의 탐험은 모두에게 같은 출발·목표입니다.", next: "싱글 시작에서 목표를 고르거나, 아래 오늘의 탐험을 시작하세요.", tags: ["랜덤", "목표 지정", "오늘의 탐험"], action: "싱글 시작 →" },
   { id: "duel", ordinal: "02", kicker: "2인 · DUEL", title: "1:1 대전", description: "같은 목표 문서에 먼저 도달하는 탐험가가 승리합니다.", course: "방장이 공통 목표를 확정하고, 출발 문서는 경기 시작 시 정해집니다.", next: "방 생성 또는 코드 참가 → 방장 목표 확정 → 두 명 입장 후 시작.", tags: ["아이템전 선택 가능", "별도 준비 버튼 없음"], action: "1:1 로비 →" },
@@ -30,7 +25,7 @@ export default function PlayPage({ isGuest, onSingle, onMultiplayer }) {
         <span className="wr-mode-desc">{mode.description}</span>
         <span className="wr-mode-brief"><strong>출발과 목표</strong>{mode.course}</span>
         <span className="wr-mode-brief"><strong>준비 순서</strong>{mode.next}</span>
-        <span className="wr-mode-brief"><strong>아이템 안내</strong>{mode.id === "solo" ? singleItemNames : mode.id === "duel" ? "방 생성 시 아이템전 선택. 실제 역할별 아이템은 로비의 규칙 · 아이템 안내에서 확인하세요." : "아이템 없이 문서 속 링크로 경쟁합니다."}</span>
+        <span className="wr-mode-brief"><strong>아이템 안내</strong>{mode.id === "solo" ? "아이템 없음 · 문서 링크만으로 탐험합니다." : mode.id === "duel" ? "방 생성 시 아이템전 선택. 실제 역할별 아이템은 로비의 규칙 · 아이템 안내에서 확인하세요." : "아이템 없이 문서 속 링크로 경쟁합니다."}</span>
         <span className="wr-mode-tags">{mode.tags.map(tag => <span key={tag}>{tag}</span>)}</span>
         <span className="wr-mode-action">{isGuest && mode.id !== "solo" ? "로그인 후 이용 가능" : mode.action}</span>
       </button>)}

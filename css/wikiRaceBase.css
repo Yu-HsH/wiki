@@ -132,3 +132,44 @@
   .wr-play-launcher { padding: 12px; }
   .wr-play-heading img, .wr-board-links img { display: none; }
 }
+
+/* Shared expedition margins. HOME's approved artwork also frames PLAY,
+   ranking, profile, achievements, duel/group lobbies and game screens.
+   Decorative spans never capture input or obscure the main sheet. */
+.wr-page { position: relative; background-color: #e9e0c9; }
+.wr-page > .wr-shell { position: relative; z-index: 1; }
+.wr-page > .wr-home-side-art { display: none; pointer-events: none; }
+.wr-header-avatar.pcard-avatar { border: 1px solid var(--wr-frame); }
+@media (min-width: 1280px) {
+  .wr-page > .wr-home-side-art {
+    display: block;
+    position: absolute;
+    inset: 0 0 auto;
+    height: clamp(600px, calc(75vw - 480px), 1080px);
+    overflow: clip;
+    z-index: 0;
+    opacity: .84;
+    mask-image: linear-gradient(to bottom, #000 65%, transparent 100%);
+  }
+  .wr-page > .wr-home-side-art > span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: max(0px, calc((100% - 1200px) / 2));
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+    filter: saturate(.86);
+  }
+  .wr-page > .wr-home-side-art-left {
+    left: 0;
+    background-image: url('/assets/wiki-race/home/wiki-home-left-decoration.webp');
+    background-position: left top;
+    mask-image: linear-gradient(to right, #000 35%, #000b 68%, transparent 100%);
+  }
+  .wr-page > .wr-home-side-art-right {
+    right: 0;
+    background-image: url('/assets/wiki-race/home/wiki-home-right-decoration.webp');
+    background-position: right top;
+    mask-image: linear-gradient(to left, #000 35%, #000b 68%, transparent 100%);
+  }
+}

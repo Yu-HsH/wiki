@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSingleServerClock, singleServerElapsed, singleStartFrame, singleStartVisualTime } from '../utils/singleStart.js';
+import { createSingleServerClock, singleServerElapsed, singleStartFrame, singleStartVisualTime, singleReverseLeafFrame } from '../utils/singleStart.js';
 import { handleSingleStart } from '../supabase/functions/single-run/start.mjs';
 import { saveGuestSingleGameSession, readGuestSingleGameSession } from '../utils/singleGameSession.js';
 
@@ -14,9 +14,11 @@ test('integer timeline changes exactly at 8100 and 8600, without prototype float
   assert.equal(singleStartFrame(8599).phase, 'countdown'); assert.equal(singleStartFrame(8600).phase, 'article');
 });
 
-test('legacy journal presents both titles and all counts without extending the 2600ms deadline', () => {
+test('legacy journal shows goal before rewind and start before countdown, within 2600ms', () => {
   const frames=Array.from({length:2601},(_,ms)=>singleStartFrame(singleStartVisualTime(ms,2600)));
-  assert.deepEqual([...new Set(frames.map(frame=>frame.phase))],['opening','start','rewind','target','countdown','article']);
+  assert.deepEqual([...new Set(frames.map(frame=>frame.phase))],['opening','target','rewind','start','countdown','article']);
+  assert.equal(singleStartFrame(720).phase,'target');
+  assert.equal(singleStartFrame(4000).phase,'start');
   assert.deepEqual([...new Set(frames.filter(frame=>frame.count).map(frame=>frame.count))],['3','2','1','시작!']);
   assert.equal(frames[2599].phase,'countdown');assert.equal(frames[2600].phase,'article');
   for(const ms of [0,720,2900,4000,6000,8100,8600])assert.equal(singleStartVisualTime(ms),ms,'reserved server timeline is untouched');
@@ -51,4 +53,21 @@ test('new member Edge verifies real JWT identity rather than trusting actor payl
   const response=await handleSingleStart(new Request('http://localhost'),{action:'allocate',actor:'member',requestId:crypto.randomUUID(),mode:'daily'},
     {db:{auth:{getUser:async()=>({error:new Error('expired')})},rpc(){calls++;}},json:(body,status=200)=>new Response(JSON.stringify(body),{status})});
   assert.equal(response.status,401);assert.equal(calls,0);
+});
+
+test('right-bound notebook returns pages backwards, bottom first and departure last', () => {
+  const before=[0,1,2].map(i=>singleReverseLeafFrame(2800,i));
+  assert.ok(before.every(leaf=>!leaf.visible));
+  assert.ok(before.every(leaf=>leaf.angle===180));
+  assert.equal(singleReverseLeafFrame(2900,2).visible,true);
+  assert.equal(singleReverseLeafFrame(2900,1).visible,false);
+  assert.equal(singleReverseLeafFrame(3340,0).visible,true);
+  for (const index of [0,1,2]) {
+    const start=2900+(2-index)*220,end=3520+(2-index)*220;
+    assert.equal(singleReverseLeafFrame(start,index).angle,180);
+    assert.equal(singleReverseLeafFrame(end,index).angle,0);
+    assert.ok(singleReverseLeafFrame((start+end)/2,index).angle>0);
+  }
+  assert.equal(singleStartFrame(4000).phase,'start');
+  assert.equal(singleStartFrame(8600).phase,'article');
 });

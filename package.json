@@ -11,6 +11,8 @@
     "supabase:start": "node scripts/supabase-start-pinned.mjs",
     "supabase:preflight": "node scripts/supabase-runtime-preflight.mjs",
     "supabase:clean-gate": "node scripts/supabase-clean-gate.mjs",
+    "public-room:local-check": "node scripts/public-room-local-verify.mjs --check-only",
+    "public-room:local-prepare": "node scripts/public-room-local-verify.mjs",
     "supabase:postgrest-smoke": "node scripts/supabase-postgrest-smoke.mjs",
     "test:e2e:packet13-b1": "node scripts/packet13-browser-b1.mjs"
   },

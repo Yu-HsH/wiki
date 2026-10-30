@@ -1,14 +1,17 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { LOBBY_PATH } from "../../utils/appRoutes";
+import ProfileAvatar from "../ProfileAvatar.jsx";
+import useOwnProfileCard from "../../hooks/useOwnProfileCard.js";
 
-export function ExplorerAvatar({ size = 36 }) {
-  return <img className="wr-avatar" src="/assets/wiki-race/explorer-portrait.png" width={size} height={size} alt="" />;
+export function ExplorerAvatar({ card }) {
+  return <ProfileAvatar card={card} size="sm" className="wr-header-avatar" />;
 }
 
 // onNavigate (optional): a page that must clean up first (waiting rooms) receives the target path
 // instead of the router navigating directly. HOME/PLAY never pass it.
 export function WikiRaceHeader({ user, level, onLogout, onNavigate }) {
+  const ownCard = useOwnProfileCard(user, level);
   const guard = (to) => onNavigate ? { onClick: (event) => { event.preventDefault(); onNavigate(to); } } : {};
   return <header className="wr-header">
     <NavLink to={LOBBY_PATH} className="wr-brand" aria-label="Wiki Race HOME" {...guard(LOBBY_PATH)}>WIKI RACE<span>JUNGLE EXPEDITION</span></NavLink>
@@ -18,7 +21,7 @@ export function WikiRaceHeader({ user, level, onLogout, onNavigate }) {
       {!user.isGuest && <><NavLink to="/ranking" {...guard("/ranking")}>랭킹</NavLink><NavLink to="/achievements" {...guard("/achievements")}>업적</NavLink></>}
     </nav>
     <div className="wr-header-user">
-      {user.isGuest ? <span>게스트 탐험가</span> : <NavLink to="/profile" aria-label={`${user.displayName} 프로필`} {...guard("/profile")}><span>{level !== null && `Lv.${level} · `}{user.displayName}</span><ExplorerAvatar /></NavLink>}
+      {user.isGuest ? <span>게스트 탐험가</span> : <NavLink to="/profile" aria-label={`${user.displayName} 프로필`} {...guard("/profile")}><span>{level !== null && `Lv.${level} · `}{user.displayName}</span><ExplorerAvatar card={ownCard} /></NavLink>}
       <button type="button" onClick={onLogout}>로그아웃</button>
     </div>
   </header>;
@@ -34,10 +37,10 @@ export function ExpeditionTrail() {
 
 export default function WikiRaceShell({ user, level, onLogout, onNavigate, view = "home", children }) {
   return <div className={`wr-page wr-${view}`}>
-    {view === "home" && <div className="wr-home-side-art" aria-hidden="true">
+    <div className="wr-home-side-art" aria-hidden="true">
       <span className="wr-home-side-art-left" />
       <span className="wr-home-side-art-right" />
-    </div>}
+    </div>
     <div className="wr-shell">
     <a className="wr-skip-link" href="#wr-content">본문 바로가기</a>
     <WikiRaceHeader user={user} level={level} onLogout={onLogout} onNavigate={onNavigate} />
