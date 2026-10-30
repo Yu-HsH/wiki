@@ -19,6 +19,7 @@ import {
 } from "../utils/achievementDisplay";
 import { fetchTodayDailyChallenge, getFallbackDailyChallenge } from "../services/dailyChallengeService";
 import "../css/wikiRaceHome.css";
+import "../css/jungle65.css";
 import ProfileCard from "../components/ProfileCard";
 import useProfileCards from "../hooks/useProfileCards.js";
 import { buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
