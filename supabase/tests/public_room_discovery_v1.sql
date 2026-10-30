@@ -75,20 +75,21 @@ select is(public.join_public_room_v1('00000000-0000-0000-0a12-000000000002'::uui
 select throws_ok($$ select public.join_public_room_v1('00000000-0000-0000-0a12-000000000004'::uuid) $$,
                  'P0001','DUEL_ROOM_FULL','full room capacity rechecked on join');
 
--- Even the room owner must use the audited create RPC for visibility.
--- A joined guest has at most the same direct UPDATE rights, never more.
+-- Direct table DML is denied by Postgres privileges before the defensive
+-- visibility trigger runs. This is the expected stricter security boundary.
+-- The trigger also guards against future accidental grants.
 set local request.jwt.claim.sub = '00000000-0000-0000-0a11-000000000001';
 select throws_ok(
   $$ update public.game_rooms set is_public = true
      where id = '00000000-0000-0000-0a12-000000000001'::uuid $$,
-  'P0001','ROOM_VISIBILITY_RPC_REQUIRED',
-  'joined room host cannot toggle visibility through direct UPDATE');
+  '42501','permission denied for table game_rooms',
+  'joined room host cannot change visibility: direct table UPDATE denied');
 select throws_ok(
   $$ insert into public.game_rooms(room_code,host_user_id,mode,status,min_players,max_players,is_public)
      values ('P2FORG','00000000-0000-0000-0a11-000000000001'::uuid,
              'duel','waiting',2,2,true) $$,
-  'P0001','ROOM_VISIBILITY_RPC_REQUIRED',
-  'authenticated direct insert cannot forge a public room');
+  '42501','permission denied for table game_rooms',
+  'authenticated cannot forge a public room: direct table INSERT denied');
 
 select * from finish();
 rollback;
