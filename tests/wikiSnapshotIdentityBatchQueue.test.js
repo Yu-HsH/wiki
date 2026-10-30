@@ -55,8 +55,11 @@ test("edge function still resolves 50-title slices into the same full snapshot g
   assert.match(edge,/titles\.slice\(index, index \+ 50\)/);
   assert.match(edge,/mapWikiIdentityBatchesOrdered\(batches/);
   assert.match(edge,/for \(const data of pages\)/);
-  assert.match(edge,/pageIdentities\.get\(titleKey\(bodyLink\.title\)\)/);
-  assert.match(edge,/uniqueLinks\.set\(targetPageId,/);
+  const graph = readFileSync(new URL("../supabase/functions/wiki-snapshot/snapshotLinkGraph.js",import.meta.url),"utf8");
+  assert.match(edge,/buildSnapshotLinkRows\(bodyLinks, pageIdentities, pageId\)/);
+  assert.match(edge,/auditSnapshotLinkRows\(bodyLinks, pageIdentities, pageId, links\)/);
+  assert.match(graph,/pageIdentities\.get\(snapshotTitleKey\(bodyLink\.title\)\)/);
+  assert.match(graph,/uniqueLinks\.set\(targetPageId,/);
   assert.match(edge,/supabase\.rpc\("replace_wiki_snapshot_v2"/);
   assert.match(edge,/debugMetrics = body\?\.debugMetrics === true/);
   assert.match(edge,/identityMs,/);
