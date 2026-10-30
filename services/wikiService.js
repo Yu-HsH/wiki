@@ -23,6 +23,7 @@ export {
 
 const WIKI_API = "https://ko.wikipedia.org/w/api.php";
 const SUMMARY_API = "https://ko.wikipedia.org/api/rest_v1/page/summary";
+const REST_DOCUMENT_API = "https://ko.wikipedia.org/w/rest.php/v1/page";
 
 export const SANITIZER_BLOCKED_SELECTORS = [
   "style", "script", "iframe", "object", "embed", "form", "audio", "video", "math",
@@ -388,6 +389,68 @@ export async function fetchDocumentData(title, { signal } = {}) {
   };
 }
 
+/**
+ * REST/Parsoid markup uses ./Article (not /wiki/Article) hrefs.
+ * Translate ONLY explicitly relative article hrefs; all links still go through
+ * the unchanged authoritative API intersection and namespace checks.
+ * No href is trusted directly, and external URLs are never normalized.
+ */
+export function normalizeRestWikiLinksHtml(html = "") {
+  return String(html).replace(
+    /(<a\b[^>]*?\bhref\s*=\s*)(["'])\.\/([^"'<>]*)\2/gi,
+    (match, prefix, quote, path) => {
+      if (!path || path.startsWith(".") || path.startsWith("/")) return match;
+      return prefix + quote + "/wiki/" + path + quote;
+    }
+  );
+}
+
+/**
+ * EXPERIMENTAL: MediaWiki's REST page-with-HTML includes page id, latest
+ * revision id, canonical title and Parsoid HTML in one response. This is not
+ * enabled in production by default. It must preserve the authoritative
+ * snapshot / revision identities before being considered for general rollout.
+ */
+export async function fetchRestDocumentData(title, { signal, fetchImpl = fetch } = {}) {
+  const requestedTitle = normalizeRequestedTitle(title);
+  if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
+  const url = REST_DOCUMENT_API + "/" + encodeURIComponent(requestedTitle) + "/with_html";
+  const response = await fetchImpl(url, {
+    signal,
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("REST 문서 요청 실패 (" + response.status + ")");
+  const data = await response.json();
+  const pageId = data?.id;
+  const revisionId = data?.latest?.id;
+  const canonicalTitle = normalizeRequestedTitle(data?.title || "");
+  if (
+    !canonicalTitle ||
+    !/^\d+$/.test(String(pageId ?? "")) ||
+    !/^\d+$/.test(String(revisionId ?? "")) ||
+    typeof data?.html !== "string" ||
+    !data.html.trim()
+  ) {
+    throw new Error("REST 문서의 필수 ID/revision/HTML이 누락되었습니다.");
+  }
+  return {
+    pageId: String(pageId),
+    canonicalTitle,
+    revisionId: String(revisionId),
+    html: normalizeRestWikiLinksHtml(data.html),
+    documentApi: "rest",
+  };
+}
+
+export function isRestDocumentExperimentEnabled() {
+  try {
+    return typeof localStorage !== "undefined" &&
+      localStorage.getItem("wiki-race-document-api") === "rest";
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchDocumentHtml(title, options) {
   return (await fetchDocumentData(title, options)).html;
 }
@@ -442,11 +505,34 @@ async function fetchPageDataUncached(title, options = {}) {
       if (startedAt) stageMs[stage] = Math.round(performance.now() - startedAt);
     }
   };
-  const [summaryData, linkData, documentData] = await Promise.all([
+  const restEnabled = isRestDocumentExperimentEnabled();
+  let restFallback = null;
+  const readDocument = async () => {
+    if (!restEnabled) return fetchDocumentData(requestedTitle, { signal });
+    try {
+      return await track("restMs", () => fetchRestDocumentData(requestedTitle, { signal }));
+    } catch (error) {
+      if (signal?.aborted || error?.name === "AbortError") throw error;
+      restFallback = "rest-unavailable";
+      return track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
+    }
+  };
+  const [summaryData, linkData, initialDocumentData] = await Promise.all([
     track("summaryMs", () => fetchSummary(requestedTitle, { signal })),
     track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal })),
-    track("documentMs", () => fetchDocumentData(requestedTitle, { signal })),
+    track("documentMs", readDocument),
   ]);
+  let documentData = initialDocumentData;
+  // A REST/Parsoid page must agree with the canonical title AND page id of
+  // MediaWiki's complete link listing before any legal navigation is exposed.
+  // Otherwise, fall back to the preexisting Action parse endpoint.
+  if (documentData.documentApi === "rest" && (
+    normalizeTitle(documentData.canonicalTitle) !== normalizeTitle(linkData.canonicalTitle) ||
+    (linkData.pageId && documentData.pageId !== linkData.pageId)
+  )) {
+    restFallback = "identity-mismatch";
+    documentData = await track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
+  }
 
   const canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
   const pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
@@ -468,6 +554,8 @@ async function fetchPageDataUncached(title, options = {}) {
   if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
     console.info("[wiki-page-perf]", {
       ...stageMs,
+      documentApi: documentData.documentApi === "rest" ? "rest" : "parse",
+      restFallback,
       linkPages: linkData.pageCounts.length,
       links: linkData.links.length,
       htmlBytes: documentData.html.length,
