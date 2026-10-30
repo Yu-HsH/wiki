@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const sql = readFileSync(new URL("../supabase/migrations/20261030040000_public_room_host_presence_v1.sql", import.meta.url), "utf8");
+const sql = readFileSync(new URL("../supabase/migrations/20261030034358_public_room_host_presence_v1.sql", import.meta.url), "utf8");
 const roomPage = readFileSync(new URL("../pages/RoomPage.jsx", import.meta.url), "utf8");
 
 test("public-room discovery filters waiting rooms without an actual host participant", () => {
