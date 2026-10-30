@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { mapWikiIdentityBatchesOrdered } from "./identityBatchQueue.js";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -82,16 +83,25 @@ function uniqueTitles(titles: string[]) {
 // resolve only those titles to stable page IDs with prop=info.
 async function fetchPageIdentities(titles: string[]) {
   const identities = new Map<string, { pageId: string; title: string }>();
+  // Identical 50-title slices to the original sequential implementation.
+  // Run at most 3 requests concurrently, then consume results in *original*
+  // batch order, preserving duplicate/redirect resolution and link identity.
+  // Any failed batch rejects the whole snapshot: no incomplete graph is saved.
+  const batches: string[][] = [];
   for (let index = 0; index < titles.length; index += 50) {
     const batch = titles.slice(index, index + 50);
-    if (!batch.length) continue;
-    const data = await wikiJson({
+    if (batch.length) batches.push(batch);
+  }
+  const pages = await mapWikiIdentityBatchesOrdered(batches, (batch: string[]) =>
+    wikiJson({
       action: "query",
       prop: "info",
       titles: batch.join("|"),
       redirects: "1",
       format: "json",
-    });
+    })
+  );
+  for (const data of pages) {
     for (const page of Object.values(data?.query?.pages ?? {}) as any[]) {
       if (page?.ns !== 0 || page?.pageid == null || !page?.title) continue;
       const identity = { pageId: String(page.pageid), title: normalizeTitle(page.title) };
