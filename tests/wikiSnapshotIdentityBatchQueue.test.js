@@ -58,5 +58,12 @@ test("edge function still resolves 50-title slices into the same full snapshot g
   assert.match(edge,/pageIdentities\.get\(titleKey\(bodyLink\.title\)\)/);
   assert.match(edge,/uniqueLinks\.set\(targetPageId,/);
   assert.match(edge,/supabase\.rpc\("replace_wiki_snapshot_v2"/);
+  assert.match(edge,/debugMetrics = body\?\.debugMetrics === true/);
+  assert.match(edge,/identityMs,/);
+  assert.match(edge,/storedLinkCount: links\.length/);
+  assert.match(edge,/totalMs: Math\.round\(performance\.now\(\) - snapshotStartedAt\)/);
+  const client=readFileSync(new URL("../services/wikiSnapshotService.js",import.meta.url),"utf8");
+  assert.match(client,/localStorage\?\.getItem\("wiki-race-wiki-perf"\)/);
+  assert.match(client,/console\.info\("\[wiki-snapshot-perf\]"/);
   assert.doesNotMatch(edge,/uniqueTitles\(bodyLinks\.map\(.*\)\)\.slice\(/);
 });
