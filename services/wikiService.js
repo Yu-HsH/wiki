@@ -534,8 +534,8 @@ async function fetchPageDataUncached(title, options = {}) {
     documentData = await track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
   }
 
-  const canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
-  const pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
+  let canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
+  let pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
   if (
     linkData.canonicalTitle &&
     normalizeTitle(linkData.canonicalTitle) !== normalizeTitle(canonicalTitle)
@@ -543,12 +543,38 @@ async function fetchPageDataUncached(title, options = {}) {
     throw new Error("본문과 링크 API의 최종 문서 제목이 일치하지 않습니다.");
   }
 
-  const apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
-  const sanitizeStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
-  const sanitized = sanitizeWikiDocument(documentData.html, {
+  let apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
+  let sanitizeStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
+  let sanitized = sanitizeWikiDocument(documentData.html, {
     currentTitle: canonicalTitle,
     apiLinks: linkData.links,
   });
+  // If REST markup unexpectedly yields no legal navigation while the official
+  // link API lists links and HTML has anchors, keep the game playable by
+  // reverting to Action parse before exposing the page to any move handler.
+  if (
+    documentData.documentApi === "rest" &&
+    sanitized.rawAnchorCount > 0 &&
+    sanitized.linkTitles.length === 0 &&
+    linkData.links.length > 0
+  ) {
+    restFallback = "no-allowed-links";
+    documentData = await track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
+    canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
+    pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
+    if (
+      linkData.canonicalTitle &&
+      normalizeTitle(linkData.canonicalTitle) !== normalizeTitle(canonicalTitle)
+    ) {
+      throw new Error("REST 폴백 이후 본문과 링크 API의 문서 제목이 일치하지 않습니다.");
+    }
+    apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
+    sanitizeStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
+    sanitized = sanitizeWikiDocument(documentData.html, {
+      currentTitle: canonicalTitle,
+      apiLinks: linkData.links,
+    });
+  }
   // Opt-in timing counters (no titles, paths or user information) identify slow
   // sequential wiki API pagination vs. DOM sanitation without changing link rules.
   if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
