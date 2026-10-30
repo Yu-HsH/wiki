@@ -189,6 +189,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
+    const debugMetrics = body?.debugMetrics === true;
+    const snapshotStartedAt = performance.now();
     const requestedTitle = normalizeTitle(body?.title);
     const requestId = body?.requestId || null;
     const expectedPageId = body?.pageId == null ? "" : String(body.pageId);
@@ -215,6 +217,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    const parseStartedAt = performance.now();
     let parsedPage: any;
     if (expectedPageId && expectedRevisionId) {
       const pinnedParseResponse = await wikiJson({
@@ -256,6 +259,7 @@ Deno.serve(async (req) => {
       return json({ code: "WIKI_REVISION_CHANGED" }, 409);
     }
 
+    const parseMs = Math.round(performance.now() - parseStartedAt);
     const pageId = String(parsedPage.pageid);
     const revisionId = String(parsedPage.revid);
     const canonicalTitle = normalizeTitle(parsedPage.title);
@@ -276,9 +280,10 @@ Deno.serve(async (req) => {
     }
 
     const bodyLinks = extractBodyLinks(parsedPage?.text?.["*"] ?? "");
-    const pageIdentities = await fetchPageIdentities(
-      uniqueTitles(bodyLinks.map((link) => link.title))
-    );
+    const uniqueBodyTitles = uniqueTitles(bodyLinks.map((link) => link.title));
+    const identityStartedAt = performance.now();
+    const pageIdentities = await fetchPageIdentities(uniqueBodyTitles);
+    const identityMs = Math.round(performance.now() - identityStartedAt);
     const uniqueLinks = new Map<string, any>();
     for (const bodyLink of bodyLinks) {
       const identity = pageIdentities.get(titleKey(bodyLink.title));
@@ -299,6 +304,7 @@ Deno.serve(async (req) => {
       targetTitle: link.targetTitle,
       linkText: link.linkText,
     }));
+    const writeStartedAt = performance.now();
     const { data: snapshotData, error: snapshotError } = await supabase.rpc("replace_wiki_snapshot_v2", {
       p_page_id: pageId,
       p_revision_id: revisionId,
@@ -306,6 +312,7 @@ Deno.serve(async (req) => {
       p_request_id: requestId,
       p_links: links,
     });
+    const writeMs = Math.round(performance.now() - writeStartedAt);
     if (snapshotError) throw snapshotError;
     const snapshot = Array.isArray(snapshotData) ? snapshotData[0] : snapshotData;
     if (!snapshot?.id) throw new Error("SNAPSHOT_REPLACEMENT_FAILED");
@@ -316,6 +323,18 @@ Deno.serve(async (req) => {
       revisionId,
       canonicalTitle,
       documentHtml: parsedPage?.text?.["*"] ?? "",
+      ...(debugMetrics ? {
+        debugPerf: {
+          state: "created",
+          parseMs,
+          identityMs,
+          writeMs,
+          totalMs: Math.round(performance.now() - snapshotStartedAt),
+          uniqueTitleCount: uniqueBodyTitles.length,
+          resolvedTitleCount: pageIdentities.size,
+          storedLinkCount: links.length,
+        }
+      } : {}),
       links: links.map((row) => ({
         pageId: row.targetPageId,
         title: row.targetTitle,
