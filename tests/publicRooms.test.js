@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const sql = readFileSync(new URL("../supabase/migrations/20261030032252_public_room_discovery_v1.sql", import.meta.url), "utf8");
-const cleanup = readFileSync(new URL("../supabase/migrations/20261030032253_public_room_visibility_hardening_v1.sql", import.meta.url), "utf8");
+const cleanup = readFileSync(new URL("../supabase/migrations/20261030044026_public_room_visibility_hardening_v1.sql", import.meta.url), "utf8");
 const page = readFileSync(new URL("../pages/MultiplayerPage.jsx", import.meta.url), "utf8");
 const duel = readFileSync(new URL("../services/multiplayerService.js", import.meta.url), "utf8");
 const group = readFileSync(new URL("../services/groupMultiplayerService.js", import.meta.url), "utf8");
