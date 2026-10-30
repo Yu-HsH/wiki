@@ -1,6 +1,5 @@
 import useRaceMotion from "../hooks/useRaceMotion.js";
 import useGameAudio from "../hooks/useGameAudio.js";
-import { audioManager } from "../services/audioManager.js";
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import PageLoadingOverlay from "../components/PageLoadingOverlay";
@@ -8,6 +7,7 @@ import {
   fetchRandomTitle,
   fetchDistinctRandomTitle,
   fetchSummary,
+  fetchPageSummary,
   fetchPageData,
   normalizeTitle,
 } from "../services/wikiService";
@@ -41,9 +41,6 @@ import {
 } from "../utils/singleGameSession";
 import { LOBBY_PATH } from "../utils/appRoutes";
 
-import ItemBar from "../components/ItemBar";
-import EffectOverlay from "../components/EffectOverlay";
-import useItemSystem from "../hooks/useItemSystem";
 import {
   applyAuthenticatedSingleMove,
   applyGuestSingleMove,
@@ -98,6 +95,31 @@ export default function GamePage({
     pageId: null,
     revisionId: null,
   });
+
+
+  // Reserved runs contain only the target snapshot. Fetch its public encyclopedia
+  // description independently: never delay the authoritative start/countdown.
+  // The same path restores the brief after F5 or an in-progress reconnect.
+  const [targetBrief, setTargetBrief] = useState({ title: "", text: "", status: "idle" });
+  const [targetBriefRetry, setTargetBriefRetry] = useState(0);
+  useEffect(() => {
+    if (!target.title || target.summary) return undefined;
+    const controller = new AbortController();
+    let cancelled = false;
+    const title = target.title;
+    setTargetBrief({ title, text: "", status: "loading" });
+    fetchPageSummary(title, { signal: controller.signal })
+      .then(({ extract, description }) => {
+        if (cancelled) return;
+        const text = extract || description || "";
+        setTargetBrief({ title, text, status: text ? "success" : "empty" });
+      })
+      .catch(error => {
+        if (cancelled || isAbortError(error)) return;
+        setTargetBrief({ title, text: "", status: "error" });
+      });
+    return () => { cancelled = true; controller.abort(); };
+  }, [target.title, target.summary, targetBriefRetry]);
 
   const [startTitle, setStartTitle] = useState("");
   const [pathTitles, setPathTitles] = useState([]);
@@ -273,8 +295,6 @@ export default function GamePage({
     });
   }, [elapsedSeconds, saveLocalGameState, target.title, user]);
 
-  const useItems = location.state?.useItems ?? true;
-
   // ----------------------------
   // 타이머
   // ----------------------------
@@ -399,7 +419,6 @@ export default function GamePage({
 
       moveInFlightRef.current = true;
       const request = pageRequestManagerRef.current.begin();
-      const previousTitle = currentTitle;
       setClickCount((prev) => prev + 1);
       setIsLoading(true);
       setIsPageLoading(true);
@@ -471,11 +490,6 @@ export default function GamePage({
           serverStateVersion: authoritativeMove?.run?.state_version ?? activeRun?.state_version,
         });
 
-        if (previousTitle) {
-          itemSystem.pushHistory(previousTitle);
-        }
-
-        itemSystem.clearPageScopedEffects();
         window.scrollTo({ top: 0, behavior: "smooth" });
 
         const serverSolved = authoritativeMove?.run?.status === "completed";
@@ -521,36 +535,6 @@ export default function GamePage({
       setAuthoritativeRun,
     ]
   );
-
-  // ----------------------------
-  // 아이템 시스템
-  // ----------------------------
-  const itemSystem = useItemSystem({
-    mode: "single",
-    links,
-    targetTitle: target.title,
-    // These two support effects are owned locally by the existing Single hook.
-    // Movement audio continues to wait for handleMove's accepted server response.
-    onLocalItemApplied: item => {
-      void audioManager.play('itemReveal', { key: `single-support:${serverRun?.id || 'guest'}:${item.instanceId}` });
-    },
-    onMove: async (title) => {
-      await handleMove(title);
-    },
-    onRandomTeleport: async () => {
-      const randomTitle = await fetchDistinctRandomTitle(
-        new Set([normalizeTitle(currentTitle)])
-      );
-      await handleMove(randomTitle);
-    },
-  });
-
-  // COUNTDOWN 진입 시 아이템 초기화
-  useEffect(() => {
-    if (phase === PHASE.COUNTDOWN) {
-      itemSystem.initializeItems({ total: 4, rareCount: 1 });
-    }
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReservedDue = useCallback(() => {
     const run = serverRunRef.current;
@@ -1021,7 +1005,14 @@ export default function GamePage({
             <main className="wr-race-main">
               <MobileRouteNotes path={pathTitles} startTitle={startTitle} />
               <WikiViewer
-                target={target}
+                target={{
+                  ...target,
+                  summary: target.summary || (targetBrief.title === target.title ? targetBrief.text : ""),
+                  ...(!target.summary && target.title ? {
+                    summaryStatus: targetBrief.title === target.title ? targetBrief.status : "loading",
+                    onSummaryRetry: () => setTargetBriefRetry(value => value + 1),
+                  } : {}),
+                }}
                 currentTitle={currentTitle}
                 currentSummary={currentSummary}
                 currentDocumentHtml={currentDocumentHtml}
@@ -1033,37 +1024,12 @@ export default function GamePage({
                 startTitle={startTitle}
                 onLinkClick={handleMove}
                 readOnly={isReservedSingle(serverRun) && phase !== PHASE.PLAYING}
-                highlightRequestId={itemSystem.highlightRequestId}
-                searchAvailable={itemSystem.searchAvailable}
-                onConsumeSearch={itemSystem.consumeSearchAvailable}
-                status={itemSystem.status}
               />
             </main>
           </div>
 
-          {/* 아이템 관련 UI — 싱글 전용 기존 아이템. 1:1 공격/방어 아이템을 가져오지 않는다 */}
-          {useItems && itemSystem && (
-            <div className="wr-race-dock wr-race-dock--single">
-              <ItemBar
-                inventory={itemSystem.inventory}
-                canUseItem={item => (!isReservedSingle(serverRun) || phase === PHASE.PLAYING) && itemSystem.canUseItem(item)}
-                onUseItem={id => { if (!isReservedSingle(serverRun) || phase === PHASE.PLAYING) itemSystem.useItem(id); }}
-              />
-              <span className="wr-race-dock-hint">싱글 아이템 · 힌트 표시는 목표 링크를 보장하지 않습니다</span>
-            </div>
-          )}
         </RaceFrame>
         </div>
-      )}
-
-      {useItems && itemSystem && showRace && (
-        <EffectOverlay
-          blindActive={itemSystem.activeEffects.self.some(
-            (e) => e.id === "blind"
-          )}
-          floatingMessage={itemSystem.floatingMessage}
-          immune={Date.now() < itemSystem.immunityUntil.self}
-        />
       )}
 
       {/* 카운트다운 오버레이 */}
