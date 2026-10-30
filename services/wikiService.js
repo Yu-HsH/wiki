@@ -401,10 +401,19 @@ async function fetchPageDataUncached(title, options = {}) {
   if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
 
   const apiStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
+  const stageMs = {};
+  const track = async (stage, run) => {
+    const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
+    try {
+      return await run();
+    } finally {
+      if (startedAt) stageMs[stage] = Math.round(performance.now() - startedAt);
+    }
+  };
   const [summaryData, linkData, documentData] = await Promise.all([
-    fetchSummary(requestedTitle, { signal }),
-    fetchAllLinkPages(requestedTitle, { signal }),
-    fetchDocumentData(requestedTitle, { signal }),
+    track("summaryMs", () => fetchSummary(requestedTitle, { signal })),
+    track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal })),
+    track("documentMs", () => fetchDocumentData(requestedTitle, { signal })),
   ]);
 
   const canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
@@ -426,6 +435,7 @@ async function fetchPageDataUncached(title, options = {}) {
   // sequential wiki API pagination vs. DOM sanitation without changing link rules.
   if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
     console.debug("[wiki-page-perf]", {
+      ...stageMs,
       linkPages: linkData.pageCounts.length,
       links: linkData.links.length,
       htmlBytes: documentData.html.length,
