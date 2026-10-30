@@ -2,6 +2,7 @@ import {
   createAllowedTitleMap,
   dedupeLinkItems,
   dedupeTitles,
+  extractHrefsFromHtml,
   extractTitleFromWikiHref,
   isSpecialTitle,
   isValidInternalLink,
@@ -377,8 +378,12 @@ export async function fetchLinks(title, options) {
   return (await fetchAllLinkPages(title, options)).links;
 }
 
-export async function fetchDocumentData(title, { signal } = {}) {
-  const url = buildWikiQueryUrl({ action: "parse", page: title, prop: "text|revid", redirects: "1", format: "json" });
+export async function fetchDocumentData(title, { signal, includeLinks = false } = {}) {
+  const url = buildWikiQueryUrl({
+    action: "parse", page: title,
+    prop: includeLinks ? "text|revid|links" : "text|revid",
+    redirects: "1", format: "json"
+  });
   const data = await fetchJson(url, "문서 본문을 불러오지 못했습니다.", { signal });
   if (!data?.parse?.title) throw new Error("문서 본문 응답 형식이 올바르지 않습니다.");
   return {
@@ -386,6 +391,7 @@ export async function fetchDocumentData(title, { signal } = {}) {
     canonicalTitle: data.parse.title,
     revisionId: data.parse.revid != null ? String(data.parse.revid) : null,
     html: data?.parse?.text?.["*"] || "",
+    ...(includeLinks ? { parsedLinks: data.parse.links } : {}),
   };
 }
 
@@ -451,6 +457,54 @@ export function isRestDocumentExperimentEnabled() {
   }
 }
 
+/**
+ * EXPERIMENTAL: action=parse can return the full rendered article, revision
+ * and links in ONE API response. The legacy query+links fallback remains
+ * authoritative whenever links are absent/incomplete or malformed.
+ *
+ * Unlike v1, NEVER cap the article or the number of legal links.
+ */
+export function isCombinedParseExperimentEnabled() {
+  try {
+    return typeof localStorage !== "undefined" &&
+      localStorage.getItem("wiki-race-document-api") === "combined";
+  } catch {
+    return false;
+  }
+}
+
+export function buildCombinedParseLinkData(documentData) {
+  const links = documentData?.parsedLinks;
+  if (!Array.isArray(links) || !links.length) return null;
+  if (links.some((link) => typeof link?.ns !== "number" ||
+    typeof (link?.["*"] ?? link?.title) !== "string")) return null;
+  const normalized = dedupeLinkItems(links.map((link) => ({
+    ns: link.ns,
+    title: link["*"] ?? link.title,
+  })));
+  if (!normalized.length) return null;
+
+  const canonical = documentData.canonicalTitle;
+  const present = new Set(normalized.map((link) => normalizeTitle(link.title)));
+  // If the complete rendered HTML has any potentially playable article href
+  // missing from the parse metadata, do NOT silently discard that link.
+  // The original complete query+links pagination is then required.
+  const missing = extractHrefsFromHtml(documentData.html)
+    .map((href) => extractTitleFromWikiHref(href, canonical))
+    .filter(Boolean)
+    .some((title) => !present.has(normalizeTitle(title)));
+  if (missing) return null;
+
+  return {
+    canonicalTitle: canonical,
+    pageId: documentData.pageId,
+    links: normalized,
+    pageCounts: [normalized.length],
+    normalized: [],
+    redirects: [],
+  };
+}
+
 export async function fetchDocumentHtml(title, options) {
   return (await fetchDocumentData(title, options)).html;
 }
@@ -506,9 +560,21 @@ async function fetchPageDataUncached(title, options = {}) {
     }
   };
   const restEnabled = isRestDocumentExperimentEnabled();
+  const combinedEnabled = isCombinedParseExperimentEnabled() && !restEnabled;
   let restFallback = null;
+  let combinedFallback = null;
+  let linkSource = combinedEnabled ? "combined" : "query";
   const readDocument = async () => {
-    if (!restEnabled) return fetchDocumentData(requestedTitle, { signal });
+    if (!restEnabled) {
+      if (!combinedEnabled) return fetchDocumentData(requestedTitle, { signal });
+      try {
+        return await fetchDocumentData(requestedTitle, { signal, includeLinks: true });
+      } catch (error) {
+        if (signal?.aborted || error?.name === "AbortError") throw error;
+        combinedFallback = "combined-unavailable";
+        return fetchDocumentData(requestedTitle, { signal });
+      }
+    }
     try {
       return await track("restMs", () => fetchRestDocumentData(requestedTitle, { signal }));
     } catch (error) {
@@ -517,12 +583,21 @@ async function fetchPageDataUncached(title, options = {}) {
       return track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
     }
   };
-  const [summaryData, linkData, initialDocumentData] = await Promise.all([
+  const [summaryData, initialLinkData, initialDocumentData] = await Promise.all([
     track("summaryMs", () => fetchSummary(requestedTitle, { signal })),
-    track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal })),
+    combinedEnabled ? Promise.resolve(null) : track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal })),
     track("documentMs", readDocument),
   ]);
   let documentData = initialDocumentData;
+  let linkData = initialLinkData;
+  if (combinedEnabled) {
+    linkData = buildCombinedParseLinkData(documentData);
+    if (!linkData) {
+      combinedFallback ||= "incomplete-or-unsafe-links";
+      linkSource = "query";
+      linkData = await track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal }));
+    }
+  }
   // A REST/Parsoid page must agree with the canonical title AND page id of
   // MediaWiki's complete link listing before any legal navigation is exposed.
   // Otherwise, fall back to the preexisting Action parse endpoint.
@@ -575,13 +650,30 @@ async function fetchPageDataUncached(title, options = {}) {
       apiLinks: linkData.links,
     });
   }
+  if (
+    combinedEnabled &&
+    linkSource === "combined" &&
+    sanitized.rawAnchorCount > 0 &&
+    sanitized.linkTitles.length === 0
+  ) {
+    combinedFallback = "no-clickable-links";
+    linkSource = "query";
+    linkData = await track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal }));
+    sanitized = sanitizeWikiDocument(documentData.html, {
+      currentTitle: canonicalTitle,
+      apiLinks: linkData.links,
+    });
+    apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
+  }
   // Opt-in timing counters (no titles, paths or user information) identify slow
   // sequential wiki API pagination vs. DOM sanitation without changing link rules.
   if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
     console.info("[wiki-page-perf]", {
       ...stageMs,
-      documentApi: documentData.documentApi === "rest" ? "rest" : "parse",
+      documentApi: documentData.documentApi === "rest" ? "rest" : combinedEnabled ? "combined" : "parse",
       restFallback,
+      combinedFallback,
+      linkSource,
       linkPages: linkData.pageCounts.length,
       links: linkData.links.length,
       htmlBytes: documentData.html.length,
@@ -642,7 +734,7 @@ export async function fetchPageData(title, options = {}) {
     throw error;
   }
 
-  const key = `${normalizeTitle(requestedTitle)}|${maxQuickLinks}|${isRestDocumentExperimentEnabled() ? "rest" : "parse"}`;
+  const key = `${normalizeTitle(requestedTitle)}|${maxQuickLinks}|${isRestDocumentExperimentEnabled() ? "rest" : isCombinedParseExperimentEnabled() ? "combined" : "parse"}`;
   const now = Date.now();
   const hit = wikiPageCache.get(key);
   if (hit && now < hit.expiresAt) {
