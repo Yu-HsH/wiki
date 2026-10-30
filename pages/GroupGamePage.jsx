@@ -23,6 +23,7 @@ import {
 
 import {
     fetchPageData,
+    createWikiMoveTimer,
     fetchPageSummary,
     formatDuration,
     normalizeTitle,
@@ -1258,17 +1259,21 @@ export default function GroupGamePage() {
         })) return;
 
         moveInFlightRef.current = true;
+        const wikiTimer = createWikiMoveTimer("group");
+        let failed = false;
         snapshotGuardRef.current.cancel();
         setIsLoading(true);
 
         try {
             const page = await fetchPageData(nextTitle);
+            wikiTimer.stage("fetch");
             // 이 두 줄의 순서가 계약이다. 서버는 링크 행의 target_revision_id가 아니라
             // 목적지의 스냅샷 행에서 revision을 해석한다 (private.resolve_wiki_revision).
             // 스냅샷이 없으면 apply_group_move_v2는 coalesce로 **이전 문서의 revision을
             // 남기고**(단일·1:1은 LINK_SNAPSHOT_MISSING으로 거절한다) 다음 이동이
             // LINK_NOT_ALLOWED로 막힌다. 근거: docs/agent/CURRENT.md §5.5-3.
             await ensureWikiSnapshot(page);
+            wikiTimer.stage("snapshot");
 
             if (normalizeTitle(page.title) === normalizeTitle(currentTitle)) return;
 
@@ -1278,6 +1283,7 @@ export default function GroupGamePage() {
                 nextPage: page,
                 clickedRawTitle: nextTitle,
             });
+            wikiTimer.stage("moveRpc");
             if (serverMove.room && roomRef.current?.status !== "finished") {
                 snapshotGuardRef.current.cancel();
                 roomRef.current = serverMove.room;
@@ -1333,6 +1339,7 @@ export default function GroupGamePage() {
 
             window.scrollTo({ top: 0, behavior: "smooth" });
         } catch (e) {
+            failed = true;
             const normalized = normalizeOnlineGameError(
                 e,
                 "문서 또는 진행 상태를 일시적으로 저장하지 못했습니다."
@@ -1347,6 +1354,7 @@ export default function GroupGamePage() {
                 message: normalized.message,
             });
         } finally {
+            wikiTimer.finish(failed ? "error" : "complete");
             moveInFlightRef.current = false;
             setIsLoading(false);
         }
