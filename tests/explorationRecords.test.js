@@ -500,7 +500,7 @@ test("(3) 로그인 창은 단일 modal 상태로만 열린다", async () => {
   const modalStates = introSource.match(/useState\(false\)/g) || [];
   assert.equal(modalStates.length, 1, "로그인 modal 상태는 하나뿐이어야 한다");
   assert.match(introSource, /const \[showLogin, setShowLogin\] = useState\(false\);/);
-  assert.equal((introSource.match(/<LoginPage isEmbedded \/>/g) || []).length, 1);
+  assert.equal((introSource.match(/<LoginPage\\b[^>]*\\bisEmbedded\\b[^>]*\\/>/g) || []).length, 1);
 });
 
 /* ────────────────────────────────────────────────────────────
