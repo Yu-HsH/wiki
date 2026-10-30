@@ -392,6 +392,38 @@ export async function fetchDocumentHtml(title, options) {
   return (await fetchDocumentData(title, options)).html;
 }
 
+/**
+ * Lightweight opt-in diagnostics for the *entire* click-to-confirmed-move
+ * pipeline. No page title, account, room code, path or user content is logged.
+ * Stage marks report time spent since the previous mark. UI network logs and
+ * server-side wiki-snapshot latency are not otherwise visible to the user.
+ */
+export function createWikiMoveTimer(mode, { storage = globalThis.localStorage, clock = globalThis.performance } = {}) {
+  let enabled = false;
+  try { enabled = storage?.getItem("wiki-race-wiki-perf") === "1"; } catch { /* storage blocked */ }
+  const validMode = ["single", "duel", "group"].includes(mode) ? mode : "other";
+  const start = enabled && typeof clock?.now === "function" ? clock.now() : 0;
+  let last = start;
+  const stages = {};
+  return {
+    stage(label) {
+      if (!start || !/^[a-zA-Z]{2,18}$/.test(label)) return;
+      const current = clock.now();
+      stages[`${label}Ms`] = Math.round(current - last);
+      last = current;
+    },
+    finish(outcome = "complete") {
+      if (!start) return;
+      console.info("[wiki-move-perf]", {
+        mode: validMode,
+        outcome: outcome === "error" ? "error" : outcome === "skipped" ? "skipped" : "complete",
+        ...stages,
+        totalMs: Math.round(clock.now() - start),
+      });
+    },
+  };
+}
+
 async function fetchPageDataUncached(title, options = {}) {
   const requestOptions = typeof options === "number"
     ? { maxQuickLinks: options }
@@ -434,7 +466,7 @@ async function fetchPageDataUncached(title, options = {}) {
   // Opt-in timing counters (no titles, paths or user information) identify slow
   // sequential wiki API pagination vs. DOM sanitation without changing link rules.
   if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
-    console.debug("[wiki-page-perf]", {
+    console.info("[wiki-page-perf]", {
       ...stageMs,
       linkPages: linkData.pageCounts.length,
       links: linkData.links.length,
