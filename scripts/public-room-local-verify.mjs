@@ -54,7 +54,7 @@ if (checkOnly) {
   process.exit(0);
 }
 
-const migrationPath = 'supabase/migrations/20261030010000_public_room_discovery_v1.sql';
+const migrationPath = 'supabase/migrations/20261030032252_public_room_discovery_v1.sql';
 const testPath = 'supabase/tests/public_room_discovery_v1.sql';
 if (!fs.existsSync(path.join(repoRoot, migrationPath))
   || !fs.existsSync(path.join(repoRoot, testPath))) throw new Error('PUBLIC_ROOM_SQL_NOT_FOUND');
