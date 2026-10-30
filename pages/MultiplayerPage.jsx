@@ -1,18 +1,20 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../authContext";
 import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog";
 import {
   createRoom,
-  findRoomByCode,
-  joinRoom,
+  joinDuelRoomByCode,
 } from "../services/multiplayerService";
 import {
   createGroupRoom,
   findGroupRoomByCode,
   joinGroupRoom,
 } from "../services/groupMultiplayerService";
+import {
+import { listPublicRooms, joinPublicRoom } from "../services/publicRoomService";
+import "../css/publicRooms.css";
 import {
   DUEL_ITEM_ROLE,
   DUEL_ROLE_LABELS,
@@ -59,6 +61,53 @@ export default function MultiplayerPage() {
   const submitting = useRef(false);
 
   const [useItems, setUseItems] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
+  const [publicRooms, setPublicRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [roomsError, setRoomsError] = useState("");
+  const roomsRequest = useRef(0);
+
+  const refreshPublicRooms = useCallback(async (mode = selectedMode) => {
+    if (!mode || !user?.id) return;
+    const request = ++roomsRequest.current;
+    setRoomsLoading(true);
+    setRoomsError("");
+    try {
+      const rooms = await listPublicRooms(mode);
+      if (request === roomsRequest.current) setPublicRooms(rooms);
+    } catch (error) {
+      if (request === roomsRequest.current) {
+        setRoomsError(error instanceof Error ? error.message : "공개방 목록을 불러오지 못했습니다.");
+        setPublicRooms([]);
+      }
+    } finally {
+      if (request === roomsRequest.current) setRoomsLoading(false);
+    }
+  }, [selectedMode, user?.id]);
+  useEffect(() => {
+    if (selectedMode && user?.id) void refreshPublicRooms(selectedMode);
+    else { setPublicRooms([]); setRoomsLoading(false); }
+    return () => { roomsRequest.current += 1; };
+  }, [selectedMode, user?.id, refreshPublicRooms]);
+
+  const handleJoinPublicRoom = async room => {
+    if (submitting.current || !user?.id) return;
+    try {
+      submitting.current = true;
+      setPending(true);
+      setSubmitError("");
+      await joinPublicRoom(room.room_id);
+      navigate(room.mode === "group"
+        ? `/multiplayer/group/room/${room.room_id}`
+        : `/multiplayer/room/${room.room_id}`, { state: { role: "guest" } });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "공개방에 참가하지 못했습니다.");
+      void refreshPublicRooms(room.mode);
+    } finally {
+      submitting.current = false;
+      setPending(false);
+    }
+  };
   const [showHelp, setShowHelp] = useState(false);
 
   /* =========================
@@ -77,7 +126,7 @@ export default function MultiplayerPage() {
       setSubmitError("");
 
       const room = await createRoom(user.id, {
-        useItems,
+        useItems, isPublic,
       });
 
       navigate(`/multiplayer/room/${room.id}`, {
@@ -111,11 +160,9 @@ export default function MultiplayerPage() {
       setPending(true);
       setSubmitError("");
 
-      const room = await findRoomByCode(code);
-      await joinRoom(room.id, user.id);
-
-      navigate(`/multiplayer/room/${room.id}`, {
-        state: { role: "guest", useItems: true },
+      const player = await joinDuelRoomByCode(code);
+      navigate(`/multiplayer/room/${player.room_id}`, {
+        state: { role: "guest" },
       });
     } catch (error) {
       setSubmitError(
@@ -151,8 +198,8 @@ export default function MultiplayerPage() {
         </header>
         <div className="wr-entry-title">
           <p className="wr-kicker">EXPEDITION BOARD · 원정대 준비</p>
-          <h1>방 만들기 · 코드로 참가</h1>
-          <p className="wr-entry-lead">함께할 탐험을 고르고, 방 코드를 공유해 같은 대기실에 모이세요.</p>
+          <h1>방 만들기 · 공개방 찾기</h1>
+          <p className="wr-entry-lead">공개방 목록에서 합류하거나, 비공개 방 코드를 공유해 함께 탐험하세요.</p>
         </div>
 
         {/* =========================
@@ -208,6 +255,12 @@ export default function MultiplayerPage() {
                   onChange={(e) => setUseItems(e.target.checked)}
                 />
                 아이템 사용 · 시작 시 {DUEL_SLOT_COUNT}칸
+              </label>
+
+              <label className="mp-option">
+                <input type="checkbox" checked={isPublic}
+                  onChange={event => setIsPublic(event.target.checked)} disabled={pending} />
+                공개방으로 만들기 · 다른 탐험가가 목록에서 참가할 수 있습니다
               </label>
 
               <button
@@ -270,6 +323,12 @@ export default function MultiplayerPage() {
                 </select>
               </label>
 
+              <label className="mp-option">
+                <input type="checkbox" checked={isPublic}
+                  onChange={event => setIsPublic(event.target.checked)} disabled={pending} />
+                공개방으로 만들기 · 목록에서 참가 가능
+              </label>
+
               <button
                 className="mp-action-btn mp-action-btn--primary"
                 disabled={pending}
@@ -285,7 +344,7 @@ export default function MultiplayerPage() {
                     setPending(true);
                     setSubmitError("");
 
-                    const room = await createGroupRoom({ maxPlayers: groupCapacity });
+                    const room = await createGroupRoom({ maxPlayers: groupCapacity, isPublic });
 
                     navigate(`/multiplayer/group/room/${room.id}`);
                   } catch (error) {
@@ -344,6 +403,42 @@ export default function MultiplayerPage() {
 
           </div>
         )}
+        {selectedMode && (
+          <section className="mp-public-board" aria-label="공개방 목록">
+            <div className="mp-public-board__header">
+              <div>
+                <span className="wr-kicker">03 · 공개 원정대 찾기</span>
+                <h2>참가할 수 있는 {selectedMode === "duel" ? "1:1" : "그룹"} 방</h2>
+                <p>공개 설정된 대기방만 표시됩니다. 비공개방은 방 코드로 참가하세요.</p>
+              </div>
+              <button type="button" className="mp-action-btn mp-action-btn--secondary"
+                disabled={pending || roomsLoading} onClick={() => void refreshPublicRooms(selectedMode)}>
+                {roomsLoading ? "불러오는 중…" : "새로고침"}
+              </button>
+            </div>
+            {roomsError && <p role="alert" className="mp-public-board__error">{roomsError}</p>}
+            {!roomsLoading && !roomsError && publicRooms.length === 0 && (
+              <p className="mp-public-board__empty">참가할 수 있는 공개방이 없어요. 직접 방을 만들어 보세요.</p>
+            )}
+            <ul className="mp-public-board__list">
+              {publicRooms.map(room => (
+                <li key={room.room_id} className="mp-public-room">
+                  <div className="mp-public-room__detail">
+                    <strong>{room.host_nickname || "탐험가"}님의 방</strong>
+                    <span>{room.current_players}/{room.max_players}명
+                      {room.mode === "duel" ? ` · ${room.use_items ? "아이템전" : "아이템 없음"}` : " · 그룹 탐험"}
+                    </span>
+                  </div>
+                  <button type="button" className="mp-action-btn mp-action-btn--primary"
+                    disabled={pending || roomsLoading} onClick={() => void handleJoinPublicRoom(room)}>
+                    참가하기
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* =========================
            에러 메시지
         ========================= */}
