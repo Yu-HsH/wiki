@@ -9,6 +9,7 @@ import {
   fetchSummary,
   fetchPageSummary,
   fetchPageData,
+  createWikiMoveTimer,
   normalizeTitle,
 } from "../services/wikiService";
 
@@ -50,6 +51,7 @@ import {
   leaveAuthenticatedSingleRun,
 } from "../services/singleGameService";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
+import { createWikiSnapshotOverlap } from "../services/wikiSnapshotOverlap.js";
 import { createPendingRequestStore } from "../utils/serverAuthority";
 import { useExitGuard } from "../components/ExitGuard";
 import { fetchTodayDailyChallenge } from "../services/dailyChallengeService";
@@ -418,21 +420,26 @@ export default function GamePage({
       if (phase !== PHASE.PLAYING || isLoading || moveInFlightRef.current) return;
 
       moveInFlightRef.current = true;
+      const wikiTimer = createWikiMoveTimer("single");
+      let failed = false;
       const request = pageRequestManagerRef.current.begin();
+      const overlap = createWikiSnapshotOverlap({ ensureSnapshot: ensureWikiSnapshot, signal: request.signal });
       setClickCount((prev) => prev + 1);
       setIsLoading(true);
       setIsPageLoading(true);
       setError("");
 
       try {
-        const page = await fetchPageData(nextTitle, { signal: request.signal });
+        const page = await fetchPageData(nextTitle, { signal: request.signal, onDocumentReady: overlap.onDocumentReady });
+        wikiTimer.stage("fetch");
         if (!pageRequestManagerRef.current.isCurrent(request.id)) return;
 
         let authoritativeMove = null;
         const activeRun = serverRunRef.current;
         if (isReservedSingle(activeRun) && activeRun.status !== 'active') throw new Error('서버에서 탐험 시작 상태를 확인해주세요.');
         if (isSupabaseConfigured && activeRun?.status === "active") {
-          await ensureWikiSnapshot(page);
+          await overlap.ensure(page);
+          wikiTimer.stage("snapshot");
           const pendingMutation = pendingRequestStoreRef.current.begin({
             runId: activeRun.id,
             mode: "single",
@@ -464,6 +471,7 @@ export default function GamePage({
               correlationId: pendingMutation.correlationId,
             });
           pendingRequestStoreRef.current.clear(pendingMutation.requestId);
+          wikiTimer.stage("moveRpc");
           setAuthoritativeRun(authoritativeMove.run);
         }
 
@@ -507,10 +515,12 @@ export default function GamePage({
           );
         }
       } catch (e) {
+        failed = true;
         if (!isAbortError(e) && pageRequestManagerRef.current.isCurrent(request.id)) {
           setError(e.message || "문서를 불러오는 중 오류가 발생했습니다.");
         }
       } finally {
+        wikiTimer.finish(failed ? "error" : "complete");
         moveInFlightRef.current = false;
         if (pageRequestManagerRef.current.isCurrent(request.id)) {
           setIsLoading(false);

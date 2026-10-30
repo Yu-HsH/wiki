@@ -869,7 +869,16 @@ test("P7 — 아이템 안내를 카탈로그에서 만든다 (베끼지 않는�
 test("P7 — 부모는 서버 미리보기 서비스를 사용하며 직접 Wikipedia로 우회하지 않는다", () => {
   const pageSource = read("pages/MultiplayerGamePage.jsx");
   assert.match(pageSource, /fetchDuelPreview\(/);
-  assert.doesNotMatch(pageSource, /fetchPageSummary\(/);
+  // The unrelated race goal-summary card may use Wikipedia's public REST
+  // summary endpoint; the *item's* protected preview must still use only
+  // the server-authorized fetchDuelPreview API and never bypass it.
+  const itemPreviewSource = pageSource.slice(
+    pageSource.indexOf("const handlePreviewLink ="),
+    pageSource.indexOf("const handleClosePreview =", pageSource.indexOf("const handlePreviewLink ="))
+  );
+  assert.ok(itemPreviewSource.length > 0);
+  assert.match(itemPreviewSource, /fetchDuelPreview\(/);
+  assert.doesNotMatch(itemPreviewSource, /fetchPageSummary\(/);
   assert.match(pageSource, /previewGenerationRef/);
   assert.match(pageSource, /refreshDuelItemState\(/);
 });

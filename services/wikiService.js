@@ -2,6 +2,7 @@ import {
   createAllowedTitleMap,
   dedupeLinkItems,
   dedupeTitles,
+  extractHrefsFromHtml,
   extractTitleFromWikiHref,
   isSpecialTitle,
   isValidInternalLink,
@@ -23,6 +24,7 @@ export {
 
 const WIKI_API = "https://ko.wikipedia.org/w/api.php";
 const SUMMARY_API = "https://ko.wikipedia.org/api/rest_v1/page/summary";
+const REST_DOCUMENT_API = "https://ko.wikipedia.org/w/rest.php/v1/page";
 
 export const SANITIZER_BLOCKED_SELECTORS = [
   "style", "script", "iframe", "object", "embed", "form", "audio", "video", "math",
@@ -376,8 +378,12 @@ export async function fetchLinks(title, options) {
   return (await fetchAllLinkPages(title, options)).links;
 }
 
-export async function fetchDocumentData(title, { signal } = {}) {
-  const url = buildWikiQueryUrl({ action: "parse", page: title, prop: "text|revid", redirects: "1", format: "json" });
+export async function fetchDocumentData(title, { signal, includeLinks = false } = {}) {
+  const url = buildWikiQueryUrl({
+    action: "parse", page: title,
+    prop: includeLinks ? "text|revid|links" : "text|revid",
+    redirects: "1", format: "json"
+  });
   const data = await fetchJson(url, "문서 본문을 불러오지 못했습니다.", { signal });
   if (!data?.parse?.title) throw new Error("문서 본문 응답 형식이 올바르지 않습니다.");
   return {
@@ -385,6 +391,143 @@ export async function fetchDocumentData(title, { signal } = {}) {
     canonicalTitle: data.parse.title,
     revisionId: data.parse.revid != null ? String(data.parse.revid) : null,
     html: data?.parse?.text?.["*"] || "",
+    ...(includeLinks ? { parsedLinks: data.parse.links } : {}),
+  };
+}
+
+/**
+ * REST/Parsoid markup uses ./Article (not /wiki/Article) hrefs.
+ * Translate ONLY explicitly relative article hrefs; all links still go through
+ * the unchanged authoritative API intersection and namespace checks.
+ * No href is trusted directly, and external URLs are never normalized.
+ */
+export function normalizeRestWikiLinksHtml(html = "") {
+  return String(html).replace(
+    /(<a\b[^>]*?\bhref\s*=\s*)(["'])\.\/([^"'<>]*)\2/gi,
+    (match, prefix, quote, path) => {
+      if (!path || path.startsWith(".") || path.startsWith("/")) return match;
+      return prefix + quote + "/wiki/" + path + quote;
+    }
+  );
+}
+
+/**
+ * EXPERIMENTAL: MediaWiki's REST page-with-HTML includes page id, latest
+ * revision id, canonical title and Parsoid HTML in one response. This is not
+ * enabled in production by default. It must preserve the authoritative
+ * snapshot / revision identities before being considered for general rollout.
+ */
+export async function fetchRestDocumentData(title, { signal, fetchImpl = fetch } = {}) {
+  const requestedTitle = normalizeRequestedTitle(title);
+  if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
+  const url = REST_DOCUMENT_API + "/" + encodeURIComponent(requestedTitle) + "/with_html";
+  const response = await fetchImpl(url, {
+    signal,
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("REST 문서 요청 실패 (" + response.status + ")");
+  const data = await response.json();
+  const pageId = data?.id;
+  const revisionId = data?.latest?.id;
+  const canonicalTitle = normalizeRequestedTitle(data?.title || "");
+  if (
+    !canonicalTitle ||
+    !/^\d+$/.test(String(pageId ?? "")) ||
+    !/^\d+$/.test(String(revisionId ?? "")) ||
+    typeof data?.html !== "string" ||
+    !data.html.trim()
+  ) {
+    throw new Error("REST 문서의 필수 ID/revision/HTML이 누락되었습니다.");
+  }
+  return {
+    pageId: String(pageId),
+    canonicalTitle,
+    revisionId: String(revisionId),
+    html: normalizeRestWikiLinksHtml(data.html),
+    documentApi: "rest",
+  };
+}
+
+export function isRestDocumentExperimentEnabled() {
+  try {
+    return typeof localStorage !== "undefined" &&
+      localStorage.getItem("wiki-race-document-api") === "rest";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * EXPERIMENTAL: action=parse can return the full rendered article, revision
+ * and links in ONE API response. The legacy query+links fallback remains
+ * authoritative whenever links are absent/incomplete or malformed.
+ *
+ * Unlike v1, NEVER cap the article or the number of legal links.
+ */
+export function isCombinedParseExperimentEnabled() {
+  try {
+    return typeof localStorage !== "undefined" &&
+      localStorage.getItem("wiki-race-document-api") === "combined";
+  } catch {
+    return false;
+  }
+}
+
+export function buildCombinedParseLinkData(documentData, diagnostics = null) {
+  const report = (reason, counts = {}) => {
+    if (diagnostics) Object.assign(diagnostics, { reason, ...counts });
+  };
+  const links = documentData?.parsedLinks;
+  if (!Array.isArray(links) || !links.length) {
+    report("missing-parse-metadata", { parseMetadataCount: 0 });
+    return null;
+  }
+  if (links.some((link) => typeof link?.ns !== "number" ||
+    typeof (link?.["*"] ?? link?.title) !== "string")) {
+    report("invalid-parse-metadata", { parseMetadataCount: links.length });
+    return null;
+  }
+  const normalized = dedupeLinkItems(links.map((link) => ({
+    ns: link.ns,
+    title: link["*"] ?? link.title,
+  })));
+  if (!normalized.length) {
+    report("no-valid-metadata-links", { parseMetadataCount: links.length, ns0LinkCount: 0 });
+    return null;
+  }
+
+  const canonical = documentData.canonicalTitle;
+  const present = new Set(normalized.map((link) => normalizeTitle(link.title)));
+  // Never suppress a playable link just because parse metadata omitted it.
+  // Count missing titles for diagnostics, but never include their text in logs.
+  const candidates = extractHrefsFromHtml(documentData.html)
+    .map((href) => extractTitleFromWikiHref(href, canonical))
+    .filter(Boolean);
+  const uniqueCandidates = new Set(candidates.map(normalizeTitle));
+  let missingMetadataCount = 0;
+  for (const title of uniqueCandidates) {
+    if (!present.has(title)) missingMetadataCount += 1;
+  }
+  const counts = {
+    parseMetadataCount: links.length,
+    ns0LinkCount: normalized.length,
+    htmlCandidateCount: candidates.length,
+    uniqueHtmlCandidateCount: uniqueCandidates.size,
+    missingMetadataCount,
+  };
+  if (missingMetadataCount) {
+    report("html-candidates-missing-from-parse", counts);
+    return null;
+  }
+  report("complete", counts);
+
+  return {
+    canonicalTitle: canonical,
+    pageId: documentData.pageId,
+    links: normalized,
+    pageCounts: [normalized.length],
+    normalized: [],
+    redirects: [],
   };
 }
 
@@ -392,22 +535,115 @@ export async function fetchDocumentHtml(title, options) {
   return (await fetchDocumentData(title, options)).html;
 }
 
-export async function fetchPageData(title, options = {}) {
+/**
+ * Lightweight opt-in diagnostics for the *entire* click-to-confirmed-move
+ * pipeline. No page title, account, room code, path or user content is logged.
+ * Stage marks report time spent since the previous mark. UI network logs and
+ * server-side wiki-snapshot latency are not otherwise visible to the user.
+ */
+export function createWikiMoveTimer(mode, { storage = globalThis.localStorage, clock = globalThis.performance } = {}) {
+  let enabled = false;
+  try { enabled = storage?.getItem("wiki-race-wiki-perf") === "1"; } catch { /* storage blocked */ }
+  const validMode = ["single", "duel", "group"].includes(mode) ? mode : "other";
+  const start = enabled && typeof clock?.now === "function" ? clock.now() : 0;
+  let last = start;
+  const stages = {};
+  return {
+    stage(label) {
+      if (!start || !/^[a-zA-Z]{2,18}$/.test(label)) return;
+      const current = clock.now();
+      stages[`${label}Ms`] = Math.round(current - last);
+      last = current;
+    },
+    finish(outcome = "complete") {
+      if (!start) return;
+      console.info("[wiki-move-perf]", {
+        mode: validMode,
+        outcome: outcome === "error" ? "error" : outcome === "skipped" ? "skipped" : "complete",
+        ...stages,
+        totalMs: Math.round(clock.now() - start),
+      });
+    },
+  };
+}
+
+async function fetchPageDataUncached(title, options = {}) {
   const requestOptions = typeof options === "number"
     ? { maxQuickLinks: options }
     : options || {};
-  const { signal, maxQuickLinks = 20 } = requestOptions;
+  const { signal, maxQuickLinks = 20, onDocumentReady } = requestOptions;
   const requestedTitle = normalizeRequestedTitle(title);
   if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
 
-  const [summaryData, linkData, documentData] = await Promise.all([
-    fetchSummary(requestedTitle, { signal }),
-    fetchAllLinkPages(requestedTitle, { signal }),
-    fetchDocumentData(requestedTitle, { signal }),
+  const apiStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
+  const stageMs = {};
+  const track = async (stage, run) => {
+    const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
+    try {
+      return await run();
+    } finally {
+      if (startedAt) stageMs[stage] = Math.round(performance.now() - startedAt);
+    }
+  };
+  const restEnabled = isRestDocumentExperimentEnabled();
+  const combinedEnabled = isCombinedParseExperimentEnabled() && !restEnabled;
+  let restFallback = null;
+  let combinedFallback = null;
+  let linkSource = combinedEnabled ? "combined" : "query";
+  const combinedDiagnostics = combinedEnabled ? {} : null;
+  const readDocument = async () => {
+    if (!restEnabled) {
+      if (!combinedEnabled) {
+        const document = await fetchDocumentData(requestedTitle, { signal });
+        if (!signal?.aborted && typeof onDocumentReady === "function") {
+          try { onDocumentReady(document); } catch { /* optional optimization must never block article data */ }
+        }
+        return document;
+      }
+      try {
+        return await fetchDocumentData(requestedTitle, { signal, includeLinks: true });
+      } catch (error) {
+        if (signal?.aborted || error?.name === "AbortError") throw error;
+        combinedFallback = "combined-unavailable";
+        return fetchDocumentData(requestedTitle, { signal });
+      }
+    }
+    try {
+      return await track("restMs", () => fetchRestDocumentData(requestedTitle, { signal }));
+    } catch (error) {
+      if (signal?.aborted || error?.name === "AbortError") throw error;
+      restFallback = "rest-unavailable";
+      return track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
+    }
+  };
+  const [summaryData, initialLinkData, initialDocumentData] = await Promise.all([
+    track("summaryMs", () => fetchSummary(requestedTitle, { signal })),
+    combinedEnabled ? Promise.resolve(null) : track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal })),
+    track("documentMs", readDocument),
   ]);
+  let documentData = initialDocumentData;
+  let linkData = initialLinkData;
+  if (combinedEnabled) {
+    linkData = buildCombinedParseLinkData(documentData, combinedDiagnostics);
+    if (!linkData) {
+      combinedFallback ||= "incomplete-or-unsafe-links";
+      linkSource = "query";
+      linkData = await track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal }));
+    }
+  }
+  // A REST/Parsoid page must agree with the canonical title AND page id of
+  // MediaWiki's complete link listing before any legal navigation is exposed.
+  // Otherwise, fall back to the preexisting Action parse endpoint.
+  if (documentData.documentApi === "rest" && (
+    normalizeTitle(documentData.canonicalTitle) !== normalizeTitle(linkData.canonicalTitle) ||
+    (linkData.pageId && documentData.pageId !== linkData.pageId)
+  )) {
+    restFallback = "identity-mismatch";
+    documentData = await track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
+  }
 
-  const canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
-  const pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
+  let canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
+  let pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
   if (
     linkData.canonicalTitle &&
     normalizeTitle(linkData.canonicalTitle) !== normalizeTitle(canonicalTitle)
@@ -415,10 +651,79 @@ export async function fetchPageData(title, options = {}) {
     throw new Error("본문과 링크 API의 최종 문서 제목이 일치하지 않습니다.");
   }
 
-  const sanitized = sanitizeWikiDocument(documentData.html, {
+  let apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
+  let sanitizeStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
+  let sanitized = sanitizeWikiDocument(documentData.html, {
     currentTitle: canonicalTitle,
     apiLinks: linkData.links,
   });
+  // If REST markup unexpectedly yields no legal navigation while the official
+  // link API lists links and HTML has anchors, keep the game playable by
+  // reverting to Action parse before exposing the page to any move handler.
+  if (
+    documentData.documentApi === "rest" &&
+    sanitized.rawAnchorCount > 0 &&
+    sanitized.linkTitles.length === 0 &&
+    linkData.links.length > 0
+  ) {
+    restFallback = "no-allowed-links";
+    documentData = await track("fallbackMs", () => fetchDocumentData(requestedTitle, { signal }));
+    canonicalTitle = documentData.canonicalTitle || linkData.canonicalTitle || summaryData.title;
+    pageId = documentData.pageId || linkData.pageId || summaryData.pageId || null;
+    if (
+      linkData.canonicalTitle &&
+      normalizeTitle(linkData.canonicalTitle) !== normalizeTitle(canonicalTitle)
+    ) {
+      throw new Error("REST 폴백 이후 본문과 링크 API의 문서 제목이 일치하지 않습니다.");
+    }
+    apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
+    sanitizeStartedAt = typeof performance !== "undefined" ? performance.now() : 0;
+    sanitized = sanitizeWikiDocument(documentData.html, {
+      currentTitle: canonicalTitle,
+      apiLinks: linkData.links,
+    });
+  }
+  if (
+    combinedEnabled &&
+    linkSource === "combined" &&
+    sanitized.rawAnchorCount > 0 &&
+    sanitized.linkTitles.length === 0
+  ) {
+    combinedFallback = "no-clickable-links";
+    linkSource = "query";
+    linkData = await track("linksMs", () => fetchAllLinkPages(requestedTitle, { signal }));
+    sanitized = sanitizeWikiDocument(documentData.html, {
+      currentTitle: canonicalTitle,
+      apiLinks: linkData.links,
+    });
+    apiElapsedMs = apiStartedAt ? performance.now() - apiStartedAt : 0;
+  }
+  // Opt-in timing counters (no titles, paths or user information) identify slow
+  // sequential wiki API pagination vs. DOM sanitation without changing link rules.
+  if (typeof localStorage !== "undefined" && localStorage.getItem("wiki-race-wiki-perf") === "1") {
+    if (combinedDiagnostics) {
+      console.info("[wiki-combined-summary] " + [
+        "reason=" + (combinedDiagnostics.reason || "unknown"),
+        "metadata=" + (combinedDiagnostics.parseMetadataCount ?? 0),
+        "htmlCandidates=" + (combinedDiagnostics.uniqueHtmlCandidateCount ?? 0),
+        "missing=" + (combinedDiagnostics.missingMetadataCount ?? 0),
+        "source=" + linkSource,
+      ].join(" "));
+    }
+    console.info("[wiki-page-perf]", {
+      ...stageMs,
+      documentApi: documentData.documentApi === "rest" ? "rest" : combinedEnabled ? "combined" : "parse",
+      restFallback,
+      combinedFallback,
+      linkSource,
+      ...(combinedDiagnostics ? { combinedDiagnostics } : {}),
+      linkPages: linkData.pageCounts.length,
+      links: linkData.links.length,
+      htmlBytes: documentData.html.length,
+      apiMs: Math.round(apiElapsedMs),
+      sanitizeMs: Math.round(sanitizeStartedAt ? performance.now() - sanitizeStartedAt : 0),
+    });
+  }
   const links = sanitized.linkTitles;
   const quickLinks = selectDeterministicQuickLinks(links, {
     canonicalTitle,
@@ -447,6 +752,72 @@ export async function fetchPageData(title, options = {}) {
     },
   };
 }
+/**
+ * Short-lived, size-limited, in-memory read cache. No DB authority, page
+ * snapshot, movement validation or link allowlist behavior is changed.
+ * Returning to a recently seen long article avoids repeating expensive
+ * MediaWiki pagination and HTML sanitization. Aborted work is never cached.
+ */
+const WIKI_PAGE_CACHE_TTL_MS = 90_000;
+const WIKI_PAGE_CACHE_MAX_ENTRIES = 4;
+const WIKI_PAGE_CACHE_MAX_HTML_CHARS = 3_000_000;
+const wikiPageCache = new Map();
+const wikiPageInFlight = new Map();
+
+export async function fetchPageData(title, options = {}) {
+  const requestOptions = typeof options === "number"
+    ? { maxQuickLinks: options }
+    : options || {};
+  const requestedTitle = normalizeRequestedTitle(title);
+  if (!requestedTitle) throw new Error("불러올 문서 제목이 올바르지 않습니다.");
+  const { signal, maxQuickLinks = 20, onDocumentReady } = requestOptions;
+  if (signal?.aborted) {
+    const error = new Error("요청이 취소되었습니다.");
+    error.name = "AbortError";
+    throw error;
+  }
+
+  const key = `${normalizeTitle(requestedTitle)}|${maxQuickLinks}|${isRestDocumentExperimentEnabled() ? "rest" : isCombinedParseExperimentEnabled() ? "combined" : "parse"}`;
+  const now = Date.now();
+  const hit = wikiPageCache.get(key);
+  if (hit && now < hit.expiresAt) {
+    wikiPageCache.delete(key);
+    wikiPageCache.set(key, hit);
+    if (typeof onDocumentReady === "function" && !signal?.aborted) {
+      try { onDocumentReady(hit.data); } catch { /* optional optimization */ }
+    }
+    return { ...hit.data, requestedTitle };
+  }
+  if (hit) wikiPageCache.delete(key);
+
+  // Only non-abortable callers coalesce. An AbortController still owns its
+  // own request lifecycle, preventing a cancelled solo move from reusing it.
+  if (!signal && wikiPageInFlight.has(key)) {
+    const page = await wikiPageInFlight.get(key);
+    if (typeof onDocumentReady === "function") {
+      try { onDocumentReady(page); } catch { /* optional optimization */ }
+    }
+    return { ...page, requestedTitle };
+  }
+
+  const work = fetchPageDataUncached(requestedTitle, requestOptions);
+  if (!signal) wikiPageInFlight.set(key, work);
+  try {
+    const page = await work;
+    if (!signal?.aborted && page.documentHtml.length <= WIKI_PAGE_CACHE_MAX_HTML_CHARS) {
+      wikiPageCache.delete(key);
+      wikiPageCache.set(key, { expiresAt: Date.now() + WIKI_PAGE_CACHE_TTL_MS, data: page });
+      while (wikiPageCache.size > WIKI_PAGE_CACHE_MAX_ENTRIES) {
+        wikiPageCache.delete(wikiPageCache.keys().next().value);
+      }
+    }
+    return page;
+  } finally {
+    if (!signal && wikiPageInFlight.get(key) === work) wikiPageInFlight.delete(key);
+  }
+}
+
+
 export async function resolveWikiTitle(input) {
   const url = `https://ko.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
     input

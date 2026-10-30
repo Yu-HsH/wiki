@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { mapWikiIdentityBatchesOrdered } from "./identityBatchQueue.js";
+import { extractSnapshotBodyLinks, buildSnapshotLinkRows, auditSnapshotLinkRows } from "./snapshotLinkGraph.js";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -48,22 +50,6 @@ function getPage(data: any) {
   return page;
 }
 
-function extractBodyLinks(html: string) {
-  const links: { title: string; linkText: string }[] = [];
-  const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(anchorPattern)) {
-    const href = match[1] ?? "";
-    if (!href.startsWith("/wiki/") || href.includes("?")) continue;
-    let raw = href.slice("/wiki/".length).split("#", 1)[0];
-    try { raw = decodeURIComponent(raw); } catch { /* keep raw title */ }
-    const title = normalizeTitle(raw);
-    if (!title || blockedNamespaces.test(title)) continue;
-    const linkText = (match[2] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    links.push({ title, linkText });
-  }
-  return links;
-}
-
 // 본문 링크에는 같은 문서가 여러 번 나온다. identities는 titleKey로 키를 잡으므로 같은 key를
 // 두 번 조회해도 Map 내용은 같다 — 배치 전에 접으면 요청 수만 줄고 결과는 그대로다.
 // 최초 등장 순서를 보존한다 (링크 순서·ordinal은 아래 bodyLinks 루프가 따로 정한다).
@@ -82,16 +68,25 @@ function uniqueTitles(titles: string[]) {
 // resolve only those titles to stable page IDs with prop=info.
 async function fetchPageIdentities(titles: string[]) {
   const identities = new Map<string, { pageId: string; title: string }>();
+  // Identical 50-title slices to the original sequential implementation.
+  // Run at most 3 requests concurrently, then consume results in *original*
+  // batch order, preserving duplicate/redirect resolution and link identity.
+  // Any failed batch rejects the whole snapshot: no incomplete graph is saved.
+  const batches: string[][] = [];
   for (let index = 0; index < titles.length; index += 50) {
     const batch = titles.slice(index, index + 50);
-    if (!batch.length) continue;
-    const data = await wikiJson({
+    if (batch.length) batches.push(batch);
+  }
+  const pages = await mapWikiIdentityBatchesOrdered(batches, (batch: string[]) =>
+    wikiJson({
       action: "query",
       prop: "info",
       titles: batch.join("|"),
       redirects: "1",
       format: "json",
-    });
+    })
+  );
+  for (const data of pages) {
     for (const page of Object.values(data?.query?.pages ?? {}) as any[]) {
       if (page?.ns !== 0 || page?.pageid == null || !page?.title) continue;
       const identity = { pageId: String(page.pageid), title: normalizeTitle(page.title) };
@@ -179,6 +174,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
+    const debugMetrics = body?.debugMetrics === true;
+    const snapshotStartedAt = performance.now();
     const requestedTitle = normalizeTitle(body?.title);
     const requestId = body?.requestId || null;
     const expectedPageId = body?.pageId == null ? "" : String(body.pageId);
@@ -205,6 +202,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    const parseStartedAt = performance.now();
     let parsedPage: any;
     if (expectedPageId && expectedRevisionId) {
       const pinnedParseResponse = await wikiJson({
@@ -246,6 +244,7 @@ Deno.serve(async (req) => {
       return json({ code: "WIKI_REVISION_CHANGED" }, 409);
     }
 
+    const parseMs = Math.round(performance.now() - parseStartedAt);
     const pageId = String(parsedPage.pageid);
     const revisionId = String(parsedPage.revid);
     const canonicalTitle = normalizeTitle(parsedPage.title);
@@ -265,30 +264,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    const bodyLinks = extractBodyLinks(parsedPage?.text?.["*"] ?? "");
-    const pageIdentities = await fetchPageIdentities(
-      uniqueTitles(bodyLinks.map((link) => link.title))
-    );
-    const uniqueLinks = new Map<string, any>();
-    for (const bodyLink of bodyLinks) {
-      const identity = pageIdentities.get(titleKey(bodyLink.title));
-      if (!identity) continue;
-      const targetPageId = identity.pageId;
-      if (targetPageId === pageId || uniqueLinks.has(targetPageId)) continue;
-      uniqueLinks.set(targetPageId, {
-        targetPageId,
-        targetTitle: identity.title,
-        linkText: bodyLink.linkText || identity.title,
-      });
+    const bodyLinks = extractSnapshotBodyLinks(parsedPage?.text?.["*"] ?? "");
+    const uniqueBodyTitles = uniqueTitles(bodyLinks.map((link) => link.title));
+    const identityStartedAt = performance.now();
+    const pageIdentities = await fetchPageIdentities(uniqueBodyTitles);
+    const identityMs = Math.round(performance.now() - identityStartedAt);
+    // Complete stable page-ID graph from the whole pinned HTML, never a
+    // truncated browser or API sample. Redirect aliases collapse by page ID.
+    const links = buildSnapshotLinkRows(bodyLinks, pageIdentities, pageId);
+    const graphAudit = auditSnapshotLinkRows(bodyLinks, pageIdentities, pageId, links);
+    if (graphAudit.missingCount !== 0 ||
+        graphAudit.actualCount !== graphAudit.expectedCount ||
+        graphAudit.samplePresent.some((present) => !present)) {
+      throw new Error("WIKI_SNAPSHOT_LINK_INTEGRITY_FAILED");
     }
-
-    // targetRevisionId는 더 이상 보내지 않는다 (위 주석 참조).
-    // `replace_wiki_snapshot_v2`는 키가 없으면 null로 저장하고, 컬럼은 nullable이다.
-    const links = [...uniqueLinks.values()].map((link) => ({
-      targetPageId: link.targetPageId,
-      targetTitle: link.targetTitle,
-      linkText: link.linkText,
-    }));
+    const writeStartedAt = performance.now();
     const { data: snapshotData, error: snapshotError } = await supabase.rpc("replace_wiki_snapshot_v2", {
       p_page_id: pageId,
       p_revision_id: revisionId,
@@ -296,6 +286,7 @@ Deno.serve(async (req) => {
       p_request_id: requestId,
       p_links: links,
     });
+    const writeMs = Math.round(performance.now() - writeStartedAt);
     if (snapshotError) throw snapshotError;
     const snapshot = Array.isArray(snapshotData) ? snapshotData[0] : snapshotData;
     if (!snapshot?.id) throw new Error("SNAPSHOT_REPLACEMENT_FAILED");
@@ -306,6 +297,19 @@ Deno.serve(async (req) => {
       revisionId,
       canonicalTitle,
       documentHtml: parsedPage?.text?.["*"] ?? "",
+      ...(debugMetrics ? {
+        debugPerf: {
+          state: "created",
+          parseMs,
+          identityMs,
+          writeMs,
+          totalMs: Math.round(performance.now() - snapshotStartedAt),
+          uniqueTitleCount: uniqueBodyTitles.length,
+          resolvedTitleCount: pageIdentities.size,
+          storedLinkCount: links.length,
+          graphAudit,
+        }
+      } : {}),
       links: links.map((row) => ({
         pageId: row.targetPageId,
         title: row.targetTitle,

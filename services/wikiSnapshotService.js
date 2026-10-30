@@ -43,6 +43,8 @@ export async function ensureWikiSnapshot(
     throw error;
   }
 
+  let debugMetrics = false;
+  try { debugMetrics = globalThis.localStorage?.getItem("wiki-race-wiki-perf") === "1"; } catch { /* storage blocked */ }
   const { data, error } = await supabase.functions.invoke("wiki-snapshot", {
     body: {
       requestId,
@@ -50,9 +52,13 @@ export async function ensureWikiSnapshot(
       pageId: identity.pageId,
       revisionId: identity.revisionId,
       includeDocument,
+      ...(debugMetrics ? { debugMetrics: true } : {}),
     },
   });
 
+  if (debugMetrics && data?.debugPerf) {
+    console.info("[wiki-snapshot-perf]", data.debugPerf);
+  }
   if (error) throw error;
   if (!data?.snapshotId || !data?.pageId || !data?.revisionId) {
     const invalid = new Error("서버가 유효한 문서 snapshot을 반환하지 않았습니다.");

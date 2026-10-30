@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { normalizeTitle } from "../services/wikiService";
 import { TARGET_SUMMARY_STATUS } from "../utils/groupTargetSummary";
 
@@ -39,6 +39,7 @@ export default function WikiViewer({
   // Phase 3 race presentation: the page owns the HUD; the viewer renders the article first.
   articleTag = null,
   showTargetBrief = true,
+  openTargetBriefByDefault = false,
 }) {
   const articleRef = useRef(null);
   const censoredSet = useMemo(
@@ -48,7 +49,9 @@ export default function WikiViewer({
   const [headings, setHeadings] = useState([]);
   const [showFindToast, setShowFindToast] = useState(false);
   const [activeId, setActiveId] = useState("");
-  const [hoveredHeading, setHoveredHeading] = useState(null); // { text, top, right }
+  const [railExpanded, setRailExpanded] = useState(false);
+  const [targetBriefOpen, setTargetBriefOpen] = useState(openTargetBriefByDefault);
+  const previousPageTitleRef = useRef(null);
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMessage, setSearchMessage] = useState("");
@@ -56,6 +59,18 @@ export default function WikiViewer({
   const [targetSummaryExpanded, setTargetSummaryExpanded] = useState(false);
   const [targetSummaryCanExpand, setTargetSummaryCanExpand] = useState(false);
   const targetSummaryRef = useRef(null);
+  // Reset only after a confirmed article identity changes; never on a failed or blocked click.
+  // Layout phase executes after the new HTML is committed and before paint.
+  useLayoutEffect(() => {
+    const title = normalizeTitle(currentTitle || "");
+    if (!title) return;
+    const previous = previousPageTitleRef.current;
+    previousPageTitleRef.current = title;
+    if (previous && previous !== title) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [currentTitle]);
+
   const hasCanonicalTargetTitle =
     target?.canonicalTitle &&
     normalizeTitle(target.canonicalTitle) !== normalizeTitle(target.title);
@@ -156,7 +171,8 @@ export default function WikiViewer({
       setActiveId(currentActive);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [currentDocumentHtml, isLoading]);
   {
@@ -247,7 +263,7 @@ export default function WikiViewer({
   }, [censoredSet, currentDocumentHtml, readOnly]);
 
   const scrollToHeading = (id) => {
-    const el = document.getElementById(id);
+    const el = articleRef.current?.querySelector(`#${CSS.escape(id)}`);
     if (el) {
       // 브라우저 기본 부드러운 스크롤 이동
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -454,45 +470,42 @@ export default function WikiViewer({
         </div>
       )}
 
-      {/* 우측 네비게이션 미니맵 */}
+      {/* Right article TOC: a compact rail that opens into readable sections on hover,
+          keyboard focus or explicit touch toggle. No movement or navigation authority changes. */}
       {headings.length > 0 && (
-        <nav className="wiki-nav-rail" aria-label="문서 목차">
-          {headings.map((h) => (
-            <button
-              type="button"
-              aria-label={`목차: ${h.text}`}
-              key={h.id}
-              className={`wiki-nav-item ${activeId === h.id ? 'active' : ''}`}
-              onClick={() => scrollToHeading(h.id)}
-              onMouseEnter={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setHoveredHeading({
-                  text: h.text,
-                  top: rect.top + rect.height / 2,
-                  right: window.innerWidth - rect.left + 8
-                });
-              }}
-              onMouseLeave={() => setHoveredHeading(null)}
-            >
-              <div className={`wiki-nav-dot level-${h.level}`} />
-            </button>
-          ))}
+        <nav
+          className={`wiki-nav-rail ${railExpanded ? "is-expanded" : ""}`}
+          aria-label="현재 문서 목차"
+        >
+          <button
+            type="button"
+            className="wiki-nav-toggle"
+            aria-expanded={railExpanded}
+            aria-label={railExpanded ? "문서 목차 접기" : "문서 목차 펼치기"}
+            onClick={() => setRailExpanded((expanded) => !expanded)}
+          >
+            <span className="wiki-nav-toggle-mark" aria-hidden="true">☷</span>
+            <span className="wiki-nav-toggle-label">문서 목차</span>
+          </button>
+          <div className="wiki-nav-section-list">
+            {headings.map((h) => (
+              <button
+                type="button"
+                title={h.text}
+                aria-label={`목차: ${h.text}`}
+                aria-current={activeId === h.id ? "location" : undefined}
+                key={h.id}
+                className={`wiki-nav-item wiki-nav-level-${h.level} ${activeId === h.id ? "active" : ""}`}
+                onClick={() => scrollToHeading(h.id)}
+              >
+                <span className={`wiki-nav-dot level-${h.level}`} aria-hidden="true" />
+                <span className="wiki-nav-item-label">{h.text}</span>
+              </button>
+            ))}
+          </div>
         </nav>
       )}
 
-      {/* 별도 레이어의 Floating 툴팁 (overflow 잘림 방지) */}
-      {hoveredHeading && (
-        <div
-          className="wiki-nav-floating-tooltip"
-          style={{
-            top: hoveredHeading.top,
-            right: hoveredHeading.right
-          }}
-        >
-          {hoveredHeading.text}
-        </div>
-
-      )}
       {searchPanelOpen && (
         <div className="game-search-panel">
           <div className="game-search-panel__head">
@@ -528,7 +541,7 @@ export default function WikiViewer({
 
       {/* 목표 설명 — HUD에는 목표 제목만 있다. 설명은 접힌 상태로 본문 위에 둔다 */}
       {hasTargetBrief && (
-        <details className="wr-target-brief">
+        <details className="wr-target-brief" open={targetBriefOpen} onToggle={(event) => setTargetBriefOpen(event.currentTarget.open)}>
           <summary>
             <span className="wr-hud-label">목표 설명</span>
             <strong>{target.title || "목표 문서"}</strong>

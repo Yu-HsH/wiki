@@ -159,7 +159,7 @@
 .wr-race .target-summary-error { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 /* Heading rail + toasts restyled lightly */
-.wr-race .wiki-nav-rail { opacity: .7; }
+.wr-race .wiki-nav-rail { opacity: 1; }
 .wr-race .wiki-find-block-toast { top: calc(var(--race-top) + 12px); }
 .wr-race .game-search-panel { top: calc(var(--race-top) + 12px); background: var(--wr-paper); border: 1px solid var(--wr-frame); color: var(--wr-ink); border-radius: 10px; box-shadow: 0 10px 24px rgb(36 52 48 / 12%); }
 
