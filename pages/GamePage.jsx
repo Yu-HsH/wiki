@@ -413,7 +413,8 @@ export default function GamePage({
 
   // ----------------------------
   // 문서 이동
-  // ------  const handleMove = useCallback(
+  // ----------------------------
+  const handleMove = useCallback(
     async (nextTitle) => {
       if (phase !== PHASE.PLAYING || isLoading || moveInFlightRef.current) return;
 
@@ -540,10 +541,6 @@ export default function GamePage({
       isGuestGame,
       loadLocalGameState,
       setAuthoritativeRun,
-    ]
-  );
-
-tativeRun,
     ]
   );
 
