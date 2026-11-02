@@ -1,24 +1,41 @@
+# 현재 상태 — Jungle65 검색 보안 통합 후보
+
+갱신: **2026-11-02 KST**. 기준 커밋 **82c82f0407c7d83df06d6a4f466057b80bbda643** (디자인27e5056 + 보안fdd7190 병합). 브랜치 **codex/jungle65-release-candidate-20261102**. 이 문서 갱신 커밋의 부모가 위 기준이며, 제품 소스는 위 HEAD로 확정했다. 문서 커밋의 최종 SHA/CI/Preview는 원격 PR head/checks로 확인한다.
+
+현재 판정: **HOLD / 출시 후보 로컬 검증 완료 / 운영 적용0**. 사용자 이번 범위는 보안 commit/push·CI·별도 통합 후보·성능 실측·Cutover 계획까지다. 운영 DB/Edge/main/Production 변경은 승인되지 않았다.
+
+- 디자인27e5056/PR #7 보존. 보안 fdd7190f16057a156caac5f78335a6d9d72f570e commit/push 완료, GitHub CI41455976926 success, Vercel Preview FgMokRQeCB9nutoJV6tReXkPbggd Ready/같은SHA (2026-11-02 실측).
+- 보안 npm756/756·build/diff, 신규SQL23/23·기존아이템157/157, 실제 로컬Auth/DB/Edge/React19/19 재실행 통과. 통합761/761·build/diff 통과. 공통741+디자인5+보안15, 삭제/skip0. 보호84·전체154/108화면·모바일78·1:1로비116/38화면·실제서버19·실제문서UI10회 통과.
+- 실제 Wikipedia5종75회:68성공/7WORKER_LIMIT. 약5.7MB 문서 cache miss에서 CPU hard limit 반복. 실제 cache hit와 실패한 warm 준비 시도를 구분했다. 15초 연장0. 성능 게이트 HOLD.
+- 신규 migration1개/Edge1개는 **로컬에만 적용·검증**. 운영 CLI migration 재조회는 project link 부재로 실패했다. 기록된45개/기존Edge는 이번 실측값으로 재사용하지 않으며 적용 창에서 다시 조회한다. 이번 세션의 읽기 조회와 과거 기록을 혼동하지 않는다.
+- 구형 탭의 DOM 검색은 새 DB/Edge만으로 차단되지 않는다. 서버 경기 진입 제한·drain·클라이언트 전환 및 검색 비활성화 복구안의 별도 승인 필요. 기존 VITE 점검은 구형 탭의 서버 쓰기 차단이 아니다.
+- 승인된 기존 QA1개는 유지. 신규 계정/경기/아이템/XP/업적 운영 생성0, 계정 삭제0. [QA 기록](../ops/JUNGLE65-QA-2026-11-02.md).
+
+상세: [통합 게이트](../ops/JUNGLE65-SEARCH-RELEASE-GATE-2026-11-02.md), [성능](../ops/SEARCH-PERFORMANCE-2026-11-02.md), [Cutover/Rollback](../ops/JUNGLE65-SEARCH-CUTOVER-2026-11-02.md).
+
+---
+
+## 아래는 이전 통합·QA 기록 (현재 상태는 위 내용 우선)
+
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-11-02** (Jungle65 최종 통합·Production 배포 게이트 검증 중. 운영 적용 전).
-기준 커밋: **`bd87c4dd88857b74da19c585660c8c65f605b91e`** + 선별된 미커밋 Jungle65 후보. 제품 fingerprint `497d5686171e5ee4bb93d70d7dcf047852427f0f9628b6fbd8f0c1443154f010`. 이 기록을 포함할 커밋의 부모를 기준으로 적었다.
-브랜치: **`feat/jungle65-design-20261030`**. 원격main **`8da7d25f4c364f431f8baf8b1abc685a3bee9e6e`** (2026-11-02 git실측). 실제VercelProduction **`4MdbEvoe5bArd9Fd1BvyTc8xpGgv` / Ready / 같은mainSHA**, alias wiki-dusky-one.vercel.app. 아래 이전날짜 기록의 미push/미적용/구Production값은 당시 상태다. #15 이후의mainpush실행자·승인·정확한횟수는 미확인이므로 과거번호를 추측해추가하지않는다.
+갱신 날짜: **2026-11-02**. **Jungle65 출시 HOLD / 검색 보안 보완은 별도 로컬 검증 완료 / 운영 보안 미적용**.
+기준 커밋: **`27e5056d2780e84bd107e64d10684be63fd204aa`** (동결 디자인). 보안 보완은 main **`8da7d25f4c364f431f8baf8b1abc685a3bee9e6e`** 기반 별도 미커밋 worktree다. 이 HOLD/QA 상태 갱신은 로컬 미커밋 문서이며 디자인 commit을 변경하지 않는다.
+현재 디자인 브랜치: **`feat/jungle65-design-20261030`**. 원격 main=`8da7d25`, 원격 디자인=`27e5056` (2026-11-02 git 재확인). Production=`4MdbEvoe5bArd9Fd1BvyTc8xpGgv` / Ready / `8da7d25`, alias wiki-dusky-one.vercel.app. main 병합·운영 migration/Edge 변경·새 Production 배포는 하지 않았다.
 
-## 2026-11-02 Jungle65 최종 통합 — 운영 배포 게이트 검증 중
+## 2026-11-02 최종 판정과 인계
 
-[릴리스 기록](../ops/RELEASE-2026-11-02.md), [선별 파일·해시](JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json). 사용자 요청은 모든 안전게이트 충족 후 실제main통합·Production배포다. 현 단계main병합/운영DB/Edge변경0. npm746/746·build/diff성공, 새fixture스모크154+78+84+19+246+116검사, 실제격리서버UI22검사통과 — 기준 위HEAD + 미커밋후보, 2026-11-02 KST [산출물]. 실제문서싱글완주/최종CI·Preview/이번후보검색소비위험승인은아직미확인이다.
+사용자가 디자인 후보의 검색 성공 소비 위험 수용을 거절하고 선행 보안을 요청해 **출시 HOLD**다. [릴리스 기록](../ops/RELEASE-2026-11-02.md), [디자인 선별 파일·해시](JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json). PR #7은 OPEN, commit27e5056의 GitHub CI 성공 및 Vercel Preview `G4KNeE3psSnd767xzVcGyLjQYfcG` Ready/동일SHA 확인. 과거 승인을 이번 위험 수용으로 확장하지 않는다.
 
-운영migration45/후보45/pending0, public함수72·테이블36·정책37, Edge8ACTIVE(single-run3, wiki-snapshot4, duel-link-preview1 포함) 읽기전용재확인. 현재검색성공소비서버권위위험은미해결이며 10-29후보승인을자동확장하지않는다. 이전CURRENT기준078a690이HEAD보다57커밋/4일뒤처졌음을작업전보고하고 실제조회값을이상단에반영했다.
+디자인 로컬 실행은 bd87c4d + 동결 전 동일 제품 작업 트리, 2026-11-02 KST 기준: npm746/746·build/diff 통과, fixture154+78+84+19+246+116검사 및 실제 격리 서버UI22검사 통과 [산출물]. 실제 Wikipedia 싱글 직접 지정 완주 +15XP·중복 지급 방지·결과 복구도 격리 서버에서 확인했다. 랜덤/오늘의 도전 실제 문서 후속 검증은 HOLD 후 중단했고 완료로 계산하지 않는다.
 
-이하 이전 날짜의 기록은 역사적 근거로 보존한다.
+별도 보안 브랜치 `codex/search-consumption-authority-20261102`, 위치 `.worktrees/search-consumption-authority-20261102`. [로컬 보안 보고서](../../.worktrees/search-consumption-authority-20261102/docs/agent/SEARCH-CONSUMPTION-AUTHORITY-2026-11-02.md). 기준8da7d25 + 미커밋 소스14파일 fingerprint `873f432929d993b5fed9a008660051df34e2442ae988af669979e10dc1d7473e`, 2026-11-02 KST: npm756/756·build/diff, 새 검색DB23/23·기존아이템DB157/157·실제 격리 Deno/Auth/RPC/React16검사 통과. 서로 다른 동시8요청은 성공1개, 중복 요청·응답 유실·React 상태 변조·F5·만료/소유권/문서 frame 검증을 포함한다. 기존 이벤트는 append-only로 유지한다. 보안 수정은 미커밋/미push/운영 미적용이며 Production의 기존 문제는 아직 미해결이다.
 
-## 2026-11-02 Jungle65 최종 통합 — 운영 배포 게이트 검증 중
+운영 읽기 전용 재확인: migration45=디자인 후보45/pending0, public함수72·테이블36·정책37, Edge8개ACTIVE(single-run3/wiki-snapshot4/duel-link-preview1 포함). 보안 후보에는 승인 전인 신규 migration1개·새 Edge1개가 있으며 적용 순서/권한/저장량/cold latency를 별도 검토해야 한다.
 
-[릴리스 기록](../ops/RELEASE-2026-11-02.md), [선별 파일·해시](JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json). 사용자 요청은 모든 안전게이트 충족 후 실제main통합·Production배포다. 현 단계main병합/운영DB/Edge변경0. npm746/746·build/diff성공, 새fixture스모크154+78+84+19+246+116검사, 실제격리서버UI22검사통과 — 기준 위HEAD + 미커밋후보, 2026-11-02 KST [산출물]. 실제문서싱글완주/최종CI·Preview/이번후보검색소비위험승인은아직미확인이다.
+별도 승인된 일반 회원 QA1개가 **2026-11-02 17:20:11 KST** 정상 가입/로그인했다. 프로필·XP·랭킹 API 조회 성공, XP0 및 자기 경기/게임아이템/XP ledger0. 기본 프로필 아이콘6개는 기존 signup trigger 동작이다. 업적 원본 테이블403은 미검증으로 남겼고 우회/DB 보정하지 않았다. 계정은 유지하며 자격정보는 저장소 밖 DPAPI 암호화 보관. [QA 상세](../ops/JUNGLE65-QA-2026-11-02.md). QA 승인은 배포·위험 수용으로 확장하지 않는다.
 
-운영migration45/후보45/pending0, public함수72·테이블36·정책37, Edge8ACTIVE(single-run3, wiki-snapshot4, duel-link-preview1 포함) 읽기전용재확인. 현재검색성공소비서버권위위험은미해결이며 10-29후보승인을자동확장하지않는다. 이전CURRENT기준078a690이HEAD보다57커밋/4일뒤처졌음을작업전보고하고 실제조회값을이상단에반영했다.
-
-이하 이전 날짜의 기록은 역사적 근거로 보존한다.
+#15 이후 과거 main push 실행자·건별 승인·정확한 총횟수는 미확인으로 번호를 추측해 추가하지 않는다. 아래 이전 날짜의 상태·수치는 당시 기록이며 현재 운영 상태의 대체 근거가 아니다. 중복 생성됐던 이 세션의11-02 안내 문단만 이 단일 요약으로 정리했고, 10-29 이후 기존 역사 본문은 그대로 보존했다.
 
 ## 2026-10-29 조건부 운영 배포 승인·인증 선행 검증
 
