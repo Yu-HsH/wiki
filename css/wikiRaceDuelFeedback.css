@@ -64,6 +64,8 @@
 .wr-race--duel .game-search-panel { top: max(calc(var(--race-top) + 12px), calc(var(--duel-feedback-bottom, 0px) + 8px)); }
 .wr-race--duel .duel-item-preview { max-height: min(50vh, calc(100dvh - var(--duel-feedback-bottom, 0px) - var(--race-dock-h) - 24px)); }
 @media (max-width: 760px) {
+  /* Mobile HUD height is auto: never feed it into a fixed panel's calc(). */
+  .wr-race.wr-race--duel.has-strip { --race-top: 0px; }
   .wr-race--duel .duel-item-index { top: var(--duel-feedback-bottom, 0px); bottom: var(--race-dock-h); }
 }
 @media (prefers-reduced-motion: no-preference) {

@@ -69,6 +69,7 @@ try{
 }finally{
  await browser?.close();await vite?.close();await new Promise(r=>transport.close(r));fs.writeFileSync(runtimeEntry,original);
  for(const room of rooms)sql(`delete from public.game_rooms where id=${q(room)};`);for(const u of users){const r=await admin.auth.admin.deleteUser(u.id);assert.equal(r.error,null);}for(const p of pages)sql(`delete from public.wiki_pages where page_id=${q(p)};`);
- fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({date:'2026-11-02',basis:'8da7d25 + search authority worktree',completed,isolatedApi:config.API_URL,productionContacted:false,checks,fixtureHits,faults,credentialsPersisted:false},null,2));
+ const git=spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8',windowsHide:true});
+ fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({date:new Date().toISOString(),basis:git.stdout.trim(),uncommitted:true,completed,isolatedApi:config.API_URL,productionContacted:false,checks,fixtureHits,faults,credentialsPersisted:false},null,2));
 }
 console.log('PASS total',checks.length);

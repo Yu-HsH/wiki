@@ -68,16 +68,18 @@ try{
     // Images do not participate in text search; avoid extra third-party traffic.
     await ctx.route('**/upload.wikimedia.org/**',route=>route.abort());
     const page=await ctx.newPage();await page.goto('http://127.0.0.1:5293/multiplayer/game/'+f.room);await expect(page.locator('.article-content')).toBeVisible({timeout:30000});
-    const readyResponse=page.waitForResponse(r=>r.url().includes('/functions/v1/duel-search')&&r.request().method()==='POST'&&r.request().postDataJSON()?.action==='prepare',{timeout:22000});
-    const at=performance.now();await page.getByRole('button',{name:/검색.*사용 가능/}).click();const response=await readyResponse,body=await response.json(),record={title:meta.title,condition,code:body.code,status:response.status(),prepareTiming:response.headers()['server-timing'],activationToResponseMs:performance.now()-at};
+    const readyResponse=page.waitForResponse(r=>r.url().includes('/functions/v1/duel-search')&&r.request().method()==='POST'&&r.request().postDataJSON()?.action==='prepare',{timeout:22000});readyResponse.catch(()=>{});
+    let activationAt;page.on('request',r=>{if(r.url().endsWith('/rpc/use_duel_item_v3'))activationAt=performance.now();});
+    const clickAt=performance.now();await page.getByRole('button',{name:/검색.*사용 가능/}).click();const response=await readyResponse,body=await response.json();assert.ok(activationAt,'actual activation request observed');const at=activationAt,record={title:meta.title,condition,code:body.code,status:response.status(),prepareTiming:response.headers()['server-timing'],activationToResponseMs:performance.now()-at,automationClickToResponseMs:performance.now()-clickAt};trials.push(record);write();
     if(body.code==='SEARCH_DOCUMENT_READY'){
      await expect(page.locator('.game-search-panel')).toBeVisible({timeout:15000});record.activationToVisibleMs=performance.now()-at;record.remainingMs=Math.max(0,15000-record.activationToVisibleMs);
      const stored=JSON.parse(sql(`select text_nodes from private.duel_search_documents_v1 where snapshot_id=${q(meta.snapshot)};`)),rendered=await page.locator('.article-content').evaluate(root=>{const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),a=[];while(w.nextNode())a.push(w.currentNode.nodeValue);return a;});assert.deepEqual(rendered,stored);record.manifestMatches=true;
-     const searchResponse=page.waitForResponse(r=>r.url().includes('/functions/v1/duel-search')&&r.request().method()==='POST'&&r.request().postDataJSON()?.action==='search');
-     await page.getByRole('textbox',{name:'현재 문서에서 찾을 단어'}).fill(meta.title.slice(0,2));const searchAt=performance.now();await page.getByRole('button',{name:'찾기',exact:true}).click();record.searchCode=(await (await searchResponse).json()).code;record.searchResponseMs=performance.now()-searchAt;
+     record.beforeSearchMs=performance.now()-at;record.panelGeometry=await page.locator('.game-search-panel').evaluate(panel=>{const nodes=[];for(let n=panel;n;n=n.parentElement){const s=getComputedStyle(n),r=n.getBoundingClientRect();nodes.push({className:n.className,top:r.top,bottom:r.bottom,position:s.position,topStyle:s.top,transform:s.transform,filter:s.filter,perspective:s.perspective,contain:s.contain,feedbackBottom:s.getPropertyValue('--duel-feedback-bottom'),isolation:s.isolation});}return nodes;});write();await page.screenshot({path:path.join(out,file+'-'+condition+'-before-search-390.png')});
+     const searchResponse=page.waitForResponse(r=>r.url().includes('/functions/v1/duel-search')&&r.request().method()==='POST'&&r.request().postDataJSON()?.action==='search',{timeout:10000}).catch(e=>{throw Error('search response: '+e.message)});searchResponse.catch(()=>{});
+     await page.getByRole('textbox',{name:'현재 문서에서 찾을 단어'}).fill(meta.title.slice(0,2));const searchAt=performance.now();await page.getByRole('button',{name:'찾기',exact:true}).click({timeout:5000});record.searchCode=(await (await searchResponse).json()).code;record.searchResponseMs=performance.now()-searchAt;
      if(record.searchCode==='SEARCH_FOUND'){await expect(page.locator('.game-search-highlight').first()).toBeVisible();record.searchToHighlightMs=performance.now()-searchAt;}
     }
-    await page.screenshot({path:path.join(out,file+'-'+condition+'-390.png')});trials.push(record);write();console.log('UI',meta.title,condition,JSON.stringify(record));await ctx.close();sql(`delete from public.game_rooms where id=${q(f.room)};`);rooms.splice(rooms.indexOf(f.room),1);
+    await page.screenshot({path:path.join(out,file+'-'+condition+'-390.png')});write();console.log('UI',meta.title,condition,JSON.stringify(record));await ctx.close();sql(`delete from public.game_rooms where id=${q(f.room)};`);rooms.splice(rooms.indexOf(f.room),1);
    }
    continue;
   }
