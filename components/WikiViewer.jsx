@@ -32,6 +32,7 @@ export default function WikiViewer({
   searchAvailable = false,
   searchExpiresAt = null, // Duel-only server deadline; Single/Group keep their existing contract.
   onConsumeSearch,
+  onAuthorizedSearch,
   highlightRequestId = 0,
   status = {},
   readOnly = false,
@@ -55,6 +56,10 @@ export default function WikiViewer({
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMessage, setSearchMessage] = useState("");
+  const [searchBusy,setSearchBusy]=useState(false);
+  const searchBusyRef=useRef(false);
+  const searchArticleRef=useRef(currentDocumentHtml);
+  searchArticleRef.current=currentDocumentHtml;
   const [articleHighlightedLinks, setArticleHighlightedLinks] = useState([]);
   const [targetSummaryExpanded, setTargetSummaryExpanded] = useState(false);
   const [targetSummaryCanExpand, setTargetSummaryCanExpand] = useState(false);
@@ -389,8 +394,9 @@ export default function WikiViewer({
     return count;
   };
 
-  const handleGameSearch = useCallback(() => {
+  const handleGameSearch = useCallback(async () => {
     if (!articleRef.current) return;
+    if(searchBusyRef.current)return;
     if (Number.isFinite(searchExpiresAt) && (!searchAvailable || searchExpiresAt <= Date.now())) {
       setSearchMessage("검색 사용 가능 시간이 끝났거나 이미 사용했습니다.");
       return;
@@ -402,6 +408,21 @@ export default function WikiViewer({
       return;
     }
 
+    if(onAuthorizedSearch){
+      const article=currentDocumentHtml;
+      searchBusyRef.current=true;setSearchBusy(true);
+      try{
+        const result=await onAuthorizedSearch(query);
+        if(searchArticleRef.current!==article||!articleRef.current||searchExpiresAt<=Date.now())return;
+        if(!result?.ok){setSearchMessage(result?.code==='SEARCH_USED'?'이미 성공 검색을 사용했습니다.':'검색을 승인받지 못했습니다. 다시 확인해주세요.');return;}
+        if(result.count===0){clearSearchHighlights();setSearchMessage(`"${query}" 검색 결과가 없습니다.`);return;}
+        if(result.code!=='SEARCH_FOUND'||result.query!==query){setSearchMessage('검색 결과를 확인하지 못했습니다.');return;}
+      }catch{setSearchMessage('검색 결과를 확인하지 못했습니다. 다시 시도해주세요.');return;}
+      finally{searchBusyRef.current=false;setSearchBusy(false);}
+    }else if(Number.isFinite(searchExpiresAt)){
+      // A finite duel permit must never fall back to client-only success authorization.
+      setSearchMessage('서버 검색 확인이 필요합니다.');return;
+    }
     clearSearchHighlights();
 
     const count = highlightTextInNode(articleRef.current, query);
@@ -418,7 +439,7 @@ export default function WikiViewer({
 
     setSearchMessage(`"${query}" ${count}개 발견`);
     onConsumeSearch?.();
-  }, [searchQuery, clearSearchHighlights, onConsumeSearch, searchAvailable, searchExpiresAt]);
+  }, [searchQuery, clearSearchHighlights, onConsumeSearch, onAuthorizedSearch, searchAvailable, searchExpiresAt,currentDocumentHtml]);
 
   const handleCloseSearchPanel = useCallback(() => {
     setSearchPanelOpen(false);
@@ -528,7 +549,7 @@ export default function WikiViewer({
               autoFocus
             />
 
-            <button type="button" onClick={handleGameSearch}>
+            <button type="button" onClick={handleGameSearch} disabled={searchBusy}>
               찾기
             </button>
           </div>

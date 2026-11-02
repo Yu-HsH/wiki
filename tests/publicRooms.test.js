@@ -10,12 +10,12 @@ const api = readFileSync(new URL("../services/publicRoomService.js", import.meta
 const pgTap = readFileSync(new URL("../supabase/tests/public_room_discovery_v1.sql", import.meta.url), "utf8");
 
 test("migration PL/pgSQL uses complete dollar-quoted blocks", () => {
-  const opens = [...sql.matchAll(/\bas \$\$\n/g)].length;
-  const closes = [...sql.matchAll(/\n\$\$;/g)].length;
+  const opens = [...sql.matchAll(/\bas \$\$\r?\n/g)].length;
+  const closes = [...sql.matchAll(/\r?\n\$\$;/g)].length;
   assert.equal(opens, 6, "all six PL/pgSQL functions use a complete opening");
   assert.equal(closes, opens, "all opening dollar quotes must be paired");
-  assert.doesNotMatch(sql, /\bas \$\n/);
-  assert.doesNotMatch(sql, /\n\$;/);
+  assert.doesNotMatch(sql, /\bas \$\r?\n/);
+  assert.doesNotMatch(sql, /\r?\n\$;/);
 });
 
 test("pgTAP exception assertions use valid dollar quoted statements", () => {
