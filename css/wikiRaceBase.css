@@ -90,7 +90,7 @@
 .wr-mode-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .wr-mode-tags span { border: 1px solid var(--wr-divider); border-radius: 6px; background: var(--wr-paper); padding: 3px 8px; font-size: 11px; }
 .wr-mode-action { margin-top: auto; padding-top: 22px; font-size: 17px; font-weight: 600; }
-.wr-mode:not([aria-disabled="true"]):is(:hover, :focus-visible) .wr-mode-action { color: var(--wr-blue); text-decoration: underline; text-underline-offset: 4px; }
+.wr-mode:not([aria-disabled="true"]):not(:disabled):is(:hover, :focus-visible) .wr-mode-action { color: var(--wr-mode-action-hover-color, var(--wr-blue)); text-decoration: underline; text-underline-offset: 4px; }
 @media (max-width: 760px) {
   .wr-page { padding: 12px 12px 28px; }
   .wr-header { flex-wrap: wrap; padding: 14px 18px; gap: 14px; }

@@ -21,9 +21,11 @@ import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
 import UserProfileModal from "../components/UserProfileModal";
-import ProfileAvatar from "../components/ProfileAvatar.jsx";
+import ProfileCard from "../components/ProfileCard.jsx";
+import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog.jsx";
+import "../css/jungle65Lobby.css";
 import useProfileCards from "../hooks/useProfileCards.js";
-import { NAME_FALLBACK, buildProfileCard, mergeRewardSlots, resolveDisplayName } from "../utils/profileCard.js";
+import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots, resolveDisplayName } from "../utils/profileCard.js";
 import {
   CopyCodeButton,
   HostTag,
@@ -33,7 +35,6 @@ import {
   LobbyStateScreen,
   MeTag,
   StatusMark,
-  TrailLine,
 } from "../components/wiki-race/LobbyParts";
 
 /**
@@ -572,18 +573,17 @@ export default function RoomPage() {
           {playerIsHost && <HostTag />}
           {isMe && <MeTag />}
         </span>
-        <ProfileAvatar card={card} size="lg" nameFallback={NAME_FALLBACK.PARTICIPANT} className="wr-duel-avatar" />
-        <span className="wr-duel-player-text">
-          <button type="button" className="wr-name-btn" onClick={() => handlePlayerClick(player.user_id)} aria-label={`${name} 프로필 보기`}>
-            {name}
-          </button>
-          {(card.level != null || card.title) && (
-            <span className="wr-duel-player-meta">
-              {card.level != null && <span className="wr-duel-level">Lv.{card.level}</span>}
-              {card.title && <span className="wr-title-badge">{card.title.displayName}</span>}
-            </span>
-          )}
-        </span>
+        <ProfileCard
+          card={card}
+          size="lg"
+          density={DENSITY.FULL}
+          nameFallback={NAME_FALLBACK.PARTICIPANT}
+          interactive
+          onClick={() => handlePlayerClick(player.user_id)}
+          className="wr-name-btn wr65-duel-profile pcard--stacked"
+        >
+          <span className="wr-visually-hidden">{name} 프로필 보기</span>
+        </ProfileCard>
         <StatusMark tone="teal">입장 완료</StatusMark>
       </li>
     );
@@ -591,43 +591,33 @@ export default function RoomPage() {
 
   return (
     <LobbyShell user={user} onLogout={handleLogout} onNavigate={handleNavigateAway} mode="duel">
-      <LobbyHeader kicker="1:1 DUEL · 대기실" title="1:1 대기실" onLeave={handleLeaveRoom} />
-      <div className="wr-room-briefing">
-        <span className="wr-kicker">대결 브리핑 · 같은 목표를 향한 링크 탐험</span>
-        <p>{isHost ? "목표 문서를 검색해 선택하면 서버에 저장됩니다. 상대 입장과 목표 확정 후 게임 시작을 누르세요." : "방장이 고른 목표를 확인하세요. 두 명이 모이면 방장이 시작합니다."}</p>
-        <p className="wr-room-sync" role="status">{syncFailed ? "최신 방 정보 확인 실패 · 마지막 확인 상태를 표시하고 있습니다. 연결을 확인하세요. 3초마다 재확인합니다." : connectionStatus === "SUBSCRIBED" ? "실시간 알림 수신 중 · 대기 중 방 정보를 3초마다 다시 확인합니다." : "실시간 연결 확인 중 · 대기 중 서버 재조회로 상태를 확인합니다."}</p>
-      </div>
+      <LobbyHeader kicker="DUEL CAMP · 탐험가 대결 준비소" title="1:1 대전 준비" onLeave={handleLeaveRoom}>
+        <span className="wr-rule-strip">{room?.use_items === false ? "아이템 없음" : "아이템전"}</span>
+        <span className="wr-head-code"><span>방 코드</span><CopyCodeButton code={roomCode} compact /></span>
+      </LobbyHeader>
+      <p className="wr-room-sync" role="status">{syncFailed ? "최신 방 정보 확인 실패 · 마지막 확인 상태를 표시하고 있습니다. 연결을 확인하세요. 3초마다 재확인합니다." : connectionStatus === "SUBSCRIBED" ? "실시간 알림 수신 중 · 대기 중 방 정보를 3초마다 다시 확인합니다." : "실시간 연결 확인 중 · 대기 중 서버 재조회로 상태를 확인합니다."}</p>
 
       <div className="wr-duel-stage">
         <h2 className="wr-visually-hidden">참가자</h2>
         <ul className="wr-duel-players" aria-label={`참가자 ${players.length} / 2`}>
           {renderPlayer(hostPlayer, "a")}
-          <li className="wr-duel-center" aria-hidden="true">
-            <span className="wr-duel-center-trail"><TrailLine /></span>
-            <span key={`flag-${targetTitle}`} className={`wr-target-flag ${targetTitle ? "is-set" : ""}`}><LobbyIcon name="flag" size={18} /></span>
-            <span className="wr-duel-center-label">목표 문서</span>
-            {targetTitle
-              ? <span key={`title-${targetTitle}`} className="wr-duel-center-title">{targetTitle}</span>
-              : <span className="wr-duel-center-empty">{isHost ? "미선택" : "방장이 고르는 중"}</span>}
-          </li>
+          <li className="wr-duel-center" aria-hidden="true"><span className="wr65-duel-vs">VS</span><span className="wr-duel-center-label">같은 목표</span></li>
           {renderPlayer(nonHostPlayer, "b")}
         </ul>
       </div>
 
-      <div className="wr-duel-target room-target-section">
-        <h2 className="wr-section-label">TARGET · 목표 문서</h2>
+      <section className="wr-duel-target room-target-section" aria-labelledby="wr-duel-target-heading" aria-busy={targetBusy}>
+        <div className="wr65-duel-target-head">
+          <h2 className="wr-section-label" id="wr-duel-target-heading"><LobbyIcon name="flag" /> SHARED TARGET · 공통 목표</h2>
+          <span className={"wr65-target-state " + (targetSaveFailed ? "is-error" : hasHostTarget ? "is-confirmed" : "")} role="status">
+            {savingTarget ? "목표 저장 중" : isSearching ? "목표 검색 중" : targetSaveFailed ? "저장 실패 · 다시 선택하세요" : hasHostTarget ? showTargetSearch ? "기존에 저장된 목표" : "목표 확정" : isHost ? "목표 미확정" : "방장이 목표를 고르는 중"}
+          </span>
+        </div>
+        {hasHostTarget && <div className="wr65-saved-target"><span className="wr-visually-hidden">방장이 고른 목표:</span><strong className="wr-duel-center-title wr-gold-pill">{targetTitle}</strong></div>}
         {isHost ? (
           <div className="wr-duel-target-body">
-            {hasHostTarget && !showTargetSearch && (
-              <div className="wr-target-chosen">
-                <span key={targetTitle} className="wr-gold-pill"><LobbyIcon name="flag" size={11} />{targetTitle}</span>
-                {isWaiting && (
-                  <button type="button" className="wr-link-btn" disabled={targetBusy} onClick={() => setChangingTarget(true)} aria-label="목표 문서 변경">
-                    변경
-                  </button>
-                )}
-                <span className="wr-visually-hidden">방장이 고른 목표: {targetTitle}</span>
-              </div>
+            {hasHostTarget && !showTargetSearch && isWaiting && (
+              <button type="button" className="wr-link-btn" disabled={targetBusy} onClick={() => setChangingTarget(true)} aria-label="목표 문서 변경">목표 변경</button>
             )}
             {showTargetSearch && (
               <form
@@ -665,21 +655,13 @@ export default function RoomPage() {
                     취소
                   </button>
                 )}
-                <span className="wr-target-help">이번 대전의 목표 문서를 선택하세요</span>
+                <span className="wr-target-help">검색 결과를 선택하면 목표가 서버에 저장됩니다. 입력만으로는 확정되지 않습니다.</span>
               </form>
             )}
           </div>
         ) : (
           <div className="wr-duel-target-body">
-            {hostPlayer?.target_title ? (
-              <p key={hostPlayer.target_title} className="wr-target-read" role="status">
-                방장이 고른 목표: <strong className="wr-gold-pill">{hostPlayer.target_title}</strong>
-              </p>
-            ) : (
-              <p className="wr-target-pending" role="status">
-                <LobbyIcon name="pending" size={12} />방장이 목표를 고르는 중
-              </p>
-            )}
+            <p className="wr-target-pending" role="status">{hasHostTarget ? "방장이 고른 공통 목표입니다. 시작을 기다려 주세요." : "방장이 목표를 고르는 중"}</p>
           </div>
         )}
         <span className="wr-target-note">시작 문서는 경기 시작 시 결정됩니다</span>
@@ -708,12 +690,7 @@ export default function RoomPage() {
         )}
 
         {savingTarget && <p className="wr-lobby-muted" role="status">목표 문서 저장 중...</p>}
-      </div>
-
-      <dl className="wr-duel-setup">
-        <div><dt>경기 규칙</dt><dd>{room?.use_items === false ? "아이템 없음" : "아이템전"}</dd></div>
-        <div><dt>방 코드</dt><dd><CopyCodeButton code={roomCode} /></dd></div>
-      </dl>
+      </section>
 
       {submitError && room && (
         <p className="wr-lobby-error" role="alert">{submitError}</p>
@@ -743,11 +720,14 @@ export default function RoomPage() {
       </div>
 
       {/* 모달 렌더링 */}
-      <UserProfileModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        userId={selectedUserId}
-      />
+      {isModalOpen && <ExpeditionDialog className="wr65-duel-profile-dialog" titleId="wr-duel-profile-title" onClose={() => setIsModalOpen(false)}>
+        <h2 id="wr-duel-profile-title" className="wr-visually-hidden">탐험가 프로필</h2>
+        <UserProfileModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          userId={selectedUserId}
+        />
+      </ExpeditionDialog>}
     </LobbyShell>
   );
 }

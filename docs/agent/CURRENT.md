@@ -1,8 +1,24 @@
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-29** (조건부 운영 배포 및 관련 검증35파일 선별 커밋 승인 수신. 실제 JWT 거부/회원 성공·최신 백업 격리복원·180파일 커밋 확인. DB migration/Edge/main push/Vercel 적용은 아직 없음. 검색 소비 미해결 후속 유지).
-기준 커밋: **`078a6906d28b86e8d1864afaef68ebbf53fa833d`** (승인 제품145 + 검증35 = 180파일 release commit). 고정 후보 source SHA-256 **`c7ef6142bfa9b357d7034dfdce126cff2a81fcf1ba4786b014bd1315f1eba555`** 유지. 이 기록 커밋의 부모가 기준이다.
-브랜치: **`main`**. **원격 `main` = `feat/group-final-gaps` = `4830b38fee774aa8953a8740cd50563c43d0eb76`** (`git ls-remote origin`, 2026-10-29 재확인 [산출물]). 기존 "d496ba2·6커밋 미push" 서술은 현재와 다르다. **실제 Vercel Production도4830b38/Ready**, 배포ID `Fg9XeDWqCDJ5LNSz71Xn3kzJKbYf`·생성Oct8·alias `wiki-dusky-one.vercel.app`을 2026-10-29 dashboard에서 확인했다. #15 이후 push 실행자·건별 승인·정확한 횟수는 미확인으로 번호를 추측해 추가하지 않았다. 아래 이전 날짜의 미push/미배포 문장은 당시 기록이다.
+갱신 날짜: **2026-11-02** (Jungle65 최종 통합·Production 배포 게이트 검증 중. 운영 적용 전).
+기준 커밋: **`bd87c4dd88857b74da19c585660c8c65f605b91e`** + 선별된 미커밋 Jungle65 후보. 제품 fingerprint `497d5686171e5ee4bb93d70d7dcf047852427f0f9628b6fbd8f0c1443154f010`. 이 기록을 포함할 커밋의 부모를 기준으로 적었다.
+브랜치: **`feat/jungle65-design-20261030`**. 원격main **`8da7d25f4c364f431f8baf8b1abc685a3bee9e6e`** (2026-11-02 git실측). 실제VercelProduction **`4MdbEvoe5bArd9Fd1BvyTc8xpGgv` / Ready / 같은mainSHA**, alias wiki-dusky-one.vercel.app. 아래 이전날짜 기록의 미push/미적용/구Production값은 당시 상태다. #15 이후의mainpush실행자·승인·정확한횟수는 미확인이므로 과거번호를 추측해추가하지않는다.
+
+## 2026-11-02 Jungle65 최종 통합 — 운영 배포 게이트 검증 중
+
+[릴리스 기록](../ops/RELEASE-2026-11-02.md), [선별 파일·해시](JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json). 사용자 요청은 모든 안전게이트 충족 후 실제main통합·Production배포다. 현 단계main병합/운영DB/Edge변경0. npm746/746·build/diff성공, 새fixture스모크154+78+84+19+246+116검사, 실제격리서버UI22검사통과 — 기준 위HEAD + 미커밋후보, 2026-11-02 KST [산출물]. 실제문서싱글완주/최종CI·Preview/이번후보검색소비위험승인은아직미확인이다.
+
+운영migration45/후보45/pending0, public함수72·테이블36·정책37, Edge8ACTIVE(single-run3, wiki-snapshot4, duel-link-preview1 포함) 읽기전용재확인. 현재검색성공소비서버권위위험은미해결이며 10-29후보승인을자동확장하지않는다. 이전CURRENT기준078a690이HEAD보다57커밋/4일뒤처졌음을작업전보고하고 실제조회값을이상단에반영했다.
+
+이하 이전 날짜의 기록은 역사적 근거로 보존한다.
+
+## 2026-11-02 Jungle65 최종 통합 — 운영 배포 게이트 검증 중
+
+[릴리스 기록](../ops/RELEASE-2026-11-02.md), [선별 파일·해시](JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json). 사용자 요청은 모든 안전게이트 충족 후 실제main통합·Production배포다. 현 단계main병합/운영DB/Edge변경0. npm746/746·build/diff성공, 새fixture스모크154+78+84+19+246+116검사, 실제격리서버UI22검사통과 — 기준 위HEAD + 미커밋후보, 2026-11-02 KST [산출물]. 실제문서싱글완주/최종CI·Preview/이번후보검색소비위험승인은아직미확인이다.
+
+운영migration45/후보45/pending0, public함수72·테이블36·정책37, Edge8ACTIVE(single-run3, wiki-snapshot4, duel-link-preview1 포함) 읽기전용재확인. 현재검색성공소비서버권위위험은미해결이며 10-29후보승인을자동확장하지않는다. 이전CURRENT기준078a690이HEAD보다57커밋/4일뒤처졌음을작업전보고하고 실제조회값을이상단에반영했다.
+
+이하 이전 날짜의 기록은 역사적 근거로 보존한다.
 
 ## 2026-10-29 조건부 운영 배포 승인·인증 선행 검증
 

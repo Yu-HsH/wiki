@@ -17,6 +17,7 @@ import { fetchPageSummary, searchWikiTitleCandidates } from "../services/wikiSer
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { createGroupEntryMarker } from "../utils/groupGameFlow";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
+import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog.jsx";
 import ProfileCard from "../components/ProfileCard";
 import useProfileCards from "../hooks/useProfileCards.js";
 import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots, resolveDisplayName } from "../utils/profileCard.js";
@@ -464,14 +465,14 @@ export default function GroupRoomPage() {
 
     return (
         <LobbyShell user={user} onLogout={handleLogout} onNavigate={handleNavigateAway} mode="group">
-            <LobbyHeader kicker="GROUP · 대기실" title="그룹 대기실" onLeave={handleLeave}>
+            <LobbyHeader kicker="GROUP · EXPEDITION CAMP" title="탐험가 집결 캠프" onLeave={handleLeave}>
                 <span className="wr-head-code"><span className="wr-head-code-label">코드</span><CopyCodeButton code={roomCode} compact /></span>
                 <span className="wr-rule-strip">{GROUP_RULES}</span>
             </LobbyHeader>
             <div className="wr-room-briefing">
-                <span className="wr-kicker">단체 브리핑 · 모두 같은 문서 코스</span>
-                <p>내 후보 선택 → READY → 전원 준비 후 방장 시작. 완주하면 개인 결과를 확인하고 관전할 수 있으며, 경기 종료 후 전체 결과가 확정됩니다.</p>
-                <p className="wr-room-sync" role="status">{connectionStatus === "SUBSCRIBED" ? "실시간 알림 수신 중 · 참가자와 준비 상태는 서버 정보로 표시합니다." : "실시간 연결 확인 중 · 연결이 돌아오지 않으면 새로고침해 방에 재접속하세요."}</p>
+                <span className="wr-kicker">후보 선택 → READY로 제출 → 방장 시작</span>
+                <p>모두 같은 코스로 탐험합니다. 완주 후에는 개인 기록을 확인하고 다른 탐험가를 관전할 수 있습니다.</p>
+                <p className="wr-room-sync" role="status">{connectionStatus === "SUBSCRIBED" ? <>실시간 알림 수신 중<span className="wr65-camp-sync-detail"> · 참가자와 준비 상태는 서버 정보로 표시합니다.</span></> : "실시간 연결 확인 중 · 연결이 돌아오지 않으면 새로고침해 방에 재접속하세요."}</p>
             </div>
 
             {hostNotice && (
@@ -491,7 +492,8 @@ export default function GroupRoomPage() {
             <div className="wr-group-layout">
                 <aside className="wr-group-mine" aria-labelledby="wr-my-candidate-title">
                     <svg className="wr-group-leaves" width="130" height="74" viewBox="0 0 130 74" aria-hidden="true" focusable="false"><path d="M52 74 C46 50 30 38 6 40 C12 60 30 74 52 74Z" fill="#B9CFA4" /><path d="M66 74 C68 46 86 28 114 24 C110 50 94 70 66 74Z" fill="#8FAE7B" /><path d="M78 74 C82 56 100 46 130 48 L130 74Z" fill="#5F7A57" /><path d="M96 74 C100 64 112 58 130 60 L130 74Z" fill="#2F4A3D" /></svg>
-                    <h2 className="wr-section-label" id="wr-my-candidate-title">MY CANDIDATE · 내 문서 후보</h2>
+                    <h2 className="wr-section-label" id="wr-my-candidate-title">내 탐험 후보</h2>
+                    <p className={`wr65-camp-state ${meReady ? "is-ready" : ""}`} role="status">{meReady ? "제출 완료 · READY" : meSelected ? "선택 완료 · 아직 제출하지 않았어요" : "문서를 선택하고 READY를 눌러 주세요"}</p>
 
                     {!meReady && !meSelected && (
                         <>
@@ -550,7 +552,7 @@ export default function GroupRoomPage() {
                         <div className="wr-party-head">
                             <span className="wr-party-count" aria-hidden="true">{players.length}<small> / {maxPlayers}</small></span>
                             <div className="wr-party-title">
-                                <h2 className="wr-section-label" id="wr-party-title">EXPEDITION PARTY · 탐험대</h2>
+                                <h2 className="wr-section-label" id="wr-party-title"><span className="wr65-camp-party-en">EXPEDITION PARTY · </span>탐험대</h2>
                                 {hostName && <span className="wr-party-host">방장 · <strong>{hostName}</strong></span>}
                             </div>
                             <span className="wr-party-ready" aria-hidden="true">READY {readyCount} / {players.length}</span>
@@ -597,8 +599,8 @@ export default function GroupRoomPage() {
                                     <li key={player.id} className={`wr-roster-row ${isMe ? "wr-is-me" : ""} ${player.is_ready ? "is-ready" : ""}`}>
                                         <ProfileCard
                                             card={card}
-                                            size="xs"
-                                            density={DENSITY.MINIMAL}
+                                            size="sm"
+                                            density={DENSITY.FULL}
                                             nameFallback={NAME_FALLBACK.PARTICIPANT}
                                             interactive
                                             onClick={() => handlePlayerClick(player.user_id)}
@@ -665,11 +667,15 @@ export default function GroupRoomPage() {
                 )}
             </div>
 
+            <p className="wr65-camp-leave-note">방장이 나가면 서버가 다음 참가자에게 방장을 넘깁니다. 방을 나갈 때 내 준비 상태도 함께 정리됩니다.</p>
+            {isModalOpen && <ExpeditionDialog className="wr65-camp-profile-dialog" titleId="wr-camp-profile-title" onClose={() => setIsModalOpen(false)}>
+            <h2 id="wr-camp-profile-title" className="wr-visually-hidden">탐험가 프로필</h2>
             <UserProfileModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 userId={selectedUserId}
             />
+            </ExpeditionDialog>}
         </LobbyShell>
     );
 }

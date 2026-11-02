@@ -450,13 +450,13 @@ export default function MainPage({ view = "home" }) {
               });
             }}
           >
-            오늘의 탐험 시작 →
+            오늘의 탐험 출발 →
           </button>
         </section>
 
         {view === "home" && <>
         <div className="wr-explorer-featured">
-          <section className="wr-my-explorer" aria-labelledby="wr-explorer-heading"><h2 id="wr-explorer-heading">내 탐험가</h2><div className="wr-explorer-identity"><ProfileCard size="lg" density="full" card={ownCard} /></div>
+          <section className="wr-my-explorer" aria-labelledby="wr-explorer-heading"><h2 id="wr-explorer-heading">나의 탐험가 수첩</h2><div className="wr-explorer-identity"><ProfileCard size="lg" density="full" card={ownCard} /></div>
           {user.isGuest ? <p>로그인하면 탐험 기록과 XP가 저장됩니다.</p> : xpSummary && <div className="wr-xp"><span>누적 {xpSummary.totalXp} XP</span><progress aria-label="현재 레벨 XP" value={xpSummary.currentLevelXp} max={xpSummary.nextLevelXp || 1} /><small>{xpSummary.currentLevelXp} / {xpSummary.nextLevelXp} XP</small></div>}
           {!user.isGuest && <div className="wr-explorer-stats" aria-label="내 탐험 기록">
             <div><small>싱글 완주</small><strong>{stats.detailed?.single?.totalWins ?? stats.gamesPlayed}<span>회</span></strong></div>
@@ -531,7 +531,7 @@ export default function MainPage({ view = "home" }) {
         {/* ── 최근 기록 (최대 3개) ── */}
         <section className="dashboard-card recent-card">
           <div className="recent-head">
-            <h2>최근 탐험</h2>
+            <h2>최근 탐험 일지</h2>
             {!user.isGuest && (
               <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
                 전체 랭킹 →
@@ -546,7 +546,7 @@ export default function MainPage({ view = "home" }) {
           )}
           {!error && !user.isGuest && loading && <p className="dashboard-muted" role="status">탐험 기록을 불러오는 중…</p>}
           {!error && !loading && !user.isGuest && stats.recentRecords.length === 0 && (
-            <p className="dashboard-muted">첫 플레이를 시작해 기록을 남겨보세요.</p>
+            <p className="dashboard-muted">첫 탐험을 떠나 나만의 기록을 남겨보세요.</p>
           )}
           {!user.isGuest && stats.recentRecords.length > 0 && (
             <ul className="recent-list">
@@ -566,7 +566,7 @@ export default function MainPage({ view = "home" }) {
           )}
         </section>
 
-        <section className="wr-base-board" aria-labelledby="wr-board-heading"><h2 id="wr-board-heading">탐험 기록판</h2>
+        <section className="wr-base-board" aria-labelledby="wr-board-heading"><h2 id="wr-board-heading">누적 탐험 전적</h2>
         {(error || statsSummaryError) && <p className="dashboard-muted" role="status">일부 전적을 불러오지 못했습니다. <button type="button" className="text-btn" onClick={() => setReloadKey(value => value + 1)}>전적 다시 불러오기</button></p>}
         {/* ── 통계 그리드 (종합 전적) ── */}
         <section className="dashboard-grid">

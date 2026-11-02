@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import WikiRaceShell from "./WikiRaceShell";
+import "../../css/jungle65Fonts.css";
 
 // Presentation-only lobby parts (Phase 2). Pages keep every room/service handler.
 

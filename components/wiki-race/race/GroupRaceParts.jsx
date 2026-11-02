@@ -194,7 +194,7 @@ export function GroupResultA({ result, size, finishedCount, pendingCount, deadli
   const rank = Number.isInteger(result?.rank) ? result.rank : null;
   const time = Number.isFinite(result?.elapsed_seconds) ? formatDuration(result.elapsed_seconds) : "확정 중";
   const moves = Number.isFinite(result?.move_count) ? `${result.move_count}회` : "확정 중";
-  return <div className={`wr-page wr-race wr-result-a${sequence ? " is-personal-sequence" : ""}`}>
+  return <div className={`wr-page wr-race wr65-field wr-result-a${sequence ? " is-personal-sequence" : ""}`}>
     <main className="wr-result-a-frame" aria-labelledby="wr-result-a-title">
       <div className={`wr-result-a-scene ${rank === 1 ? "is-first" : rank && rank <= 3 ? "is-podium" : ""}`} aria-hidden="true">
         <span className="wr-journal-heading"><small>MY FIELD NOTES</small><strong>개인 탐험 기록</strong></span>

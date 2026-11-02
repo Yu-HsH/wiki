@@ -4,6 +4,16 @@ import test from "node:test";
 
 const src = (path) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 
+test("all five jungle artworks are valid WebP files in Vite public root", () => {
+  for (const name of ["landing-final", "hero-jungle-expedition", "solo-expedition", "duel-expedition", "group-expedition"]) {
+    const path = `public/assets/wiki-race/jungle65/${name}.webp`;
+    const installed = readFileSync(new URL("../" + path, import.meta.url));
+    assert.equal(installed.toString("ascii", 0, 4), "RIFF", path);
+    assert.equal(installed.toString("ascii", 8, 12), "WEBP", path);
+    assert.equal(installed.readUInt32LE(4), installed.length - 8, path);
+  }
+});
+
 test("nav-free landing preserves actual authentication and public routes", () => {
   const page = src("pages/IntroPage.jsx");
   assert.match(page, /JUNGLE_LANDING/);
@@ -36,7 +46,7 @@ test("home and mode artwork retain fallback navigation", () => {
 
 test("mobile has visible login controls, keyboard-focus navigation, and reduced-motion support", () => {
   const css = src("css/jungle65.css");
-  assert.match(css, /wr65-landing-mobile-controls/);
+  assert.match(css, /wr65-landing-actions/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /max-width: 720px/);
   assert.match(css, /prefers-reduced-motion: reduce/);

@@ -60,7 +60,7 @@ export function ResultScreen({ mode, tone, layer = "page", titleId, focusKey = n
   }, [titleId, focusKey, phase]);
 
   // `wr-race` brings the Phase 3 resets (headings, lists, focus ring, sr-only) — same as Result A.
-  const className = `wr-page wr-race wr-result wr-result--${mode} wr-result--${tone} wr-result-layer--${layer}${entrance ? " is-journal-arrival" : ""}${cinematic ? " wr-cinematic-result" : ""}${phase === "single" ? " is-single-celebrating" : phase === "ceremony" ? " is-cinematic-cover" : entrance && cinematic === "group" ? " is-cinematic-records-transition" : ""}`;
+  const className = `wr-page wr-race wr65-field wr-result wr-result--${mode} wr-result--${tone} wr-result-layer--${layer}${entrance ? " is-journal-arrival" : ""}${cinematic ? " wr-cinematic-result" : ""}${phase === "single" ? " is-single-celebrating" : phase === "ceremony" ? " is-cinematic-cover" : entrance && cinematic === "group" ? " is-cinematic-records-transition" : ""}`;
   const attributes = { "data-cinematic-scene": cinematic ? `${cinematic}-end` : undefined, "data-cinematic-phase": phase, "data-cinematic-duration": cinematic === "group" ? 6200 : cinematic === "single" ? 1800 : undefined };
   if (layer === "overlay") {
     return <div ref={rootRef} className={className} {...attributes} role="dialog" aria-modal="true" aria-labelledby={titleId} data-testid={testId}>

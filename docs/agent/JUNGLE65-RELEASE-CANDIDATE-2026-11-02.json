@@ -1,0 +1,268 @@
+{
+  "date": "2026-11-02 KST",
+  "base": "bd87c4dd88857b74da19c585660c8c65f605b91e",
+  "remoteMain": "8da7d25f4c364f431f8baf8b1abc685a3bee9e6e",
+  "branch": "feat/jungle65-design-20261030",
+  "productSha256": "497d5686171e5ee4bb93d70d7dcf047852427f0f9628b6fbd8f0c1443154f010",
+  "formula": "sorted changed product paths + NUL + SHA256(file bytes) + LF; docs/scripts/tests excluded from product fingerprint",
+  "files": [
+    {
+      "path": "appStyles.js",
+      "bytes": 1395,
+      "sha256": "b18bc41daa47ecc02409089bb7cbc1a2ae7d7a0ba1da5cb5c56cfe6eb6e5a0ed"
+    },
+    {
+      "path": "components/wiki-race/ExpeditionHero.jsx",
+      "bytes": 1408,
+      "sha256": "a0ca95bafc538fb1b8d8c43092635d347784a0aef4ecc36ff08be6beda84e436"
+    },
+    {
+      "path": "components/wiki-race/LobbyParts.jsx",
+      "bytes": 4623,
+      "sha256": "2c6e22988a517fde54118be4ae0b433166ecd2f27317cc97c97447d0d4326512"
+    },
+    {
+      "path": "components/wiki-race/race/GroupRaceParts.jsx",
+      "bytes": 16679,
+      "sha256": "0eb4c56e16babcfa25251f8e8cddcdad8ec40ac301c132aa38b9b766c8d07790"
+    },
+    {
+      "path": "components/wiki-race/race/RaceParts.jsx",
+      "bytes": 7926,
+      "sha256": "ab553068280dada9c810dcd1c80c45aecc3562fc63b91aae9567c722ffad7b5c"
+    },
+    {
+      "path": "components/wiki-race/result/ResultParts.jsx",
+      "bytes": 12378,
+      "sha256": "eccc5bf00f628e90190803a9316c0a5287933f5548a4b9396261925a58aae5f7"
+    },
+    {
+      "path": "components/wiki-race/WikiRaceShell.jsx",
+      "bytes": 3031,
+      "sha256": "78f2bcdfaa01f7b8f92218538f1a1a0cd1b262676f2b4eb6d6c5fbb756e0113e"
+    },
+    {
+      "path": "css/jungle65.css",
+      "bytes": 16885,
+      "sha256": "8880730e94451d324a256362f98f802abe987ec20ecdddaacb7aa3695faa4035"
+    },
+    {
+      "path": "css/jungle65Expedition.css",
+      "bytes": 22369,
+      "sha256": "cdb09f211c8fde9a94f387ead2f8c2f48fcd0c70c5ee3ef21913465dc7122ee4"
+    },
+    {
+      "path": "css/jungle65Fonts.css",
+      "bytes": 4458,
+      "sha256": "06bd2eb5d9e6b2b141b933a29858736cf0d26416d29f85354ae389f1e94c042c"
+    },
+    {
+      "path": "css/jungle65Lobby.css",
+      "bytes": 22133,
+      "sha256": "168b6a16bea3cfbc42c2eed3cd518028bc51383881b9f644bc2f31489d98ec7e"
+    },
+    {
+      "path": "css/wikiRaceBase.css",
+      "bytes": 13174,
+      "sha256": "2f8488e09887d57a0de093821679d4294303a052330cf784b9dd096d1688ab5b"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-APLUS-ENTRY-2026-11-02.md",
+      "bytes": 15471,
+      "sha256": "37e1e868f492a115917bbca1a84ee0a97786edbc8e4e2666dbc75df778d640ed"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-ASSET-HOVER-2026-10-31.md",
+      "bytes": 11030,
+      "sha256": "d1a455e3847403a3f62b61acb46e03b6c3f834d302b5366034a34e976697bef0"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-COPY-POLISH-2026-11-02.md",
+      "bytes": 12855,
+      "sha256": "b4e47501eda6f899e52aa4523139c177b09bd61cc7628b297e7638ff0546b922"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-DUEL-2026-11-02.md",
+      "bytes": 12907,
+      "sha256": "241ca92eaa6235caf935026e7b43a2ef886ca5c125a674bf97110a4958964152"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-FINAL-REVIEW-2026-11-01.md",
+      "bytes": 17396,
+      "sha256": "2f2e2c78314d6571baabde461754ef5aaddd1c8922dcb6b9e026ab0db7f78386"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-FULL-REDESIGN-2026-11-02.md",
+      "bytes": 14721,
+      "sha256": "d615d398b31f9eb97d923f242cc5250abc4f2655934851507214d5430fcd2cd8"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-LOBBY-RESEARCH-2026-11-02.md",
+      "bytes": 36362,
+      "sha256": "5fc1678a847b3a95802812daac9f894847f1c1a3a1d8e20e1587b75f85d15c88"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-REGRESSION-FIX-2026-11-02.md",
+      "bytes": 12373,
+      "sha256": "0265a2902eb7ea1a12fb48c7dcb8fbf93b09084a6a4eec25514aa2284e6a0023"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-VISUAL-REPAIR-2026-11-02.md",
+      "bytes": 12706,
+      "sha256": "c6abc5c8db8c6e79b3161b35a1ea40dda06ab4e01abb1c8cca80f27b68d445b7"
+    },
+    {
+      "path": "pages/GroupRoomPage.jsx",
+      "bytes": 33357,
+      "sha256": "11ce5495d045fc94c42bb90379eec26b15544959ea00aa94c88d25104a1ebc91"
+    },
+    {
+      "path": "pages/IntroPage.jsx",
+      "bytes": 5812,
+      "sha256": "1118fef7611ba770a5c8f9ecd7532dcbc6022a4247f51ef35b88bcc7fe6d2c7a"
+    },
+    {
+      "path": "pages/LoginPage.jsx",
+      "bytes": 11559,
+      "sha256": "58e52e8eb1b89e5b2f9ebb758f7ede1ee1f004ae532e661f1d07274de7024fc8"
+    },
+    {
+      "path": "pages/MainPage.jsx",
+      "bytes": 34728,
+      "sha256": "83ff793b6b3c2e278977b781be0e88eb8863814f23ea89c039baa7523584abdd"
+    },
+    {
+      "path": "pages/MultiplayerPage.jsx",
+      "bytes": 23622,
+      "sha256": "1b3d442cedf3894f7319624dca96c51d9fde817539a80180e154458cb9d78db2"
+    },
+    {
+      "path": "pages/PlayPage.jsx",
+      "bytes": 5360,
+      "sha256": "c02461ee7aed7bf1d401b8a198b14c85bfdb903606f45bb6cebbc1835d89a2df"
+    },
+    {
+      "path": "pages/PublicContentPage.jsx",
+      "bytes": 10076,
+      "sha256": "b357c9f781566b360f838751da2f8a9e0fa3657c579a553df7a91665a5ad134d"
+    },
+    {
+      "path": "pages/RankingPage.jsx",
+      "bytes": 19141,
+      "sha256": "7497debfec3e5be8a666dcce34719f2a74677867a9a370dcc8a32734fb8d1fa2"
+    },
+    {
+      "path": "pages/RoomPage.jsx",
+      "bytes": 30770,
+      "sha256": "15e1d41f0d608e73ee366d1149ed427f1af329c55935e66d08a66653db86f939"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/duel-expedition.webp",
+      "bytes": 53224,
+      "sha256": "5e6aa384dcab8803c1f500ed6de58d188babd3be77c91f4b7dfc07b6b90e02d5"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/group-expedition.webp",
+      "bytes": 58372,
+      "sha256": "78d75daabca42735b535afb4175cfd2cb5c10c8e4a8009c4be0da7b1f2f5198b"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/hero-jungle-expedition.webp",
+      "bytes": 152576,
+      "sha256": "e0829ac25713abd90dca4d2f5cf63734f3c9c70892082d8ef5389cfddb1ad193"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/landing-final.webp",
+      "bytes": 499436,
+      "sha256": "7b1790bf4e4f1d5e327bc47e2501a14b0683cbc831d647229845ab2666c235f3"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/solo-expedition.webp",
+      "bytes": 59632,
+      "sha256": "2325171df6ac2f2ccc44aa26380b29526a093ebd73a34e49784a0c2118fe0674"
+    },
+    {
+      "path": "public/licenses/jungle65-fonts.html",
+      "bytes": 2705,
+      "sha256": "9f5ab7703752adeb76a5c9a00bc990f1159302a4be81099de2432f03eb8c317f"
+    },
+    {
+      "path": "scripts/jungle65-design-smoke.mjs",
+      "bytes": 29325,
+      "sha256": "9622f233dd91ed090a5927a907506e531afbe8d4d905e13de12d47cf9777e47a"
+    },
+    {
+      "path": "scripts/jungle65-duel-smoke.mjs",
+      "bytes": 30319,
+      "sha256": "fcc891a22d82c9584bad8dd8712a25a64454342bc0d0817521721e58185b22a2"
+    },
+    {
+      "path": "scripts/jungle65-entry-smoke.mjs",
+      "bytes": 24239,
+      "sha256": "7c9262ee2281958fb19a80ae1916be30f0e216f14c04242dd5465ac642a64fe6"
+    },
+    {
+      "path": "scripts/jungle65-full-fixtures.mjs",
+      "bytes": 32605,
+      "sha256": "b5b7cb07d8c67b3ea9dec16bc9a27a19ba3d63c5d6aea0cfca27c8fab9fdb0a8"
+    },
+    {
+      "path": "scripts/jungle65-full-review.mjs",
+      "bytes": 14643,
+      "sha256": "89898e4579c513fac9d71a4168630644bac4c2ffa34a6c8e7f2843d66d9d9a2e"
+    },
+    {
+      "path": "scripts/jungle65-full-smoke.mjs",
+      "bytes": 23243,
+      "sha256": "0a96011501f9811209a381461c136a0bc5ba42b62d133ac4cd6730c2098972b5"
+    },
+    {
+      "path": "scripts/jungle65-full-supplement.mjs",
+      "bytes": 4731,
+      "sha256": "da7d49fd53e7d0f3db3c3f6dfffd71bbdb9b71d18d74041900ccc90cdd60266d"
+    },
+    {
+      "path": "scripts/jungle65-polish-smoke.mjs",
+      "bytes": 24453,
+      "sha256": "45637aae88a2ea50aef30c1980c05c37a22bd3d2a384dbb8d07742b669473020"
+    },
+    {
+      "path": "scripts/jungle65-regression-fix-smoke.mjs",
+      "bytes": 12221,
+      "sha256": "1a3ba4a7c1a1c7430781d8b7a3c13dbe74fcbbdd6d5082cb85256f877efc8231"
+    },
+    {
+      "path": "tests/jungle65DesignEntry.test.js",
+      "bytes": 2466,
+      "sha256": "0fd652a346f1554d79a89168cacdc97e0952362d750d04d1a2567bb40045e930"
+    },
+    {
+      "path": "tests/publicRooms.test.js",
+      "bytes": 4828,
+      "sha256": "982d8fb68b2a68432a6a01a45c1ab100cf44019bd64227a7199791be54cb730c"
+    }
+  ],
+  "additionalIntegrationFiles": [
+    "docs/agent/CURRENT.md",
+    "docs/agent/JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json",
+    "docs/ops/RELEASE-2026-11-02.md"
+  ],
+  "excluded": [
+    "WikiRace_Jungle65_Design_Assets_20261030/",
+    ".temp/",
+    "dist/",
+    "logs",
+    "credentials",
+    ".env*"
+  ],
+  "protectedCode": {
+    "services": true,
+    "hooks": true,
+    "utils": true,
+    "supabase": true,
+    "package": true,
+    "vercel": true,
+    "meaning": "unchanged against remote main"
+  },
+  "evidenceRoot": ".temp/jungle65-release-20261102"
+}

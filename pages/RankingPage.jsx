@@ -6,6 +6,7 @@ import { fetchRankings, fetchExplorerXpRankings, fetchMyDailyCourseRank } from "
 import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import { fetchTodayDailyChallenge } from "../services/dailyChallengeService";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
+import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog.jsx";
 import ProfileCard from "../components/ProfileCard";
 import useProfileCards from "../hooks/useProfileCards.js";
 import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
@@ -334,11 +335,14 @@ export default function RankingPage() {
       </section>
 
       {/* 7. 모달 렌더링 (guest 로직 처리는 UserProfileModal 내부에서 수행됨) */}
+      {isProfileModalOpen && <ExpeditionDialog className="wr65-profile-dialog" titleId="wr-ranking-profile-title" onClose={() => setIsProfileModalOpen(false)}>
+      <h2 id="wr-ranking-profile-title" className="wr-visually-hidden">탐험가 프로필</h2>
       <UserProfileModal
         userId={selectedUserId}
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
       />
+      </ExpeditionDialog>}
     </WikiRaceShell>
   );
 }
