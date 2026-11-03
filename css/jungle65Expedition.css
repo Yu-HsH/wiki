@@ -180,6 +180,13 @@
 .wr65-public .public-section h2 { font: 700 21px/1.6 var(--wr65-font-paper); }
 .wr65-public .public-section { border-color: #c4af81; }
 .wr65-field :is(.help-modal, .wr-exit-dialog, .duel-item-index, .game-search-panel) { color: #293d31; background: #fff9e9; border-color: #b39662; }
+/* The shared search controls were white on a dark panel; this panel is parchment. */
+.wr65-field .game-search-panel__body input { min-height: 44px; color: #293d31; caret-color: #293d31; background: #fffdf5; border-color: #b39662; font: inherit; font-size: 16px; }
+.wr65-field .game-search-panel__body input::placeholder { color: #66705c; opacity: 1; }
+.wr65-field .game-search-panel__message { color: #47533f; }
+.wr65-field .game-search-panel button { min-width: 44px; min-height: 44px; color: #293d31; background: #e7eddf; border: 1px solid #b39662; }
+.wr65-field .game-search-panel button:disabled { color: #596451; background: #ece7d7; opacity: 1; cursor: wait; }
+.wr65-field .game-search-panel :is(input, button):focus-visible { outline: 3px solid #235b86; outline-offset: 2px; }
 .wr65-field :is(.help-modal h2, .wr-exit-dialog h2, .duel-item-index__head) { font-family: var(--wr65-font-paper); }
 .wr65-field :is(.user-profile-modal-card, .app-modal) { color: #293d31; background: #fff9e9; border: 2px solid #b39662; }
 .wr65-field .app-modal h2 { font-family: var(--wr65-font-paper); }

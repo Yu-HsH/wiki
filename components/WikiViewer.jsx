@@ -544,7 +544,7 @@ export default function WikiViewer({
               aria-label="현재 문서에서 찾을 단어"
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleGameSearch();
+                if (e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229) handleGameSearch();
               }}
               autoFocus
             />

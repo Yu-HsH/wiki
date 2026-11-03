@@ -6,13 +6,14 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
-import {createServer} from 'vite';
+import {build,createServer,preview} from 'vite';
 import {chromium, expect} from '@playwright/test';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const task=path.resolve(root,process.env.JUNGLE65_ENTRY_TASK||'.temp/jungle65-aplus-20261102');
 const sourceRoot=path.resolve(root,process.env.JUNGLE65_ENTRY_SOURCE_ROOT||path.join(task,'preserved'));
 const before=process.argv.includes('--before');
+const bundled=process.argv.includes('--bundled');
 const output=path.join(process.env.JUNGLE65_ENTRY_OUTPUT||task,before?'before':'after');
 fs.mkdirSync(output,{recursive:true});
 const port=Number(process.env.JUNGLE65_ENTRY_PORT)||(before?5214:5215),base=`http://127.0.0.1:${port}`,api='http://127.0.0.1:54329';
@@ -24,11 +25,19 @@ const playersFor=mode=>ids.slice(0,mode==='duel'?2:3).map((user_id,i)=>({id:`${m
 const report={date:'2026-11-02 KST',head:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),uncommitted:true,before,realReact:true,syntheticBackend:true,realSupabaseContacted:false,screens:[],checks:[],pageErrors:[],consoleErrors:[],requests:[],fontNetwork:[],blockedExternal:[]};
 const check=(name,condition=true)=>{assert.ok(condition,name);report.checks.push(name);console.log('PASS',name)};
 const fontCache=new Map();
-const server=await createServer({root,configFile:false,envFile:false,cacheDir:path.join(task,'vite-cache-'+port),
+const serverConfig={root,configFile:false,envFile:false,cacheDir:path.join(task,'vite-cache-'+port),
  plugins:before?[{name:'preserved-entry',enforce:'pre',load(id){const relative=path.relative(root,id.split('?')[0]);const p=path.join(sourceRoot,relative);if(!relative.startsWith('..')&&/\.(?:[cm]?jsx?|css)$/.test(relative)&&fs.existsSync(p)&&fs.statSync(p).isFile())return fs.readFileSync(p,'utf8')}}]:[],
  define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify(api),'import.meta.env.VITE_SUPABASE_ANON_KEY':JSON.stringify('entry-ui-fixture-public-key'),'import.meta.env.VITE_MAINTENANCE':JSON.stringify('')},
  server:{host:'127.0.0.1',port,strictPort:true,watch:{ignored:['**/.temp/**']}}
-});
+};
+let server;
+if(bundled){
+ const outDir=path.join(output,'bundled-app');
+ await build({...serverConfig,build:{outDir},logLevel:'error'});
+ const running=await preview({root,configFile:false,envFile:false,build:{outDir},preview:{host:'127.0.0.1',port,strictPort:true}});
+ server={listen:async()=>{},close:()=>new Promise(resolve=>running.httpServer.close(resolve))};
+}else server=await createServer(serverConfig);
+report.bundled=bundled;
 let browser;
 async function makePage(width,{mode='duel',actor=0,listing='normal',guest=false,anonymous=false,fontFailure=false}={}){
  const context=await browser.newContext({viewport:{width,height:width<=390?844:1000},hasTouch:width<=390,isMobile:width<=390,reducedMotion:'reduce',serviceWorkers:'block'});
@@ -44,7 +53,10 @@ async function makePage(width,{mode='duel',actor=0,listing='normal',guest=false,
   // A frozen release source already includes A+ fonts; compare it with the same
   // real font responses. Historical pre-A+ runs retain their original policy.
   if(fontSource&&(!before||process.env.JUNGLE65_ENTRY_SOURCE_ROOT)){
-   if(fontFailure)return route.abort('failed');
+   // In a production bundle Vite awaits imported CSS before mounting React.
+   // Keep the original dev stylesheet-outage case, and inject font-file failure
+   // in bundled mode so that its fallback-font assertion actually reaches the UI.
+   if(fontFailure&&(!bundled||request.resourceType()==='font'))return route.abort('failed');
    if(!fontCache.has(url.href))fontCache.set(url.href,(async()=>{const response=await route.fetch();const body=await response.body();report.fontNetwork.push({url:url.href,status:response.status(),bytes:body.length});return {status:response.status(),body,contentType:response.headers()['content-type'],headers:{'access-control-allow-origin':'*'}}})());
    return route.fulfill(await fontCache.get(url.href));
   }
@@ -105,7 +117,7 @@ const mutationCalls=(page,rpc)=>page.fixture.calls.filter(c=>c.path.endsWith('/'
 try{
  await server.listen();browser=await chromium.launch({headless:true,executablePath:process.env.JUNGLE65_BROWSER_PATH||'C:/Users/SSAFY/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe'});
  report.browser=await browser.version();
- for(const width of [1440,1024,768,390,320])for(const mode of ['duel','group']){
+ for(const width of [1920,1440,1024,768,390,320])for(const mode of ['duel','group']){
   const page=await makePage(width,{mode});await page.goto(base+'/multiplayer?mode='+mode);await expect(page.locator('.mp-public-room')).toHaveCount(3);
   const metrics=await shot(page,`${mode}-${width}`);
   check(`${mode}/${width}: scoped mode has no duplicate picker`,await page.locator('.mp-mode-grid').count()===0);
@@ -113,6 +125,13 @@ try{
   check(`${mode}/${width}: no room code in public listing`,!(await page.locator('.mp-public-board').innerText()).includes('DUEL65'));
   if(mode==='group')check(`${width}: default capacity 6`,await page.getByLabel('그룹 방 정원').inputValue()==='6');
   if(!before){
+   if(width>=1024||width<=760){
+    check(`${mode}/${width}: narrow action column stacks cards`,metrics.create.top>=metrics.join.top+metrics.join.height);
+    check(`${mode}/${width}: stacked cards use the full action column`,await page.locator('.mp-mode-panel').evaluate(e=>[...e.children].every(card=>card.getBoundingClientRect().width===e.getBoundingClientRect().width)));
+   }else check(`${mode}/${width}: two-column cards have readable width`,metrics.join.width>=280&&metrics.create.width>=280);
+   const code=page.getByRole('textbox',{name:mode==='duel'?'1:1 방 코드':'단체 방 코드'});await code.fill('ABC123');
+   check(`${mode}/${width}: all six code characters fit`,await code.evaluate(e=>e.value==='ABC123'&&e.clientWidth-parseFloat(getComputedStyle(e).paddingLeft)-parseFloat(getComputedStyle(e).paddingRight)>=6*parseFloat(getComputedStyle(e).fontSize)*.65));
+   check(`${mode}/${width}: card labels and controls are not clipped`,await page.locator('.mp-mode-panel').evaluate(panel=>[...panel.querySelectorAll('h3,p,label,button,input')].every(e=>e.scrollWidth<=e.clientWidth&&e.scrollHeight<=e.clientHeight)));
    check(`${mode}/${width}: public board before code/create`,metrics.board.top<=metrics.join.top&&await page.locator('.wr65-entry-layout').evaluate(e=>e.firstElementChild.classList.contains('mp-public-board')));
    if(width<=390)check(`${mode}/${width}: public rooms in first mobile screen`,metrics.firstRoom.top<844);
    check(`${mode}/${width}: all main controls >=44px`,metrics.buttons.every(b=>b.height>=44));
