@@ -34,7 +34,7 @@ f.extendApi(async(route,key)=>{
  if(p==='user_reward_inventory')return send(owned.map(r=>({reward_id:r.rewardId,acquired_at:iso(now()),reward_catalog:{reward_id:r.rewardId,kind:r.kind,asset_ref:r.assetRef,display_name:r.displayName,retired:false}})));
  if(p==='equip_profile_reward_v1'||p==='unequip_profile_reward_v1')return send({ok:true,equipment:p.startsWith('un')?[]:[{slot:body.p_slot,slot_index:1,reward:owned.find(r=>r.rewardId===body.p_reward_id)}]});
  if(p==='get_my_achievements_v1'){if(failRead)return send({message:'검수용 조회 실패'},500);if(slowRead)await new Promise(r=>setTimeout(r,1200));return send(emptyRead?{ok:true,achievements:[],hidden:{discovered:0,achievements:[]}}:achBody)}
- if(p==='ensure_today_daily_challenge')return send([{start_title:START,target_title:TARGET,challenge_date:'2026-11-02',hint:'같은 코스에 도전하세요'}]);
+ if(p==='ensure_today_daily_challenge')return send([{start_title:START,target_title:TARGET,challenge_date:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),hint:'같은 코스에 도전하세요'}]);
  if(p==='get_daily_course_rankings_contract_v1'||p==='get_explorer_xp_rankings_v2'){
   if(failRead)return send({message:'검수용 조회 실패'},500);if(slowRead)await new Promise(r=>setTimeout(r,1200));
   return send(emptyRead?[]:p.includes('explorer')?profiles.slice(0,5).map((r,i)=>({...r,user_id:r.id,rank:i+1,total_count:8,ranking_xp:840-i*70})):rankingRows);

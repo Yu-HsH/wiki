@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { withDuelClientProtocol } from "./utils/duelClientProtocol.js";
 
 /**
  * Supabase 클라이언트 초기화 및 설정 확인 모듈
@@ -60,6 +61,7 @@ export const isSupabaseConfigured = Boolean(
  */
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
+    global: { fetch: withDuelClientProtocol((...args) => fetch(...args)) },
     auth: {
       persistSession: true,
       autoRefreshToken: true,

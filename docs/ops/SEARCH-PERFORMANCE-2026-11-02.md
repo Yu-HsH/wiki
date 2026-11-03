@@ -1,5 +1,7 @@
 # 실제 Wikipedia 검색 성능 — 2026-11-02 KST
 
+> 후속(2026-11-03): [CPU 최적화·동일75회 비교·대형Cold20회 추가 결과](SEARCH-CPU-2026-11-03.md)가 최신이다. 아래7 CPU 실패는 이전 후보의 보존 기록이다.
+
 판정: **HOLD**. 기준 보안 소스 fdd7190, 격리 API localhost55421, Edge Runtime1.74.3/Deno2.1.4. 운영 DB/계정/게임 쓰기0. 결과 원본 요약: [JSON](SEARCH-PERFORMANCE-2026-11-02.json).
 
 ## 측정 범위

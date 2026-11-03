@@ -1,5 +1,7 @@
 # Jungle65 디자인 + 검색 보안 통합 후보
 
+> 후속(2026-11-03): [검색 CPU 최적화 및 재검증](SEARCH-CPU-2026-11-03.md), [서버 게이트·drain·복구·보존 후보](JUNGLE65-SEARCH-CUTOVER-2026-11-03.md), [현재 기준](../agent/CURRENT.md)이 최신이다. 아래 성능 FAIL과 미구현 항목은96fec9b 시점의 보존 기록이다. 운영 변경0/Production HOLD는 유지한다.
+
 판정: **HOLD**. 이번 범위는 후보 commit/push·CI/Preview·로컬 실측·배포 계획까지다. 운영 DB/Edge/main/Production은 변경하지 않았다. 2026-11-02 KST.
 
 ## 후보와 보존

@@ -1270,7 +1270,7 @@ function DuelGameSession() {
       if (!outcome.itemEventId || !Number.isFinite(expiresAt) || expiresAt<=Date.now()) return;
       const prepared=await requestDuelSearch('prepare',{roomId,itemEventId:outcome.itemEventId});
       if(generation!==searchGenerationRef.current||searchPhaseRef.current!==PHASE.PLAYING||expiresAt<=Date.now()||pageDataRef.current?.pageId!==openedPageId||pageDataRef.current?.revisionId!==openedRevisionId||normalizeTitle(pageDataRef.current?.title||'')!==normalizeTitle(openedOnTitle))return;
-      if(!prepared.ok||typeof prepared.documentHtml!=='string'||!prepared.documentHash){showMessage('검색 본문을 준비하지 못했습니다.');return;}
+      if(!prepared.ok||typeof prepared.documentHtml!=='string'||!prepared.documentHash){showMessage(prepared.code==='SEARCH_DISABLED'?'검색 아이템이 일시 중지되었습니다.':'검색 본문을 준비하지 못했습니다. 아이템은 이미 사용되었으며 사용 시간은 연장되지 않습니다.');return;}
       // The UI displays the exact server-sanitized revision used for successful-use decisions.
       setPageData(page=>page?{...page,documentHtml:prepared.documentHtml}:page);
       setSearchPermit({expiresAt,openedOnTitle,itemEventId:outcome.itemEventId,documentHash:prepared.documentHash});

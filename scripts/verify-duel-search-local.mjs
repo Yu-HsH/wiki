@@ -11,11 +11,13 @@ const status=spawnSync(process.execPath,['node_modules/supabase/dist/supabase.js
 const config=JSON.parse(status.stdout);assert.equal(config.API_URL,'http://127.0.0.1:55421');
 const sql=s=>{const r=spawnSync('docker',['exec','-i',container,'psql','-U','postgres','-d','postgres','-X','-At','-v','ON_ERROR_STOP=1'],{input:s,encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
 const q=v=>"'"+String(v).replaceAll("'","''")+"'",checks=[],users=[],rooms=[],pages=[];const pass=n=>{checks.push(n);console.log('PASS',n)};
+const releaseControl=JSON.parse(sql('select row_to_json(c) from private.duel_release_control_v1 c;'));
+assert.deepEqual(releaseControl,{singleton:true,entry_open:true,required_protocol:'',search_enabled:true},'refuse to change non-default local control state');
 const admin=createClient(config.API_URL,config.SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const call=async(actor,name,args)=>{const r=await actor.client.rpc(name,args);assert.equal(r.error,null,name+': '+r.error?.message);return r.data;};
 const edge=async(actor,body)=>{const at=performance.now(),r=await fetch(config.API_URL+'/functions/v1/duel-search',{method:'POST',headers:{apikey:config.ANON_KEY,Authorization:'Bearer '+actor.session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});return {status:r.status,body:await r.json(),ms:performance.now()-at};};
 const tag=randomUUID().slice(0,8),raw='<div class="mw-parser-output"><p>Hello &amp; world <b>Needle</b> hello <a href="/wiki/목표문서">목표문서</a></p><h2>개요</h2><p>두 번째 단어 secondword 와 [literal].</p><sup class="reference">삭제각주</sup></div>';
-const fixtureDocs=new Map(),faults=[];let fixtureHits=0,browser,vite,completed=false,faultMode=null;
+const fixtureDocs=new Map(),faults=[];let fixtureHits=0,sharedColdUpstreamFetches=null,browser,vite,completed=false,faultMode=null;
 const transport=httpServer(async(req,res)=>{let text='';for await(const chunk of req)text+=chunk;const body=JSON.parse(text||'{}'),page=fixtureDocs.get(body.pageId),mode=faultMode;fixtureHits++;res.setHeader('Content-Type','application/json');if(mode==='429'){res.writeHead(429,{'Retry-After':'1'});res.end('{}');return;}if(mode==='timeout')await new Promise(r=>setTimeout(r,13000));res.end(JSON.stringify(page?{pageId:mode==='identity'?'wrong-page':body.pageId,revisionId:page.rev,canonicalTitle:page.title,documentHtml:raw,links:[{title:'목표문서',pageId:'search-target'}]}:{error:'unknown local fixture'}));});
 const runtimeEntry=path.join(project,'supabase/functions/duel-search/index.ts'),original=fs.readFileSync(runtimeEntry,'utf8');
 const transportAdapter=`// LOCAL TEST TRANSPORT ONLY: service auth headers are never forwarded.\nconst _searchLocalFetch=globalThis.fetch.bind(globalThis);globalThis.fetch=(input,options)=>{const address=String(input instanceof Request?input.url:input);return address.endsWith('/functions/v1/wiki-snapshot')?_searchLocalFetch('http://host.docker.internal:5294/',{method:'POST',headers:{'Content-Type':'application/json'},body:options?.body,signal:options?.signal}):_searchLocalFetch(input,options);};\n`;
@@ -42,6 +44,15 @@ try{
  assert.equal((await search(d,'secondword',requestId)).body.code,'SEARCH_REQUEST_CONFLICT');assert.equal((await search(d,'secondword')).body.code,'SEARCH_USED');assert.equal((await search(d,'hello',randomUUID(),users[1])).body.code,'SEARCH_NOT_OWNED');pass('request rebinding, new success and other member permit theft rejected');
  assert.equal((await edge(users[0],{action:'prepare',roomId:d.roomId,itemEventId:d.itemEventId})).body.code,'SEARCH_USED');assert.equal((await search({...f,itemEventId:d.itemEventId},'hello')).body.code,'SEARCH_NOT_OWNED');pass('re-preparing a used item and cross-room event reuse cannot reset authority');
  const miss=await fixture('miss');await activate(miss);assert.equal((await search(miss,'없는검색어')).body.code,'SEARCH_NOT_FOUND');assert.equal(sql(`select consumed_at is null from private.duel_search_sessions_v1 where item_event_id=${q(miss.itemEventId)};`),'t');assert.equal((await search(miss,'[literal]')).body.code,'SEARCH_FOUND');pass('not found remains unconsumed; literal metacharacter query subsequently succeeds');
+ const independent=await Promise.all(Array.from({length:8},(_,n)=>fixture('independent-'+n)));
+ const shared=independent[0];
+ sql(`update public.room_players set current_title=${q(shared.title)},current_page_id=${q(shared.page)},current_revision_id=${q(shared.rev)},start_title=${q(shared.title)},start_page_id=${q(shared.page)},start_revision_id=${q(shared.rev)},path_titles=array[${q(shared.title)}],path_page_ids=array[${q(shared.page)}],path_revision_ids=array[${q(shared.rev)}] where room_id in(${independent.map(f=>q(f.roomId)).join(',')});`);
+ const beforeShared=fixtureHits;await Promise.all(independent.map(activate));sharedColdUpstreamFetches=fixtureHits-beforeShared;
+ assert.equal(sql(`select count(*) from private.duel_search_documents_v1 where snapshot_id in(select id from public.wiki_page_snapshots where page_id=${q(shared.page)});`),'1');
+ const independentResults=await Promise.all(independent.map(f=>search(f,'Needle')));
+ assert.ok(independentResults.every(r=>r.body.code==='SEARCH_FOUND'));
+ assert.equal(sql(`select count(*) from private.duel_search_sessions_v1 where item_event_id in(${independent.map(f=>q(f.itemEventId)).join(',')}) and consumed_at is not null;`),'8');
+ pass('8 independent permits concurrently succeed once each, without sharing ownership or consumption');
  const deadline=await fixture('lock-expiry');await activate(deadline);const app='search-lock-'+tag;
  const holder=spawn('docker',['exec','-e','PGAPPNAME='+app,container,'psql','-U','postgres','-d','postgres','-X','-At','-v','ON_ERROR_STOP=1','-c',`begin;select id from public.game_rooms where id=${q(deadline.roomId)} for update;select pg_sleep(2);commit;`],{windowsHide:true,stdio:['ignore','pipe','pipe']});const released=new Promise((resolve,reject)=>holder.on('close',code=>code===0?resolve():reject(Error('local lock holder failed'))));let waiting=false;for(let i=0;i<15;i++){if(sql(`select count(*) from pg_stat_activity where application_name=${q(app)} and wait_event='PgSleep';`)==='1'){waiting=true;break;}await new Promise(r=>setTimeout(r,40));}assert.equal(waiting,true);sql(`update private.duel_search_sessions_v1 set expires_at=clock_timestamp()+interval '100 milliseconds' where item_event_id=${q(deadline.itemEventId)};`);assert.equal((await search(deadline,'hello')).body.code,'SEARCH_EXPIRED');await released;assert.equal(sql(`select consumed_at is null from private.duel_search_sessions_v1 where item_event_id=${q(deadline.itemEventId)};`),'t');pass('expiry is checked after room lock waits; a queued request never consumes an expired permit');
  Object.assign(process.env,{VITE_SUPABASE_URL:config.API_URL,VITE_SUPABASE_ANON_KEY:config.ANON_KEY,VITE_MAINTENANCE:'false'});vite=await createServer({root,cacheDir:path.join(out,'vite-cache'),server:{host:'127.0.0.1',port:5293,strictPort:true},logLevel:'error'});await vite.listen();browser=await chromium.launch({headless:true,executablePath:'C:/Users/SSAFY/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe'});
@@ -65,11 +76,33 @@ try{
   if(mode==='429'){const recovered=await edge(users[0],{action:'prepare',roomId:f.roomId,itemEventId:f.itemEventId});assert.equal(recovered.body.code,'SEARCH_DOCUMENT_READY');assert.equal(Date.parse(recovered.body.expiresAt),Date.parse(before));}
   pass('injected upstream '+mode+' fails closed without extending expiry or consuming success');
  }
+ const controlled=await fixture('release-control');
+ sql('update private.duel_release_control_v1 set search_enabled=false;');
+ const disabledUse=await call(users[0],'use_duel_item_v3',{p_room_id:controlled.roomId,p_grant_id:controlled.grantId,p_request_id:randomUUID(),p_correlation_id:randomUUID()});assert.equal(disabledUse.code,'SEARCH_DISABLED');
+ assert.equal(sql(`select consumed_at is null from public.duel_item_grants where id=${q(controlled.grantId)};`),'t');
+ sql('update private.duel_release_control_v1 set search_enabled=true;');await activate(controlled);
+ const expiry=sql(`select expires_at from private.duel_search_sessions_v1 where item_event_id=${q(controlled.itemEventId)};`);
+ sql("update private.duel_release_control_v1 set entry_open=false,required_protocol='search-authority-v1';");
+ const paused=await users[0].client.rpc('create_discoverable_duel_room_v1',{p_use_items:true,p_is_public:false});assert.match(paused.error?.message||'',/DUEL_ENTRY_PAUSED/);
+ await call(users[0],'heartbeat_duel_v2',{p_room_id:controlled.roomId});
+ sql('update private.duel_release_control_v1 set entry_open=true;');
+ const old=await users[0].client.rpc('create_duel_room_v2',{p_use_items:true});assert.match(old.error?.message||'',/DUEL_CLIENT_RELOAD_REQUIRED/);
+ const modern=createClient(config.API_URL,config.ANON_KEY,{global:{headers:{'x-wiki-duel-protocol':'search-authority-v1'}},accessToken:async()=>users[0].session.access_token});
+ const modernRoom=await modern.rpc('create_discoverable_duel_room_v1',{p_use_items:true,p_is_public:false});assert.equal(modernRoom.error,null);rooms.push(modernRoom.data.id);
+ pass('actual RPC gate blocks closed entry/old tabs, admits current protocol, preserves active heartbeat');
+ sql('update private.duel_release_control_v1 set search_enabled=false;');
+ assert.equal((await search(controlled,'Needle')).body.code,'SEARCH_DISABLED');
+ sql("update private.duel_release_control_v1 set required_protocol='',search_enabled=true;");
+ assert.equal((await search(controlled,'Needle')).body.code,'SEARCH_FOUND');
+ assert.equal((await search(controlled,'secondword')).body.code,'SEARCH_USED');
+ assert.equal(sql(`select expires_at from private.duel_search_sessions_v1 where item_event_id=${q(controlled.itemEventId)};`),expiry);
+ pass('actual kill/recovery preserves slot before activation, absolute expiry and one success after activation');
  completed=true;
 }finally{
  await browser?.close();await vite?.close();await new Promise(r=>transport.close(r));fs.writeFileSync(runtimeEntry,original);
+ sql("update private.duel_release_control_v1 set entry_open=true,required_protocol='',search_enabled=true;");
  for(const room of rooms)sql(`delete from public.game_rooms where id=${q(room)};`);for(const u of users){const r=await admin.auth.admin.deleteUser(u.id);assert.equal(r.error,null);}for(const p of pages)sql(`delete from public.wiki_pages where page_id=${q(p)};`);
  const git=spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8',windowsHide:true});
- fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({date:new Date().toISOString(),basis:git.stdout.trim(),uncommitted:true,completed,isolatedApi:config.API_URL,productionContacted:false,checks,fixtureHits,faults,credentialsPersisted:false},null,2));
+ fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({date:new Date().toISOString(),basis:git.stdout.trim(),uncommitted:true,completed,isolatedApi:config.API_URL,productionContacted:false,checks,fixtureHits,sharedColdUpstreamFetches,faults,credentialsPersisted:false},null,2));
 }
 console.log('PASS total',checks.length);

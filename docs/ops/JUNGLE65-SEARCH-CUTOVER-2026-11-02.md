@@ -1,5 +1,7 @@
 # Jungle65 + 검색 서버 권위 Cutover / Rollback 검토
 
+> 후속(2026-11-03): [기반 게이트 선행·drain·구형 탭 차단·검색 중지/복구·보존 정책](JUNGLE65-SEARCH-CUTOVER-2026-11-03.md)이 최신 후보 계획이다. 아래 migration1개/kill switch 미구현 표기는 당시 기록이다. 운영 미실행/HOLD는 유지한다.
+
 상태: **HOLD / 계획만 작성 / 운영 실행 승인 없음**. 2026-11-02 KST.
 
 디자인 `27e5056`/PR #7은 보존한다. 보안 `fdd7190f16057a156caac5f78335a6d9d72f570e`를 별도 출시 브랜치에 통합했다. 최종 후보 SHA·CI·Preview는 [통합 기록](JUNGLE65-SEARCH-RELEASE-GATE-2026-11-02.md)이 우선한다.

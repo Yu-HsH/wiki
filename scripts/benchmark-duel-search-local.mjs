@@ -10,9 +10,11 @@ import {createServer} from 'vite';
 import {chromium,expect} from '@playwright/test';
 import {extractSnapshotBodyLinks} from '../supabase/functions/wiki-snapshot/snapshotLinkGraph.js';
 const workspace=path.resolve('../..'),project=path.join(workspace,'.temp/next-goal-20261014/jungle65-release-20261102/project');
-const corpus=path.resolve(process.argv[2]||path.join(workspace,'.temp/search-release-gate-20261102/corpus'));
+const corpus=path.resolve(process.argv.slice(2).find(arg=>!arg.startsWith('--'))||path.join(workspace,'.temp/search-release-gate-20261102/corpus'));
 const browserOnly=process.argv.includes('--browser');
-const out=path.resolve(browserOnly?'.temp/duel-search-performance-browser':'.temp/duel-search-performance');fs.mkdirSync(out,{recursive:true});
+const largeRepeat=process.argv.includes('--large-repeat');
+const widths=process.argv.includes('--both-widths')?[320,390]:[390];
+const out=path.resolve(process.env.SEARCH_BENCH_OUTPUT||(browserOnly?'.temp/duel-search-performance-browser':'.temp/duel-search-performance'));fs.mkdirSync(out,{recursive:true});
 const container='supabase_db_wiki-next-goal-release-20261029';
 assert.ok(fs.readFileSync(path.join(project,'supabase/config.toml'),'utf8').includes('project_id = "wiki-next-goal-release-20261029"'));
 const status=spawnSync(process.execPath,['node_modules/supabase/dist/supabase.js','status','--workdir',project,'--output','json'],{encoding:'utf8',windowsHide:true});
@@ -20,7 +22,7 @@ assert.equal(status.status,0);const config=JSON.parse(status.stdout);assert.equa
 const sql=s=>{const r=spawnSync('docker',['exec','-i',container,'psql','-U','postgres','-d','postgres','-X','-At','-v','ON_ERROR_STOP=1'],{input:s,encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
 const q=v=>"'"+String(v).replaceAll("'","''")+"'",admin=createClient(config.API_URL,config.SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const users=[],rooms=[],ownedPages=[],ownedSnapshots=[],ownedCaches=[],trials=[],documents=[],errors=[],tag=randomUUID().slice(0,8);let completed=false;
-let browser,vite;
+let browser,vite;const peerHeartbeats=new Set();
 const write=()=>fs.writeFileSync(path.join(out,'measurements.json'),JSON.stringify({date:new Date().toISOString(),completed,productionContacted:false,isolatedApi:config.API_URL,cacheDefinition:'cold=search-document cache miss, warm=search-document hit; source link graph pre-existing in both',graphBoundary:'Actual pinned HTML and body link titles; fixture destination IDs. Wikipedia identity resolution is outside the timed activation path.',coldRuntime:'First request includes current worker initialization; later cold trials are document-cache cold, not forced isolate cold.',trials,documents,errors},null,2));
 const timed=async work=>{const at=performance.now(),value=await work();return {value,ms:performance.now()-at};};
 const rpc=async(client,name,args)=>{const r=await client.rpc(name,args);assert.equal(r.error,null,r.error?.message);return r.data;};
@@ -56,40 +58,61 @@ try{
   vite=await createServer({root:process.cwd(),cacheDir:path.join(out,'vite-cache'),server:{host:'127.0.0.1',port:5293,strictPort:true},logLevel:'error'});await vite.listen();
   browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||'C:/Users/SSAFY/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe'});
  }
- for(const file of ['00.json','01.json','02.json','04.json','05.json']){
+ const diagnosticFile=process.argv.find(arg=>arg.startsWith('--corpus-file='))?.split('=')[1];
+ for(const file of diagnosticFile?[diagnosticFile]:largeRepeat?['05.json']:['00.json','01.json','02.json','04.json','05.json']){
   const meta=await seed(index.find(x=>x.file===file));
   if(browserOnly){
    const actual=JSON.parse(fs.readFileSync(path.join(corpus,meta.file),'utf8')).parse;
-   for(const condition of ['cold','warm']){
+   // One real corpus-to-corpus link exercises navigation and authoritative DB
+   // movement, in addition to comparing every rendered destination/manifest.
+   if(meta.title==='대한민국'){
+    if(ownedSnapshots.includes(meta.snapshot))sql(`update public.wiki_snapshot_links set target_page_id='6160',target_revision_id='42027587' where snapshot_id=${q(meta.snapshot)} and target_title_snapshot='한강';`);
+    else assert.equal(sql(`select distinct target_page_id from public.wiki_snapshot_links where snapshot_id=${q(meta.snapshot)} and target_title_snapshot='한강';`),'6160','existing graph remains read-only');
+   }
+   for(const width of widths)for(const condition of ['cold','warm']){
     if(condition==='cold')sql(`delete from private.duel_search_documents_v1 where snapshot_id=${q(meta.snapshot)};`);
-    const f=await fixture(meta),ctx=await browser.newContext({viewport:{width:390,height:844}});
+    const f=await fixture(meta),ctx=await browser.newContext({viewport:{width,height:844}});
+    // A valid two-player game needs a live opponent too. Do not disable the
+    // server's disconnect finalizer or lengthen search/reconnect deadlines.
+    await rpc(users[1].client,'heartbeat_duel_v2',{p_room_id:f.room});
+    const peerHeartbeat=setInterval(()=>{rpc(users[1].client,'heartbeat_duel_v2',{p_room_id:f.room}).catch(error=>{errors.push({stage:'peer-heartbeat',message:error.message});write();});},5000);peerHeartbeats.add(peerHeartbeat);
     await ctx.addInitScript(session=>localStorage.setItem('sb-127-auth-token',JSON.stringify(session)),users[0].session);
-    await ctx.route('**/ko.wikipedia.org/**',route=>{const u=new URL(route.request().url()),page={pageid:meta.pageId,revid:meta.revisionId,lastrevid:meta.revisionId,title:meta.title,ns:0,extract:'실제 문서 성능 검증',links:actual.links.map(x=>({title:x['*'],ns:x.ns}))};return route.fulfill({json:u.pathname.includes('/summary/')?{...page,revision:meta.revisionId}:u.searchParams.get('action')==='parse'?{parse:actual}:{query:{pages:{[meta.pageId]:page}}}});});
+    await ctx.route('**/ko.wikipedia.org/**',route=>{const u=new URL(route.request().url()),requested=u.pathname.includes('/summary/')?decodeURIComponent(u.pathname.split('/summary/')[1]):(u.searchParams.get('titles')||u.searchParams.get('page')),target=requested==='한강'?index.find(m=>m.title==='한강'):meta,targetActual=target===meta?actual:JSON.parse(fs.readFileSync(path.join(corpus,target.file),'utf8')).parse,page={pageid:target.pageId,revid:target.revisionId,lastrevid:target.revisionId,title:target.title,ns:0,extract:'실제 문서 성능 검증',links:targetActual.links.map(x=>({title:x['*'],ns:x.ns}))};return route.fulfill({json:u.pathname.includes('/summary/')?{...page,revision:target.revisionId}:u.searchParams.get('action')==='parse'?{parse:targetActual}:{query:{pages:{[target.pageId]:page}}}});});
     // Images do not participate in text search; avoid extra third-party traffic.
     await ctx.route('**/upload.wikimedia.org/**',route=>route.abort());
-    const page=await ctx.newPage();await page.goto('http://127.0.0.1:5293/multiplayer/game/'+f.room);await expect(page.locator('.article-content')).toBeVisible({timeout:30000});
+    const page=await ctx.newPage(),navigation=[];
+    page.on('response',async response=>{if(/wiki-snapshot|apply_duel_move_v2/.test(response.url())){try{const b=await response.json();navigation.push({endpoint:response.url().split('/').at(-1),status:response.status(),code:b.code,error:b.error,pageId:b.pageId,revisionId:b.revisionId});write();}catch{}}});
+    await page.goto('http://127.0.0.1:5293/multiplayer/game/'+f.room);await expect(page.locator('.article-content')).toBeVisible({timeout:30000});
     const readyResponse=page.waitForResponse(r=>r.url().includes('/functions/v1/duel-search')&&r.request().method()==='POST'&&r.request().postDataJSON()?.action==='prepare',{timeout:22000});readyResponse.catch(()=>{});
     let activationAt;page.on('request',r=>{if(r.url().endsWith('/rpc/use_duel_item_v3'))activationAt=performance.now();});
-    const clickAt=performance.now();await page.getByRole('button',{name:/검색.*사용 가능/}).click();const response=await readyResponse,body=await response.json();assert.ok(activationAt,'actual activation request observed');const at=activationAt,record={title:meta.title,condition,code:body.code,status:response.status(),prepareTiming:response.headers()['server-timing'],activationToResponseMs:performance.now()-at,automationClickToResponseMs:performance.now()-clickAt};trials.push(record);write();
+    const clickAt=performance.now();await page.getByRole('button',{name:/검색.*사용 가능/}).click();const response=await readyResponse,body=await response.json();assert.ok(activationAt,'actual activation request observed');const at=activationAt,record={title:meta.title,width,condition,code:body.code,status:response.status(),prepareTiming:response.headers()['server-timing'],activationToResponseMs:performance.now()-at,automationClickToResponseMs:performance.now()-clickAt};trials.push(record);write();
+    assert.equal(body.code,'SEARCH_DOCUMENT_READY','every UI trial must actually prepare');
     if(body.code==='SEARCH_DOCUMENT_READY'){
      await expect(page.locator('.game-search-panel')).toBeVisible({timeout:15000});record.activationToVisibleMs=performance.now()-at;record.remainingMs=Math.max(0,15000-record.activationToVisibleMs);
      const stored=JSON.parse(sql(`select text_nodes from private.duel_search_documents_v1 where snapshot_id=${q(meta.snapshot)};`)),rendered=await page.locator('.article-content').evaluate(root=>{const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),a=[];while(w.nextNode())a.push(w.currentNode.nodeValue);return a;});assert.deepEqual(rendered,stored);record.manifestMatches=true;
-     record.beforeSearchMs=performance.now()-at;record.panelGeometry=await page.locator('.game-search-panel').evaluate(panel=>{const nodes=[];for(let n=panel;n;n=n.parentElement){const s=getComputedStyle(n),r=n.getBoundingClientRect();nodes.push({className:n.className,top:r.top,bottom:r.bottom,position:s.position,topStyle:s.top,transform:s.transform,filter:s.filter,perspective:s.perspective,contain:s.contain,feedbackBottom:s.getPropertyValue('--duel-feedback-bottom'),isolation:s.isolation});}return nodes;});write();await page.screenshot({path:path.join(out,file+'-'+condition+'-before-search-390.png')});
+     record.beforeSearchMs=performance.now()-at;record.panelGeometry=await page.locator('.game-search-panel').evaluate(panel=>{const nodes=[];for(let n=panel;n;n=n.parentElement){const s=getComputedStyle(n),r=n.getBoundingClientRect();nodes.push({className:n.className,top:r.top,bottom:r.bottom,position:s.position,topStyle:s.top,transform:s.transform,filter:s.filter,perspective:s.perspective,contain:s.contain,feedbackBottom:s.getPropertyValue('--duel-feedback-bottom'),isolation:s.isolation});}return nodes;});write();await page.screenshot({path:path.join(out,file+'-'+condition+'-before-search-'+width+'.png')});
      const searchResponse=page.waitForResponse(r=>r.url().includes('/functions/v1/duel-search')&&r.request().method()==='POST'&&r.request().postDataJSON()?.action==='search',{timeout:10000}).catch(e=>{throw Error('search response: '+e.message)});searchResponse.catch(()=>{});
      await page.getByRole('textbox',{name:'현재 문서에서 찾을 단어'}).fill(meta.title.slice(0,2));const searchAt=performance.now();await page.getByRole('button',{name:'찾기',exact:true}).click({timeout:5000});record.searchCode=(await (await searchResponse).json()).code;record.searchResponseMs=performance.now()-searchAt;
+     assert.equal(record.searchCode,'SEARCH_FOUND','every UI trial must actually search');
      if(record.searchCode==='SEARCH_FOUND'){await expect(page.locator('.game-search-highlight').first()).toBeVisible();record.searchToHighlightMs=performance.now()-searchAt;}
+     if(meta.title==='대한민국'){
+      record.navigation=navigation;write();
+      const link=page.locator('.article-content a[data-wiki-title="한강"]').first();await expect(link).toBeVisible();await link.click();
+      await expect.poll(()=>sql(`select current_page_id from public.room_players where room_id=${q(f.room)} and user_id=${q(users[0].id)};`)).toBe('6160');
+      record.realCorpusLinkMove='대한민국/42562205 -> 한강/42027587';
+     }
     }
-    await page.screenshot({path:path.join(out,file+'-'+condition+'-390.png')});write();console.log('UI',meta.title,condition,JSON.stringify(record));await ctx.close();sql(`delete from public.game_rooms where id=${q(f.room)};`);rooms.splice(rooms.indexOf(f.room),1);
+    await page.screenshot({path:path.join(out,file+'-'+condition+'-'+width+'.png')});write();console.log('UI',meta.title,condition,JSON.stringify(record));clearInterval(peerHeartbeat);peerHeartbeats.delete(peerHeartbeat);await ctx.close();sql(`delete from public.game_rooms where id=${q(f.room)};`);rooms.splice(rooms.indexOf(f.room),1);
    }
    continue;
   }
-  for(const condition of ['cold','warm'])for(let n=0;n<(condition==='cold'?5:10);n++){
+  for(const condition of ['cold','warm'])for(let n=0;n<(condition==='cold'?(largeRepeat?20:5):10);n++){
    if(condition==='cold')sql(`delete from private.duel_search_documents_v1 where snapshot_id=${q(meta.snapshot)};`);
    const cacheWasPresent=sql(`select count(*) from private.duel_search_documents_v1 where snapshot_id=${q(meta.snapshot)};`)==='1';
    const f=await fixture(meta),at=performance.now(),activated=await timed(()=>rpc(users[0].client,'use_duel_item_v3',{p_room_id:f.room,p_grant_id:f.grant,p_request_id:randomUUID(),p_correlation_id:randomUUID()}));assert.equal(activated.value.ok,true);
    const b={action:'prepare',roomId:f.room,itemEventId:activated.value.item_event_id};let prepared;
    try{prepared=await edge(b)}catch(e){prepared={status:0,body:{code:e.name},ms:performance.now()-at-activated.ms};}
-   const readyMs=performance.now()-at,record={title:meta.title,rawBytes:meta.rawBytes,condition,cacheWasPresent,n:n+1,activationMs:activated.ms,prepareMs:prepared.ms,prepareTiming:prepared.timing,code:prepared.body.code,status:prepared.status,activationToReadyMs:readyMs,remainingMs:Math.max(0,15000-readyMs),search:null};
+   const readyMs=performance.now()-at,record={title:meta.title,rawBytes:meta.rawBytes,condition,cacheWasPresent,n:n+1,activationMs:activated.ms,prepareMs:prepared.ms,prepareTiming:prepared.timing,code:prepared.body.code,status:prepared.status,activationToReadyMs:readyMs,remainingMs:prepared.body.code==='SEARCH_DOCUMENT_READY'?Math.max(0,15000-readyMs):0,search:null};
    if(prepared.body.code==='SEARCH_DOCUMENT_READY'){
     const response=await edge({action:'search',roomId:f.room,itemEventId:activated.value.item_event_id,documentHash:prepared.body.documentHash,requestId:randomUUID(),query:meta.title.slice(0,2)});
     record.search={ms:response.ms,timing:response.timing,code:response.body.code,status:response.status};
@@ -103,6 +126,7 @@ try{
  }
  completed=true;
 }catch(e){errors.push({name:e.name,message:e.message});throw e;}finally{
+ for(const timer of peerHeartbeats)clearInterval(timer);
  await browser?.close();await vite?.close();
  for(const room of rooms)sql(`delete from public.game_rooms where id=${q(room)};`);
  for(const actor of users){const r=await admin.auth.admin.deleteUser(actor.id);assert.equal(r.error,null);}
