@@ -1,3 +1,23 @@
+# 현재 상태 — Jungle65 검색 CPU 최적화·전환 제어 후보
+
+갱신: **2026-11-03 KST**. 기준 커밋 **6849223334d87ed34222281869d970662ea5777d**. 브랜치 **codex/jungle65-release-candidate-20261102**, Draft [PR #8](https://github.com/Yu-HsH/wiki/pull/8). 이 CURRENT 갱신 커밋의 부모가 기준이다. 디자인27e5056/PR #7·보안fdd7190은 보존한다.
+
+판정: **로컬 CPU/회귀 게이트 통과 / Production HOLD / 운영 변경0**. 테스트는96fec9b+미커밋 후보에서 실행했고 제품 fingerprint `a449f156fd3e92f56098fa79e174d37d7ad7780d16584f9b8c075697cfafff62`가 위 제품 커밋과 같다. 아래 수치는 모두2026-11-03 KST 확인이다.
+
+- 동일5문서/revision의 기존75회 비교: 이전68성공/7 WORKER_LIMIT → 이후75/75 성공/실패0. 대형 실제Cold20회 추가 + hit10회도30/30. 대형 cache miss 합계25/25, CPU hard limit0. 대형 추가Cold p50/p95/max 3328/3796/3918ms, 최소 잔여11082ms. 실제320/390px UI20/20, 대형Cold 최소 잔여11195ms. 실패 표본/실사용0·느린 외부 fetch·fixture 수정 전 실패도 결과 문서/JSON에 보존했다.
+- canonical HTML/textNodes/policy·링크·literal/gi 결과25쌍 동일, malformed/entity/table/namespace1000개 동일. Node 프로세스CPU 중앙값2328→1780ms, wall1324→1153ms, 관측heap198.4→197.5MiB. 이 CPU/heap을 Edge worker의 직접 실측으로 부르지 않는다. 실제 Edge2초/256MB 설정은 유지했다.
+- npm765/765(fail/skip0)·build·diff 통과, 기존SQL23+157 및 최종신규SQL34 통과. 실제 Auth/DB/Edge/React 보안/복구22, 두 계정1:1/3인그룹·XP/F522, 디자인보호246·전체154/108화면·1:1로비116/38화면·모바일78 통과. 테스트 삭제/skip0, public 에셋·폰트 변경0.
+- 새 로컬 migration3개: 기반게이트 `20261102080000`, 검색guard연결 `20261103090000`, 보존/청소 `20261103100000`. 기존검색 후보 `20261102090000`은 수정하지 않았다. 기반게이트를 검색보다 먼저 설치→진입/새검색 닫기→기존경기·15초검색 drain→나머지DB/Edge→새프론트확인→protocol고정/재개 순서다. 구형 탭 신규 진입 거부, 기존 이동/기권/결과/XP 유지, 검색만 닫는 복구를 로컬 SQL/실제 RPC로 확인했다.
+- 캐시: snapshot/revision 재사용, worker pending만 공유(동일snapshot Cold8준비의 upstream3회/저장1행), 전역lease 미구현. session/request는 절대만료7일 이상+finished 조건, document는 생성30일+무참조 조건으로 postgres 수동batch 청소. 자동Cron0, 정책v1 유지. prewarm은 별도 제안이며 경기/링크 이동에 선행 대기를 추가하지 않았다. 준비실패 슬롯 소비 안내, 환급/재활성화/시간연장0.
+- 로컬 검증 runner 초기에는 기존 대한민국→한강 링크의 목적지revision UPDATE가 실행됐다. 원래 revision값 미기록으로 변경/복원 여부는 확인 필요다. 이후 기존graph 읽기 전용/자체fixture만 보정하도록 수정했다. 운영 DB 및 사용자 worktree/에셋 변경과 구분한다.
+- 운영45개 migration/Edge8 ACTIVE는 사용자 제공 확인값이며 이번 실측으로 바꾸지 않는다. 실제 적용 직전 최신이력/ACL/RLS/Edge·백업·drain·배포SHA를 다시 확인하고 건별 승인해야 한다. main은읽기 재확인8da7d25, 운영DB/Edge/main/Production 변경0. 최종 feature SHA의 GitHub CI/Preview Ready는 PR #8의 현재 head/check/deployment를 기준으로 확인한다.
+
+상세: [CPU·기존75회 비교·전체 검증](../ops/SEARCH-CPU-2026-11-03.md), [원시 JSON](../ops/SEARCH-CPU-2026-11-03.json), [게이트·drain·복구·보존](../ops/JUNGLE65-SEARCH-CUTOVER-2026-11-03.md).
+
+---
+
+## 아래는96fec9b 시점 통합 기록 (현재 상태는 위 내용 우선)
+
 # 현재 상태 — Jungle65 검색 보안 통합 후보
 
 갱신: **2026-11-02 KST**. 기준 커밋 **82c82f0407c7d83df06d6a4f466057b80bbda643** (디자인27e5056 + 보안fdd7190 병합). 브랜치 **codex/jungle65-release-candidate-20261102**. 이 문서 갱신 커밋의 부모가 위 기준이며, 제품 소스는 위 HEAD로 확정했다. 문서 커밋의 최종 SHA/CI/Preview는 원격 PR head/checks로 확인한다.
