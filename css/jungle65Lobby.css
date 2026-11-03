@@ -42,9 +42,10 @@
 .wr65-entry .mp-mode-card .wr-kicker { margin: 0; font-size: 11px; }
 .wr65-entry .mp-mode-card strong { font-size: 23px; }
 .wr65-entry .mp-mode-card > span:last-child { font-size: 13px; line-height: 1.5; }
-.wr65-entry-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+.wr65-entry-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 22px; align-items: start; }
 .wr65-entry-layout > * { min-width: 0; }
-.wr65-entry .mp-mode-panel { display: flex; flex-direction: column; gap: 16px; animation: none; }
+/* Outrank the shared .wr-entry rule, regardless of lazy CSS import order. */
+.wr-entry.wr65-entry .mp-mode-panel { display: flex; flex-direction: column; gap: 16px; animation: none; }
 .wr65-entry .mp-card {
   align-items: stretch; text-align: left; gap: 12px; padding: 20px;
   background: #f8f2e3; border: 1px solid #bba57a; border-radius: 9px;
@@ -95,14 +96,14 @@
 .wr65-entry .wr65-font-credit a { display: inline-flex; align-items: center; min-height: 32px; }
 @media (max-width: 1023px) {
   .wr65-entry-layout { grid-template-columns: minmax(0, 1fr); }
-  .wr65-entry .mp-mode-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wr-entry.wr65-entry .mp-mode-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .wr-entry.wr65-entry { padding: 14px 16px 24px; gap: 14px; }
   .wr65-entry .wr65-entry-heading { padding: 18px; }
   .wr65-entry .wr65-entry-heading .wr-entry-lead { font-size: 13px; }
   .wr65-entry .wr-entry-rules { font-size: 12px; }
-  .wr65-entry .mp-mode-panel { display: flex; }
+  .wr-entry.wr65-entry .mp-mode-panel { display: flex; }
   .wr65-entry .mp-public-board { padding: 16px; }
   .wr65-entry .mp-public-board__header { flex-wrap: wrap; gap: 12px; padding-bottom: 14px; }
   .wr65-entry .mp-public-board__header h2 { font-size: 21px; }

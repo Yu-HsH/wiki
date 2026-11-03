@@ -1,0 +1,925 @@
+{
+  "date": "2026-11-03T05:01:04.000Z",
+  "productionBase": "90b3fa49f4313d4ef973c5911824b9c50b041707",
+  "productSha": "3b0615b50a9112ca7518c22ea6bbfdb89783667b",
+  "branch": "codex/jungle65-ui-hotfix-20261103",
+  "sourceFingerprint": "32e174a680dcc09419a02098b4de0ac7bb6698453a20ed2cce065d48174a6e7a",
+  "sources": [
+    {
+      "file": "components/WikiViewer.jsx",
+      "sha256": "553baafcc796d2c80507729b78bf63932f64ad4fa523399a71020cd02170870e"
+    },
+    {
+      "file": "css/jungle65Expedition.css",
+      "sha256": "9cefd21d51c5b978ef410272b4b6d6a566eca04dd6ffe04bfc36d041c7830748"
+    },
+    {
+      "file": "css/jungle65Lobby.css",
+      "sha256": "907a92d10245af70832fc67831e17494e0330d50232bedf452be1ccdb11f12c0"
+    },
+    {
+      "file": "scripts/jungle65-entry-smoke.mjs",
+      "sha256": "7614bcf13428810d99f538b3a22bdfa33583db7da626bd03e8a2eb7a84c1fd30"
+    },
+    {
+      "file": "scripts/verify-duel-search-local.mjs",
+      "sha256": "734ebe567a9f6ac43a7ec10425b7ae7b08d94636f450c5f1a117446387b9e852"
+    }
+  ],
+  "decision": "HOTFIX_LOCAL_VERIFIED_PRODUCTION_APPROVAL_REQUIRED",
+  "issues": [
+    10,
+    11
+  ],
+  "productionChanges": 0,
+  "productionAuthOrGameMutation": 0,
+  "qaTtlRenewals": 0,
+  "productionReproduction": {
+    "readOnly": true,
+    "viewport": 2160,
+    "actionColumnWidth": 319.992,
+    "cardWidth": 153.996,
+    "codeInputWidth": 27,
+    "computedDisplay": "grid",
+    "cssOrder": [
+      "App-BFPdxYZf.css",
+      "appStyles-BvfYTh8n.css"
+    ]
+  },
+  "inputBefore": {
+    "value": "대한",
+    "focused": true,
+    "disabled": false,
+    "readOnly": false,
+    "topElementIsInput": true,
+    "color": "rgb(255, 255, 255)",
+    "caret": "rgb(255, 255, 255)",
+    "background": "rgba(255, 255, 255, 0.08)",
+    "panelBackground": "rgb(255, 249, 233)",
+    "placeholder": "rgba(255, 255, 255, 0.56)",
+    "message": "rgba(255, 255, 255, 0.72)",
+    "findDisabled": false,
+    "composingEnterSearches": 1,
+    "compositionRequests": [
+      {
+        "query": "대한대한",
+        "action": "search"
+      }
+    ],
+    "remainingMs": 13776
+  },
+  "inputAfter": [
+    {
+      "viewport": 320,
+      "value": "대한",
+      "focused": true,
+      "enabled": true,
+      "topElementIsInput": true,
+      "caret": [
+        41,
+        61,
+        49
+      ],
+      "input": {
+        "color": [
+          41,
+          61,
+          49
+        ],
+        "background": [
+          255,
+          253,
+          245
+        ]
+      },
+      "placeholder": {
+        "color": [
+          102,
+          112,
+          92
+        ],
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "message": {
+        "color": [
+          71,
+          83,
+          63
+        ],
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "panel": {
+        "color": [
+          41,
+          61,
+          49
+        ],
+        "background": [
+          255,
+          249,
+          233
+        ]
+      },
+      "buttons": [
+        {
+          "color": [
+            41,
+            61,
+            49
+          ],
+          "background": [
+            231,
+            237,
+            223
+          ],
+          "height": 44
+        },
+        {
+          "color": [
+            41,
+            61,
+            49
+          ],
+          "background": [
+            231,
+            237,
+            223
+          ],
+          "height": 46.390625
+        }
+      ],
+      "width": 214.1875
+    },
+    {
+      "viewport": 390,
+      "value": "대한",
+      "focused": true,
+      "enabled": true,
+      "topElementIsInput": true,
+      "caret": [
+        41,
+        61,
+        49
+      ],
+      "input": {
+        "color": [
+          41,
+          61,
+          49
+        ],
+        "background": [
+          255,
+          253,
+          245
+        ]
+      },
+      "placeholder": {
+        "color": [
+          102,
+          112,
+          92
+        ],
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "message": {
+        "color": [
+          71,
+          83,
+          63
+        ],
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "panel": {
+        "color": [
+          41,
+          61,
+          49
+        ],
+        "background": [
+          255,
+          249,
+          233
+        ]
+      },
+      "buttons": [
+        {
+          "color": [
+            41,
+            61,
+            49
+          ],
+          "background": [
+            231,
+            237,
+            223
+          ],
+          "height": 44
+        },
+        {
+          "color": [
+            41,
+            61,
+            49
+          ],
+          "background": [
+            231,
+            237,
+            223
+          ],
+          "height": 46.390625
+        }
+      ],
+      "width": 278.59375
+    },
+    {
+      "viewport": 1440,
+      "value": "대한",
+      "focused": true,
+      "enabled": true,
+      "topElementIsInput": true,
+      "caret": [
+        41,
+        61,
+        49
+      ],
+      "input": {
+        "color": [
+          41,
+          61,
+          49
+        ],
+        "background": [
+          255,
+          253,
+          245
+        ]
+      },
+      "placeholder": {
+        "color": [
+          102,
+          112,
+          92
+        ],
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "message": {
+        "color": [
+          71,
+          83,
+          63
+        ],
+        "background": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "panel": {
+        "color": [
+          41,
+          61,
+          49
+        ],
+        "background": [
+          255,
+          249,
+          233
+        ]
+      },
+      "buttons": [
+        {
+          "color": [
+            41,
+            61,
+            49
+          ],
+          "background": [
+            231,
+            237,
+            223
+          ],
+          "height": 44
+        },
+        {
+          "color": [
+            41,
+            61,
+            49
+          ],
+          "background": [
+            231,
+            237,
+            223
+          ],
+          "height": 46.390625
+        }
+      ],
+      "width": 339.796875
+    }
+  ],
+  "layout": [
+    {
+      "viewport": 1920,
+      "publicBoard": {
+        "x": 508,
+        "top": 480.66,
+        "width": 542.77,
+        "height": 496.2
+      },
+      "join": {
+        "x": 1072.77,
+        "top": 480.66,
+        "width": 339.23,
+        "height": 216.72
+      },
+      "create": {
+        "x": 1072.77,
+        "top": 713.38,
+        "width": 339.23,
+        "height": 371.11
+      }
+    },
+    {
+      "viewport": 1440,
+      "publicBoard": {
+        "x": 268,
+        "top": 480.66,
+        "width": 542.77,
+        "height": 496.2
+      },
+      "join": {
+        "x": 832.77,
+        "top": 480.66,
+        "width": 339.23,
+        "height": 216.72
+      },
+      "create": {
+        "x": 832.77,
+        "top": 713.38,
+        "width": 339.23,
+        "height": 371.11
+      }
+    },
+    {
+      "viewport": 1024,
+      "publicBoard": {
+        "x": 60,
+        "top": 476.06,
+        "width": 542.77,
+        "height": 496.2
+      },
+      "join": {
+        "x": 624.77,
+        "top": 476.06,
+        "width": 339.23,
+        "height": 216.72
+      },
+      "create": {
+        "x": 624.77,
+        "top": 708.78,
+        "width": 339.23,
+        "height": 371.11
+      }
+    },
+    {
+      "viewport": 768,
+      "publicBoard": {
+        "x": 54,
+        "top": 489.5,
+        "width": 660,
+        "height": 470.61
+      },
+      "join": {
+        "x": 54,
+        "top": 982.11,
+        "width": 322,
+        "height": 371.11
+      },
+      "create": {
+        "x": 392,
+        "top": 982.11,
+        "width": 322,
+        "height": 371.11
+      }
+    },
+    {
+      "viewport": 390,
+      "publicBoard": {
+        "x": 32,
+        "top": 558.41,
+        "width": 326,
+        "height": 528.27
+      },
+      "join": {
+        "x": 32,
+        "top": 1108.67,
+        "width": 326,
+        "height": 266.72
+      },
+      "create": {
+        "x": 32,
+        "top": 1391.39,
+        "width": 326,
+        "height": 363.11
+      }
+    },
+    {
+      "viewport": 320,
+      "publicBoard": {
+        "x": 32,
+        "top": 588.34,
+        "width": 256,
+        "height": 696.27
+      },
+      "join": {
+        "x": 32,
+        "top": 1306.61,
+        "width": 256,
+        "height": 266.72
+      },
+      "create": {
+        "x": 32,
+        "top": 1589.33,
+        "width": 256,
+        "height": 363.11
+      }
+    }
+  ],
+  "tests": {
+    "npm": {
+      "passed": 765,
+      "failed": 0,
+      "skipped": 0
+    },
+    "build": "PASS; existing >500kB warning",
+    "diff": "PASS",
+    "search": {
+      "passed": 23,
+      "completed": true,
+      "date": "2026-11-03T04:53:46.213Z",
+      "checks": [
+        "actual Deno rejects missing/anon/forged/correctly signed expired member JWTs",
+        "cold server document preparation uses pinned identity and actual parse5/Deno/RPC path",
+        "actual member RPC and HTTP cannot submit caller-claimed successful counts",
+        "8 independent concurrent requests produce exactly one successful consumption",
+        "other participant can normally use their own separate permit once",
+        "concurrent identical retries reuse one committed request",
+        "request rebinding, new success and other member permit theft rejected",
+        "re-preparing a used item and cross-room event reuse cannot reset authority",
+        "not found remains unconsumed; literal metacharacter query subsequently succeeds",
+        "8 independent permits concurrently succeed once each, without sharing ownership or consumption",
+        "expiry is checked after room lock waits; a queued request never consumes an expired permit",
+        "HTML5 server sanitizer matches existing browser sanitizer across 9 entity/table/reference/link/empty-body cases",
+        "actual rendered body text nodes equal server canonical revision manifest",
+        "readable value/caret/placeholder/messages/buttons at 320/390/1440; real Chromium IME Enter waits for commit and preserves focus",
+        "real React blank/missing/normal success flow highlights only after server approval",
+        "lost committed response retries the same request without duplicate consumption",
+        "React availability state tampering cannot obtain another successful highlight/consumption",
+        "F5 does not reopen search or reset server ledger; no browser page errors",
+        "injected upstream 429 fails closed without extending expiry or consuming success",
+        "injected upstream identity fails closed without extending expiry or consuming success",
+        "injected upstream timeout fails closed without extending expiry or consuming success",
+        "actual RPC gate blocks closed entry/old tabs, admits current protocol, preserves active heartbeat",
+        "actual kill/recovery preserves slot before activation, absolute expiry and one success after activation"
+      ]
+    },
+    "gameplay": {
+      "passed": 23,
+      "completed": true,
+      "date": "2026-11-03T04:55:38.824Z",
+      "checks": [
+        "target helper: authenticated candidate read uses existing schema columns",
+        "a3: both players reach playing through the RPC read",
+        "a3: the table read during play returns my own row only",
+        "A3: host and guest direct SELECT both show only their own row",
+        "duel-game: mobile 390px no horizontal overflow and result button usable",
+        "a3: the guest panel shows the host's current document and move count",
+        "a3: the guest received the host's duel_progress signal (265ms)",
+        "a3: no guest player read carried the host path while playing",
+        "A3: real Realtime own-row positive controls received by both; opponent private payload absent; public progress received by both",
+        "a3: guest F5 mid-match recovers with the opponent shown",
+        "a3: after the finish both results show and the host path is revealed",
+        "A3: after finish both direct SELECT and masked RPC reveal opponent path",
+        "duel result F5: verdict/path/moves/XP recovered; XP and achievement rows unchanged",
+        "duel-result: mobile 390px no horizontal overflow and result button usable",
+        "no 1:1 page read room_players directly",
+        "random_teleport: actual local Edge selects canonical unrelated document; DB move/path/count/consumption and browser rendering succeed",
+        "duel: forfeit result and retired-player F5 restore",
+        "group: room/join/ready/start via actual RPC; A3 retains all three group rows",
+        "group: personal finish shows rank while remaining race continues",
+        "group: actual finished player enters spectator mode while the other two continue",
+        "group: final result XP/achievement, F5 no duplicate grants, mobile 390px result and primary action usable",
+        "browser page errors: zero",
+        "cleanup: policy preserved; rooms/accounts/pages removed; sessions/keys never saved"
+      ]
+    },
+    "bundled": {
+      "passed": 321,
+      "screens": 42,
+      "assertionErrors": null,
+      "pageErrors": [],
+      "checks": [
+        "duel-1920: no horizontal overflow",
+        "duel/1920: scoped mode has no duplicate picker",
+        "duel/1920: default private",
+        "duel/1920: no room code in public listing",
+        "duel/1920: narrow action column stacks cards",
+        "duel/1920: stacked cards use the full action column",
+        "duel/1920: all six code characters fit",
+        "duel/1920: card labels and controls are not clipped",
+        "duel/1920: public board before code/create",
+        "duel/1920: all main controls >=44px",
+        "duel/1920: title actual Surround",
+        "duel/1920: cta actual Surround",
+        "duel/1920: paper actual Maru Bold",
+        "duel/1920: player actual Pretendard",
+        "duel/1920: body actual Pretendard",
+        "duel/1920: numeric actual Pretendard",
+        "duel/1920: nickname600 / numbers700 tabular",
+        "duel/1920: header nickname600",
+        "group-1920: no horizontal overflow",
+        "group/1920: scoped mode has no duplicate picker",
+        "group/1920: default private",
+        "group/1920: no room code in public listing",
+        "1920: default capacity 6",
+        "group/1920: narrow action column stacks cards",
+        "group/1920: stacked cards use the full action column",
+        "group/1920: all six code characters fit",
+        "group/1920: card labels and controls are not clipped",
+        "group/1920: public board before code/create",
+        "group/1920: all main controls >=44px",
+        "group/1920: title actual Surround",
+        "group/1920: cta actual Surround",
+        "group/1920: paper actual Maru Bold",
+        "group/1920: player actual Pretendard",
+        "group/1920: body actual Pretendard",
+        "group/1920: numeric actual Pretendard",
+        "group/1920: nickname600 / numbers700 tabular",
+        "group/1920: header nickname600",
+        "duel-1440: no horizontal overflow",
+        "duel/1440: scoped mode has no duplicate picker",
+        "duel/1440: default private",
+        "duel/1440: no room code in public listing",
+        "duel/1440: narrow action column stacks cards",
+        "duel/1440: stacked cards use the full action column",
+        "duel/1440: all six code characters fit",
+        "duel/1440: card labels and controls are not clipped",
+        "duel/1440: public board before code/create",
+        "duel/1440: all main controls >=44px",
+        "duel/1440: title actual Surround",
+        "duel/1440: cta actual Surround",
+        "duel/1440: paper actual Maru Bold",
+        "duel/1440: player actual Pretendard",
+        "duel/1440: body actual Pretendard",
+        "duel/1440: numeric actual Pretendard",
+        "duel/1440: nickname600 / numbers700 tabular",
+        "duel/1440: header nickname600",
+        "group-1440: no horizontal overflow",
+        "group/1440: scoped mode has no duplicate picker",
+        "group/1440: default private",
+        "group/1440: no room code in public listing",
+        "1440: default capacity 6",
+        "group/1440: narrow action column stacks cards",
+        "group/1440: stacked cards use the full action column",
+        "group/1440: all six code characters fit",
+        "group/1440: card labels and controls are not clipped",
+        "group/1440: public board before code/create",
+        "group/1440: all main controls >=44px",
+        "group/1440: title actual Surround",
+        "group/1440: cta actual Surround",
+        "group/1440: paper actual Maru Bold",
+        "group/1440: player actual Pretendard",
+        "group/1440: body actual Pretendard",
+        "group/1440: numeric actual Pretendard",
+        "group/1440: nickname600 / numbers700 tabular",
+        "group/1440: header nickname600",
+        "duel-1024: no horizontal overflow",
+        "duel/1024: scoped mode has no duplicate picker",
+        "duel/1024: default private",
+        "duel/1024: no room code in public listing",
+        "duel/1024: narrow action column stacks cards",
+        "duel/1024: stacked cards use the full action column",
+        "duel/1024: all six code characters fit",
+        "duel/1024: card labels and controls are not clipped",
+        "duel/1024: public board before code/create",
+        "duel/1024: all main controls >=44px",
+        "duel/1024: title actual Surround",
+        "duel/1024: cta actual Surround",
+        "duel/1024: paper actual Maru Bold",
+        "duel/1024: player actual Pretendard",
+        "duel/1024: body actual Pretendard",
+        "duel/1024: numeric actual Pretendard",
+        "duel/1024: nickname600 / numbers700 tabular",
+        "duel/1024: header nickname600",
+        "group-1024: no horizontal overflow",
+        "group/1024: scoped mode has no duplicate picker",
+        "group/1024: default private",
+        "group/1024: no room code in public listing",
+        "1024: default capacity 6",
+        "group/1024: narrow action column stacks cards",
+        "group/1024: stacked cards use the full action column",
+        "group/1024: all six code characters fit",
+        "group/1024: card labels and controls are not clipped",
+        "group/1024: public board before code/create",
+        "group/1024: all main controls >=44px",
+        "group/1024: title actual Surround",
+        "group/1024: cta actual Surround",
+        "group/1024: paper actual Maru Bold",
+        "group/1024: player actual Pretendard",
+        "group/1024: body actual Pretendard",
+        "group/1024: numeric actual Pretendard",
+        "group/1024: nickname600 / numbers700 tabular",
+        "group/1024: header nickname600",
+        "duel-768: no horizontal overflow",
+        "duel/768: scoped mode has no duplicate picker",
+        "duel/768: default private",
+        "duel/768: no room code in public listing",
+        "duel/768: two-column cards have readable width",
+        "duel/768: all six code characters fit",
+        "duel/768: card labels and controls are not clipped",
+        "duel/768: public board before code/create",
+        "duel/768: all main controls >=44px",
+        "duel/768: title actual Surround",
+        "duel/768: cta actual Surround",
+        "duel/768: paper actual Maru Bold",
+        "duel/768: player actual Pretendard",
+        "duel/768: body actual Pretendard",
+        "duel/768: numeric actual Pretendard",
+        "duel/768: nickname600 / numbers700 tabular",
+        "duel/768: header nickname600",
+        "group-768: no horizontal overflow",
+        "group/768: scoped mode has no duplicate picker",
+        "group/768: default private",
+        "group/768: no room code in public listing",
+        "768: default capacity 6",
+        "group/768: two-column cards have readable width",
+        "group/768: all six code characters fit",
+        "group/768: card labels and controls are not clipped",
+        "group/768: public board before code/create",
+        "group/768: all main controls >=44px",
+        "group/768: title actual Surround",
+        "group/768: cta actual Surround",
+        "group/768: paper actual Maru Bold",
+        "group/768: player actual Pretendard",
+        "group/768: body actual Pretendard",
+        "group/768: numeric actual Pretendard",
+        "group/768: nickname600 / numbers700 tabular",
+        "group/768: header nickname600",
+        "duel-390: no horizontal overflow",
+        "duel/390: scoped mode has no duplicate picker",
+        "duel/390: default private",
+        "duel/390: no room code in public listing",
+        "duel/390: narrow action column stacks cards",
+        "duel/390: stacked cards use the full action column",
+        "duel/390: all six code characters fit",
+        "duel/390: card labels and controls are not clipped",
+        "duel/390: public board before code/create",
+        "duel/390: public rooms in first mobile screen",
+        "duel/390: all main controls >=44px",
+        "duel/390: title actual Surround",
+        "duel/390: cta actual Surround",
+        "duel/390: paper actual Maru Bold",
+        "duel/390: player actual Pretendard",
+        "duel/390: body actual Pretendard",
+        "duel/390: numeric actual Pretendard",
+        "duel/390: nickname600 / numbers700 tabular",
+        "duel/390: header nickname600",
+        "group-390: no horizontal overflow",
+        "group/390: scoped mode has no duplicate picker",
+        "group/390: default private",
+        "group/390: no room code in public listing",
+        "390: default capacity 6",
+        "group/390: narrow action column stacks cards",
+        "group/390: stacked cards use the full action column",
+        "group/390: all six code characters fit",
+        "group/390: card labels and controls are not clipped",
+        "group/390: public board before code/create",
+        "group/390: public rooms in first mobile screen",
+        "group/390: all main controls >=44px",
+        "group/390: title actual Surround",
+        "group/390: cta actual Surround",
+        "group/390: paper actual Maru Bold",
+        "group/390: player actual Pretendard",
+        "group/390: body actual Pretendard",
+        "group/390: numeric actual Pretendard",
+        "group/390: nickname600 / numbers700 tabular",
+        "group/390: header nickname600",
+        "duel-320: no horizontal overflow",
+        "duel/320: scoped mode has no duplicate picker",
+        "duel/320: default private",
+        "duel/320: no room code in public listing",
+        "duel/320: narrow action column stacks cards",
+        "duel/320: stacked cards use the full action column",
+        "duel/320: all six code characters fit",
+        "duel/320: card labels and controls are not clipped",
+        "duel/320: public board before code/create",
+        "duel/320: public rooms in first mobile screen",
+        "duel/320: all main controls >=44px",
+        "duel/320: title actual Surround",
+        "duel/320: cta actual Surround",
+        "duel/320: paper actual Maru Bold",
+        "duel/320: player actual Pretendard",
+        "duel/320: body actual Pretendard",
+        "duel/320: numeric actual Pretendard",
+        "duel/320: nickname600 / numbers700 tabular",
+        "duel/320: header nickname600",
+        "group-320: no horizontal overflow",
+        "group/320: scoped mode has no duplicate picker",
+        "group/320: default private",
+        "group/320: no room code in public listing",
+        "320: default capacity 6",
+        "group/320: narrow action column stacks cards",
+        "group/320: stacked cards use the full action column",
+        "group/320: all six code characters fit",
+        "group/320: card labels and controls are not clipped",
+        "group/320: public board before code/create",
+        "group/320: public rooms in first mobile screen",
+        "group/320: all main controls >=44px",
+        "group/320: title actual Surround",
+        "group/320: cta actual Surround",
+        "group/320: paper actual Maru Bold",
+        "group/320: player actual Pretendard",
+        "group/320: body actual Pretendard",
+        "group/320: numeric actual Pretendard",
+        "group/320: nickname600 / numbers700 tabular",
+        "group/320: header nickname600",
+        "landing-1440: no horizontal overflow",
+        "home-1440: no horizontal overflow",
+        "play-1440: no horizontal overflow",
+        "landing-1024: no horizontal overflow",
+        "home-1024: no horizontal overflow",
+        "play-1024: no horizontal overflow",
+        "landing-768: no horizontal overflow",
+        "home-768: no horizontal overflow",
+        "play-768: no horizontal overflow",
+        "landing-390: no horizontal overflow",
+        "home-390: no horizontal overflow",
+        "play-390: no horizontal overflow",
+        "landing-320: no horizontal overflow",
+        "home-320: no horizontal overflow",
+        "play-320: no horizontal overflow",
+        "duel-waiting-1440: no horizontal overflow",
+        "1440: duel no READY",
+        "duel/1440: waiting nickname uses Pretendard",
+        "duel/1440: waiting nickname600",
+        "duel/1440: waiting title uses Surround",
+        "duel/1440: fixture F5 restoration retained",
+        "duel-waiting-390: no horizontal overflow",
+        "390: duel no READY",
+        "duel/390: waiting nickname uses Pretendard",
+        "duel/390: waiting nickname600",
+        "duel/390: waiting title uses Surround",
+        "duel/390: fixture F5 restoration retained",
+        "duel-waiting-320: no horizontal overflow",
+        "320: duel no READY",
+        "duel/320: waiting nickname uses Pretendard",
+        "duel/320: waiting nickname600",
+        "duel/320: waiting title uses Surround",
+        "duel/320: fixture F5 restoration retained",
+        "group-waiting-1440: no horizontal overflow",
+        "group/1440: waiting nickname uses Pretendard",
+        "group/1440: waiting nickname600",
+        "group/1440: waiting title uses Surround",
+        "group/1440: fixture F5 restoration retained",
+        "group-waiting-390: no horizontal overflow",
+        "group/390: waiting nickname uses Pretendard",
+        "group/390: waiting nickname600",
+        "group/390: waiting title uses Surround",
+        "group/390: fixture F5 restoration retained",
+        "group-waiting-320: no horizontal overflow",
+        "group/320: waiting nickname uses Pretendard",
+        "group/320: waiting nickname600",
+        "group/320: waiting title uses Surround",
+        "group/320: fixture F5 restoration retained",
+        "state-loading-390: no horizontal overflow",
+        "state-empty-390: no horizontal overflow",
+        "state-error-390: no horizontal overflow",
+        "list error refresh recovers",
+        "help-duel-390: no horizontal overflow",
+        "duel: help focus trap/Escape/return",
+        "duel: failed public join re-fetches list",
+        "duel: public join navigation and duplicate guard",
+        "duel: code trim/uppercase preserved",
+        "duel: default private create payload",
+        "duel default items true",
+        "duel: configured create single request",
+        "help-group-390: no horizontal overflow",
+        "group: help focus trap/Escape/return",
+        "group: failed public join re-fetches list",
+        "group: public join navigation and duplicate guard",
+        "group: code trim/uppercase preserved",
+        "group code join second RPC retained",
+        "group: default private create payload",
+        "group default create settings preserved",
+        "group: configured create single request",
+        "unscoped legacy mode picker retained",
+        "guest blocked from online entry",
+        "anonymous redirected to login",
+        "font-fallback-320: no horizontal overflow",
+        "font failure retains readable system fallback",
+        "CTA keyboard focus visible",
+        "focus-hover-390: no horizontal overflow",
+        "reduced-height-keyboard-390: no horizontal overflow",
+        "reduced viewport allows code field focus",
+        "long-cta-320: no horizontal overflow",
+        "long CTA wraps without clipping",
+        "no unhandled page errors",
+        "no normal console errors",
+        "landing-1440: pixel-identical regression",
+        "home-1440: pixel-identical regression",
+        "play-1440: pixel-identical regression",
+        "landing-1024: pixel-identical regression",
+        "home-1024: pixel-identical regression",
+        "play-1024: pixel-identical regression",
+        "landing-768: pixel-identical regression",
+        "home-768: pixel-identical regression",
+        "play-768: pixel-identical regression",
+        "landing-390: pixel-identical regression",
+        "home-390: pixel-identical regression",
+        "play-390: pixel-identical regression",
+        "landing-320: pixel-identical regression",
+        "home-320: pixel-identical regression",
+        "play-320: pixel-identical regression"
+      ]
+    },
+    "dev": {
+      "passed": 321,
+      "screens": 42,
+      "pageErrors": []
+    },
+    "before": {
+      "passed": 86,
+      "screens": 33
+    },
+    "designPixelIdentical": [
+      "landing-1440: pixel-identical regression",
+      "home-1440: pixel-identical regression",
+      "play-1440: pixel-identical regression",
+      "landing-1024: pixel-identical regression",
+      "home-1024: pixel-identical regression",
+      "play-1024: pixel-identical regression",
+      "landing-768: pixel-identical regression",
+      "home-768: pixel-identical regression",
+      "play-768: pixel-identical regression",
+      "landing-390: pixel-identical regression",
+      "home-390: pixel-identical regression",
+      "play-390: pixel-identical regression",
+      "landing-320: pixel-identical regression",
+      "home-320: pixel-identical regression",
+      "play-320: pixel-identical regression"
+    ]
+  },
+  "evidence": [
+    {
+      "file": "docs/ops/evidence/jungle65-ui-hotfix-20261103/lobby-after-1440.png",
+      "sha256": "3b67988eee55435367668a958639b147c6279d50630599c55f6af87d05f9bfbd"
+    },
+    {
+      "file": "docs/ops/evidence/jungle65-ui-hotfix-20261103/lobby-before-1440.png",
+      "sha256": "0395f10f6603db244ccd5757fe8b3d80bbabb84e9e685bd9dc1844195dc5dddc"
+    },
+    {
+      "file": "docs/ops/evidence/jungle65-ui-hotfix-20261103/search-after-390.png",
+      "sha256": "699bd5e589eac2b63dbc810520aa07147b3f9ffaf99c467baffb5763d090dceb"
+    },
+    {
+      "file": "docs/ops/evidence/jungle65-ui-hotfix-20261103/search-before-390.png",
+      "sha256": "d6dbc0eb690e8e60a28130c6860f027e9e60beb821cbcb67781dc5672b8c7540"
+    }
+  ],
+  "harnessCorrections": [
+    "New group locator corrected to the existing accessible name 단체 방 코드",
+    "New mobile width assertion checks full column use plus six visible characters and unclipped controls; it does not assume a viewport gutter",
+    "Existing dev font/CSS outage test retained; new bundled mode injects font-file failures because aborting imported CSS prevents Vite mounting the app"
+  ],
+  "originalAssertionsRemoved": 0,
+  "existingTolerancesRelaxed": 0,
+  "serverAndAssetsChanged": false,
+  "remoteGate": "Verify the final PR head CI and Vercel Preview; no main merge or Production redeploy in this task"
+}
