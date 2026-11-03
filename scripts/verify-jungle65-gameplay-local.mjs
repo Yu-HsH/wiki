@@ -10,6 +10,7 @@ import { chromium, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { createServer } from 'vite';
 import {spawnSync} from 'node:child_process';
+import {createServer as createHttpServer} from 'node:http';
 const isolatedProject='C:/Project/wiki-jungle65/.temp/next-goal-20261014/jungle65-release-20261102/project';
 assert.ok(fs.readFileSync(isolatedProject+'/supabase/config.toml','utf8').includes('project_id = "wiki-next-goal-release-20261029"'));
 const readProjectId=()=> 'wiki-next-goal-release-20261029';
@@ -33,7 +34,7 @@ const token = randomUUID().slice(0, 8);
 const groupOnly = process.argv.includes('--group-only');
 const singleOnly = process.argv.includes('--single-only');
 const names = ['시작', '중간', '목표'].map((name) => `sa2-${token}-${name}${process.argv.includes('--long-titles') ? '-아주긴문서제목'.repeat(12) : ''}`);
-const pages = names.map((title, i) => ({ title, pageId: `sa2-${token}-${i}`, revisionId: `${100 + i}`, snapshotId: randomUUID() }));
+const pages = names.map((title, i) => ({ title, pageId: singleOnly ? String(8000000000+parseInt(token,16)+i) : `sa2-${token}-${i}`, revisionId: `${100 + i}`, snapshotId: randomUUID() }));
 const [START, MIDDLE, TARGET] = pages;
 const PATH_KEYS = ['path_titles', 'path_page_ids', 'path_revision_ids'];
 // Assert the applied SF-A3 policy; never replace it for this smoke.
@@ -64,6 +65,8 @@ const admin = createClient(apiUrl, config.SERVICE_ROLE_KEY, { auth: { persistSes
 let browser, server, completed = false;
 let groupFixture = false;
 let singleRandomFixture = false, randomPickCount = 0;
+let singleTransport, singleRuntimeOriginal, singleDraw=0;
+const singleRuntime=isolatedProject+'/supabase/functions/single-run/index.ts';
 let dailyOriginal, dailyChanged = false;
 const artifactDir = '.temp/search-cpu-20261103/gameplay';
 fs.mkdirSync(artifactDir, { recursive: true });
@@ -135,6 +138,20 @@ async function roomRows(id) {
 const opponentBox = (page, label) => page.locator('.mp-opponent-box').filter({ hasText: label }).locator('.mp-opponent-value');
 
 try {
+  if(singleOnly){
+    singleTransport=createHttpServer(async(req,res)=>{let input='';for await(const c of req)input+=c;const {address,body}=JSON.parse(input),url=new URL(address);let data;
+      if(url.hostname==='ko.wikipedia.org'){
+        const p=url.searchParams.get('generator')==='random'?[START,TARGET][singleDraw++%2]:START;
+        data=url.searchParams.get('generator')==='random'?{query:{pages:[{ns:0,pageid:p.pageId,title:p.title,revisions:[{revid:p.revisionId}]}]}}:{query:{random:[{title:p.title}]}};
+      } else {const request=JSON.parse(body||'{}'),p=pages.find(p=>p.title===request.title||p.pageId===request.pageId);assert(p,'known server fixture identity');data={snapshotId:p.snapshotId,pageId:p.pageId,revisionId:p.revisionId,canonicalTitle:p.title,documentHtml:`<div class="mw-parser-output"><p>Local single fixture</p><a href="/wiki/${TARGET.title}">${TARGET.title}</a></div>`,links:[{title:TARGET.title,pageId:TARGET.pageId}]};}
+      res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(data));
+    });
+    await new Promise(r=>singleTransport.listen(5354,'0.0.0.0',r));
+    singleRuntimeOriginal=fs.readFileSync(singleRuntime,'utf8');
+    // Only external transport changes. Real handler/Auth/DB/claim/commit remain.
+    fs.writeFileSync(singleRuntime,`const _singleFixtureFetch=globalThis.fetch.bind(globalThis);globalThis.fetch=(input,options)=>{const address=String(input instanceof Request?input.url:input);return address.includes('ko.wikipedia.org/w/api.php')||address.endsWith('/functions/v1/wiki-snapshot')?_singleFixtureFetch('http://host.docker.internal:5354/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address,body:options?.body}),signal:options?.signal}):_singleFixtureFetch(input,options);};\n`+singleRuntimeOriginal);
+    await new Promise(r=>setTimeout(r,4000));
+  }
   sql(`insert into public.wiki_pages(page_id, canonical_title) values ${pages.map((p) => `(${q(p.pageId)},${q(p.title)})`).join(',')};
     insert into public.wiki_page_snapshots(id,page_id,revision_id,canonical_title_snapshot) values ${pages.map((p) => `(${q(p.snapshotId)},${q(p.pageId)},${q(p.revisionId)},${q(p.title)})`).join(',')};
     insert into public.wiki_snapshot_links(snapshot_id,target_page_id,target_revision_id,target_title_snapshot,link_text,ordinal) values
@@ -321,14 +338,15 @@ try {
     if(dailyOriginal?.hint==='Release fixture' && dailyOriginal.target_title.startsWith('sa2-')) dailyOriginal=null;
     dailyChanged=true;
     sql(`delete from public.daily_challenges where challenge_date=(now() at time zone 'Asia/Seoul')::date;
-      insert into public.daily_challenges(challenge_date,target_title,hint) values((now() at time zone 'Asia/Seoul')::date,${q(TARGET.title)},'Release fixture');`);
+      insert into public.daily_challenges(challenge_date,start_title,target_title,hint) values((now() at time zone 'Asia/Seoul')::date,${q(START.title)},${q(TARGET.title)},'Release fixture');`);
     dailyChanged=true;
     const measurements=[];
     for(const [mode,expected] of [['custom',15],['custom',0],['random',20],['daily',25],['daily',0]]) {
-      singleRandomFixture=mode==='random';randomPickCount=0;
+      singleRandomFixture=mode==='random';randomPickCount=0;singleDraw=0;
       await host.goto(`${base}/lobby`);
       if(mode==='daily') {
-        await expect(host.locator('.daily-keyword')).toHaveText(TARGET.title,{timeout:15000});
+        await expect(host.locator('.daily-course .daily-endpoint strong').nth(0)).toHaveText(START.title,{timeout:15000});
+        await expect(host.locator('.daily-course .daily-endpoint strong').nth(1)).toHaveText(TARGET.title,{timeout:15000});
         await host.locator('.daily-btn').click();
       } else {
         await host.goto(`${base}/play`);
@@ -408,6 +426,8 @@ try {
   assert.deepEqual(errors, []); pass('browser page errors: zero');
   completed = true;
 } finally {
+  if(singleRuntimeOriginal!==undefined)fs.writeFileSync(singleRuntime,singleRuntimeOriginal);
+  if(singleTransport)await new Promise(r=>singleTransport.close(r));
   assert.equal(policyQual(),originalQual,'the real A3 policy was preserved');
   for(const s of subscriptions) await s.client.removeChannel(s.channel);
   for (const context of contexts) await context.close();
