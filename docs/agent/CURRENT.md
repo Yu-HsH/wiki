@@ -1,3 +1,44 @@
+# 현재 상태 — Jungle65 최종 운영 배포 후보
+
+갱신: **2026-11-03 KST**. 기준 커밋 **0b93be93bf8fa19ae9f74bcfd9174a7b3613a04d** (20b50fb 후 제한 복구·QA 구현). 이 CURRENT를 기록하는 문서 커밋의 부모가 제품 기준이다. 브랜치 **codex/jungle65-release-candidate-20261102**, Draft [PR #8](https://github.com/Yu-HsH/wiki/pull/8). 디자인 PR #7·27e5056, 보안 fdd7190, 이전 후보20b50fb를 보존한다.
+
+판정: **최종 로컬 후보 검증 통과 / Production HOLD / 운영 변경0**. 검사 기준은 위 제품과 같은 커밋 직전 소스, fingerprint 4c7162b768bd5ee28485a53d8a4ce607f746190e80a62293598525573f751dfb, 2026-11-03 KST다. 새 문서 head의 CI/Preview는 PR #8의 최신 head/check/deployment 및 최종 실행 보고를 기준으로 확인한다.
+
+- 신규 postgres 전용 admin_recover_legacy_duel_v1: 고정4개(D01/D02/D28/D32) hash/전체 사전 지문·status/roster/snapshot·30일 미활동·결과/XP 부재를 잠금 안에서 확인한다. 무승자 취소·신규 XP/업적0, 요청 ID/근거/시각/actor 감사 및 동일 결과 재시도를 구현했다. 정상 finished leave의 요청 이력은 허용하고 정산 변조는 거부한다. 일반 회원/anon/service_role 실행0.
+- 신규 postgres 전용 admin_set_duel_qa_v1: 정확한 auth.uid 최대2개, 기본60분/최대2시간·명단 비공개·구형 protocol 차단·감사/재시도 TTL 연장0. 만료/회수 뒤 새 입장만 거부하고 기존 경기 정산은 허용한다. 운영 명단 등록0·실제 사용자 인증정보 수집0.
+- 원래4개 migration raw 승인 hash와 Git LF 원문 모두 동일. 별도2개 추가로 후보51=운영 기준45+pending6, 의존 순서는 기반→복구→QA→검색→guard→retention. 신규 Edge는 기존20b50fb의 duel-search1개 그대로다. 운영 적용/배포0, 자동 일괄 push0.
+- 실제 백업3,019,987bytes를 OWNER postgres 새 빈 DB에 복원: 원래77테이블/125함수/41정책/76보안/24기본권한 동일. 검색 설치 전 전체36건 drain0/신규 XP0을 rollback 검증했다. 32건 정상 취소·제한4건 무승자/무XP/무업적·실제 두 연결 중복/heartbeat 경합 통과. 모든 결과는 격리 복사본이며 운영 처리 결과가 아니다.
+- 최종 SQL275=기존23+157+34 및 신규복구28/QA33, TAP 실제 assertion=plan 확인. npm765/765·fail/skip0, build/diff 통과. 실제 복원본 Auth/HTTP/Realtime/React14, 실제 검색권위/Edge22, 1:1·그룹 관전/XP23, 싱글15/0·20·25/0 XP9 통과. 디자인69·전체154/108화면·승인20b50fb 원본과 duel116/38화면 픽셀 비교·모바일HUD78 통과. 기존 검사 삭제/skip/허용오차 확대0.
+- 실제 Wikipedia75/75, 추가 대형Cold20/20+hit10/10, 320/390px UI20/20, CPU hard limit0. 대형Cold p50/p95/max3325/3723/4122ms·최소 잔여10878ms, UI 최소 잔여11542ms. 정제기/화면/폰트/이미지/Edge 소스 변경0,15초 연장·환급0.
+- 기존32건 만료 RPC는 그대로다. 한쪽이 heartbeat 경합에서 재개하면 정상 기권승/30 XP가 생길 수 있음을 실제 검증했다. 엄격한 취소만 보장하는 별도32건 관리 경로는 이번 범위에 추가하지 않았다. 운영 실행은 재검증 후 별도 승인하며 결과/XP를 임의 수정하지 않는다.
+- 남은 운영 승인:6개 migration/제어,32건 정상 만료,4건 제한 복구,Edge1개,QA2계정 경기·아이템·XP,PR8 main 병합/자동Production1회,QA PASS 정상화. 실제 창에서 새 백업/restore·최신 활동·권한·drain0·복구 artifact를 다시 확인한다. 장애 시 entry/search 닫기·protocol 유지·정상 정산 허용, 구형 프론트 무조건 rollback 금지.
+- HOME 배너 Issue #9 및 튜토리얼/이펙트/공지/관전 이모티콘/채팅 변경0. 운영2계정 QA는 새 서버 권위 Production 후 사용자가 직접 수행한다. 운영 DB/종료RPC/게임·XP/Edge/main/Production/점검 게이트 설치·해제0.
+
+상세: [최종 후보·검증·승인 목록](../ops/JUNGLE65-FINAL-CANDIDATE-2026-11-03.md), [전체 migration/Edge 해시·실측 JSON](../ops/JUNGLE65-FINAL-CANDIDATE-2026-11-03.json), [실행 절차](../ops/JUNGLE65-DEPLOY-PROCEDURE-2026-11-03.md), [36건 원래 읽기 분석](../ops/JUNGLE65-DRAIN-REVIEW-2026-11-03.md).
+
+---
+
+## 아래는20b50fb 기준 읽기 전용 분석과 과거 기록
+
+# 현재 상태 — Jungle65 미종료 경기 분석·배포 HOLD
+
+갱신: **2026-11-03 KST**. 기준 커밋 **20b50fb63cd8fe1eee10130892c439a6a2af64be**, 브랜치 **codex/jungle65-release-candidate-20261102**, Draft PR #8. 이번 갱신은 **미커밋 문서 변경**이다. 최신 사용자 지시는 운영 읽기 전용 분석·절차 확정이며, 기존 배포 요청을 지금 실행하지 않는다. 제품·디자인·기존 migration/Edge 원문은 변경하지 않았다.
+
+판정: **HOLD / 운영 DB·Edge·main·Production 변경0 / 운영 종료 RPC·QA 경기·XP 생성0**. 운영 2계정 QA는 새 서버 권위 Production 프론트 배포 후 사용자가 직접 수행하고 인증정보를 공유하지 않는다. HOME 배너는 Issue #9로 보류하며 후속 기능을 추가하지 않는다.
+
+- 실제 운영 45개 migration(마지막20261030044026)·public 함수72/테이블36/정책37·기존 Edge8 ACTIVE를 이번 창에서 읽기 확인했다. 기반 제어/검색 세션은 미설치다. 아래 과거 문단의 “사용자 제공값/실측 아님”보다 이 확인이 우선한다. 정확한 적용 창에서는 다시 조회한다.
+- **미종료36건 = 정상 만료 후보32 + starting 고착2 + host만 남은 playing2**. 2026-11-03 10:37:28→10:47:50 KST 재조회에서 방·70참가자·활동·결과·XP 및 관련 함수/트리거 동일. 33건은 heartbeat NULL/start identity 없음, 최근3건은 양쪽 snapshot/graph 존재(10:49:40 확인)여서 본인 재접속 가능성을 배제하지 않는다. 모든 기존 참가자는 playing, 기존 결과/연결 XP0, 활성 검색효과0 [산출물].
+- 운영 백업을 실제 격리 복사본에 복원하고 기존 만료 RPC를 rollback 검증했다. **32건은 cancelled 결과1/retired2/신규 XP0, 재시도 동일**. 나머지2건은 DUEL_NOT_PLAYING, 2건은 DUEL_PARTICIPANTS_REQUIRED다. 77테이블 fingerprint는 rollback 뒤 동일했다. 4건의 실제 참가자 자발적 기권은 가능하지만 forfeit/XP 영향이 있으므로 운영자가 대신 호출하지 않는다. 4건은 자발적 종료 또는 별도 복구 정책/구현/승인이 필요하며 drain 집계에서 제외하지 않는다.
+- **원래4개 migration만으로 QA2계정 전용 입장은 불가**다. 전역 entry_open을 열거나 protocol 표식만으로 대체하지 않는다. 정확히2개 auth.uid/TTL/자가 등록 불가/protocol 필수의 별도 private 명단 설계를 격리 rollback에서24/24 확인했으나, 정식 migration/PR/운영에는 미반영이다. 추가 서버 변경과 필요 시4건 복구 RPC를 별도 승인하고 새 후보 SHA의 CI/Preview를 재검증해야 한다.
+- 실제 DB archive는10:14:49 KST, 3,019,987bytes이며 새 빈 DB 복원 후77테이블 데이터/125함수/41정책/76보안·ACL·RLS/24기본권한 동일. 복사 DB OWNER postgres로 DDL 권한을 맞춰 원래4개를 적용하고 검색SQL23/아이템157/제어34 모두 통과했다. Storage 본문/Edge secret/관리형 PITR 실복구는 별도 미확인이고 다음 창에 최신 백업/복원을 다시 검증한다.
+- 문서 외 제품 변경0이므로 npm/build 재실행0; 아래 기존765/765·UI 수치는 당시 산출물로 보존한다. 이번 후보 head20b50fb·CI41551776807 success·Preview FHZm9ZKxgbQF8m4MaRDFT95zsPrR success/동일SHA는 이번 창 앞선 원격 조회다. main8da7d25/기존Production은 변경하지 않았다. 실제 배포 시 alias/Deployment ID/Ready를 다시 확인한다.
+
+상세: [36건 개별 시각·참가자·정상/복구 분류](../ops/JUNGLE65-DRAIN-REVIEW-2026-11-03.md), [개인 식별정보를 뺀 JSON](../ops/JUNGLE65-DRAIN-REVIEW-2026-11-03.json), [백업·게이트·추가 승인·QA·배포·복구 절차](../ops/JUNGLE65-DEPLOY-PROCEDURE-2026-11-03.md). 커밋·push·점검 게이트 설치/해제·운영 QA는 실행하지 않았다.
+
+---
+
+## 아래는20b50fb 커밋 시점 CPU 최적화·전환 제어 기록
+
 # 현재 상태 — Jungle65 검색 CPU 최적화·전환 제어 후보
 
 갱신: **2026-11-03 KST**. 기준 커밋 **05efcfbae002ae6aac6e123a43ba6a7b2004642f** (제품6849223 + 실제 그룹 관전 검사 추가). 브랜치 **codex/jungle65-release-candidate-20261102**, Draft [PR #8](https://github.com/Yu-HsH/wiki/pull/8). 이 CURRENT 갱신 커밋의 부모가 기준이다. 디자인27e5056/PR #7·보안fdd7190은 보존한다.
