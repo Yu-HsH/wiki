@@ -1,8 +1,102 @@
+# 현재 상태 — Jungle65 최종 운영 배포 후보
+
+갱신: **2026-11-03 KST**. 기준 커밋 **0b93be93bf8fa19ae9f74bcfd9174a7b3613a04d** (20b50fb 후 제한 복구·QA 구현). 이 CURRENT를 기록하는 문서 커밋의 부모가 제품 기준이다. 브랜치 **codex/jungle65-release-candidate-20261102**, Draft [PR #8](https://github.com/Yu-HsH/wiki/pull/8). 디자인 PR #7·27e5056, 보안 fdd7190, 이전 후보20b50fb를 보존한다.
+
+판정: **최종 로컬 후보 검증 통과 / Production HOLD / 운영 변경0**. 검사 기준은 위 제품과 같은 커밋 직전 소스, fingerprint 4c7162b768bd5ee28485a53d8a4ce607f746190e80a62293598525573f751dfb, 2026-11-03 KST다. 새 문서 head의 CI/Preview는 PR #8의 최신 head/check/deployment 및 최종 실행 보고를 기준으로 확인한다.
+
+- 신규 postgres 전용 admin_recover_legacy_duel_v1: 고정4개(D01/D02/D28/D32) hash/전체 사전 지문·status/roster/snapshot·30일 미활동·결과/XP 부재를 잠금 안에서 확인한다. 무승자 취소·신규 XP/업적0, 요청 ID/근거/시각/actor 감사 및 동일 결과 재시도를 구현했다. 정상 finished leave의 요청 이력은 허용하고 정산 변조는 거부한다. 일반 회원/anon/service_role 실행0.
+- 신규 postgres 전용 admin_set_duel_qa_v1: 정확한 auth.uid 최대2개, 기본60분/최대2시간·명단 비공개·구형 protocol 차단·감사/재시도 TTL 연장0. 만료/회수 뒤 새 입장만 거부하고 기존 경기 정산은 허용한다. 운영 명단 등록0·실제 사용자 인증정보 수집0.
+- 원래4개 migration raw 승인 hash와 Git LF 원문 모두 동일. 별도2개 추가로 후보51=운영 기준45+pending6, 의존 순서는 기반→복구→QA→검색→guard→retention. 신규 Edge는 기존20b50fb의 duel-search1개 그대로다. 운영 적용/배포0, 자동 일괄 push0.
+- 실제 백업3,019,987bytes를 OWNER postgres 새 빈 DB에 복원: 원래77테이블/125함수/41정책/76보안/24기본권한 동일. 검색 설치 전 전체36건 drain0/신규 XP0을 rollback 검증했다. 32건 정상 취소·제한4건 무승자/무XP/무업적·실제 두 연결 중복/heartbeat 경합 통과. 모든 결과는 격리 복사본이며 운영 처리 결과가 아니다.
+- 최종 SQL275=기존23+157+34 및 신규복구28/QA33, TAP 실제 assertion=plan 확인. npm765/765·fail/skip0, build/diff 통과. 실제 복원본 Auth/HTTP/Realtime/React14, 실제 검색권위/Edge22, 1:1·그룹 관전/XP23, 싱글15/0·20·25/0 XP9 통과. 디자인69·전체154/108화면·승인20b50fb 원본과 duel116/38화면 픽셀 비교·모바일HUD78 통과. 기존 검사 삭제/skip/허용오차 확대0.
+- 실제 Wikipedia75/75, 추가 대형Cold20/20+hit10/10, 320/390px UI20/20, CPU hard limit0. 대형Cold p50/p95/max3325/3723/4122ms·최소 잔여10878ms, UI 최소 잔여11542ms. 정제기/화면/폰트/이미지/Edge 소스 변경0,15초 연장·환급0.
+- 기존32건 만료 RPC는 그대로다. 한쪽이 heartbeat 경합에서 재개하면 정상 기권승/30 XP가 생길 수 있음을 실제 검증했다. 엄격한 취소만 보장하는 별도32건 관리 경로는 이번 범위에 추가하지 않았다. 운영 실행은 재검증 후 별도 승인하며 결과/XP를 임의 수정하지 않는다.
+- 남은 운영 승인:6개 migration/제어,32건 정상 만료,4건 제한 복구,Edge1개,QA2계정 경기·아이템·XP,PR8 main 병합/자동Production1회,QA PASS 정상화. 실제 창에서 새 백업/restore·최신 활동·권한·drain0·복구 artifact를 다시 확인한다. 장애 시 entry/search 닫기·protocol 유지·정상 정산 허용, 구형 프론트 무조건 rollback 금지.
+- HOME 배너 Issue #9 및 튜토리얼/이펙트/공지/관전 이모티콘/채팅 변경0. 운영2계정 QA는 새 서버 권위 Production 후 사용자가 직접 수행한다. 운영 DB/종료RPC/게임·XP/Edge/main/Production/점검 게이트 설치·해제0.
+
+상세: [최종 후보·검증·승인 목록](../ops/JUNGLE65-FINAL-CANDIDATE-2026-11-03.md), [전체 migration/Edge 해시·실측 JSON](../ops/JUNGLE65-FINAL-CANDIDATE-2026-11-03.json), [실행 절차](../ops/JUNGLE65-DEPLOY-PROCEDURE-2026-11-03.md), [36건 원래 읽기 분석](../ops/JUNGLE65-DRAIN-REVIEW-2026-11-03.md).
+
+---
+
+## 아래는20b50fb 기준 읽기 전용 분석과 과거 기록
+
+# 현재 상태 — Jungle65 미종료 경기 분석·배포 HOLD
+
+갱신: **2026-11-03 KST**. 기준 커밋 **20b50fb63cd8fe1eee10130892c439a6a2af64be**, 브랜치 **codex/jungle65-release-candidate-20261102**, Draft PR #8. 이번 갱신은 **미커밋 문서 변경**이다. 최신 사용자 지시는 운영 읽기 전용 분석·절차 확정이며, 기존 배포 요청을 지금 실행하지 않는다. 제품·디자인·기존 migration/Edge 원문은 변경하지 않았다.
+
+판정: **HOLD / 운영 DB·Edge·main·Production 변경0 / 운영 종료 RPC·QA 경기·XP 생성0**. 운영 2계정 QA는 새 서버 권위 Production 프론트 배포 후 사용자가 직접 수행하고 인증정보를 공유하지 않는다. HOME 배너는 Issue #9로 보류하며 후속 기능을 추가하지 않는다.
+
+- 실제 운영 45개 migration(마지막20261030044026)·public 함수72/테이블36/정책37·기존 Edge8 ACTIVE를 이번 창에서 읽기 확인했다. 기반 제어/검색 세션은 미설치다. 아래 과거 문단의 “사용자 제공값/실측 아님”보다 이 확인이 우선한다. 정확한 적용 창에서는 다시 조회한다.
+- **미종료36건 = 정상 만료 후보32 + starting 고착2 + host만 남은 playing2**. 2026-11-03 10:37:28→10:47:50 KST 재조회에서 방·70참가자·활동·결과·XP 및 관련 함수/트리거 동일. 33건은 heartbeat NULL/start identity 없음, 최근3건은 양쪽 snapshot/graph 존재(10:49:40 확인)여서 본인 재접속 가능성을 배제하지 않는다. 모든 기존 참가자는 playing, 기존 결과/연결 XP0, 활성 검색효과0 [산출물].
+- 운영 백업을 실제 격리 복사본에 복원하고 기존 만료 RPC를 rollback 검증했다. **32건은 cancelled 결과1/retired2/신규 XP0, 재시도 동일**. 나머지2건은 DUEL_NOT_PLAYING, 2건은 DUEL_PARTICIPANTS_REQUIRED다. 77테이블 fingerprint는 rollback 뒤 동일했다. 4건의 실제 참가자 자발적 기권은 가능하지만 forfeit/XP 영향이 있으므로 운영자가 대신 호출하지 않는다. 4건은 자발적 종료 또는 별도 복구 정책/구현/승인이 필요하며 drain 집계에서 제외하지 않는다.
+- **원래4개 migration만으로 QA2계정 전용 입장은 불가**다. 전역 entry_open을 열거나 protocol 표식만으로 대체하지 않는다. 정확히2개 auth.uid/TTL/자가 등록 불가/protocol 필수의 별도 private 명단 설계를 격리 rollback에서24/24 확인했으나, 정식 migration/PR/운영에는 미반영이다. 추가 서버 변경과 필요 시4건 복구 RPC를 별도 승인하고 새 후보 SHA의 CI/Preview를 재검증해야 한다.
+- 실제 DB archive는10:14:49 KST, 3,019,987bytes이며 새 빈 DB 복원 후77테이블 데이터/125함수/41정책/76보안·ACL·RLS/24기본권한 동일. 복사 DB OWNER postgres로 DDL 권한을 맞춰 원래4개를 적용하고 검색SQL23/아이템157/제어34 모두 통과했다. Storage 본문/Edge secret/관리형 PITR 실복구는 별도 미확인이고 다음 창에 최신 백업/복원을 다시 검증한다.
+- 문서 외 제품 변경0이므로 npm/build 재실행0; 아래 기존765/765·UI 수치는 당시 산출물로 보존한다. 이번 후보 head20b50fb·CI41551776807 success·Preview FHZm9ZKxgbQF8m4MaRDFT95zsPrR success/동일SHA는 이번 창 앞선 원격 조회다. main8da7d25/기존Production은 변경하지 않았다. 실제 배포 시 alias/Deployment ID/Ready를 다시 확인한다.
+
+상세: [36건 개별 시각·참가자·정상/복구 분류](../ops/JUNGLE65-DRAIN-REVIEW-2026-11-03.md), [개인 식별정보를 뺀 JSON](../ops/JUNGLE65-DRAIN-REVIEW-2026-11-03.json), [백업·게이트·추가 승인·QA·배포·복구 절차](../ops/JUNGLE65-DEPLOY-PROCEDURE-2026-11-03.md). 커밋·push·점검 게이트 설치/해제·운영 QA는 실행하지 않았다.
+
+---
+
+## 아래는20b50fb 커밋 시점 CPU 최적화·전환 제어 기록
+
+# 현재 상태 — Jungle65 검색 CPU 최적화·전환 제어 후보
+
+갱신: **2026-11-03 KST**. 기준 커밋 **05efcfbae002ae6aac6e123a43ba6a7b2004642f** (제품6849223 + 실제 그룹 관전 검사 추가). 브랜치 **codex/jungle65-release-candidate-20261102**, Draft [PR #8](https://github.com/Yu-HsH/wiki/pull/8). 이 CURRENT 갱신 커밋의 부모가 기준이다. 디자인27e5056/PR #7·보안fdd7190은 보존한다.
+
+판정: **로컬 CPU/회귀 게이트 통과 / Production HOLD / 운영 변경0**. 테스트는96fec9b+미커밋 후보에서 실행했고 제품 fingerprint `a449f156fd3e92f56098fa79e174d37d7ad7780d16584f9b8c075697cfafff62`가 위 제품 커밋과 같다. 아래 수치는 모두2026-11-03 KST 확인이다.
+
+- 동일5문서/revision의 기존75회 비교: 이전68성공/7 WORKER_LIMIT → 이후75/75 성공/실패0. 대형 실제Cold20회 추가 + hit10회도30/30. 대형 cache miss 합계25/25, CPU hard limit0. 대형 추가Cold p50/p95/max 3328/3796/3918ms, 최소 잔여11082ms. 실제320/390px UI20/20, 대형Cold 최소 잔여11195ms. 실패 표본/실사용0·느린 외부 fetch·fixture 수정 전 실패도 결과 문서/JSON에 보존했다.
+- canonical HTML/textNodes/policy·링크·literal/gi 결과25쌍 동일, malformed/entity/table/namespace1000개 동일. Node 프로세스CPU 중앙값2328→1780ms, wall1324→1153ms, 관측heap198.4→197.5MiB. 이 CPU/heap을 Edge worker의 직접 실측으로 부르지 않는다. 실제 Edge2초/256MB 설정은 유지했다.
+- npm765/765(fail/skip0)·build·diff 통과, 기존SQL23+157 및 최종신규SQL34 통과. 실제 Auth/DB/Edge/React 보안/복구22, 두 계정1:1/3인그룹·XP/F5 회귀22, **실제 그룹 관전 전환 추가8**(24acb2a+검증runner assertion, 제품동일), 디자인보호246·전체154/108화면·1:1로비116/38화면·모바일78 통과. 테스트 삭제/skip0, public 에셋·폰트 변경0.
+- 새 로컬 migration3개: 기반게이트 `20261102080000`, 검색guard연결 `20261103090000`, 보존/청소 `20261103100000`. 기존검색 후보 `20261102090000`은 수정하지 않았다. 기반게이트를 검색보다 먼저 설치→진입/새검색 닫기→기존경기·15초검색 drain→나머지DB/Edge→새프론트확인→protocol고정/재개 순서다. 구형 탭 신규 진입 거부, 기존 이동/기권/결과/XP 유지, 검색만 닫는 복구를 로컬 SQL/실제 RPC로 확인했다.
+- 캐시: snapshot/revision 재사용, worker pending만 공유(동일snapshot Cold8준비의 upstream3회/저장1행), 전역lease 미구현. session/request는 절대만료7일 이상+finished 조건, document는 생성30일+무참조 조건으로 postgres 수동batch 청소. 자동Cron0, 정책v1 유지. prewarm은 별도 제안이며 경기/링크 이동에 선행 대기를 추가하지 않았다. 준비실패 슬롯 소비 안내, 환급/재활성화/시간연장0.
+- 로컬 검증 runner 초기에는 기존 대한민국→한강 링크의 목적지revision UPDATE가 실행됐다. 원래 revision값 미기록으로 변경/복원 여부는 확인 필요다. 이후 기존graph 읽기 전용/자체fixture만 보정하도록 수정했다. 운영 DB 및 사용자 worktree/에셋 변경과 구분한다.
+- 운영45개 migration/Edge8 ACTIVE는 사용자 제공 확인값이며 이번 실측으로 바꾸지 않는다. 실제 적용 직전 최신이력/ACL/RLS/Edge·백업·drain·배포SHA를 다시 확인하고 건별 승인해야 한다. main은읽기 재확인8da7d25, 운영DB/Edge/main/Production 변경0. 최종 feature SHA의 GitHub CI/Preview Ready는 PR #8의 현재 head/check/deployment를 기준으로 확인한다.
+
+상세: [CPU·기존75회 비교·전체 검증](../ops/SEARCH-CPU-2026-11-03.md), [원시 JSON](../ops/SEARCH-CPU-2026-11-03.json), [게이트·drain·복구·보존](../ops/JUNGLE65-SEARCH-CUTOVER-2026-11-03.md).
+
+---
+
+## 아래는96fec9b 시점 통합 기록 (현재 상태는 위 내용 우선)
+
+# 현재 상태 — Jungle65 검색 보안 통합 후보
+
+갱신: **2026-11-02 KST**. 기준 커밋 **82c82f0407c7d83df06d6a4f466057b80bbda643** (디자인27e5056 + 보안fdd7190 병합). 브랜치 **codex/jungle65-release-candidate-20261102**. 이 문서 갱신 커밋의 부모가 위 기준이며, 제품 소스는 위 HEAD로 확정했다. 문서 커밋의 최종 SHA/CI/Preview는 원격 PR head/checks로 확인한다.
+
+현재 판정: **HOLD / 출시 후보 로컬 검증 완료 / 운영 적용0**. 사용자 이번 범위는 보안 commit/push·CI·별도 통합 후보·성능 실측·Cutover 계획까지다. 운영 DB/Edge/main/Production 변경은 승인되지 않았다.
+
+- 디자인27e5056/PR #7 보존. 보안 fdd7190f16057a156caac5f78335a6d9d72f570e commit/push 완료, GitHub CI41455976926 success, Vercel Preview FgMokRQeCB9nutoJV6tReXkPbggd Ready/같은SHA (2026-11-02 실측).
+- 보안 npm756/756·build/diff, 신규SQL23/23·기존아이템157/157, 실제 로컬Auth/DB/Edge/React19/19 재실행 통과. 통합761/761·build/diff 통과. 공통741+디자인5+보안15, 삭제/skip0. 보호84·전체154/108화면·모바일78·1:1로비116/38화면·실제서버19·실제문서UI10회 통과.
+- 실제 Wikipedia5종75회:68성공/7WORKER_LIMIT. 약5.7MB 문서 cache miss에서 CPU hard limit 반복. 실제 cache hit와 실패한 warm 준비 시도를 구분했다. 15초 연장0. 성능 게이트 HOLD.
+- 신규 migration1개/Edge1개는 **로컬에만 적용·검증**. 운영 CLI migration 재조회는 project link 부재로 실패했다. 기록된45개/기존Edge는 이번 실측값으로 재사용하지 않으며 적용 창에서 다시 조회한다. 이번 세션의 읽기 조회와 과거 기록을 혼동하지 않는다.
+- 구형 탭의 DOM 검색은 새 DB/Edge만으로 차단되지 않는다. 서버 경기 진입 제한·drain·클라이언트 전환 및 검색 비활성화 복구안의 별도 승인 필요. 기존 VITE 점검은 구형 탭의 서버 쓰기 차단이 아니다.
+- 승인된 기존 QA1개는 유지. 신규 계정/경기/아이템/XP/업적 운영 생성0, 계정 삭제0. [QA 기록](../ops/JUNGLE65-QA-2026-11-02.md).
+
+상세: [통합 게이트](../ops/JUNGLE65-SEARCH-RELEASE-GATE-2026-11-02.md), [성능](../ops/SEARCH-PERFORMANCE-2026-11-02.md), [Cutover/Rollback](../ops/JUNGLE65-SEARCH-CUTOVER-2026-11-02.md).
+
+---
+
+## 아래는 이전 통합·QA 기록 (현재 상태는 위 내용 우선)
+
 # 현재 상태 — Wiki Race 2.0
 
-갱신 날짜: **2026-10-29** (조건부 운영 배포 및 관련 검증35파일 선별 커밋 승인 수신. 실제 JWT 거부/회원 성공·최신 백업 격리복원·180파일 커밋 확인. DB migration/Edge/main push/Vercel 적용은 아직 없음. 검색 소비 미해결 후속 유지).
-기준 커밋: **`078a6906d28b86e8d1864afaef68ebbf53fa833d`** (승인 제품145 + 검증35 = 180파일 release commit). 고정 후보 source SHA-256 **`c7ef6142bfa9b357d7034dfdce126cff2a81fcf1ba4786b014bd1315f1eba555`** 유지. 이 기록 커밋의 부모가 기준이다.
-브랜치: **`main`**. **원격 `main` = `feat/group-final-gaps` = `4830b38fee774aa8953a8740cd50563c43d0eb76`** (`git ls-remote origin`, 2026-10-29 재확인 [산출물]). 기존 "d496ba2·6커밋 미push" 서술은 현재와 다르다. **실제 Vercel Production도4830b38/Ready**, 배포ID `Fg9XeDWqCDJ5LNSz71Xn3kzJKbYf`·생성Oct8·alias `wiki-dusky-one.vercel.app`을 2026-10-29 dashboard에서 확인했다. #15 이후 push 실행자·건별 승인·정확한 횟수는 미확인으로 번호를 추측해 추가하지 않았다. 아래 이전 날짜의 미push/미배포 문장은 당시 기록이다.
+갱신 날짜: **2026-11-02**. **Jungle65 출시 HOLD / 검색 보안 보완은 별도 로컬 검증 완료 / 운영 보안 미적용**.
+기준 커밋: **`27e5056d2780e84bd107e64d10684be63fd204aa`** (동결 디자인). 보안 보완은 main **`8da7d25f4c364f431f8baf8b1abc685a3bee9e6e`** 기반 별도 미커밋 worktree다. 이 HOLD/QA 상태 갱신은 로컬 미커밋 문서이며 디자인 commit을 변경하지 않는다.
+현재 디자인 브랜치: **`feat/jungle65-design-20261030`**. 원격 main=`8da7d25`, 원격 디자인=`27e5056` (2026-11-02 git 재확인). Production=`4MdbEvoe5bArd9Fd1BvyTc8xpGgv` / Ready / `8da7d25`, alias wiki-dusky-one.vercel.app. main 병합·운영 migration/Edge 변경·새 Production 배포는 하지 않았다.
+
+## 2026-11-02 최종 판정과 인계
+
+사용자가 디자인 후보의 검색 성공 소비 위험 수용을 거절하고 선행 보안을 요청해 **출시 HOLD**다. [릴리스 기록](../ops/RELEASE-2026-11-02.md), [디자인 선별 파일·해시](JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json). PR #7은 OPEN, commit27e5056의 GitHub CI 성공 및 Vercel Preview `G4KNeE3psSnd767xzVcGyLjQYfcG` Ready/동일SHA 확인. 과거 승인을 이번 위험 수용으로 확장하지 않는다.
+
+디자인 로컬 실행은 bd87c4d + 동결 전 동일 제품 작업 트리, 2026-11-02 KST 기준: npm746/746·build/diff 통과, fixture154+78+84+19+246+116검사 및 실제 격리 서버UI22검사 통과 [산출물]. 실제 Wikipedia 싱글 직접 지정 완주 +15XP·중복 지급 방지·결과 복구도 격리 서버에서 확인했다. 랜덤/오늘의 도전 실제 문서 후속 검증은 HOLD 후 중단했고 완료로 계산하지 않는다.
+
+별도 보안 브랜치 `codex/search-consumption-authority-20261102`, 위치 `.worktrees/search-consumption-authority-20261102`. [로컬 보안 보고서](../../.worktrees/search-consumption-authority-20261102/docs/agent/SEARCH-CONSUMPTION-AUTHORITY-2026-11-02.md). 기준8da7d25 + 미커밋 소스14파일 fingerprint `873f432929d993b5fed9a008660051df34e2442ae988af669979e10dc1d7473e`, 2026-11-02 KST: npm756/756·build/diff, 새 검색DB23/23·기존아이템DB157/157·실제 격리 Deno/Auth/RPC/React16검사 통과. 서로 다른 동시8요청은 성공1개, 중복 요청·응답 유실·React 상태 변조·F5·만료/소유권/문서 frame 검증을 포함한다. 기존 이벤트는 append-only로 유지한다. 보안 수정은 미커밋/미push/운영 미적용이며 Production의 기존 문제는 아직 미해결이다.
+
+운영 읽기 전용 재확인: migration45=디자인 후보45/pending0, public함수72·테이블36·정책37, Edge8개ACTIVE(single-run3/wiki-snapshot4/duel-link-preview1 포함). 보안 후보에는 승인 전인 신규 migration1개·새 Edge1개가 있으며 적용 순서/권한/저장량/cold latency를 별도 검토해야 한다.
+
+별도 승인된 일반 회원 QA1개가 **2026-11-02 17:20:11 KST** 정상 가입/로그인했다. 프로필·XP·랭킹 API 조회 성공, XP0 및 자기 경기/게임아이템/XP ledger0. 기본 프로필 아이콘6개는 기존 signup trigger 동작이다. 업적 원본 테이블403은 미검증으로 남겼고 우회/DB 보정하지 않았다. 계정은 유지하며 자격정보는 저장소 밖 DPAPI 암호화 보관. [QA 상세](../ops/JUNGLE65-QA-2026-11-02.md). QA 승인은 배포·위험 수용으로 확장하지 않는다.
+
+#15 이후 과거 main push 실행자·건별 승인·정확한 총횟수는 미확인으로 번호를 추측해 추가하지 않는다. 아래 이전 날짜의 상태·수치는 당시 기록이며 현재 운영 상태의 대체 근거가 아니다. 중복 생성됐던 이 세션의11-02 안내 문단만 이 단일 요약으로 정리했고, 10-29 이후 기존 역사 본문은 그대로 보존했다.
 
 ## 2026-10-29 조건부 운영 배포 승인·인증 선행 검증
 

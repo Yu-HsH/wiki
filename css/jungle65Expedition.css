@@ -1,0 +1,273 @@
+/* Jungle65 field UI. One scoped layer for the remaining screens; no article/link,
+   item authority, animation timings, or approved entry artwork overrides. */
+.wr-page.wr65-field, .wr-page:has(.wr-room--group), .wr65-public {
+  --wr-canvas: #233b2e;
+  --wr-paper: #fffaf0;
+  --wr-paper-2: #f3ecd9;
+  --wr-frame: #b7a078;
+  --wr-divider: #d6c7a7;
+  --wr-ink: #293d31;
+  --wr-ink-2: #52604c;
+  --wr-ink-3: #68725e;
+  --wr-gold: #94691d;
+  --wr-gold-bg: #f7edcf;
+  --wr-shadow-shell: 0 12px 40px #0c211b40;
+  background: radial-gradient(ellipse at 50% 0, #486347 0, #233b2e 65%);
+}
+.wr65-field .wr-shell, .wr-page:has(.wr-room--group) .wr-shell {
+  border: 2px solid #a88b59;
+  background: var(--wr-paper);
+}
+.wr-page.wr65-field:not(.wr-result-layer--overlay) { background: radial-gradient(ellipse at 50% 0, #486347 0, #233b2e 65%); }
+.wr-page.wr65-field::before { content: none; }
+.wr65-field .wr-header, .wr-page:has(.wr-room--group) .wr-header {
+  background: repeating-linear-gradient(0deg, #705138 0 3px, #76573b 4px 9px, #795b3e 10px 13px);
+  border-bottom: 3px solid #b89960;
+  color: #fff4d9;
+}
+.wr65-field .wr-header :is(.wr-brand, a, button), .wr-page:has(.wr-room--group) .wr-header :is(.wr-brand, a, button) { color: #fff4d9 !important; }
+.wr65-field .wr-brand span, .wr-page:has(.wr-room--group) .wr-brand span { color: #f2cf88; }
+.wr65-field .wr-header nav a.active, .wr-page:has(.wr-room--group) .wr-header nav a.active { border-color: #e5bf6c; }
+.wr65-field .wr-header :focus-visible, .wr-page:has(.wr-room--group) .wr-header :focus-visible { outline-color: #ffe1a3; }
+
+/* A. Gathering camp. Local selection and server submission remain separate. */
+.wr-room--group .wr-lobby-head { padding: 20px 26px; background: linear-gradient(#eee0bc, #f8efd7); border-bottom-color: #b79d69; }
+.wr-room--group .wr-lobby-titles h1 { font-size: clamp(24px, 3vw, 32px); line-height: 1.4; }
+.wr-room--group :is(.wr-btn, .wr-link-btn) { min-height: 44px; white-space: normal; line-height: 1.5; }
+.wr-room--group .wr-room-code .wr-link-btn { min-width: 44px; }
+.wr-room--group .wr-rule-strip { background: #f9f1da; padding: 5px 10px; border: 1px solid #b9a176; border-radius: 5px; }
+.wr-room--group .wr-room-briefing { padding: 14px 26px; background: #faf3e2; border-bottom: 1px dashed var(--wr-frame); }
+.wr-room--group .wr-room-briefing p { font-size: 13px; line-height: 1.7; }
+.wr-room--group .wr-room-sync { color: #5a674e; font-size: 12px; margin-top: 6px; }
+.wr-room--group .wr-group-layout { grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; padding: 22px 26px; background: #eee8d3; }
+.wr-room--group .wr-group-mine { align-self: start; padding: 20px; border: 2px solid #b49a65; border-radius: 9px; background: #fff9e9; box-shadow: 0 4px 0 #d3c19a; }
+.wr-room--group .wr-group-mine h2 { font: 700 22px/1.5 var(--wr65-font-paper); letter-spacing: 0; }
+.wr65-camp-state { padding: 8px 10px; border: 1px dashed #a9946b; border-radius: 6px; color: #6a5b3c; background: #f2ead5; font-size: 12px; line-height: 1.65; }
+.wr65-camp-state.is-ready { background: #e6f2ea; color: #265e4c; border-color: #649a82; }
+.wr-room--group .wr-group-main { gap: 16px; }
+.wr-room--group .wr-party { padding: 18px; background: #fff9e9; border: 2px solid #b49a65; border-radius: 9px; box-shadow: 0 4px 0 #d3c19a; }
+.wr-room--group .wr-party-head { flex-wrap: wrap; align-items: center; }
+.wr-room--group .wr-party-title { flex: 1; min-width: 100px; }
+.wr-room--group .wr-party-title h2 { font: 700 17px/1.5 var(--wr65-font-paper); letter-spacing: 0; }
+.wr-room--group .wr-party-host { overflow-wrap: anywhere; }
+.wr-room--group .wr-party-ready { font-size: 13px; }
+.wr-room--group .wr-roster { gap: 10px; border: 0; }
+.wr-room--group .wr-roster-row { flex-wrap: wrap; align-content: center; padding: 12px; border: 1px solid #c9b68c; border-radius: 7px; background: #f9f1dc; min-height: 88px; }
+.wr-room--group .wr-roster-row .pcard { flex-basis: 100%; padding: 2px; }
+.wr-room--group .wr-roster-row .pcard-name-row { flex-wrap: wrap; }
+.wr-room--group .wr-roster-row :is(.pcard-name, .pcard-title) { white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; max-width: 100%; }
+.wr-room--group .wr-roster-row .pcard-title { color: #66508d; font-size: 12px; }
+.wr-room--group .wr-roster-row.wr-is-me { border-color: #6e88aa; box-shadow: inset 3px 0 #4869aa; }
+.wr-room--group .wr-roster-row--empty { min-height: 68px; border-style: dashed; background: #f3ecd8; }
+.wr-room--group .wr-course { border: 1px dashed #b49a65; border-radius: 8px; background: #faf2da; padding: 18px; }
+.wr-room--group .wr-course-head { flex-wrap: wrap; gap: 8px; }
+.wr-room--group .wr-course-badge { white-space: normal; text-align: center; }
+.wr-room--group .wr-search-field { background: #fffdf7; border-color: #ad9360; min-height: 46px; }
+.wr-room--group .wr-search-field input { font-size: 16px; }
+.wr-room--group .wr-candidate-card { background: #fffdf7; border-color: #b9a176; }
+.wr-room--group .wr-lobby-actions { position: static; padding: 18px 26px; background: #faf2dd; border-top: 2px solid #b49a65; gap: 16px; }
+.wr-room--group .wr-btn--primary { color: #fff; background: linear-gradient(#4866a5, #314c83); border: 2px solid #c7a968; box-shadow: 0 3px 0 #293f6b; }
+.wr65-camp-leave-note { padding: 0 26px 18px; color: #5b654e; font-size: 12px; line-height: 1.7; background: #faf2dd; }
+:is(.wr65-camp-profile-dialog, .wr65-profile-dialog) { position: fixed; inset: 0; z-index: 1000; }
+:is(.wr65-camp-profile-dialog, .wr65-profile-dialog) .user-profile-modal-card { color: #293d31; background: #fff9e9; border: 2px solid #a88b59; padding-top: 58px; }
+:is(.wr65-camp-profile-dialog, .wr65-profile-dialog) .user-profile-modal-close { right: 12px; top: 8px; min-width: 44px; min-height: 44px; }
+
+/* B. Field instruments. Document surface and every interactive article rule are
+   intentionally left to wiki.css/wikiRaceRace.css. No blanket article filters. */
+.wr65-field.wr-race:not(.wr-result) { padding-top: 12px; }
+.wr65-field .wr-race-shell { border: 2px solid #aa8b54; border-bottom: 0; background: #fff; }
+.wr65-field.wr-race:not(.wr-result) .wr-race-shell { border-top: 3px solid #aa8b54; }
+.wr65-field.wr-race:not(.wr-result) .wr-race-hud { background: linear-gradient(#f9efd5, #efe1bc); border-bottom: 3px solid #9d7b48; }
+.wr65-field .wr-hud-brand { background: repeating-linear-gradient(0deg, #705138 0 3px, #795b3e 4px 12px); }
+.wr65-field .wr-brand-mark { color: #f4d99a; background: #324b36; border: 1px solid #d7b36e; border-radius: 50%; width: 30px; height: 30px; }
+.wr65-field .wr-mode-tag { font-family: var(--wr65-font-display); font-weight: 400; color: #fff0ca; background: transparent; border-color: #c7a572; }
+.wr65-field .wr-hud-brand > .wr-hud-label { color: #f8dfaa; }
+.wr65-field .wr-hud-label { font-family: var(--wr65-font-body); font-weight: 600; line-height: 1.4; letter-spacing: .025em; }
+.wr65-field .wr-hud-doc-value { font: 700 19px/1.4 var(--wr65-font-paper); }
+.wr65-field .wr-hud-stat-value { font: 700 25px/1.15 var(--wr65-font-numeric); font-variant-numeric: tabular-nums; }
+.wr65-field .wr-hud-doc--goal { background: #f6e9bd; }
+.wr65-field .wr-hud-doc--goal .wr-hud-doc-value { color: #8b6116; }
+.wr65-field .wr-hud-doc--current { background: #edf1e7; }
+.wr65-field .wr-race-strip { background: #f9f2df; border-bottom: 1px solid #bda675; }
+.wr65-field .wr-race-side { background: #fbf4e3; border-right: 1px solid #c6b487; }
+.wr65-field .wr-route-head { padding-block: 16px 12px; background: #eee3c7; border-bottom-color: #bca477; }
+.wr65-field .wr-route-head h2 { font: 700 16px/1.5 var(--wr65-font-paper); }
+.wr65-field .wr-route-list { border-left-style: dashed; }
+.wr65-field .wr-route-step { font-family: var(--wr65-font-body); }
+.wr65-field .wr-race-dock { background: linear-gradient(#f8f0dc, #ebdfbd); border-top: 3px solid #a58a55; }
+.wr65-field .duel-item-bar__count { color: #52604c; }
+.wr65-field .duel-item-slot { background: #fffaf0; border-color: #bda675; }
+.wr65-field .duel-item-slot--attack { border-color: var(--wr-coral); }
+.wr65-field .duel-item-slot--defense { border-color: var(--wr-teal); }
+.wr65-field .wr-race-btn { min-height: 44px; font-family: var(--wr65-font-body) !important; white-space: normal; }
+.wr65-field .wr-race-btn--primary { font-family: var(--wr65-font-display) !important; font-weight: 400; border-color: #be9b51; background: linear-gradient(#4866a5, #314c83); color: #fff; }
+.wr65-field .wr-mobile-route-notes { background: #faf1da; border-color: #c2ab7c; }
+.wr65-field .wr-mobile-route-notes > summary { min-height: 44px; align-content: center; }
+.wr65-field .wr-race-hold { background: #fff9e9; border-color: #bda675; }
+.wr65-field .wr-race-hold h1 { font-family: var(--wr65-font-display); font-weight: 400; line-height: 1.5; }
+.wr65-field .wr-target-brief { background: #fff9e9; border-color: #c8b487; }
+.wr65-field .wr-target-brief > summary { min-height: 44px; }
+.wr65-field .wr-target-brief > summary strong { font-family: var(--wr65-font-paper); }
+.wr65-field .current-page-card { --wr-font-heading: var(--wr65-font-paper); }
+
+/* C. Expedition report. Existing outcome, ledger and recovery own all values. */
+.wr65-field :is(.wr-result-frame, .wr-result-a-frame) { background: #eee3c7; border: 2px solid #ab8a51; box-shadow: 0 20px 70px #0c211b55; }
+/* The persistent sound controls occupy the top 60px; keep the report below them. */
+.wr-page.wr-race.wr65-field.wr-result-layer--overlay { padding-top: 72px; }
+.wr65-field.wr-result-layer--overlay .wr-result-frame { min-height: calc(100dvh - 72px); }
+.wr65-field :is(.wr-rscene, .wr-result-a-scene) { background: repeating-linear-gradient(0deg, #705138 0 3px, #795b3e 4px 12px); border-bottom: 3px solid #c09d59; padding: 24px 28px; }
+.wr65-field .wr-journal-heading strong { font: 700 26px/1.4 var(--wr65-font-paper); color: #fff1ce; }
+.wr65-field .wr-journal-heading :is(small, span), .wr65-field .wr-rscene-dest .wr-hud-label { color: #f0d79d; }
+.wr65-field .wr-rscene-dest b { color: #ffe3a1; }
+.wr65-field .wr-journal-seal { background: #f4e6bc; border-color: #cfae67; color: #735420; }
+.wr65-field .wr-result-card { background: #fffaf0; border-color: #bba272; }
+.wr65-field .wr-result-headline h1 { font: 400 clamp(26px, 4vw, 38px)/1.4 var(--wr65-font-display); }
+.wr65-field .wr-rstats { background: #f7efd9; }
+.wr65-field .wr-rstats dd, .wr65-field .rxp-gain { font-family: var(--wr65-font-numeric); font-weight: 700; line-height: 1.3; }
+.wr65-field .wr-result-course { font-family: var(--wr65-font-body); }
+.wr65-field .wr-rroute, .wr65-field .wr-rxp-row { border-color: #d3bf95; }
+.wr65-field .wr-rroute-chain .wr-chain-chip { background: #faf2db; }
+.wr65-field .wr-rroute-chain .wr-chain-chip.is-target { background: #94691d; color: #fff; }
+.wr65-field .wr-result-actions { border-top: 1px dashed #bda675; }
+
+/* D. Honor board, explorer notebook, discovery album. */
+.wr65-field:is(.wr-ranking, .wr-profile, .wr-achievements) :is(.dashboard-header, .profile-notebook-heading) { padding: 24px 28px; background: linear-gradient(#f0e1bb, #f9efd5); border-bottom: 2px solid #b99a61; }
+.wr65-field:is(.wr-ranking, .wr-profile, .wr-achievements) h1 { font: 400 clamp(25px, 3vw, 34px)/1.45 var(--wr65-font-display); }
+.wr65-field:is(.wr-ranking, .wr-profile, .wr-achievements) h2 { font-family: var(--wr65-font-paper); font-weight: 700; line-height: 1.5; }
+.wr65-field:is(.wr-ranking, .wr-profile, .wr-achievements) .app-btn { min-height: 44px; font-family: var(--wr65-font-body); white-space: normal; }
+.wr65-field:is(.wr-ranking, .wr-profile, .wr-achievements) .app-btn-primary { background: linear-gradient(#4866a5, #314c83); border: 1px solid #bd9b59; color: #fff; }
+.wr65-field .pcard-name { font-family: var(--wr65-font-player); font-weight: 600; }
+.wr65-field .pcard-title { color: #675297; }
+.wr65-field:is(.wr-ranking, .wr-profile) .pcard-name-row { flex-wrap: wrap; }
+.wr65-field:is(.wr-ranking, .wr-profile) :is(.pcard-name, .pcard-title) { max-width: 100%; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.wr65-field .ranking-filters { background: #f9f0da; }
+.wr65-field .ranking-top article { background: linear-gradient(#fffcf3, #f5e9c9); border-color: #bba272; box-shadow: 0 4px 0 #ddcda8; }
+.wr65-field .ranking-top article[data-rank="1"] { border-color: #b28b3e; }
+.wr65-field .ranking-top .ranking-place .wr-kicker { font-family: var(--wr65-font-display); font-weight: 400; }
+.wr65-field .ranking-my-record { background: #eaf0e3; border: 1px solid #a1b197; border-left: 5px solid var(--wr-teal); }
+.wr65-field .ranking-table-wrap { margin: 18px 28px 28px; padding: 0; border: 1px solid #bba272; border-radius: 8px; background: #fffaf0; overflow: hidden; }
+.wr65-field .ranking-table th { background: #eee2c5; color: #4c5943; }
+.wr65-field .ranking-table tr.mine { background: #eaf0e3; }
+.wr65-field .ranking-score strong, .wr65-field .profile-stat-value { font-family: var(--wr65-font-numeric); font-variant-numeric: tabular-nums; }
+.wr65-field .wr-profile-content { background: #f8f0dc; }
+.wr65-field .profile-notebook-heading { margin: 0 -28px 24px; }
+.wr65-field .profile-representative { background: linear-gradient(#fffaf0, #f0e3bf); border: 2px solid #b69961; box-shadow: inset 0 0 0 4px #fffaec, 0 4px 0 #d7c59d; }
+.wr65-field .preward { background: #fffaf0; border: 1px solid #bba272; border-radius: 9px; overflow: hidden; }
+.wr65-field .preward-tab { min-height: 44px; background: #f5ebd2; }
+.wr65-field .preward-tab[aria-selected="true"] { color: #3a568f; border-color: #4869aa; }
+.wr65-field :is(.preward-choice, .profile-settings, .ach-summary, .profile-stat-card) { background: #fffaf0; border-color: #c9b68c; }
+.wr65-field .profile-settings > summary { min-height: 44px; align-content: center; }
+.wr65-field .profile-settings input { min-width: 0; font-family: var(--wr65-font-body); }
+.wr65-field .profile-stats-group > header { background: #ece1c5; border-bottom: 1px dashed #bda675; }
+.wr65-field .album-cover { background: linear-gradient(120deg, #e6dab9, #faf0d7); border-bottom: 3px double #a48950; }
+.wr65-field .album-cover h2 { color: #344c35; }
+.wr65-field .wr-ach-filters { background: #faf2df; }
+.wr65-field .wr-ach-filters button { min-height: 44px; font-family: var(--wr65-font-body); }
+.wr65-field .wr-ach-filters button[aria-pressed="true"] { background: #665189; color: #fff; border-color: #665189; }
+.wr65-field .ach-section { background: #f8f0dc; }
+.wr65-field .ach-card { background: #fffcf2; border-color: #c4af81; box-shadow: 0 3px 0 #dfd0ae; }
+.wr65-field .ach-card--complete { border-color: #9383b5; }
+.wr65-field .ach-name { font-family: var(--wr65-font-paper); line-height: 1.6; }
+.wr65-field .ach-card-name { font-family: var(--wr65-font-paper); font-weight: 700; line-height: 1.6; }
+.wr65-field .ach-status { padding: 24px 28px; background: #faf2df; }
+
+/* E. Existing public guide and dialogs; no new routes or services. */
+.wr65-public { min-height: 100svh; max-width: none; padding: 24px max(16px, calc((100% - 1120px)/2)) 48px; color: #293d31; }
+.wr65-public .public-nav { padding: 16px 22px; background: #795b3e; border: 2px solid #b39662; border-radius: 10px 10px 0 0; }
+.wr65-public .public-nav a { color: #fff1ce; min-height: 44px; display: inline-flex; align-items: center; }
+.wr65-public .public-article { background: #fff9e9; border: 2px solid #b39662; padding: clamp(20px, 4vw, 48px); border-radius: 0 0 10px 10px; }
+.wr65-public .public-article h1 { font: 400 clamp(26px, 4vw, 38px)/1.5 var(--wr65-font-display); }
+.wr65-public .public-section h2 { font: 700 21px/1.6 var(--wr65-font-paper); }
+.wr65-public .public-section { border-color: #c4af81; }
+.wr65-field :is(.help-modal, .wr-exit-dialog, .duel-item-index, .game-search-panel) { color: #293d31; background: #fff9e9; border-color: #b39662; }
+.wr65-field :is(.help-modal h2, .wr-exit-dialog h2, .duel-item-index__head) { font-family: var(--wr65-font-paper); }
+.wr65-field :is(.user-profile-modal-card, .app-modal) { color: #293d31; background: #fff9e9; border: 2px solid #b39662; }
+.wr65-field .app-modal h2 { font-family: var(--wr65-font-paper); }
+.wr65-field .app-modal button { min-height: 44px; }
+.app-center { background: #233b2e; color: #fff2d1; font-family: "Pretendard Variable", "Malgun Gothic", system-ui, sans-serif; }
+.app-center .app-muted { color: #fff2d1; }
+.wr-duel-end { --de-paper: #fff9e9; --de-frame: #b7a078; font-family: "Pretendard Variable", "Malgun Gothic", system-ui, sans-serif; }
+.wr-duel-end :is(h1, .wr-de-title) { font-family: "Cafe24 Ssurround", "Malgun Gothic", system-ui, sans-serif; font-weight: 400; }
+.wr-audio { font-family: "Pretendard Variable", "Malgun Gothic", system-ui, sans-serif; }
+.wr65-field .help-modal .text-btn { min-width: 44px; min-height: 44px; }
+.wr65-field .state-text.error { color: #963d2c; }
+.wr65-field :is(.wr-result-route-steps, .wr-rroute-chain, .wr-rscene-dest, .ranking-summary) { overflow-wrap: anywhere; }
+
+@media (max-width: 1023px) {
+  .wr-room--group .wr-group-layout { grid-template-columns: minmax(0, 1fr) 300px; padding: 18px; gap: 14px; }
+  .wr-room--group .wr-roster { grid-template-columns: minmax(0, 1fr); }
+  .wr-room--group .wr-roster-row .pcard { flex-basis: 0; }
+}
+@media (max-width: 760px) {
+  .wr65-field.wr-page:not(.wr-race) { padding: 12px 10px 28px; }
+  .wr65-field .wr-header { gap: 10px; padding: 14px 16px; flex-wrap: wrap; }
+  .wr65-field .wr-header nav { gap: 16px; flex-wrap: wrap; }
+  .wr65-field .wr-header-user { min-width: 0; max-width: 100%; }
+  .wr65-field .wr-header-user > a { min-width: 0; }
+  .wr65-field .wr-header-user > a > span { white-space: normal; overflow-wrap: anywhere; }
+  .wr-page:has(.wr-room--group) .wr-header { padding: 10px 14px; gap: 8px 14px; }
+  .wr-room--group .wr-lobby-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 12px 14px; gap: 8px; }
+  .wr-room--group .wr-lobby-titles { grid-column: 1; grid-row: 1; min-width: 0; }
+  .wr-room--group .wr-lobby-head > .wr-btn { grid-column: 2; grid-row: 1; margin: 0; }
+  .wr-room--group .wr-lobby-titles .wr-kicker { display: none; }
+  .wr-room--group .wr-lobby-titles h1 { font-size: 23px; line-height: 1.4; }
+  .wr-room--group .wr-lobby-head-meta { grid-column: 1 / -1; grid-row: 2; gap: 4px 12px; }
+  .wr-room--group .wr-copy-feedback:empty { display: none; }
+  .wr-room--group .wr-rule-strip { padding: 3px 7px; font-size: 11px; }
+  /* Flow and course guidance already appear beside the candidate and start button. */
+  .wr-room--group .wr-room-briefing { padding: 8px 14px; }
+  .wr-room--group .wr-room-briefing > :not(.wr-room-sync) { display: none; }
+  .wr-room--group .wr-room-sync { margin: 0; font-size: 11px; line-height: 1.6; }
+  .wr-room--group .wr65-camp-sync-detail { display: none; }
+  .wr-room--group .wr-group-layout { display: flex; flex-direction: column; padding: 10px; gap: 10px; }
+  .wr-room--group .wr-group-mine { order: 0; width: 100%; padding: 12px; gap: 8px; }
+  .wr-room--group .wr-group-mine h2 { font-size: 19px; }
+  .wr-room--group .wr65-camp-state { padding: 5px 8px; }
+  .wr-room--group .wr-mine-lead { display: none; }
+  .wr-room--group .wr-mine-note { font-size: 12px; line-height: 1.55; }
+  .wr-room--group .wr-target-search--stack { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .wr-room--group .wr-target-search--stack .wr-search-field { width: 100%; min-height: 44px; }
+  .wr-room--group .wr-target-search--stack .wr-btn { padding-inline: 12px; }
+  .wr-room--group .wr-group-mine > .wr-section-label--hud { display: none; }
+  .wr-room--group .wr-candidate-card { padding: 10px 12px; }
+  .wr-room--group .wr-candidate-card :is(.wr-candidate-desc, .wr-status) { display: none; }
+  .wr-room--group .wr-group-main { order: 1; width: 100%; }
+  .wr-room--group .wr-group-main { gap: 10px; }
+  .wr-room--group .wr-party { padding: 12px; }
+  .wr-room--group .wr-party-head { gap: 8px; margin-bottom: 8px; }
+  .wr-room--group .wr65-camp-party-en { display: none; }
+  .wr-room--group .wr-party-title h2 { font-size: 15px; }
+  .wr-room--group .wr-party-host { font-size: 11px; }
+  .wr-room--group .wr-roster { gap: 6px; }
+  /* The state shares the name row; the full title keeps the card's body width. */
+  .wr-room--group .wr-roster-row { position: relative; display: block; min-height: 56px; padding: 6px 8px; }
+  .wr-room--group .wr-roster-row .pcard { width: 100%; flex-basis: auto; min-height: 44px; gap: 8px; padding: 0; }
+  .wr-room--group .wr-roster-row .pcard-name-row { padding-right: 64px; gap: 4px; }
+  .wr-room--group .wr-roster-row .pcard-title { font-size: 11.5px; line-height: 1.45; }
+  .wr-room--group .wr-roster-row > .wr-status { position: absolute; top: 10px; right: 8px; }
+  .wr-room--group .wr-roster-row--empty { display: none; }
+  .wr-room--group .wr-roster-summary { display: block; font-size: 12px; line-height: 1.6; }
+  .wr-room--group .wr-course { padding: 10px 12px; gap: 6px; }
+  .wr-room--group .wr-course-route { display: none; }
+  .wr-room--group .wr-course-count { margin-left: 0; }
+  .wr-room--group .wr-lobby-actions { padding: 12px 14px; gap: 10px; }
+  .wr-room--group .wr-start-rules { font-size: 11px; line-height: 1.6; }
+  .wr65-camp-leave-note { padding: 0 14px 12px; font-size: 11px; line-height: 1.6; }
+  .wr65-field .wr-hud-doc-value { font-size: 17px; }
+  .wr65-field .wr-hud-stat-value { font-size: 22px; }
+  .wr65-field.wr-result .wr-rscene { padding: 20px; }
+  .wr65-field .wr-journal-heading strong { font-size: 22px; }
+  .wr65-field:is(.wr-ranking, .wr-profile, .wr-achievements) :is(.dashboard-header, .profile-notebook-heading) { padding: 20px 16px; }
+  .wr65-field .profile-notebook-heading { margin-inline: -16px; }
+  .wr65-field .ranking-top { padding: 18px 16px; gap: 12px; }
+  .wr65-field .ranking-top article:not([data-rank="1"]) { margin-top: 0; }
+  .wr65-field .ranking-table-wrap { margin-inline: 16px; }
+  .wr65-field .ranking-board-heading { align-items: flex-start; flex-wrap: wrap; }
+  .wr65-field .profile-settings > div:has(input) > div { flex-wrap: wrap; }
+  .wr65-field .profile-settings input { flex-basis: 100% !important; }
+  .wr65-public .public-nav { flex-wrap: wrap; gap: 8px; }
+  .wr65-public .public-nav-links { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-room--group :is(.wr-roster-row, .wr-candidate-card) { animation: none; }
+}

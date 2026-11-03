@@ -422,3 +422,7 @@ enabled = true
 # every read or mutation; authenticated-only wiki-snapshot keeps JWT validation.
 [functions.single-run]
 verify_jwt = false
+
+# Explicit auth.getUser validation inside the handler; never accepts anon/forged JWTs.
+[functions.duel-search]
+verify_jwt = false

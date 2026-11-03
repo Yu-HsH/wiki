@@ -1,0 +1,3336 @@
+{
+  "date": "2026-11-03T01:47:50.711612+00:00",
+  "basis": "20b50fb63cd8fe1eee10130892c439a6a2af64be",
+  "decision": "HOLD",
+  "productionReadOnly": true,
+  "productionWrites": 0,
+  "productSourceChanged": false,
+  "counts": {
+    "RECOVERY_STARTING": 2,
+    "NORMAL_TIMEOUT_CANCEL": 32,
+    "RECOVERY_ROSTER": 2
+  },
+  "total": 36,
+  "players": 70,
+  "classificationCapturedAt": "2026-11-03T01:37:28.731698+00:00",
+  "snapshotAvailabilityCapturedAt": "2026-11-03T01:49:40.691Z",
+  "unchangedAtRecheck": {
+    "date": "2026-11-03T01:47:50.711612+00:00",
+    "basis": "20b50fb",
+    "productionReadOnly": true,
+    "productionWrites": 0,
+    "total": 36,
+    "same36RoomPlayerActivityResultXpData": true,
+    "sourceFunctionsUnchanged": true,
+    "sourceTriggersUnchanged": true,
+    "roomDataSha256": "004e296910b4fe2479692991d9e4c28cd75e09b03df59a3fc1a3862c27b3a804"
+  },
+  "backup": {
+    "date": "2026-11-03T01:14:49.775Z",
+    "basis": "20b50fb63cd8fe1eee10130892c439a6a2af64be",
+    "productionReadOnly": true,
+    "backupBytes": 3019987,
+    "backupSha256": "56ec8b3f87cdc8d4bc062a43d770a51d0539209d6671aeca41dc6734aba97dab",
+    "sameBeforeAfterBackup": true,
+    "actualRestore": true,
+    "isolatedDatabase": "jungle65_predeploy_20261103_mvzzwjpb",
+    "isolatedDbPort": 55422,
+    "checks": {
+      "tables": {
+        "count": 77,
+        "equal": true
+      },
+      "functions": {
+        "count": 125,
+        "equal": true
+      },
+      "policies": {
+        "count": 41,
+        "equal": true
+      },
+      "security": {
+        "count": 76,
+        "equal": true
+      },
+      "defaults": {
+        "count": 24,
+        "equal": true
+      }
+    },
+    "credentialsLogged": false,
+    "rolePasswordsDumped": false,
+    "productionWrites": 0,
+    "limitations": [
+      "Database logical archive only; Storage object bodies and Edge secret values are not exported",
+      "Restore verified on isolated local PostgreSQL; no managed-provider point-in-time restore exercised",
+      "Archive restricted to current Windows user; restore depends on secure custody of this backup and available platform roles/extensions"
+    ]
+  },
+  "timeoutRehearsal": {
+    "date": "2026-11-03T01:39:20.897Z",
+    "basis": "20b50fb63cd8fe1eee10130892c439a6a2af64be",
+    "productionContacted": false,
+    "productionWrites": 0,
+    "localDatabase": "jungle65_drain_20261103_5b8d82e6",
+    "backupMatchesCurrent36": true,
+    "serviceRoleExecutePath": true,
+    "claimsOnlyMockedInIsolatedCopy": true,
+    "total": 36,
+    "counts": {
+      "cancelled": 32,
+      "errors": 4
+    },
+    "allBusinessTableFingerprintsPreservedAfterRollback": 77
+  },
+  "legacyOptions": {
+    "date": "2026-11-03T01:45:31.379Z",
+    "basis": "20b50fb",
+    "productionContacted": false,
+    "productionWrites": 0,
+    "localClaimsMocked": true,
+    "participantActionNotOperatorAuthorization": true,
+    "businessTablesUnchangedAfterRollback": 77
+  },
+  "qaAdmissionDesign": {
+    "date": "2026-11-03T01:43:01.682Z",
+    "basis": "20b50fb + design-only QA gate draft",
+    "productionContacted": false,
+    "productionWrites": 0,
+    "productSourceChanged": false,
+    "approvedFourMigrationsInsufficientForQaException": true,
+    "additionalServerChangeRequired": true,
+    "draftAppliedOnlyInLocalRollback": true,
+    "localDatabase": "jungle65_qa_gate_20261103_3db54611",
+    "passed": 24,
+    "failed": 0,
+    "maxAccounts": 2,
+    "maxWindowHours": 2,
+    "credentialsShared": false,
+    "limits": [
+      "This proves admission controls only, not resolution of the four historical recovery cases",
+      "No operational QA user IDs were collected; synthetic accounts are local rollback fixtures"
+    ]
+  },
+  "restoredFourMigrationRegressions": {
+    "date": "2026-11-03T01:43:33.249Z",
+    "basis": "20b50fb",
+    "target": "jungle65_qa_gate_20261103_3db54611",
+    "productionContacted": false,
+    "productionWrites": 0,
+    "appliedOriginalFourToRestoredCopy": true,
+    "extraQaDraftRolledBackBeforeExistingRegressions": true,
+    "checks": [
+      {
+        "name": "duel_search_authority_v1",
+        "passed": 23,
+        "failed": 0
+      },
+      {
+        "name": "duel_item_authority_v3",
+        "passed": 157,
+        "failed": 0
+      },
+      {
+        "name": "duel_release_controls_v1",
+        "passed": 34,
+        "failed": 0
+      }
+    ]
+  },
+  "rows": [
+    {
+      "caseId": "D01",
+      "status": "starting",
+      "createdAt": "2026-04-21T08:50:49.256729+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-21T08:51:04.631+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "RECOVERY_STARTING",
+      "reason": "expiry RPC requires playing; initialization/leave requires actual participant",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D01",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "error": "DUEL_NOT_PLAYING",
+        "error_code": "P0001",
+        "before_status": "starting"
+      },
+      "voluntaryLeaveRehearsal": {
+        "new_xp_rows": 2,
+        "after_status": "finished",
+        "new_xp_amount": 30,
+        "result_reason": "forfeit",
+        "result_status": "forfeit",
+        "winner_is_null": false,
+        "initialize_error": "DUEL_START_SNAPSHOT_REQUIRED",
+        "replay_identical": true,
+        "participant_leave_code": "FORFEIT",
+        "new_achievement_unlocks": 0,
+        "service_role_without_actor": "AUTH_REQUIRED"
+      }
+    },
+    {
+      "caseId": "D02",
+      "status": "starting",
+      "createdAt": "2026-04-21T08:57:42.043357+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-21T08:58:07.567+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "RECOVERY_STARTING",
+      "reason": "expiry RPC requires playing; initialization/leave requires actual participant",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D02",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "error": "DUEL_NOT_PLAYING",
+        "error_code": "P0001",
+        "before_status": "starting"
+      },
+      "voluntaryLeaveRehearsal": {
+        "new_xp_rows": 2,
+        "after_status": "finished",
+        "new_xp_amount": 30,
+        "result_reason": "forfeit",
+        "result_status": "forfeit",
+        "winner_is_null": false,
+        "initialize_error": "DUEL_START_SNAPSHOT_REQUIRED",
+        "replay_identical": true,
+        "participant_leave_code": "FORFEIT",
+        "new_achievement_unlocks": 0,
+        "service_role_without_actor": "AUTH_REQUIRED"
+      }
+    },
+    {
+      "caseId": "D03",
+      "status": "playing",
+      "createdAt": "2026-04-21T12:15:24.195807+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-21T12:16:05.426+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D03",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D04",
+      "status": "playing",
+      "createdAt": "2026-04-22T02:13:42.331629+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-22T02:14:32.472+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 36,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 27,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D04",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D05",
+      "status": "playing",
+      "createdAt": "2026-04-22T03:21:29.732794+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-22T03:21:55.072+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 7,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 6,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D05",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D06",
+      "status": "playing",
+      "createdAt": "2026-04-22T08:43:30.141714+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-22T08:45:00.57+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 10,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 20,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D06",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D07",
+      "status": "playing",
+      "createdAt": "2026-04-22T08:46:10.630566+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-22T08:46:58.114+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 9,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 15,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D07",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D08",
+      "status": "playing",
+      "createdAt": "2026-04-22T08:52:44.813327+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-22T08:53:14.556+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 3,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D08",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D09",
+      "status": "playing",
+      "createdAt": "2026-04-24T00:23:34.482977+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-24T00:24:01.372+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-24T00:42:56.657323+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-24T00:42:56.657323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D09",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D10",
+      "status": "playing",
+      "createdAt": "2026-04-27T07:41:40.231899+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-27T07:42:10.895+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T07:41:46.751412+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T07:41:40.387176+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-27T07:41:46.751412+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D10",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D11",
+      "status": "playing",
+      "createdAt": "2026-04-27T07:43:25.013703+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-27T07:43:50.367+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T07:43:29.871545+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T07:43:25.14462+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-27T07:43:29.871545+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D11",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D12",
+      "status": "playing",
+      "createdAt": "2026-04-27T08:21:23.524019+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-27T08:22:00.381+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T08:21:32.577191+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 17,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T08:21:23.667811+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 77,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-27T08:21:32.577191+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D12",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D13",
+      "status": "playing",
+      "createdAt": "2026-04-27T08:48:16.767229+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-27T08:48:47.317+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T08:48:33.520816+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T08:48:16.902131+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-27T08:48:33.520816+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D13",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D14",
+      "status": "playing",
+      "createdAt": "2026-04-27T08:53:55.835968+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-27T08:54:09.733+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T08:54:01.923266+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T08:53:55.982288+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-27T08:54:01.923266+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D14",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D15",
+      "status": "playing",
+      "createdAt": "2026-04-27T15:16:30.386051+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-27T15:17:30.718+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T15:16:38.266801+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-27T15:16:30.540166+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-27T15:22:34.561058+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-27T15:22:34.561058+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D15",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D16",
+      "status": "playing",
+      "createdAt": "2026-04-28T02:13:10.112473+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T02:13:29.211+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T02:13:16.181409+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T02:13:10.253383+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-28T02:14:55.783591+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T02:14:55.783591+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D16",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D17",
+      "status": "playing",
+      "createdAt": "2026-04-28T06:42:08.210906+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T06:42:44.566+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T06:42:12.179716+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 6,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T06:42:08.34302+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-28T07:24:30.670403+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T07:24:30.670403+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D17",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D18",
+      "status": "playing",
+      "createdAt": "2026-04-28T07:27:49.733417+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T07:28:05.525+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T07:27:53.41365+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T07:27:49.875132+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-28T08:45:25.568427+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T08:45:25.568427+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D18",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D19",
+      "status": "playing",
+      "createdAt": "2026-04-28T11:20:26.106457+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T11:20:51.466+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:20:31.011076+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:20:26.266381+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-28T11:23:28.350466+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T11:23:28.350466+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D19",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D20",
+      "status": "playing",
+      "createdAt": "2026-04-28T11:27:09.314064+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T11:27:54.228+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:27:12.722424+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:27:09.492994+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T11:27:12.722424+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D20",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D21",
+      "status": "playing",
+      "createdAt": "2026-04-28T11:28:43.753896+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T11:28:56.661+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:28:47.281024+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:28:43.859304+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T11:28:47.281024+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D21",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D22",
+      "status": "playing",
+      "createdAt": "2026-04-28T11:31:31.032473+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T11:31:44.947+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:31:35.354713+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:31:31.160496+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T11:31:35.354713+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D22",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D23",
+      "status": "playing",
+      "createdAt": "2026-04-28T11:39:11.652685+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T11:39:38.55+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:39:22.766722+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T11:39:11.773008+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-28T12:29:29.828728+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T12:29:29.828728+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D23",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D24",
+      "status": "playing",
+      "createdAt": "2026-04-28T12:40:19.481288+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-28T12:40:33.677+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T12:40:23.963714+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-28T12:40:19.655946+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-28T12:52:01.327712+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-28T12:52:01.327712+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D24",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D25",
+      "status": "playing",
+      "createdAt": "2026-04-30T01:22:01.582756+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-04-30T01:22:24.879+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-30T01:22:06.397538+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 4,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-04-30T01:22:01.737283+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 4,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-04-30T01:23:27.234823+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-04-30T01:23:27.234823+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D25",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D26",
+      "status": "playing",
+      "createdAt": "2026-05-03T05:07:30.491295+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-03T05:09:03.045+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-03T05:07:59.964355+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-03T05:07:30.697125+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-05-03T05:10:06.370922+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-05-03T05:10:06.370922+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D26",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D27",
+      "status": "playing",
+      "createdAt": "2026-05-26T06:08:45.929632+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-26T06:09:55.151+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T06:09:23.397835+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T06:08:46.027917+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-05-26T06:09:23.397835+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D27",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D28",
+      "status": "playing",
+      "createdAt": "2026-05-26T06:11:10.403011+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-26T06:12:27.872+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 1,
+      "players": [
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T06:11:10.496603+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 1,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 1,
+      "expired": 1,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-05-26T06:13:32.749378+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "RECOVERY_ROSTER",
+      "reason": "expiry RPC requires exactly two rows",
+      "lastObservedSignal": "2026-05-26T06:13:32.749378+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D28",
+        "players": [
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "error": "DUEL_PARTICIPANTS_REQUIRED",
+        "error_code": "P0001",
+        "before_status": "playing"
+      },
+      "voluntaryLeaveRehearsal": {
+        "new_xp_rows": 1,
+        "after_status": "finished",
+        "new_xp_amount": 0,
+        "result_reason": "forfeit",
+        "result_status": "forfeit",
+        "winner_is_null": true,
+        "initialize_error": "DUEL_START_SNAPSHOT_REQUIRED",
+        "replay_identical": true,
+        "participant_leave_code": "FORFEIT",
+        "new_achievement_unlocks": 0,
+        "service_role_without_actor": "AUTH_REQUIRED"
+      }
+    },
+    {
+      "caseId": "D29",
+      "status": "playing",
+      "createdAt": "2026-05-26T06:27:51.137436+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-26T06:29:07.343+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T06:28:14.816715+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 54,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T06:27:51.223188+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 65,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-05-26T06:44:03.09247+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-05-26T06:44:03.09247+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D29",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D30",
+      "status": "playing",
+      "createdAt": "2026-05-26T07:15:11.519184+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-26T07:16:16.304+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T07:15:30.53039+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 41,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T07:15:11.614945+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 38,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-05-26T07:15:30.53039+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D30",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D31",
+      "status": "playing",
+      "createdAt": "2026-05-26T08:56:44.888471+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-26T08:57:22.671+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T08:57:03.697055+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 11,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-26T08:56:44.975592+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-05-26T09:00:07.026998+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-05-26T09:00:07.026998+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D31",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D32",
+      "status": "playing",
+      "createdAt": "2026-05-28T06:10:51.791622+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-28T06:11:41.397+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 1,
+      "players": [
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-28T06:10:51.94909+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 25,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 1,
+      "expired": 1,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-05-28T06:29:24.296312+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "RECOVERY_ROSTER",
+      "reason": "expiry RPC requires exactly two rows",
+      "lastObservedSignal": "2026-05-28T06:29:24.296312+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D32",
+        "players": [
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "error": "DUEL_PARTICIPANTS_REQUIRED",
+        "error_code": "P0001",
+        "before_status": "playing"
+      },
+      "voluntaryLeaveRehearsal": {
+        "new_xp_rows": 1,
+        "after_status": "finished",
+        "new_xp_amount": 0,
+        "result_reason": "forfeit",
+        "result_status": "forfeit",
+        "winner_is_null": true,
+        "initialize_error": "DUEL_START_SNAPSHOT_REQUIRED",
+        "replay_identical": true,
+        "participant_leave_code": "FORFEIT",
+        "new_achievement_unlocks": 0,
+        "service_role_without_actor": "AUTH_REQUIRED"
+      }
+    },
+    {
+      "caseId": "D33",
+      "status": "playing",
+      "createdAt": "2026-05-28T08:16:44.783095+00:00",
+      "lastActivity": "2026-08-28T12:47:32.573022+00:00",
+      "startedAt": "2026-05-28T08:18:05.353+00:00",
+      "gameStartsAt": null,
+      "reconnectSeconds": 60,
+      "roomStartIdentity": false,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-28T08:16:58.289273+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 18,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": null,
+          "lastSeenAt": "2026-05-28T08:16:44.897004+00:00",
+          "updatedAt": "2026-08-28T12:47:32.573022+00:00",
+          "initialized": false,
+          "hasFinished": false,
+          "moveCount": 96,
+          "progressVersion": 0,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": "2026-05-28T08:39:30.800323+00:00",
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-05-28T08:39:30.800323+00:00",
+      "metadataUpdateIsNotHeartbeat": true,
+      "snapshotAvailability": {
+        "caseId": "D33",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          },
+          {
+            "role": "host",
+            "outgoing_graph": false,
+            "start_snapshot": false,
+            "target_snapshot": false,
+            "current_snapshot": false
+          }
+        ],
+        "room_start_snapshot": false
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 0,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D34",
+      "status": "playing",
+      "createdAt": "2026-10-01T02:49:33.163224+00:00",
+      "lastActivity": "2026-10-01T02:50:46.797054+00:00",
+      "startedAt": "2026-10-01T02:50:05.195947+00:00",
+      "gameStartsAt": "2026-10-01T02:50:06.524941+00:00",
+      "reconnectSeconds": 60,
+      "roomStartIdentity": true,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": "2026-10-01T02:50:37.491195+00:00",
+          "lastSeenAt": "2026-10-01T02:50:37.491195+00:00",
+          "updatedAt": "2026-10-01T02:50:37.491195+00:00",
+          "initialized": true,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 6,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": "2026-10-01T02:50:46.797054+00:00",
+          "lastSeenAt": "2026-10-01T02:50:46.797054+00:00",
+          "updatedAt": "2026-10-01T02:50:46.797054+00:00",
+          "initialized": true,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 7,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": "2026-10-01T02:50:39.681974+00:00",
+      "lastMutation": "2026-10-01T02:50:39.679516+00:00",
+      "lastRoomEvent": "2026-10-01T02:50:39.679516+00:00",
+      "moveEvents": 0,
+      "itemEvents": 3,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-10-01T02:50:46.797054+00:00",
+      "metadataUpdateIsNotHeartbeat": false,
+      "snapshotAvailability": {
+        "caseId": "D34",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": true,
+            "start_snapshot": true,
+            "target_snapshot": true,
+            "current_snapshot": true
+          },
+          {
+            "role": "host",
+            "outgoing_graph": true,
+            "start_snapshot": true,
+            "target_snapshot": true,
+            "current_snapshot": true
+          }
+        ],
+        "room_start_snapshot": true
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 2846953,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D35",
+      "status": "playing",
+      "createdAt": "2026-10-01T08:27:24.65497+00:00",
+      "lastActivity": "2026-10-01T08:28:00.306135+00:00",
+      "startedAt": "2026-10-01T08:27:50.122874+00:00",
+      "gameStartsAt": "2026-10-01T08:27:50.917333+00:00",
+      "reconnectSeconds": 60,
+      "roomStartIdentity": true,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": "2026-10-01T08:28:00.306135+00:00",
+          "lastSeenAt": "2026-10-01T08:28:00.306135+00:00",
+          "updatedAt": "2026-10-01T08:28:00.306135+00:00",
+          "initialized": true,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 3,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": "2026-10-01T08:28:00.135847+00:00",
+          "lastSeenAt": "2026-10-01T08:28:00.135847+00:00",
+          "updatedAt": "2026-10-01T08:28:00.135847+00:00",
+          "initialized": true,
+          "hasFinished": false,
+          "moveCount": 0,
+          "progressVersion": 4,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": null,
+      "lastItem": null,
+      "lastMutation": null,
+      "lastRoomEvent": null,
+      "moveEvents": 0,
+      "itemEvents": 0,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-10-01T08:28:00.306135+00:00",
+      "metadataUpdateIsNotHeartbeat": false,
+      "snapshotAvailability": {
+        "caseId": "D35",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": true,
+            "start_snapshot": true,
+            "target_snapshot": true,
+            "current_snapshot": true
+          },
+          {
+            "role": "host",
+            "outgoing_graph": true,
+            "start_snapshot": true,
+            "target_snapshot": true,
+            "current_snapshot": true
+          }
+        ],
+        "room_start_snapshot": true
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 2826689,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    },
+    {
+      "caseId": "D36",
+      "status": "playing",
+      "createdAt": "2026-10-03T13:03:05.793834+00:00",
+      "lastActivity": "2026-10-03T13:04:29.789407+00:00",
+      "startedAt": "2026-10-03T13:03:17.994638+00:00",
+      "gameStartsAt": "2026-10-03T13:03:18.978322+00:00",
+      "reconnectSeconds": 60,
+      "roomStartIdentity": true,
+      "playerCount": 2,
+      "players": [
+        {
+          "role": "guest",
+          "status": "playing",
+          "heartbeatAt": "2026-10-03T13:04:29.78844+00:00",
+          "lastSeenAt": "2026-10-03T13:04:29.78844+00:00",
+          "updatedAt": "2026-10-03T13:04:29.78844+00:00",
+          "initialized": true,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 11,
+          "profileExists": true,
+          "authExists": true
+        },
+        {
+          "role": "host",
+          "status": "playing",
+          "heartbeatAt": "2026-10-03T13:04:28.082999+00:00",
+          "lastSeenAt": "2026-10-03T13:04:28.082999+00:00",
+          "updatedAt": "2026-10-03T13:04:28.082999+00:00",
+          "initialized": true,
+          "hasFinished": false,
+          "moveCount": 2,
+          "progressVersion": 12,
+          "profileExists": true,
+          "authExists": true
+        }
+      ],
+      "eligible": 2,
+      "expired": 2,
+      "lastMove": "2026-10-03T13:04:29.78844+00:00",
+      "lastItem": "2026-10-03T13:04:29.789407+00:00",
+      "lastMutation": "2026-10-03T13:04:29.78844+00:00",
+      "lastRoomEvent": "2026-10-03T13:04:29.78844+00:00",
+      "moveEvents": 4,
+      "itemEvents": 9,
+      "liveSearch": 0,
+      "existingResults": 0,
+      "xpRows": 0,
+      "xpAmount": 0,
+      "classification": "NORMAL_TIMEOUT_CANCEL",
+      "reason": "both active participants expired; normal RPC cancellation, no XP",
+      "lastObservedSignal": "2026-10-03T13:04:29.789407+00:00",
+      "metadataUpdateIsNotHeartbeat": false,
+      "snapshotAvailability": {
+        "caseId": "D36",
+        "players": [
+          {
+            "role": "guest",
+            "outgoing_graph": true,
+            "start_snapshot": true,
+            "target_snapshot": true,
+            "current_snapshot": true
+          },
+          {
+            "role": "host",
+            "outgoing_graph": true,
+            "start_snapshot": true,
+            "target_snapshot": true,
+            "current_snapshot": true
+          }
+        ],
+        "room_start_snapshot": true
+      },
+      "timeoutRehearsal": {
+        "xp_delta": 0,
+        "match_count": 1,
+        "new_matches": 1,
+        "after_status": "finished",
+        "before_status": "playing",
+        "result_reason": "disconnect_cancelled",
+        "result_status": "cancelled",
+        "finished_reason": "cancelled",
+        "retired_players": 2,
+        "duration_seconds": 2637361,
+        "replay_identical": true
+      },
+      "voluntaryLeaveRehearsal": null
+    }
+  ],
+  "documentationVerification": {
+    "basis": "20b50fb + uncommitted documentation",
+    "date": "2026-11-03T01:57:52.228Z",
+    "roomRowsChecked": 36,
+    "participantRowsChecked": 70,
+    "normalRehearsalsChecked": 32,
+    "expectedErrorsChecked": 4,
+    "originalFourHashesUnchanged": true,
+    "newReportAndCurrentIntroLinksValid": true,
+    "noIdentifiersOrTokensInReports": true,
+    "productDiffFiles": 0,
+    "productionWrites": 0,
+    "existingHistoricalCurrentCrossWorktreeLink": "unchanged; not resolved relative to release worktree; originally detected by full-history link scan"
+  }
+}

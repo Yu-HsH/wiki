@@ -128,7 +128,7 @@ export default function PublicContentPage() {
     const page = PAGES[location.pathname] || PAGES["/about"];
 
     return (
-        <main className="public-page">
+        <main className="public-page wr65-public">
             <nav className="public-nav" aria-label="공개 문서">
                 <Link to="/" className="public-brand">Wiki Race</Link>
                 <div className="public-nav-links">

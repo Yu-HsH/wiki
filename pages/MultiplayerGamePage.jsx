@@ -29,6 +29,7 @@ import { isAbortError } from "../utils/latestRequest";
 import { createTargetSummaryState, getTargetSummaryText, TARGET_SUMMARY_STATUS } from "../utils/groupTargetSummary.js";
 import { mergePreviewPanel, previewPanelFromState } from "../utils/duelPreview.js";
 import { createRequestId } from "../utils/serverAuthority.js";
+import { requestDuelSearch } from "../services/duelSearchService.js";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { createWikiSnapshotOverlap } from "../services/wikiSnapshotOverlap.js";
 
@@ -173,6 +174,9 @@ function DuelGameSession() {
   });
   const [leaving, setLeaving] = useState(false);
   const [phase, setPhase] = useState(PHASE.LOADING);
+  const searchPhaseRef=useRef(phase);searchPhaseRef.current=phase;
+  useEffect(()=>()=>{++searchGenerationRef.current;},[]);
+  useEffect(()=>{++searchGenerationRef.current;},[pageData?.title,pageData?.revisionId]);
   // 16d 판정 4 — 1:1은 승자 카드에 완주 효과만. 경로 줄은 없다
   const matchExpression = useMatchExpression(phase === PHASE.SUCCESS ? user?.id ?? null : null);
 
@@ -240,6 +244,8 @@ function DuelGameSession() {
   const [highlightRequestId, setHighlightRequestId] = useState(0);
   const [searchAvailable, setSearchAvailable] = useState(false);
   const [searchPermit, setSearchPermit] = useState(null);
+  const searchGenerationRef = useRef(0);
+  const searchRequestRef = useRef(null);
   const [historyStack, setHistoryStack] = useState([]);
   const [floatingMessage, setFloatingMessage] = useState("");
   const [miniGame, setMiniGame] = useState(null);
@@ -1254,11 +1260,20 @@ function DuelGameSession() {
    * 방어 소진은 여기서 하지 않는다 — 전자는 상대 클라이언트가 수신 경로에서 받고,
    * 후자는 `pendingDefenses`로 서버에서 온다.
    */
-  const applyLocalItemEffect = (item, outcome) => {
+  const applyLocalItemEffect = async (item, outcome) => {
     if (item.id === "search_once") {
       const expiresAt = outcome.effectExpiresAt;
-      setSearchPermit(Number.isFinite(expiresAt) ? { expiresAt, openedOnTitle: pageDataRef.current?.title || "" } : null);
-      setSearchAvailable(Number.isFinite(expiresAt) && expiresAt > Date.now());
+      const generation = ++searchGenerationRef.current;
+      const openedOnTitle = pageDataRef.current?.title || "";
+      const openedPageId=pageDataRef.current?.pageId,openedRevisionId=pageDataRef.current?.revisionId;
+      setSearchAvailable(false);setSearchPermit(null);searchRequestRef.current=null;
+      if (!outcome.itemEventId || !Number.isFinite(expiresAt) || expiresAt<=Date.now()) return;
+      const prepared=await requestDuelSearch('prepare',{roomId,itemEventId:outcome.itemEventId});
+      if(generation!==searchGenerationRef.current||searchPhaseRef.current!==PHASE.PLAYING||expiresAt<=Date.now()||pageDataRef.current?.pageId!==openedPageId||pageDataRef.current?.revisionId!==openedRevisionId||normalizeTitle(pageDataRef.current?.title||'')!==normalizeTitle(openedOnTitle))return;
+      if(!prepared.ok||typeof prepared.documentHtml!=='string'||!prepared.documentHash){showMessage(prepared.code==='SEARCH_DISABLED'?'검색 아이템이 일시 중지되었습니다.':'검색 본문을 준비하지 못했습니다. 아이템은 이미 사용되었으며 사용 시간은 연장되지 않습니다.');return;}
+      // The UI displays the exact server-sanitized revision used for successful-use decisions.
+      setPageData(page=>page?{...page,documentHtml:prepared.documentHtml}:page);
+      setSearchPermit({expiresAt,openedOnTitle,itemEventId:outcome.itemEventId,documentHash:prepared.documentHash});
       return;
     }
 
@@ -1334,7 +1349,11 @@ function DuelGameSession() {
       );
 
       if (outcome.result === DUEL_ITEM_RESULT.APPLIED) {
-        if (item.id !== "link_preview" || previewGeneration === previewGenerationRef.current) applyLocalItemEffect(item, outcome);
+        if (item.id !== "link_preview" || previewGeneration === previewGenerationRef.current) {
+          // Preparing search HTML must not extend the existing global item busy period.
+          if (item.id === "search_once") void applyLocalItemEffect(item, outcome);
+          else await applyLocalItemEffect(item, outcome);
+        }
       }
 
       // 슬롯의 `used`와 지속효과·보호 대기는 서버 행에서만 온다. HUD는 낙관적으로
@@ -1413,11 +1432,18 @@ function DuelGameSession() {
     return () => clearTimeout(timer);
   }, [linkPreview?.entries, refreshDuelItemState]);
 
+  // Open after the authoritative HTML render has cleared the old panel. A new
+  // activation ID opens exactly once; consuming a result never retriggers it.
+  useEffect(()=>{
+    if(searchPermit?.itemEventId&&searchPermit.expiresAt>Date.now()&&phase===PHASE.PLAYING
+      &&normalizeTitle(pageData?.title||'')===normalizeTitle(searchPermit.openedOnTitle))setSearchAvailable(true);
+  },[searchPermit?.itemEventId]);
+
   // The existing server expiry is already converted to client time by the item service.
   // No duration fallback and no search panel restoration from F5 snapshots.
   useEffect(() => {
     if (!searchPermit) return undefined;
-    const clear = () => { setSearchAvailable(false); setSearchPermit(null); };
+    const clear = () => { ++searchGenerationRef.current;setSearchAvailable(false);setSearchPermit(null);searchRequestRef.current=null; };
     if (phase !== PHASE.PLAYING
       || normalizeTitle(pageData?.title || "") !== normalizeTitle(searchPermit.openedOnTitle)
       || searchPermit.expiresAt <= Date.now()) {
@@ -1427,6 +1453,16 @@ function DuelGameSession() {
     const timer = setTimeout(clear, searchPermit.expiresAt - Date.now());
     return () => clearTimeout(timer);
   }, [searchPermit, pageData?.title, phase]);
+
+  const handleAuthorizedSearch = async (query) => {
+    const permit=searchPermit;
+    if(!permit||permit.expiresAt<=Date.now()||normalizeTitle(pageDataRef.current?.title||'')!==normalizeTitle(permit.openedOnTitle))return {ok:false,code:'SEARCH_EXPIRED'};
+    const binding=permit.itemEventId+'\0'+permit.documentHash+'\0'+query;
+    if(searchRequestRef.current?.binding!==binding)searchRequestRef.current={binding,requestId:createRequestId()};
+    const result=await requestDuelSearch('search',{roomId,itemEventId:permit.itemEventId,documentHash:permit.documentHash,query,requestId:searchRequestRef.current.requestId});
+    if(result.ok&&result.count>0)setSearchAvailable(false);
+    return result;
+  };
 
   /**
    * 15초 창이 끝나면 패널을 닫는다. HUD는 남은 시간을 그리기만 하므로, 0이 된 뒤에도
@@ -2031,6 +2067,7 @@ function DuelGameSession() {
               searchAvailable={searchAvailable}
               searchExpiresAt={searchPermit?.expiresAt ?? 0}
               onConsumeSearch={() => setSearchAvailable(false)}
+              onAuthorizedSearch={handleAuthorizedSearch}
               status={status}
               showTargetBrief
               openTargetBriefByDefault

@@ -128,6 +128,7 @@ export const DUEL_ITEM_THROWN_CODES = Object.freeze([
  * 서버가 새 코드를 늘려도 HUD가 조용히 성공으로 읽지 않는다.
  */
 const FAILURE_KIND_BY_CODE = Object.freeze({
+    SEARCH_DISABLED: FAILURE_KIND.UNAVAILABLE,
     ITEMS_DISABLED: FAILURE_KIND.UNAVAILABLE,
     GAME_NOT_ACTIVE: FAILURE_KIND.UNAVAILABLE,
     ITEM_COOLDOWN: FAILURE_KIND.COOLDOWN,
@@ -156,6 +157,7 @@ const FAILURE_KIND_BY_CODE = Object.freeze({
  * 이 트랙은 `getDuelResultLabel`을 읽기 전용으로만 부른다 (`TRACKS.md` §2.2).
  */
 const FAILURE_MESSAGES = Object.freeze({
+    SEARCH_DISABLED: "검색 아이템이 일시 중지되었습니다. 슬롯은 사용되지 않았습니다.",
     ITEMS_DISABLED: "아이템을 쓰지 않는 방입니다.",
     GAME_NOT_ACTIVE: "지금은 아이템을 쓸 수 없습니다.",
     ITEM_NOT_OWNED: "가지고 있지 않은 아이템입니다.",

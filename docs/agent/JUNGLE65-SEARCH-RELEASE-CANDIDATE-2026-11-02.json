@@ -1,0 +1,459 @@
+{
+  "date": "2026-11-02 KST",
+  "productCommit": "82c82f0407c7d83df06d6a4f466057b80bbda643",
+  "baseMain": "8da7d25f4c364f431f8baf8b1abc685a3bee9e6e",
+  "design": "27e5056d2780e84bd107e64d10684be63fd204aa",
+  "security": "fdd7190f16057a156caac5f78335a6d9d72f570e",
+  "scope": "full candidate vs main; raw-byte SHA256 plus canonical Git blob; manifest excludes own hash",
+  "count": 75,
+  "files": [
+    {
+      "path": "appStyles.js",
+      "bytes": 1395,
+      "sha256": "b18bc41daa47ecc02409089bb7cbc1a2ae7d7a0ba1da5cb5c56cfe6eb6e5a0ed",
+      "gitBlob": "7aa8189a07a0776b2a1d3d9e1cc7522926c69bc5"
+    },
+    {
+      "path": "components/WikiViewer.jsx",
+      "bytes": 25360,
+      "sha256": "2a077d1c9e0180f5a816ed22f00fa0d8b73e79ca45960e03bd889c51a6794ae4",
+      "gitBlob": "1b0440742536f242f8376bffb97d9497d850c5ed"
+    },
+    {
+      "path": "components/wiki-race/ExpeditionHero.jsx",
+      "bytes": 1408,
+      "sha256": "a0ca95bafc538fb1b8d8c43092635d347784a0aef4ecc36ff08be6beda84e436",
+      "gitBlob": "dcd5f2b234f451bce5f4cb6c81a011452839192e"
+    },
+    {
+      "path": "components/wiki-race/LobbyParts.jsx",
+      "bytes": 4623,
+      "sha256": "2c6e22988a517fde54118be4ae0b433166ecd2f27317cc97c97447d0d4326512",
+      "gitBlob": "e0e82bd0b79b1801d2f1db9e5c7e2029f8fdd801"
+    },
+    {
+      "path": "components/wiki-race/WikiRaceShell.jsx",
+      "bytes": 3031,
+      "sha256": "78f2bcdfaa01f7b8f92218538f1a1a0cd1b262676f2b4eb6d6c5fbb756e0113e",
+      "gitBlob": "282bd3c20bde9c7ebf8309184b9c1419f78867ac"
+    },
+    {
+      "path": "components/wiki-race/race/GroupRaceParts.jsx",
+      "bytes": 16679,
+      "sha256": "0eb4c56e16babcfa25251f8e8cddcdad8ec40ac301c132aa38b9b766c8d07790",
+      "gitBlob": "bf54f991aa97b46e2a64c1772ffbaf7f0a8b24ae"
+    },
+    {
+      "path": "components/wiki-race/race/RaceParts.jsx",
+      "bytes": 7926,
+      "sha256": "ab553068280dada9c810dcd1c80c45aecc3562fc63b91aae9567c722ffad7b5c",
+      "gitBlob": "b822a3e14be89c5b649e82494926970b6797dd68"
+    },
+    {
+      "path": "components/wiki-race/result/ResultParts.jsx",
+      "bytes": 12378,
+      "sha256": "eccc5bf00f628e90190803a9316c0a5287933f5548a4b9396261925a58aae5f7",
+      "gitBlob": "ad4b3360ff54db541da356161022481b72397081"
+    },
+    {
+      "path": "css/jungle65.css",
+      "bytes": 16885,
+      "sha256": "8880730e94451d324a256362f98f802abe987ec20ecdddaacb7aa3695faa4035",
+      "gitBlob": "cdacb0b7dfa6b98ef04a37b4c91c75111224b5cd"
+    },
+    {
+      "path": "css/jungle65Expedition.css",
+      "bytes": 22642,
+      "sha256": "74c1c28fa77a357c342e75a7d94ab50d5109e76839a5b40696340e2950718779",
+      "gitBlob": "aeb7f2333489eb328db00550ce5e63a9797b4803"
+    },
+    {
+      "path": "css/jungle65Fonts.css",
+      "bytes": 4527,
+      "sha256": "77d84e40aa279c16426bb5cb27860ac5a95b6969b8ea809495027101dbafe2d2",
+      "gitBlob": "efe88cd0724c80d6788e1dc051feee0931b3c6c1"
+    },
+    {
+      "path": "css/jungle65Lobby.css",
+      "bytes": 22382,
+      "sha256": "6af7cf1e061e0195460d9df13c93911bb4553f008cf524781ce3f506e4f0b423",
+      "gitBlob": "11cfc07b2791c842db45e06ae79d8c6d6eccc985"
+    },
+    {
+      "path": "css/wikiRaceBase.css",
+      "bytes": 13174,
+      "sha256": "2f8488e09887d57a0de093821679d4294303a052330cf784b9dd096d1688ab5b",
+      "gitBlob": "88d6f83dfe902fe52e27490a328d955e2feaaaa2"
+    },
+    {
+      "path": "css/wikiRaceDuelFeedback.css",
+      "bytes": 18683,
+      "sha256": "0106b249df46e346f8d8d58f210e120857e6e3c2947a0a920faad66f97ac4cd5",
+      "gitBlob": "db3f8a712768176c995096e95802ce9c9a220acd"
+    },
+    {
+      "path": "docs/agent/2.0x/SEARCH-CONSUMPTION-FOLLOWUP.md",
+      "bytes": 2152,
+      "sha256": "a7017abce836e17fc15db3b0026bfe158e2eab7960212bb0e4a0df2aebe5ca86",
+      "gitBlob": "793db555869699dfa43b35c6982f82b2fc104db7"
+    },
+    {
+      "path": "docs/agent/CURRENT.md",
+      "bytes": 427711,
+      "sha256": "cda8149c628cfa1c6f65e6afddd28914098a9d22d3f63fac2914c71f2bac2979",
+      "gitBlob": "96f0c8d81375cb40ccb45fa792c1e1d8d22c987c"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-APLUS-ENTRY-2026-11-02.md",
+      "bytes": 15617,
+      "sha256": "d6633f7502dc8607335dcdeb27cb46d530385a99cdf8128bf1ef9dfc70b54f7b",
+      "gitBlob": "22841d42903eac5c74dbca0c69e277fe39898872"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-ASSET-HOVER-2026-10-31.md",
+      "bytes": 11124,
+      "sha256": "e328afaadae17a184a65465a59fb886250a42075672b0a25202eef1a903090b9",
+      "gitBlob": "23ac1a7be9a4421cec5befd8a0d3ecea39835eba"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-COPY-POLISH-2026-11-02.md",
+      "bytes": 12965,
+      "sha256": "cfa5b5f64a1fe0316dfafc425bae2f020d452bbb3b2dae4305807e7eb7e2bee9",
+      "gitBlob": "e8d00f792413d02a1858e105387eb8114b31b9be"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-DUEL-2026-11-02.md",
+      "bytes": 13035,
+      "sha256": "e5cef4fa41e4a3e1fce11bae84644dbd4392d8428fddd15d8210bea2d0f35355",
+      "gitBlob": "99a14d805325f9344f5534df6d72f45e781676d1"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-FINAL-REVIEW-2026-11-01.md",
+      "bytes": 17566,
+      "sha256": "fefecc296cf3fc6bbb0a106712167080fbc466eacf60688024a4b1d47acd522b",
+      "gitBlob": "cb8504c6c231b6afca938cd9548fb76fb1831cec"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-FULL-REDESIGN-2026-11-02.md",
+      "bytes": 14859,
+      "sha256": "1d305ff674fabe3092ee75081a7cb16915888b3a826730f2e4607a9d058e4855",
+      "gitBlob": "c73381e916a3294af4cfd4db60c90118336aca59"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-LOBBY-RESEARCH-2026-11-02.md",
+      "bytes": 36626,
+      "sha256": "7db8dd43f2c46fa4e8dff74d67f51e92bca32027659910f509f5f7b7cff8b559",
+      "gitBlob": "77fa3a4a7d65d0fa487222e0b57508ce7398c674"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-REGRESSION-FIX-2026-11-02.md",
+      "bytes": 12496,
+      "sha256": "f20c47cb5e66fcb24e013f0d731879f11fde4a14347584038949835690eae814",
+      "gitBlob": "cc2f7a988384b175ad4eb8b79dcfbb061ccbeae2"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-RELEASE-CANDIDATE-2026-11-02.json",
+      "bytes": 9248,
+      "sha256": "c0355a31a5bb495f0f4eeaa60e814b348e624db82706ca894efb151d3092d96e",
+      "gitBlob": "b414baf273aa200d6098a6a1daec2b6ccf778001"
+    },
+    {
+      "path": "docs/agent/JUNGLE65-SEARCH-RELEASE-CANDIDATE-2026-11-02.json",
+      "selfReference": true
+    },
+    {
+      "path": "docs/agent/JUNGLE65-VISUAL-REPAIR-2026-11-02.md",
+      "bytes": 12813,
+      "sha256": "ab993ca23b8039e51f0da34f44324965e672a8cd1609bd8c038e27db2a595f08",
+      "gitBlob": "6b9b8a7677bca73fa15afd7bec8f95eb4ce6427e"
+    },
+    {
+      "path": "docs/agent/SEARCH-CONSUMPTION-AUTHORITY-2026-11-02.md",
+      "bytes": 17200,
+      "sha256": "646c77f6c425c02a8f219ceed6fc3ca088cfe09d55749ae330682aab7d383705",
+      "gitBlob": "d7fa6610eb9935921cc37d92d92ff90e549df132"
+    },
+    {
+      "path": "docs/ops/JUNGLE65-QA-2026-11-02.md",
+      "bytes": 1876,
+      "sha256": "0bde86a03df4d437d51d51d9fba4861aee712636af0fc56e4fe2d8d001f9fb23",
+      "gitBlob": "93f8e7d2e324a400bd8e7df8a7b7709fb7065d4f"
+    },
+    {
+      "path": "docs/ops/JUNGLE65-SEARCH-CUTOVER-2026-11-02.md",
+      "bytes": 9317,
+      "sha256": "1db5a46a785de19f1737241a9252059f98d439089cb8859c26c7594fa62f40f0",
+      "gitBlob": "e558288ea8f19eb01b4dbe2eeabcc220a1d7b897"
+    },
+    {
+      "path": "docs/ops/JUNGLE65-SEARCH-RELEASE-GATE-2026-11-02.md",
+      "bytes": 8139,
+      "sha256": "2a9e024e6a6bb7cd46d7724bdbd18cf105f9edbb56c5e1b2fc3af1bdd720098d",
+      "gitBlob": "fbd07f2f7373bbb417e41cdb71e2adce51bc89cc"
+    },
+    {
+      "path": "docs/ops/RELEASE-2026-11-02.md",
+      "bytes": 8018,
+      "sha256": "63e8fe637812635b2271ace66c6687e2e4faeab4f1cedca7b61a2c6c0649f5b2",
+      "gitBlob": "7310ab96d6c15a92c5369390d4e8ef86e58720fc"
+    },
+    {
+      "path": "docs/ops/SEARCH-PERFORMANCE-2026-11-02.json",
+      "bytes": 18885,
+      "sha256": "892767b45d884464dc6be9a26398db8172c3d9172c9fae9fc1db6bc0659bb623",
+      "gitBlob": "38d8e1e2410233a42f3a74fc57d132a562da0a51"
+    },
+    {
+      "path": "docs/ops/SEARCH-PERFORMANCE-2026-11-02.md",
+      "bytes": 9675,
+      "sha256": "4492c378e28d461369d586e181f55abbe6d07f2ca06657ed2336d83c5a2790c7",
+      "gitBlob": "f4defd11a8a988f53929221053497477c08d81d6"
+    },
+    {
+      "path": "docs/ops/SEARCH-PERFORMANCE-BROWSER-2026-11-02.json",
+      "bytes": 7603,
+      "sha256": "b2fce00b852d4fd00d474a1dce360152a21317301a096a62c36248e44c5ebb39",
+      "gitBlob": "d398251f807c72aa971371d02a8ce9411761c5ff"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 52675,
+      "sha256": "5fa163b77b8814a05382ce730f73f6dbba52310c469d8d100bff3c283b7dcb33",
+      "gitBlob": "501e8ab6cb6e9c87e5bdd3dfec9470f6d2bc7960"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1127,
+      "sha256": "0c9e3d751a963f857f4f7d172eaf1e6743b16e2b890e506cab8ef64c834e3eee",
+      "gitBlob": "efa4be436fe9c3c2276ad0ff1657f8683ff60d7f"
+    },
+    {
+      "path": "pages/GroupRoomPage.jsx",
+      "bytes": 33357,
+      "sha256": "11ce5495d045fc94c42bb90379eec26b15544959ea00aa94c88d25104a1ebc91",
+      "gitBlob": "3ce48b7cf8571ab50a8598b099b58087bf523c42"
+    },
+    {
+      "path": "pages/IntroPage.jsx",
+      "bytes": 5812,
+      "sha256": "1118fef7611ba770a5c8f9ecd7532dcbc6022a4247f51ef35b88bcc7fe6d2c7a",
+      "gitBlob": "bd2ecab13f3136a630ab65e64021e97a09a31c31"
+    },
+    {
+      "path": "pages/LoginPage.jsx",
+      "bytes": 11559,
+      "sha256": "58e52e8eb1b89e5b2f9ebb758f7ede1ee1f004ae532e661f1d07274de7024fc8",
+      "gitBlob": "8796cb484add77f46f8663ec97d090351f0e9ef1"
+    },
+    {
+      "path": "pages/MainPage.jsx",
+      "bytes": 34728,
+      "sha256": "83ff793b6b3c2e278977b781be0e88eb8863814f23ea89c039baa7523584abdd",
+      "gitBlob": "4e7f18423b50caac453cd944ac717186880c5544"
+    },
+    {
+      "path": "pages/MultiplayerGamePage.jsx",
+      "bytes": 96905,
+      "sha256": "364af90d05c5e74deb057d2f0c65ff2b3eb746012fbe25f1f160e7eb6bd8fe36",
+      "gitBlob": "8a2eced6053aae3d2f9f2bf8be38fb100831e410"
+    },
+    {
+      "path": "pages/MultiplayerPage.jsx",
+      "bytes": 24155,
+      "sha256": "19df3ba4783232c591279c638c64889da619b71cd1b591b3fcef6e967173d041",
+      "gitBlob": "3acbde23a026af8f5db2f9a7721131140ed9a3b9"
+    },
+    {
+      "path": "pages/PlayPage.jsx",
+      "bytes": 5360,
+      "sha256": "c02461ee7aed7bf1d401b8a198b14c85bfdb903606f45bb6cebbc1835d89a2df",
+      "gitBlob": "ca697e2e4e034c8222e3ef0a2841f87062d685ec"
+    },
+    {
+      "path": "pages/PublicContentPage.jsx",
+      "bytes": 10076,
+      "sha256": "b357c9f781566b360f838751da2f8a9e0fa3657c579a553df7a91665a5ad134d",
+      "gitBlob": "4ee04c800be27975138e5eb4c543d0f81a401da4"
+    },
+    {
+      "path": "pages/RankingPage.jsx",
+      "bytes": 19141,
+      "sha256": "7497debfec3e5be8a666dcce34719f2a74677867a9a370dcc8a32734fb8d1fa2",
+      "gitBlob": "237e07c28fb5f63730600d5c5073ca92b26e3364"
+    },
+    {
+      "path": "pages/RoomPage.jsx",
+      "bytes": 31503,
+      "sha256": "194d4300a2d58aaf0c11343706d61beaf174b539e9feeff80e02b34b4aad5f58",
+      "gitBlob": "95e5cd0eb6a497c0b2abe84faa334eb8352252eb"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/duel-expedition.webp",
+      "bytes": 53224,
+      "sha256": "5e6aa384dcab8803c1f500ed6de58d188babd3be77c91f4b7dfc07b6b90e02d5",
+      "gitBlob": "8245507744c3ee84989476edd5b35fb6dddc580c"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/group-expedition.webp",
+      "bytes": 58372,
+      "sha256": "78d75daabca42735b535afb4175cfd2cb5c10c8e4a8009c4be0da7b1f2f5198b",
+      "gitBlob": "2049aaac7a6045d648af91040fec4edd8716fa29"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/hero-jungle-expedition.webp",
+      "bytes": 152576,
+      "sha256": "e0829ac25713abd90dca4d2f5cf63734f3c9c70892082d8ef5389cfddb1ad193",
+      "gitBlob": "8f04ccdd9c07a620fb520df4a488648f6720c0a4"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/landing-final.webp",
+      "bytes": 499436,
+      "sha256": "7b1790bf4e4f1d5e327bc47e2501a14b0683cbc831d647229845ab2666c235f3",
+      "gitBlob": "cf8db80dfa98fb74cbbcff4bc32a377497f4f2ab"
+    },
+    {
+      "path": "public/assets/wiki-race/jungle65/solo-expedition.webp",
+      "bytes": 59632,
+      "sha256": "2325171df6ac2f2ccc44aa26380b29526a093ebd73a34e49784a0c2118fe0674",
+      "gitBlob": "5df0d0a07332aa1378227984bb0402d147d61559"
+    },
+    {
+      "path": "public/licenses/jungle65-fonts.html",
+      "bytes": 2716,
+      "sha256": "5784c9bf5cba2354eb8dffe63a8b951a9715253f1eeb6176b8f8a3f8c0364378",
+      "gitBlob": "57c31b8b6100e8aecbbea36747d9a1680ff61607"
+    },
+    {
+      "path": "scripts/benchmark-duel-search-local.mjs",
+      "bytes": 15278,
+      "sha256": "9c29b0aadf7ed6a8515cbf49566fa37269201fa912f096614c4f0a433a8e077c",
+      "gitBlob": "5c8164e623571a86d831f35c45c45182eaa4392f"
+    },
+    {
+      "path": "scripts/jungle65-design-smoke.mjs",
+      "bytes": 29780,
+      "sha256": "3dfc8a92088aa0ed0cf6f7b668178ee4bcd9f53fc7fdf8b273bfc50b457fbc8e",
+      "gitBlob": "4a3ad3e08a30f2b0c226abac19b3763527323953"
+    },
+    {
+      "path": "scripts/jungle65-duel-smoke.mjs",
+      "bytes": 30504,
+      "sha256": "9355f131d25411ec5a097b10060bb37989fa7b95458cea81e87d4873372e2bb4",
+      "gitBlob": "93e8a5fc0cc5a143efcade8e79533bfee4408f1c"
+    },
+    {
+      "path": "scripts/jungle65-entry-smoke.mjs",
+      "bytes": 24407,
+      "sha256": "096b37ecae5742df3c4479583a960418fbf037b660c855c67b7d6ba5595f7366",
+      "gitBlob": "58c8a9cc748ab1bcaf3dbae79ce607a0cde93ff9"
+    },
+    {
+      "path": "scripts/jungle65-full-fixtures.mjs",
+      "bytes": 32619,
+      "sha256": "4677b243adf50f908e7d4018ec43d95c9ab57c8f9b09e1c98a6ed9db9826101a",
+      "gitBlob": "7adf177dd94de21bb9135893ed3252b28d6e6983"
+    },
+    {
+      "path": "scripts/jungle65-full-review.mjs",
+      "bytes": 14689,
+      "sha256": "e383505ccf15c2e9dce7a9bf2c514d3625213f65526e851b9c5726d9aa979ebf",
+      "gitBlob": "409135ea85e2108e843decf486c7ed3d7ba40a46"
+    },
+    {
+      "path": "scripts/jungle65-full-smoke.mjs",
+      "bytes": 23442,
+      "sha256": "480afd9fe83c6b70fc11fceb5ecd53b635917c108e7acf3cbf5d1bf5902068c0",
+      "gitBlob": "83e0f0753ed23909ec84038fb93c2c4ea421da4d"
+    },
+    {
+      "path": "scripts/jungle65-full-supplement.mjs",
+      "bytes": 4760,
+      "sha256": "8b30803d0a00696c708ffb400cc6eb9cb2b9420f6d4dead5645d136759f96da0",
+      "gitBlob": "e4fddafd3b08784440d2d25eaa0a7db5afc1368d"
+    },
+    {
+      "path": "scripts/jungle65-polish-smoke.mjs",
+      "bytes": 24841,
+      "sha256": "c9f83c7f658ee27846ffe45b8c4de374e2b542cfab44a02bc90036f6eae4afa6",
+      "gitBlob": "42a9484258ef877bb7b5d00b2f7dedebb4e2a392"
+    },
+    {
+      "path": "scripts/jungle65-regression-fix-smoke.mjs",
+      "bytes": 12267,
+      "sha256": "ac794c6456d56dd8c2e40e202052e5b56035b760dc59291c2f7d67531dc09dae",
+      "gitBlob": "9f9320dafd11467f8930696762e8e5955dcf6855"
+    },
+    {
+      "path": "scripts/verify-duel-search-local.mjs",
+      "bytes": 21810,
+      "sha256": "5dd90a5c739239bf15823a39f2300c382a05a4bd8bf7b55e68867a24774346ba",
+      "gitBlob": "97b09cc8ee2d244766fe4ecfcd4ea44b19b3efca"
+    },
+    {
+      "path": "services/duelSearchService.js",
+      "bytes": 464,
+      "sha256": "178ad99f9311dc381ad311857240c0a30a2eb7d80ed174e2b1ae99c2b53f64e2",
+      "gitBlob": "940442e6cbbdf5b85760c2639d5488c63e1251e2"
+    },
+    {
+      "path": "supabase/config.toml",
+      "bytes": 16707,
+      "sha256": "c8f86e06a8025d950d5eaa60f38e0cee6187d6c7e17a3dddfc2f0b395e70ac97",
+      "gitBlob": "bd4114638744553bb6bcf9ad04dabb2a767a420a"
+    },
+    {
+      "path": "supabase/functions/duel-search/document.mjs",
+      "bytes": 4525,
+      "sha256": "97b89d67c5a3235c03bbbaf89a5c00e3ab67c373ae6cc4abc0943f785170f03c",
+      "gitBlob": "59e01ee1d64895d7311f93a72eeedea70616b862"
+    },
+    {
+      "path": "supabase/functions/duel-search/handler.mjs",
+      "bytes": 3114,
+      "sha256": "70945311ae15f2b536fb6550f93c89bcb3000a5ba274d5ec243e84724bb50bd3",
+      "gitBlob": "5ccc9f69f15e8226e9ac646adbbfd75bf63be32d"
+    },
+    {
+      "path": "supabase/functions/duel-search/index.ts",
+      "bytes": 2640,
+      "sha256": "3e40d3692b3f5cbae0fc3be849ca04ed36ce234824b98fa21ca2964af2c9aa62",
+      "gitBlob": "14e710d03c06f6345a81a1b28492d2f0b6456255"
+    },
+    {
+      "path": "supabase/migrations/20261102090000_duel_search_authority_v1.sql",
+      "bytes": 10125,
+      "sha256": "de99cb75859833b6aadefd7eb16cdfe32b2f8caf039cd4b19cf12acc82de6516",
+      "gitBlob": "cdd76f411ac66e169a1e2f3127ef1fba27769c62"
+    },
+    {
+      "path": "supabase/tests/duel_search_authority_v1.sql",
+      "bytes": 8730,
+      "sha256": "6bdac1cbc9b07085116370c55cffe5936732ffae9976fe394b7fe28e885401ce",
+      "gitBlob": "f45b4979e1c33565c38b0f22a1cf83532fbce72a"
+    },
+    {
+      "path": "tests/duelSearchAuthority.test.js",
+      "bytes": 5356,
+      "sha256": "dd6bbb93b74eea8836dbea5da53e4df97e0d7b766e29ab2e0b0c0f7201bfc639",
+      "gitBlob": "73a13ce7f29916917299d474b1d674e359d18c14"
+    },
+    {
+      "path": "tests/explorationRecords.test.js",
+      "bytes": 22541,
+      "sha256": "92d7dbb533f6a90ca32c21cc98b7417d64aac81a41fa9032b9606ca73170d6b1",
+      "gitBlob": "13de904cba5aeedd2b70553dfd6df4cc395e3b4a"
+    },
+    {
+      "path": "tests/jungle65DesignEntry.test.js",
+      "bytes": 2466,
+      "sha256": "0fd652a346f1554d79a89168cacdc97e0952362d750d04d1a2567bb40045e930",
+      "gitBlob": "9ac47cec757bc04f8e768513e617cc32ac33fc1a"
+    },
+    {
+      "path": "tests/publicRooms.test.js",
+      "bytes": 4828,
+      "sha256": "982d8fb68b2a68432a6a01a45c1ab100cf44019bd64227a7199791be54cb730c",
+      "gitBlob": "e05453751ac85a8dfac68d3eb24f816e05820654"
+    }
+  ]
+}

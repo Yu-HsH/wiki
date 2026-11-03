@@ -15,6 +15,8 @@ import {
 } from "../services/groupMultiplayerService";
 import { listPublicRooms, joinPublicRoom } from "../services/publicRoomService";
 import "../css/publicRooms.css";
+import "../css/jungle65Lobby.css";
+import { LobbyIcon } from "../components/wiki-race/LobbyParts";
 import {
   DUEL_ITEM_ROLE,
   DUEL_ROLE_LABELS,
@@ -183,7 +185,7 @@ export default function MultiplayerPage() {
   // Phase 2: 기존 방 생성/코드 참가 기능은 그대로 두고 공용 Shell 안에서 가볍게 보인다.
   return (
     <WikiRaceShell user={user} level={null} onLogout={handleLogout} view="entry">
-      <div className="mp-container wr-entry">
+      <div className="mp-container wr-entry wr65-entry">
 
         {/* =========================
            상단 내비게이션
@@ -197,9 +199,9 @@ export default function MultiplayerPage() {
             ← 탐험 선택
           </button>
         </header>
-        <div className="wr-entry-title">
-          <p className="wr-kicker">EXPEDITION BOARD · 원정대 준비</p>
-          <h1>{selectedMode === "duel" ? "1:1" : selectedMode === "group" ? "그룹" : "온라인"} 방 만들기 · 공개방 찾기</h1>
+        <div className="wr-entry-title wr65-entry-heading">
+          <p className="wr-kicker">EXPEDITION BOARD · 탐험가 모집 게시판</p>
+          <h1>{selectedMode === "duel" ? "1:1" : selectedMode === "group" ? "그룹" : "온라인"} 탐험가 모집</h1>
           <p className="wr-entry-lead">공개방 목록에서 합류하거나, 비공개 방 코드를 공유해 함께 탐험하세요.</p>
         </div>
 
@@ -235,15 +237,83 @@ export default function MultiplayerPage() {
           {!selectedMode ? "먼저 1:1 또는 단체모드를 선택하세요." : selectedMode === "duel" ? "방장이 목표를 확정합니다. 두 명이 입장하면 방장이 시작하며, 출발 문서는 시작 시 정해집니다. 아이템 사용 여부는 방 생성 시 선택합니다." : "3–8명 · 20분 · 아이템 없음. 각자 후보를 제출하고 READY. 전원 준비·서로 다른 후보 2개 이상일 때 방장이 시작합니다."}
         </div>
 
+        <div className="wr65-entry-layout">
+        {selectedMode && (
+          <section className="mp-public-board" aria-label="공개방 목록" aria-busy={roomsLoading}>
+            <div className="mp-public-board__header">
+              <div>
+                <span className="wr-kicker"><LobbyIcon name="flag" /> PUBLIC EXPEDITIONS · 공개 원정대</span>
+                <h2>참가할 수 있는 {selectedMode === "duel" ? "1:1" : "그룹"} 방</h2>
+                <p>공개 설정된 대기방만 표시됩니다. 비공개방은 방 코드로 참가하세요.</p>
+              </div>
+              <button type="button" className="mp-action-btn mp-action-btn--secondary"
+                disabled={pending || roomsLoading} onClick={() => void refreshPublicRooms(selectedMode)}>
+                {roomsLoading ? "불러오는 중…" : "새로고침"}
+              </button>
+            </div>
+            {roomsLoading && <p className="mp-public-board__loading" role="status">열린 원정대를 찾고 있습니다…</p>}
+            {roomsError && <p role="alert" className="mp-public-board__error">{roomsError}</p>}
+            {!roomsLoading && !roomsError && publicRooms.length === 0 && (
+              <p className="mp-public-board__empty">참가할 수 있는 공개방이 없어요. 직접 방을 만들어 보세요.</p>
+            )}
+            <ul className="mp-public-board__list">
+              {publicRooms.map(room => (
+                <li key={room.room_id} className="mp-public-room">
+                  <span className="mp-public-room__flag" aria-hidden="true"><LobbyIcon name="flag" size={18} /></span>
+                  <div className="mp-public-room__detail">
+                    <strong><span className="wr65-player-name">{room.host_nickname || "탐험가"}</span>님의 방</strong>
+                    <span className="mp-public-room__meta"><span className="wr65-room-count">{room.current_players}/{room.max_players}명</span>
+                      {room.mode === "duel" ? ` · ${room.use_items ? "아이템전" : "아이템 없음"}` : " · 그룹 탐험"}
+                    </span>
+                  </div>
+                  <button type="button" className="mp-action-btn mp-action-btn--primary"
+                    aria-label={`${room.host_nickname || "탐험가"}님의 공개방 참가하기`}
+                    disabled={pending || roomsLoading} onClick={() => void handleJoinPublicRoom(room)}>
+                    참가하기
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {/* =========================
            1vs1 모드
         ========================= */}
         {selectedMode === "duel" && (
           <div className="mp-mode-panel">
 
-            {/* 방 생성 카드 */}
+            {/* 코드 참가 카드 */}
+            <div className="mp-card mp-card--join">
+              <div className="wr-kicker">02 · 초대받은 탐험가</div>
+              <h3 className="mp-card-title">코드로 참가</h3>
+              <p className="mp-card-desc">
+                공유받은 6자리 방 코드로 참가하세요.
+              </p>
+
+              <form className="mp-join-row" onSubmit={e => { e.preventDefault(); void handleJoinDuelRoom(); }}>
+                <input
+                  className="mp-code-input"
+                  value={duelRoomCodeInput}
+                  onChange={(e) => setDuelRoomCodeInput(e.target.value)}
+                  placeholder="예: JUNG65"
+                  enterKeyHint="go"
+                  aria-label="1:1 방 코드"
+                  autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                  disabled={pending}
+                />
+
+                <button
+                  className="mp-action-btn mp-action-btn--secondary"
+                  type="submit"
+                  disabled={pending}
+                >
+                  참가
+                </button>
+              </form>
+            </div>
+
             <div className="mp-card mp-card--create">
-              <div className="wr-kicker">01 · 새 탐험 열기</div>
+              <div className="wr-kicker">03 · 새 탐험 열기</div>
               <h3 className="mp-card-title">방 만들기</h3>
               <p className="mp-card-desc">
                 방장이 되어 목표 문서를 정하고 상대에게 방 코드를 공유하세요.
@@ -273,47 +343,61 @@ export default function MultiplayerPage() {
               </button>
             </div>
 
-            {/* 방 참가 카드 */}
+
+          </div>
+        )}
+
+        {/* =========================
+           단체 모드
+        ========================= */}
+        {selectedMode === "group" && (
+          <div className="mp-mode-panel">
+
+            {/* 코드 참가 */}
             <div className="mp-card mp-card--join">
-              <div className="wr-kicker">02 · 열린 탐험에 합류</div>
-              <h3 className="mp-card-title">방 참가</h3>
+              <div className="wr-kicker">02 · 초대받은 탐험가</div>
+              <h3 className="mp-card-title">코드로 참가</h3>
               <p className="mp-card-desc">
-                코드를 입력하여 참가합니다
+                공유받은 6자리 방 코드로 참가하세요.
               </p>
 
-              <form className="mp-join-row" onSubmit={e => { e.preventDefault(); void handleJoinDuelRoom(); }}>
+              <form className="mp-join-row" onSubmit={async (e) => {
+                e.preventDefault();
+                if (submitting.current) return;
+                const code = groupRoomCodeInput.trim().toUpperCase();
+                if (!code) { setSubmitError("방 코드를 입력해 주세요."); return; }
+                if (!user?.id) { setSubmitError("로그인이 필요합니다."); return; }
+                try {
+                  submitting.current = true; setPending(true); setSubmitError("");
+                  const room = await findGroupRoomByCode(code);
+                  await joinGroupRoom(room.id);
+                  navigate(`/multiplayer/group/room/${room.id}`);
+                } catch (error) {
+                  setSubmitError(error instanceof Error ? error.message : "단체 방 참가 실패");
+                } finally { submitting.current = false; setPending(false); }
+              }}>
                 <input
                   className="mp-code-input"
-                  value={duelRoomCodeInput}
-                  onChange={(e) => setDuelRoomCodeInput(e.target.value)}
-                  placeholder="ROOM CODE"
-                  aria-label="1:1 방 코드"
+                  value={groupRoomCodeInput}
+                  onChange={(e) => setGroupRoomCodeInput(e.target.value)}
+                  placeholder="예: JUNG65"
+                  enterKeyHint="go"
+                  aria-label="단체 방 코드"
                   autoCapitalize="characters" autoComplete="off" spellCheck={false}
                   disabled={pending}
                 />
 
                 <button
                   className="mp-action-btn mp-action-btn--secondary"
-                  type="submit"
-                  disabled={pending}
+                  type="submit" disabled={pending}
                 >
                   참가
                 </button>
               </form>
             </div>
 
-          </div>
-        )}
-
-        {/* =========================
-           단체 모드 
-        ========================= */}
-        {selectedMode === "group" && (
-          <div className="mp-mode-panel">
-
-            {/* 방 생성 */}
             <div className="mp-card mp-card--create">
-              <div className="wr-kicker">01 · 새 탐험 열기</div>
+              <div className="wr-kicker">03 · 새 탐험 열기</div>
               <h3 className="mp-card-title">단체 방 만들기</h3>
               <p className="mp-card-desc">
                 방 생성 후 코드를 공유하세요. 최소 3명이 모여야 시작할 수 있습니다.
@@ -360,85 +444,12 @@ export default function MultiplayerPage() {
               </button>
             </div>
 
-            {/* 방 참가 */}
-            <div className="mp-card mp-card--join">
-              <div className="wr-kicker">02 · 열린 탐험에 합류</div>
-              <h3 className="mp-card-title">단체 방 참가</h3>
-              <p className="mp-card-desc">
-                코드를 입력하여 참가합니다
-              </p>
-
-              <form className="mp-join-row" onSubmit={async (e) => {
-                e.preventDefault();
-                if (submitting.current) return;
-                const code = groupRoomCodeInput.trim().toUpperCase();
-                if (!code) { setSubmitError("방 코드를 입력해 주세요."); return; }
-                if (!user?.id) { setSubmitError("로그인이 필요합니다."); return; }
-                try {
-                  submitting.current = true; setPending(true); setSubmitError("");
-                  const room = await findGroupRoomByCode(code);
-                  await joinGroupRoom(room.id);
-                  navigate(`/multiplayer/group/room/${room.id}`);
-                } catch (error) {
-                  setSubmitError(error instanceof Error ? error.message : "단체 방 참가 실패");
-                } finally { submitting.current = false; setPending(false); }
-              }}>
-                <input
-                  className="mp-code-input"
-                  value={groupRoomCodeInput}
-                  onChange={(e) => setGroupRoomCodeInput(e.target.value)}
-                  placeholder="ROOM CODE"
-                  aria-label="단체 방 코드"
-                  autoCapitalize="characters" autoComplete="off" spellCheck={false}
-                  disabled={pending}
-                />
-
-                <button
-                  className="mp-action-btn mp-action-btn--secondary"
-                  type="submit" disabled={pending}
-                >
-                  참가
-                </button>
-              </form>
-            </div>
 
           </div>
         )}
-        {selectedMode && (
-          <section className="mp-public-board" aria-label="공개방 목록">
-            <div className="mp-public-board__header">
-              <div>
-                <span className="wr-kicker">03 · 공개 원정대 찾기</span>
-                <h2>참가할 수 있는 {selectedMode === "duel" ? "1:1" : "그룹"} 방</h2>
-                <p>공개 설정된 대기방만 표시됩니다. 비공개방은 방 코드로 참가하세요.</p>
-              </div>
-              <button type="button" className="mp-action-btn mp-action-btn--secondary"
-                disabled={pending || roomsLoading} onClick={() => void refreshPublicRooms(selectedMode)}>
-                {roomsLoading ? "불러오는 중…" : "새로고침"}
-              </button>
-            </div>
-            {roomsError && <p role="alert" className="mp-public-board__error">{roomsError}</p>}
-            {!roomsLoading && !roomsError && publicRooms.length === 0 && (
-              <p className="mp-public-board__empty">참가할 수 있는 공개방이 없어요. 직접 방을 만들어 보세요.</p>
-            )}
-            <ul className="mp-public-board__list">
-              {publicRooms.map(room => (
-                <li key={room.room_id} className="mp-public-room">
-                  <div className="mp-public-room__detail">
-                    <strong>{room.host_nickname || "탐험가"}님의 방</strong>
-                    <span>{room.current_players}/{room.max_players}명
-                      {room.mode === "duel" ? ` · ${room.use_items ? "아이템전" : "아이템 없음"}` : " · 그룹 탐험"}
-                    </span>
-                  </div>
-                  <button type="button" className="mp-action-btn mp-action-btn--primary"
-                    disabled={pending || roomsLoading} onClick={() => void handleJoinPublicRoom(room)}>
-                    참가하기
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+
+
+        </div>
 
         {/* =========================
            에러 메시지
@@ -450,6 +461,7 @@ export default function MultiplayerPage() {
         <button type="button" className="wr-btn wr-btn--secondary wr-entry-help" onClick={() => setShowHelp(true)} aria-label="게임 설명">
           규칙 · 아이템 안내
         </button>
+        <p className="wr65-font-credit"><a href="/licenses/jungle65-fonts.html" target="_blank" rel="noreferrer">사용 글꼴 안내</a></p>
 
         {/* ── 도움말 모달 ── */}
         {showHelp && (

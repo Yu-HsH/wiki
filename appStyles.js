@@ -35,3 +35,4 @@ import "./css/wikiRaceStart.css";
 import "./css/wikiRaceSequences.css";
 import "./css/wikiRaceCinematic.css";
 import "./css/wikiRaceDuelFeedback.css";
+import "./css/jungle65Expedition.css";
