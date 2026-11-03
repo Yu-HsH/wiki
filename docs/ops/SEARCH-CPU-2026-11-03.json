@@ -14274,6 +14274,27 @@
     "duelScreens": 38,
     "focusedRegression": 78,
     "actualAuthority": 22,
-    "actualGameplay": 22
+    "actualGameplay": 22,
+    "actualGroupSpectator": 8
+  },
+  "additionalGroupSpectator": {
+    "date": "2026-11-03T00:16:20.124Z",
+    "base": "24acb2a1589f83042361b475a68615999128f5e8",
+    "uncommitted": true,
+    "actualLocalAuthRpcRealtime": true,
+    "syntheticArticles": true,
+    "completed": true,
+    "checks": [
+      "target helper: authenticated candidate read uses existing schema columns",
+      "no 1:1 page read room_players directly",
+      "group: room/join/ready/start via actual RPC; A3 retains all three group rows",
+      "group: personal finish shows rank while remaining race continues",
+      "group: actual finished player enters spectator mode while the other two continue",
+      "group: final result XP/achievement, F5 no duplicate grants, mobile 390px result and primary action usable",
+      "browser page errors: zero",
+      "cleanup: policy preserved; rooms/accounts/pages removed; sessions/keys never saved"
+    ],
+    "errors": [],
+    "basis": "24acb2a + uncommitted spectator regression assertion; product fingerprint unchanged"
   }
 }

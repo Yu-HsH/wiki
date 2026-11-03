@@ -382,6 +382,10 @@ try {
   await expect(host.locator('#wr-result-a-title')).toHaveText('1위 완주',{timeout:20000});
   assert.equal((await roomRows(group.id)).room.status,'playing');
   pass('group: personal finish shows rank while remaining race continues');
+  await host.getByRole('button',{name:'관전하기 →',exact:true}).click();
+  await expect(host.locator('.wr-race-tabs')).toBeVisible({timeout:15000});
+  assert.equal((await roomRows(group.id)).room.status,'playing');
+  pass('group: actual finished player enters spectator mode while the other two continue');
   await guest.locator('.article-content a').filter({hasText:groupTarget.title}).first().click();
   const thirdRow=(await roomRows(group.id)).players.find(p=>p.user_id===third.id);
   const thirdFinish=await rpc(third.client,'apply_group_move_v2',{p_room_id:group.id,p_request_id:randomUUID(),p_correlation_id:null,p_expected_version:thirdRow.progress_version,p_to_page_id:groupTarget.pageId});assert.equal(thirdFinish.ok,true);
