@@ -232,6 +232,23 @@ try {
           await openScene(page, scene);
           if (baseline && scene === "home") await page.waitForTimeout(760); // v1 entrance animation.
           const state = await measure(page, scene);
+          if (!baseline && scene === "home" && width >= 1280) {
+            const layout = await page.evaluate(() => {
+              const frame = document.querySelector(".wr-page.wr-home").getBoundingClientRect();
+              const shell = document.querySelector(".wr-page.wr-home .wr-shell").getBoundingClientRect();
+              const side = document.querySelector(".wr-page.wr-home .wr-home-side-art");
+              const left = side.querySelector(".wr-home-side-art-left").getBoundingClientRect();
+              const right = side.querySelector(".wr-home-side-art-right").getBoundingClientRect();
+              return { shellWidth: shell.width,
+                centered: Math.abs(shell.left - (frame.left + (frame.width - shell.width) / 2)) <= 2,
+                sideVisible: getComputedStyle(side).display !== "none",
+                gutter: (frame.width - shell.width) / 2, leftWidth: left.width, rightWidth: right.width };
+            });
+            check(`HOME ${width}px stays centered with real side-art gutters at 100% zoom`,
+              Math.abs(layout.shellWidth - 1120) <= 2 && layout.centered && layout.sideVisible &&
+              Math.abs(layout.leftWidth - layout.gutter) <= 2 &&
+              Math.abs(layout.rightWidth - layout.gutter) <= 2);
+          }
           const label = [scene, width, "dpr" + dpr, reduce ? "reduced" : "motion"].join("-");
           result.measurements.push({ scene, ...state });
           const dimensions = scene === "landing" ? "1672,941" : "1535,436";
