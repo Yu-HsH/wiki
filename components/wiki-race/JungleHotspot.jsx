@@ -31,13 +31,13 @@ export default function JungleHotspot({ kind, label, onReveal }) {
   const pulse = useJunglePulse();
 
   return <button type="button" className={`wr65-hotspot wr65-hotspot--${kind}`} aria-label={label}
-    onClick={() => {
+    onClick={event => {
       pulse(light.current, [
         { opacity: .95, transform: "scale(.8)" },
         { opacity: .7, transform: "scale(1) rotate(12deg)", offset: .3 },
         { opacity: 0, transform: "scale(1.3) rotate(23deg)" },
       ], kind === "lantern" ? 760 : 560);
-      onReveal?.();
+      onReveal?.(event);
     }}>
     <span ref={light} className="wr65-hotspot-pulse" aria-hidden="true" />
   </button>;

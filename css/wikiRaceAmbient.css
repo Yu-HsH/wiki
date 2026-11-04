@@ -176,6 +176,41 @@
 }
 .wr65-art-cta:active::after, .wr65-hotspot:active::before { opacity: 1; transition-duration: 0s; }
 .wr65-hotspot--lantern:is(:hover, :focus-visible, :active)::before { animation: none; }
+
+.wr65-prop-layers {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.wr65-prop-idle, .wr65-prop-reply, .wr65-prop-flame { transform-box: view-box; }
+.wr65-prop-idle {
+  animation: wr65-prop-idle calc(var(--wr-prop-period) * var(--wr-prop-pace, 1))
+    ease-in-out var(--wr-prop-phase) infinite;
+}
+.wr65-prop-flame { animation: wr65-prop-flame calc(1800ms * var(--wr-prop-pace, 1)) ease-in-out infinite; }
+:is(.wr65-landing-art, .wr65-hero-art):has(> .wr65-atmosphere.is-paused) :is(.wr65-prop-idle, .wr65-prop-flame) {
+  animation-play-state: paused;
+}
+.wr65-landing-art:has(> .wr65-prop-layers) > .wr65-hotspot--lantern::before { animation: none; opacity: .08; }
+.wr65-landing-art:has(> .wr65-prop-layers) > .wr65-hotspot--lantern:focus-visible::before { opacity: .45; }
+@media (hover: hover) and (pointer: fine) {
+  .wr65-landing-art:has(> .wr65-prop-layers) > .wr65-hotspot--lantern:hover::before { opacity: .45; }
+}
+@media (pointer: coarse) { .wr65-prop-layers { --wr-prop-pace: 1.32; } }
+@media (prefers-reduced-motion: reduce) {
+  :is(.wr65-prop-idle, .wr65-prop-flame) { animation: none; }
+  .wr65-prop-reply { transform: none !important; }
+}
+@keyframes wr65-prop-idle {
+  0%, 100% { transform: var(--wr-prop-start); }
+  50% { transform: var(--wr-prop-end); }
+}
+@keyframes wr65-prop-flame {
+  0%, 100% { transform: skewX(-3deg) scaleY(.96); opacity: .92; }
+  50% { transform: skewX(4deg) scaleY(1.035); opacity: 1; }
+}
 .wr65-landing-actions > button:active { box-shadow: 0 0 0 3px #f3e0ac; }
 @keyframes wr65-mist-breathe { from { opacity: .15; } to { opacity: .47; } }
 @keyframes wr65-sunlight {
