@@ -40,7 +40,9 @@ export default function ExpeditionHero({ onPlay, notebook = false }) {
   const playButton = (art = false) => <button type="button"
     className={`wr-play-launcher${art ? " wr65-art-cta" : ""}`} onClick={onPlay}
     aria-label={art ? "배너에서 탐험 시작 · 모드 선택으로 이동" : "탐험 시작 · 모드 선택으로 이동"}>
-    {notebook ? <>탐험 시작 <span aria-hidden="true">→</span></> : <>PLAY <span>탐험 시작 →</span></>}
+    {notebook ? <>
+      <span className="wr65-play-label">탐험 시작</span><span className="wr65-play-arrow" aria-hidden="true">→</span>
+    </> : <>PLAY <span>탐험 시작 →</span></>}
   </button>;
 
   return <section className={`wr-hero${sequence ? " is-home-sequence" : ""}${notebook ? hasJungleArt ? " wr65-jungle-hero" : " wr65-hero-fallback" : ""}`} aria-label="Base Camp 탐험 시작">
@@ -51,6 +53,8 @@ export default function ExpeditionHero({ onPlay, notebook = false }) {
           src="/assets/wiki-race/jungle65/hero-jungle-expedition.webp" alt="" onError={() => setHasJungleArt(false)} />
         <JunglePropLayers scene="home" />
         <JungleAtmosphere variant="hero" />
+        <div className="wr65-home-wordmark wr65-art-paper" aria-hidden="true"><span>Wiki<br />Race</span></div>
+        <p className="wr65-home-speech wr65-art-paper"><span>위키백과 링크를 따라<br />목표 문서까지 탐험하세요.</span></p>
         <div className="wr-hero-entry wr65-hero-art-entry">{playButton(true)}</div>
         <JungleRoute />
       </div>
