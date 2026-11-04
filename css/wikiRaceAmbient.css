@@ -135,8 +135,8 @@
   to { transform: rotate(155deg) scaleX(1); }
 }
 @keyframes wr65-bird-glide {
-  from { transform: translate3d(-20px,0,0); }
-  to { transform: translate3d(42px,9px,0); }
+  from { transform: translate3d(calc(var(--wr65-far-x) - 20px),var(--wr65-far-y),0); }
+  to { transform: translate3d(calc(var(--wr65-far-x) + 42px),calc(var(--wr65-far-y) + 9px),0); }
 }
 /* Keep the existing approved gutter art, but let it breathe on large screens. */
 @media (min-width: 1280px) {
@@ -155,7 +155,7 @@
 @media (max-width: 700px), (pointer: coarse) {
   .wr65-alive-mist, .wr65-alive-birds, .wr65-alive-sunbeam--right,
   .wr65-alive-canopy--right, .wr65-alive-leaf-track:nth-last-child(-n+4),
-  .wr65-alive-firefly:nth-last-child(-n+7) { display: none; }
+  .wr65-alive-firefly:nth-of-type(n+9) { display: none; }
   .wr65-atmosphere--hero .wr65-alive-canopy { width: 100px; }
   .wr65-atmosphere--landing .wr65-alive-canopy { width: 140px; }
 }

@@ -11,7 +11,7 @@ export function getJungleParallaxOffsets(clientX, clientY, rect) {
   return {
     nearX: Math.round(x * 10),
     nearY: Math.round(y * 7),
-    farX: Math.round(-x * 5),
-    farY: Math.round(-y * 3),
+    farX: Math.round(-x * 5) || 0,
+    farY: Math.round(-y * 3) || 0,
   };
 }
