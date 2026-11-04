@@ -2,10 +2,13 @@ name: Jungle Alive isolated browser QA
 
 on:
   pull_request:
-    branches: [main, feat/jungle-alive-depth-v1-20261104]
+    branches: [main, feat/jungle-alive-depth-v1-20261104, feat/jungle-alive-interactions-20261104]
     paths:
       - "components/wiki-race/JungleAtmosphere.jsx"
       - "components/wiki-race/JungleHotspot.jsx"
+      - "components/wiki-race/JunglePropLayers.jsx"
+      - "components/wiki-race/junglePropAssets.js"
+      - "public/assets/wiki-race/jungle65/layers/**"
       - "components/wiki-race/ExpeditionHero.jsx"
       - "components/wiki-race/WikiRaceShell.jsx"
       - "pages/IntroPage.jsx"

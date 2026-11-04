@@ -3,6 +3,7 @@ import { ExpeditionTrail } from "./WikiRaceShell";
 import useSceneSequence from "../../hooks/useSceneSequence.js";
 import JungleAtmosphere from "./JungleAtmosphere.jsx";
 import JungleHotspot, { useJunglePulse } from "./JungleHotspot.jsx";
+import JunglePropLayers, { reactJungleProp } from "./JunglePropLayers.jsx";
 
 function JungleRoute() {
   const trail = useRef(null);
@@ -21,9 +22,14 @@ function JungleRoute() {
     <svg className="wr65-route-light" viewBox="0 0 1535 436" aria-hidden="true" focusable="false">
       <path ref={trail} pathLength="100" d="M480 390 Q520 346 565 353 C640 356 666 400 755 392 S870 408 962 381 C1060 360 1067 328 1142 313 S1218 304 1257 314 S1320 285 1348 257 Q1381 228 1430 237" />
     </svg>
-    <JungleHotspot kind="marker-one" label="출발 지점과 깃발에 빛 비추기" onReveal={reveal} />
-    <JungleHotspot kind="marker-two" label="두 번째 경로 마커와 깃발에 빛 비추기" onReveal={reveal} />
-    <JungleHotspot kind="marker-three" label="세 번째 경로 마커와 깃발에 빛 비추기" onReveal={reveal} />
+    {[
+      ["marker-one", "출발 지점과 깃발에 빛 비추기"],
+      ["marker-two", "두 번째 경로 마커와 깃발에 빛 비추기"],
+      ["marker-three", "세 번째 경로 마커와 깃발에 빛 비추기"],
+    ].map(([id, label]) => <JungleHotspot key={id} kind={id} label={label} onReveal={event => {
+      reactJungleProp("home", id, event);
+      reveal();
+    }} />)}
   </>;
 }
 
@@ -43,6 +49,7 @@ export default function ExpeditionHero({ onPlay, notebook = false }) {
       <div className="wr65-hero-art">
         <img className="wr-landscape" width="1535" height="436" loading="eager" decoding="async" fetchPriority="high"
           src="/assets/wiki-race/jungle65/hero-jungle-expedition.webp" alt="" onError={() => setHasJungleArt(false)} />
+        <JunglePropLayers scene="home" />
         <JungleAtmosphere variant="hero" />
         <div className="wr-hero-entry wr65-hero-art-entry">{playButton(true)}</div>
         <JungleRoute />

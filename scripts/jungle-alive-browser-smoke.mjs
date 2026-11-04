@@ -124,6 +124,76 @@ async function expectPulse(page, selector, name, { reduced = false } = {}) {
   check(name, frames.length >= 2 && frames.some(f => "opacity" in f) && (!reduced || frames.every(f => !("transform" in f))));
 }
 
+const motionLayer = (page, id) => page.locator(`[data-jungle-prop="${id}"]`);
+async function verifyIdle(page, scene, label, reduce) {
+  const layers = page.locator(".wr65-prop-layers");
+  await expect(layers).toBeVisible();
+  const evidence = await layers.evaluate((svg, reduce) => {
+    const art = svg.parentElement.querySelector("img");
+    const bounds = svg.getBoundingClientRect();
+    const source = art.getBoundingClientRect();
+    const objects = [...svg.querySelectorAll("[data-jungle-prop], .wr65-prop-flame")];
+    const motion = objects.map(object => {
+      const animation = object.getAnimations()[0];
+      if (reduce || !animation) return { count: object.getAnimations().length };
+      const original = animation.currentTime;
+      const { duration, delay } = animation.effect.getTiming();
+      const sample = fraction => {
+        animation.currentTime = duration * (1 + fraction) + delay;
+        return getComputedStyle(object).transform;
+      };
+      const a = sample(0), b = sample(.5);
+      animation.currentTime = original;
+      return { duration, delay, a, b };
+    });
+    return { aligned: ["x", "y", "width", "height"].every(key => Math.abs(bounds[key] - source[key]) < .5), motion };
+  }, reduce);
+  result.measurements.push({ label, layers: evidence });
+  check(label + ": sprites share the artwork frame and have the expected motion",
+    evidence.aligned && evidence.motion.length === (scene === "home" ? 3 : 2) &&
+    evidence.motion.every(item => reduce ? item.count === 0 : item.duration && item.a !== item.b));
+  if (scene === "home" && !reduce) check(label + ": three distinct wind periods and phases",
+    new Set(evidence.motion.map(item => item.duration)).size === 3 &&
+    new Set(evidence.motion.map(item => item.delay)).size === 3);
+}
+
+async function verifyPropReply(page, id, { tap = false } = {}) {
+  await expect.poll(() => page.locator(".wr65-prop-reply").evaluateAll(layers =>
+    layers.every(layer => !layer.getAnimations().length))).toBe(true);
+  const hit = page.locator(".wr65-hotspot--" + id);
+  const idle = motionLayer(page, id);
+  await idle.evaluate(el => { el.qaIdle = el.getAnimations()[0]; });
+  if (tap) await hit.tap();
+  else await hit.click();
+  const motion = await idle.locator(".wr65-prop-reply").evaluate(async el => {
+    const animation = el.getAnimations()[0];
+    if (!animation) return null;
+    await animation.ready;
+    const current = animation.currentTime;
+    const sprite = el.querySelector("image").getBBox();
+    const [x, y] = el.style.transformOrigin.split(" ").map(parseFloat);
+    const sample = () => {
+      const matrix = el.parentElement.getCTM().inverse().multiply(el.getCTM());
+      const points = [new DOMPoint(sprite.x + sprite.width, sprite.y), new DOMPoint(x, y)]
+        .map(point => point.matrixTransform(matrix)).map(point => [point.x, point.y]);
+      return { transform: getComputedStyle(el).transform, points };
+    };
+    animation.currentTime = 0;
+    const first = sample();
+    const peakTime = animation.effect.getTiming().duration * .27;
+    animation.currentTime = peakTime;
+    const peak = sample();
+    animation.currentTime = current;
+    return { first, peak, peakTime, active: [...el.closest("svg").querySelectorAll(".wr65-prop-reply")]
+      .filter(reply => reply.getAnimations().length).map(reply => reply.parentElement.dataset.jungleProp) };
+  });
+  const delta = index => Math.hypot(...motion.first.points[index].map((value, axis) => value - motion.peak.points[index][axis]));
+  if (motion) result.measurements.push({ id, tap, ...motion, tipDelta: delta(0), pivotDelta: delta(1) });
+  check(id + ": only selected sprite moves, with its pivot fixed", motion?.active.join() === id && delta(0) > 1 && delta(1) < .05);
+  await expect.poll(() => idle.locator(".wr65-prop-reply").evaluate(el => el.getAnimations().length)).toBe(0);
+  check(id + ": reply returns to the same idle animation", await idle.evaluate(el => el.getAnimations()[0] === el.qaIdle));
+}
+
 try {
   await server.listen();
   browser = await chromium.launch({ headless: true });
@@ -148,6 +218,7 @@ try {
               state.leaves === (reduce ? 0 : mobile ? 4 : 8) && state.fireflies === (reduce ? 0 : mobile ? 3 : 7));
             if (scene === "landing" && mobile) await expect(page.locator(".wr65-landing-start")).toBeVisible();
             if (scene === "home" && mobile) await expect(page.locator(".wr65-hero-mobile-entry button")).toBeVisible();
+            await verifyIdle(page, scene, label, reduce);
           }
           if (!reduce) await screenshot(page, label);
         } finally { await ctx.close(); }
@@ -166,9 +237,13 @@ try {
     check("fine pointer moves parallax without transforming the artwork",
       await page.locator(artSelector.landing).evaluate(e => getComputedStyle(e).transform === "none"));
     const lantern = page.getByRole("button", { name: "랜턴 불빛 밝히기" });
+    await lantern.hover();
+    await expect.poll(() => lantern.evaluate(el => getComputedStyle(el, "::before").opacity)).toBe("0.45");
+    check("lantern hover increases localized brightness");
     await lantern.click();
     await expectPulse(page, ".wr65-hotspot--lantern .wr65-hotspot-pulse", "lantern click brightens original lamp");
     await screenshot(page, "landing-lantern-pressed");
+    await verifyPropReply(page, "lantern");
     const compass = page.getByRole("button", { name: "나침반 반짝임 보기" });
     await compass.press("Enter");
     await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "compass Enter flashes");
@@ -177,6 +252,10 @@ try {
     await expect(atmosphere).toBeHidden();
     await compass.press("Space");
     await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "reduced motion keeps a stationary light response", { reduced: true });
+    await lantern.press("Enter");
+    await expectPulse(page, ".wr65-hotspot--lantern .wr65-hotspot-pulse", "reduced motion lantern keeps light feedback", { reduced: true });
+    check("reduced motion lantern stays still on activation",
+      await motionLayer(page, "lantern").locator(".wr65-prop-reply").evaluate(el => getComputedStyle(el).transform === "none"));
     await page.emulateMedia({ reducedMotion: "no-preference" });
     const signin = page.getByRole("button", { name: "Wiki Race 로그인" });
     await signin.hover();
@@ -200,6 +279,7 @@ try {
     await openScene(signup.page, "landing");
     await signup.page.getByRole("button", { name: "랜턴 불빛 밝히기" }).tap();
     await expectPulse(signup.page, ".wr65-hotspot--lantern .wr65-hotspot-pulse", "mobile lantern responds to tap");
+    await verifyPropReply(signup.page, "lantern", { tap: true });
     await signup.page.locator(".wr65-landing-signup").tap();
     const signDialog = signup.page.getByRole("dialog");
     await expect(signDialog.locator(".auth-tab.active")).toHaveText("회원가입");
@@ -224,10 +304,12 @@ try {
       ?.effect.getKeyframes().map(f => parseFloat(f.strokeDashoffset)));
     check("route light traverses the painted route in one pass", offsets?.[0] > 0 && offsets.at(-1) === -100);
     await screenshot(hp, "home-route-pressed");
+    for (const id of ["marker-one", "marker-two", "marker-three"]) await verifyPropReply(hp, id);
     check("marker leaves route and auth unchanged", new URL(hp.url()).pathname === "/lobby" && !home.authCalls.length);
     await hp.locator(".wr65-atmosphere").evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await expect(hp.locator(".wr65-atmosphere")).toHaveClass(/is-paused/);
     check("offscreen effects pause", await hp.locator(".wr65-alive-leaf").first().evaluate(e => getComputedStyle(e).animationPlayState === "paused"));
+    check("offscreen flags pause", await motionLayer(hp, "marker-one").evaluate(e => getComputedStyle(e).animationPlayState === "paused"));
     await hp.evaluate(() => {
       window.scrollTo(0, 0);
       Object.defineProperty(document, "hidden", { configurable: true, value: true });
@@ -235,6 +317,7 @@ try {
     });
     await expect(hp.locator(".wr-home-side-art")).toHaveClass(/is-paused/);
     await expect(hp.locator(".wr65-atmosphere")).toHaveClass(/is-paused/);
+    check("hidden flags pause", await motionLayer(hp, "marker-three").evaluate(e => getComputedStyle(e).animationPlayState === "paused"));
     await hp.evaluate(() => {
       delete document.hidden;
       document.dispatchEvent(new Event("visibilitychange"));
@@ -273,6 +356,7 @@ try {
     await openScene(touch.page, "home");
     await touch.page.locator(".wr65-hotspot--marker-three").tap();
     await expectPulse(touch.page, ".wr65-hotspot--marker-three .wr65-hotspot-pulse", "HOME marker responds on 320px touch viewport");
+    await verifyPropReply(touch.page, "marker-three", { tap: true });
     await touch.page.locator(".wr65-hero-art-entry button").tap();
     await expect(touch.page).toHaveURL(base + "/play");
     await touch.page.goBack();
@@ -290,6 +374,19 @@ try {
     await expect(fallback.page).toHaveURL(base + "/play");
     check("missing HOME art still offers the original fallback action");
     await fallback.ctx.close();
+
+    for (const scene of ["landing", "home"]) {
+      const missing = await pageFor({ guest: scene === "home" });
+      const tile = scene === "landing" ? "lantern-flame.png" : "flag-three-sprite.png";
+      await missing.page.route("**/" + tile, route => route.fulfill({ status: 404, body: "" }));
+      const failure = missing.page.waitForResponse(response => response.url().endsWith(tile) && response.status() === 404);
+      await openScene(missing.page, scene);
+      await failure;
+      await expect(missing.page.locator(".wr65-prop-layers")).toHaveCount(0);
+      await expect(missing.page.locator(artSelector[scene])).toBeVisible();
+      check(scene + ": missing sprite leaves complete original artwork");
+      await missing.ctx.close();
+    }
   }
   check("no browser runtime exceptions", result.pageErrors.length === 0);
 } catch (error) { result.failure = String(error.stack || error); throw error; }

@@ -6,6 +6,7 @@ import LoginPage from "./LoginPage";
 import openingBg from "../Opening.png";
 import JungleAtmosphere from "../components/wiki-race/JungleAtmosphere.jsx";
 import JungleHotspot from "../components/wiki-race/JungleHotspot.jsx";
+import JunglePropLayers, { reactJungleProp } from "../components/wiki-race/JunglePropLayers.jsx";
 import "../css/jungle65.css";
 
 const JUNGLE_LANDING = "/assets/wiki-race/jungle65/landing-final.webp";
@@ -80,6 +81,7 @@ export default function IntroPage() {
               alt="Wiki Race · 지식이 모이는, 더 빠른 여정. 정글의 문서를 탐험하고 가장 먼저 목표에 도달해 보세요."
               onError={() => setJungleAssetReady(false)}
             />
+            <JunglePropLayers scene="landing" />
             <JungleAtmosphere variant="landing" />
             <button className="wr65-landing-hit wr65-landing-hit-login wr65-art-cta" type="button"
               aria-label="Wiki Race 로그인" onClick={() => openAuth("signin")}>로그인</button>
@@ -90,7 +92,7 @@ export default function IntroPage() {
               <Link to="/guide">플레이 가이드</Link>
               <Link to="/privacy">개인정보처리방침</Link>
             </nav>
-            <JungleHotspot kind="lantern" label="랜턴 불빛 밝히기" />
+            <JungleHotspot kind="lantern" label="랜턴 불빛 밝히기" onReveal={event => reactJungleProp("landing", "lantern", event)} />
             <JungleHotspot kind="compass" label="나침반 반짝임 보기" />
           </div>
         ) : <section className="wr65-landing-fallback">
