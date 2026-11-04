@@ -4,6 +4,7 @@ import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
 import LoginPage from "./LoginPage";
 import openingBg from "../Opening.png";
+import JungleAtmosphere from "../components/wiki-race/JungleAtmosphere.jsx";
 import "../css/jungle65.css";
 
 const JUNGLE_LANDING = "/assets/wiki-race/jungle65/landing-final.webp";
@@ -74,10 +75,11 @@ export default function IntroPage() {
             <img
               className="wr65-landing-picture"
               src={JUNGLE_LANDING}
-              width="1672" height="941"
+              width="1672" height="941" loading="eager" decoding="async" fetchPriority="high"
               alt="Wiki Race · 지식이 모이는, 더 빠른 여정. 정글의 문서를 탐험하고 가장 먼저 목표에 도달해 보세요."
               onError={() => setJungleAssetReady(false)}
             />
+            <JungleAtmosphere variant="landing" />
             <button className="wr65-landing-hit wr65-landing-hit-login" type="button"
               aria-label="Wiki Race 로그인" onClick={() => openAuth("signin")}>로그인</button>
             <button className="wr65-landing-hit wr65-landing-hit-signup" type="button"

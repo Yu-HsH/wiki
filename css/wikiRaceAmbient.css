@@ -1,0 +1,167 @@
+/* Jungle Alive v1: vector depth over existing APPROVED bitmap, never animate
+   the artwork itself (it contains actual title, CTA, and text). */
+.wr65-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  contain: paint;
+  isolation: isolate;
+  pointer-events: none;
+  --wr65-near-x: 0px;
+  --wr65-near-y: 0px;
+  --wr65-far-x: 0px;
+  --wr65-far-y: 0px;
+}
+.wr65-atmosphere :is(span, svg) { position: absolute; pointer-events: none; }
+.wr65-atmosphere :is(.wr65-alive-canopy, .wr65-alive-mist, .wr65-alive-birds) {
+  transition: transform 240ms ease-out;
+}
+.wr65-alive-canopy {
+  top: -12px;
+  width: clamp(130px, 20%, 350px);
+  height: auto;
+  opacity: .86;
+  transform: translate3d(var(--wr65-near-x), var(--wr65-near-y), 0);
+  filter: drop-shadow(0 8px 5px #173a2629);
+}
+.wr65-alive-canopy--left { left: -16px; }
+.wr65-alive-canopy--right {
+  right: -16px;
+  transform: translate3d(var(--wr65-near-x), var(--wr65-near-y), 0) scaleX(-1);
+}
+.wr65-alive-canopy__sway {
+  transform-origin: 16% 0%;
+  transform-box: fill-box;
+  animation: wr65-canopy-wind 5.9s ease-in-out infinite alternate;
+}
+.wr65-alive-canopy--right .wr65-alive-canopy__sway { animation-delay: -2.3s; animation-duration: 7.2s; }
+.wr65-alive-mist {
+  width: 33%;
+  height: 26%;
+  bottom: 2%;
+  opacity: .45;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #e4f0dc59, #d4e4c020 49%, transparent 72%);
+  transform: translate3d(var(--wr65-far-x),var(--wr65-far-y),0);
+  animation: wr65-mist-breathe 12s ease-in-out infinite alternate;
+}
+.wr65-alive-mist--left { left: 4%; }
+.wr65-alive-mist--right { right: 4%; animation-delay: -5s; }
+.wr65-alive-sunbeam {
+  top: -18%;
+  height: 136%;
+  width: 18%;
+  opacity: 0;
+  background: linear-gradient(110deg, transparent 0%, #f7da8982 50%, transparent 100%);
+  clip-path: polygon(40% 0, 85% 0, 100% 100%, 0 100%);
+  animation: wr65-sunlight 10s ease-in-out infinite;
+}
+.wr65-alive-sunbeam--left { left: 7%; }
+.wr65-alive-sunbeam--right { right: 5%; animation-delay: -5s; transform: rotate(-11deg); }
+.wr65-alive-firefly {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  opacity: 0;
+  background: #fff8c2;
+  box-shadow: 0 0 9px 3px #ffe6a2a6, 0 0 23px 5px #f9de9269;
+  animation: wr65-firefly-dance 9s ease-in-out infinite;
+}
+.wr65-alive-leaf-track {
+  top: -11%;
+  height: 112%;
+  width: 22px;
+  opacity: 0;
+  animation: wr65-leaf-travel 15s linear infinite;
+}
+.wr65-alive-leaf {
+  top: 0; left: 0;
+  width: var(--wr65-leaf-size, 14px);
+  height: calc(var(--wr65-leaf-size, 14px) * .56);
+  background: linear-gradient(135deg, #a3be6c, #4e803e 63%, #2c5834);
+  border-radius: 100% 0 100% 0;
+  box-shadow: inset 1px 1px #d4d99181, 0 1px 2px #18391f50;
+  animation: wr65-leaf-turn 3.6s ease-in-out infinite alternate;
+}
+.wr65-alive-leaf-track:nth-child(odd) .wr65-alive-leaf { animation-delay: -1.2s; }
+.wr65-alive-birds {
+  left: 31%;
+  top: 9%;
+  width: 9%;
+  height: auto;
+  opacity: .64;
+  transform: translate3d(var(--wr65-far-x),var(--wr65-far-y),0);
+  animation: wr65-bird-glide 28s ease-in-out infinite alternate;
+}
+.wr65-atmosphere--landing .wr65-alive-canopy { width: clamp(170px, 22%, 380px); opacity: .9; }
+.wr65-atmosphere--landing .wr65-alive-canopy--left { left: -22px; top: -22px; }
+.wr65-atmosphere--landing .wr65-alive-canopy--right { right: -22px; top: -20px; }
+.wr65-atmosphere--landing .wr65-alive-mist { bottom: 12%; }
+.wr65-atmosphere--landing .wr65-alive-sunbeam--left { left: 9%; }
+.wr65-atmosphere--landing .wr65-alive-birds { top: 10%; left: 29%; width: 6.5%; }
+.wr65-atmosphere--hero .wr65-alive-canopy { width: clamp(95px, 12%, 170px); opacity: .75; }
+.wr65-atmosphere--hero .wr65-alive-canopy--left { top: -32px; left: -10px; }
+.wr65-atmosphere--hero .wr65-alive-canopy--right { top: -32px; right: -10px; }
+.wr65-atmosphere--hero .wr65-alive-birds { top: 6%; left: 34%; width: 4%; opacity: .5; }
+.wr65-atmosphere--hero .wr65-alive-mist { height: 30%; opacity: .25; }
+.wr65-atmosphere--hero .wr65-alive-firefly { width: 5px; height: 5px; }
+.wr65-atmosphere.is-paused :is(span, svg, g) { animation-play-state: paused !important; }
+@keyframes wr65-canopy-wind {
+  0% { transform: rotate(-2.5deg) translateX(-3px); }
+  50% { transform: rotate(1.5deg) translateX(2px); }
+  100% { transform: rotate(3.2deg) translateX(4px); }
+}
+@keyframes wr65-mist-breathe { from { opacity: .15; } to { opacity: .47; } }
+@keyframes wr65-sunlight {
+  0%,100% { opacity: 0; }
+  30% { opacity: .13; }
+  55% { opacity: .26; }
+  80% { opacity: .1; }
+}
+@keyframes wr65-firefly-dance {
+  0%, 100% { transform: translate3d(0, 9px, 0); opacity: .04; }
+  24% { transform: translate3d(12px, -8px, 0); opacity: .95; }
+  54% { transform: translate3d(-10px, -20px, 0); opacity: .3; }
+  74% { transform: translate3d(8px, -4px, 0); opacity: .88; }
+}
+@keyframes wr65-leaf-travel {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8% { opacity: .83; }
+  83% { opacity: .74; }
+  100% { transform: translate3d(var(--wr65-leaf-drift,60px),100%,0); opacity: 0; }
+}
+@keyframes wr65-leaf-turn {
+  from { transform: rotate(-35deg) scaleX(.72); }
+  to { transform: rotate(155deg) scaleX(1); }
+}
+@keyframes wr65-bird-glide {
+  from { transform: translate3d(calc(var(--wr65-far-x) - 20px),var(--wr65-far-y),0); }
+  to { transform: translate3d(calc(var(--wr65-far-x) + 42px),calc(var(--wr65-far-y) + 9px),0); }
+}
+/* Keep the existing approved gutter art, but let it breathe on large screens. */
+@media (min-width: 1280px) {
+  .wr-page.wr-home .wr-home-side-art-left,
+  .wr-page.wr-play .wr-home-side-art-left { animation: wr65-gutter-left 17s ease-in-out infinite; }
+  .wr-page.wr-home .wr-home-side-art-right,
+  .wr-page.wr-play .wr-home-side-art-right { animation: wr65-gutter-right 20s ease-in-out infinite; }
+}
+@keyframes wr65-gutter-left { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-9px); } }
+@keyframes wr65-gutter-right { 0%,100% { transform:translateY(-7px); } 50% { transform:translateY(7px); } }
+.wr-page.wr-play .wr-mode { transition: box-shadow 180ms ease, border-color 180ms ease; }
+.wr-page.wr-play .wr-mode:hover {
+  border-color: #9a783f;
+  box-shadow: inset 0 0 0 4px #f8eed5, 0 9px 17px #3b34272e;
+}
+@media (max-width: 700px), (pointer: coarse) {
+  .wr65-alive-mist, .wr65-alive-birds, .wr65-alive-sunbeam--right,
+  .wr65-alive-canopy--right, .wr65-alive-leaf-track:nth-last-child(-n+4),
+  .wr65-alive-firefly:nth-of-type(n+9) { display: none; }
+  .wr65-atmosphere--hero .wr65-alive-canopy { width: 100px; }
+  .wr65-atmosphere--landing .wr65-alive-canopy { width: 140px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr65-atmosphere { display: none !important; }
+  .wr-page.wr-home .wr-home-side-art > span,
+  .wr-page.wr-play .wr-home-side-art > span { animation: none !important; transform: none !important; }
+  .wr-page.wr-play .wr-mode { transition: none !important; }
+}
