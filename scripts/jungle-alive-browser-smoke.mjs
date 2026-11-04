@@ -135,12 +135,17 @@ async function verifyLiveCopy(page, scene, label, mobile) {
     await expect(text).toHaveText(copy);
     assert.ok(await text.evaluate((element, maxLines) => {
       const range = document.createRange();
-      range.selectNodeContents(element);
-      const rows = new Set([...range.getClientRects()]
-        .filter(rect => rect.width > 0)
-        .map(rect => Math.round(rect.top)));
+      const nodes = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const rows = new Set();
+      while (nodes.nextNode()) {
+        const node = nodes.currentNode;
+        const decoration = node.parentElement.closest('[aria-hidden="true"]');
+        if (!node.textContent.trim() || (decoration && element.contains(decoration))) continue;
+        range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) if (rect.width > 0) rows.add(Math.round(rect.top));
+      }
       const style = getComputedStyle(element);
-      return rows.size <= maxLines && parseFloat(style.fontSize) > 0 && Number(style.fontWeight) >= 800;
+      return rows.size > 0 && rows.size <= maxLines && parseFloat(style.fontSize) > 0 && Number(style.fontWeight) >= 800;
     }, maxLines), label + ": readable text within its intended rows: " + selector);
   }
   if (mobile) {
