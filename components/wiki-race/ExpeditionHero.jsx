@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ExpeditionTrail } from "./WikiRaceShell";
 import useSceneSequence from "../../hooks/useSceneSequence.js";
+import JungleAtmosphere from "./JungleAtmosphere.jsx";
 
 export default function ExpeditionHero({ onPlay, notebook = false }) {
   const sequence = useSceneSequence(notebook ? "scene:home:intro-v1" : null);
@@ -8,6 +9,7 @@ export default function ExpeditionHero({ onPlay, notebook = false }) {
   return <section className={`wr-hero${sequence ? " is-home-sequence" : ""}${notebook ? hasJungleArt ? " wr65-jungle-hero" : " wr65-hero-fallback" : ""}`} aria-label="Base Camp 탐험 시작">
     <h1 className="wr-visually-hidden">Wiki Race · Base Camp</h1>
     <img className="wr-landscape" src={notebook && hasJungleArt ? "/assets/wiki-race/jungle65/hero-jungle-expedition.webp" : "/assets/wiki-race/hero-landscape.png"} alt="" onError={() => setHasJungleArt(false)} />
+    {notebook && hasJungleArt && <JungleAtmosphere variant="hero" />}
     <ExpeditionTrail />
     {!notebook && <img className="wr-explorer" src="/assets/wiki-race/explorer-home.png" alt="" />}
     <div className="wr-hero-entry">
