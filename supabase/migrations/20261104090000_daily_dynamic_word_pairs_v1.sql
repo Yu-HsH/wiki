@@ -53,6 +53,8 @@ begin
   -- wiki snapshot links (two visible game moves). The pool is not expanded.
   -- Snapshots are supporting evidence, not a guarantee of live Wikipedia links;
   -- expire after 30 days and keep the previously reviewed static courses as fallback.
+  -- Exact canonical title comparisons are conservative and avoid a costly scan
+  -- of every stored link through regexp title normalization.
   with words as (
     select distinct p.target_title as title from public.daily_challenge_pool p
     where p.is_active and nullif(btrim(p.target_title),'') is not null
@@ -60,17 +62,17 @@ begin
     select distinct src_word.title as start_title, dst_word.title as target_title
     from words src_word
     join public.wiki_page_snapshots src on
-      private.normalize_wiki_title(src.canonical_title_snapshot) = private.normalize_wiki_title(src_word.title)
+      src.canonical_title_snapshot = src_word.title
       and src.fetched_at >= now() - interval '30 days'
     join public.wiki_snapshot_links first_link on first_link.snapshot_id = src.id
     join public.wiki_page_snapshots mid on mid.page_id = first_link.target_page_id
       and mid.fetched_at >= now() - interval '30 days'
     join public.wiki_snapshot_links second_link on second_link.snapshot_id = mid.id
     join words dst_word on
-      private.normalize_wiki_title(second_link.target_title_snapshot) = private.normalize_wiki_title(dst_word.title)
-    where private.normalize_wiki_title(src_word.title) <> private.normalize_wiki_title(dst_word.title)
-      and private.normalize_wiki_title(mid.canonical_title_snapshot) <> private.normalize_wiki_title(src_word.title)
-      and private.normalize_wiki_title(mid.canonical_title_snapshot) <> private.normalize_wiki_title(dst_word.title)
+      second_link.target_title_snapshot = dst_word.title
+    where src_word.title <> dst_word.title
+      and mid.canonical_title_snapshot <> src_word.title
+      and mid.canonical_title_snapshot <> dst_word.title
   ), available as (
     select lp.start_title, lp.target_title,
       '오늘의 단어에서 만든 탐험 코스'::text as hint, 0 as source_rank
