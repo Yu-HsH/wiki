@@ -84,14 +84,16 @@ try {
   const home = await pageFor({ guest: true });
   await home.page.goto(base + "/lobby", { waitUntil: "domcontentloaded" });
   await home.page.locator(".wr65-jungle-hero .wr65-atmosphere").waitFor();
+  await home.page.waitForTimeout(950); // Existing 720ms notebook entrance must finish.
   const hero = await home.page.evaluate(() => {
     const img = document.querySelector(".wr65-jungle-hero .wr-landscape");
     const btn = document.querySelector(".wr65-jungle-hero .wr-play-launcher");
     const r = btn.getBoundingClientRect();
     return { width: img.naturalWidth, height: img.naturalHeight,
-      safe: document.elementFromPoint(r.left+r.width/2,r.top+r.height/2) === btn,
+      safe: btn.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)),
       moved: getComputedStyle(img).transform !== "none" };
   });
+  console.log("HOME hit diagnostics " + JSON.stringify(hero));
   check("HOME native 1535x436 preserved", hero.width === 1535 && hero.height === 436);
   check("HOME CTA remains clickable", hero.safe && !hero.moved);
   await screenshot(home.page, "home-1440");
