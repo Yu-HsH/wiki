@@ -213,11 +213,13 @@
 .wr-page.wr-home .wr65-hero-fallback .wr-hero-intro { padding: 0; margin: 0 0 14px; background: transparent; color: #fff3d8; font-size: 20px; }
 .wr-page.wr-home .wr65-hero-fallback .wr-play-launcher { width: 100%; font-size: 17px !important; }
 
-/* Approved moderate wooden notebook treatment; single content semantics
-   and existing rankings remain untouched. */
-.wr-page.wr-home .wr-shell, .wr-page.wr-play .wr-shell { width: min(1400px, 100%); }
+/* HOME is a centered expedition notebook (not a full-width billboard).
+   Keep PLAY's existing roomier shell independently. Natural artwork ratios,
+   SVG viewBoxes and interactive hotspots remain unchanged. */
+.wr-page.wr-home .wr-shell { width: min(1120px, 100%); }
+.wr-page.wr-play .wr-shell { width: min(1400px, 100%); }
 @media (min-width: 1280px) {
-  .wr-page.wr-home .wr-home-side-art > span { width: max(0px, calc((100% - 1400px) / 2)); }
+  .wr-page.wr-home .wr-home-side-art > span { width: max(0px, calc((100% - 1120px) / 2)); }
 }
 .wr-page.wr-home .wr-header,
 .wr-page.wr-play .wr-header {
