@@ -124,6 +124,17 @@ async function expectPulse(page, selector, name, { reduced = false } = {}) {
   check(name, frames.length >= 2 && frames.some(f => "opacity" in f) && (!reduced || frames.every(f => !("transform" in f))));
 }
 
+async function changeMotion(page, reducedMotion) {
+  // Wait for the media change handlers to finish cancelling the old pulses.
+  await page.evaluate(() => {
+    const preference = matchMedia("(prefers-reduced-motion: reduce)");
+    window.qaMotionChanged = false;
+    preference.addEventListener("change", () => { window.qaMotionChanged = true; }, { once: true });
+  });
+  await page.emulateMedia({ reducedMotion });
+  await expect.poll(() => page.evaluate(() => window.qaMotionChanged)).toBe(true);
+}
+
 const motionLayer = (page, id) => page.locator(`[data-jungle-prop="${id}"]`);
 async function verifyIdle(page, scene, label, reduce) {
   const layers = page.locator(".wr65-prop-layers");
@@ -248,7 +259,7 @@ try {
     await compass.press("Enter");
     await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "compass Enter flashes");
     check("hotspots are visual only", new URL(page.url()).pathname === "/" && !landing.authCalls.length);
-    await page.emulateMedia({ reducedMotion: "reduce" });
+    await changeMotion(page, "reduce");
     await expect(atmosphere).toBeHidden();
     await compass.press("Space");
     await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "reduced motion keeps a stationary light response", { reduced: true });
@@ -256,7 +267,7 @@ try {
     await expectPulse(page, ".wr65-hotspot--lantern .wr65-hotspot-pulse", "reduced motion lantern keeps light feedback", { reduced: true });
     check("reduced motion lantern stays still on activation",
       await motionLayer(page, "lantern").locator(".wr65-prop-reply").evaluate(el => getComputedStyle(el).transform === "none"));
-    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await changeMotion(page, "no-preference");
     const signin = page.getByRole("button", { name: "Wiki Race 로그인" });
     await signin.hover();
     await expect.poll(() => signin.evaluate(e => Number(getComputedStyle(e, "::after").opacity))).toBeGreaterThan(.7);
