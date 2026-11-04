@@ -65,11 +65,6 @@
 }
 .wr65-landing-hit-login { left: 36.3%; width: 13.7%; }
 .wr65-landing-hit-signup { left: 51.8%; width: 13.4%; }
-.wr65-landing-hit:is(:hover, :focus-visible) {
-  outline: 3px solid #fff4c6;
-  outline-offset: 2px;
-  box-shadow: 0 0 0 6px #2a4d61a6;
-}
 .wr65-landing-hotlinks { position: absolute; z-index: 2; left: 39%; top: 68.5%; width: 23.1%; height: 4.3%; display: flex; gap: 1.5%; }
 .wr65-landing-hotlinks a { flex: 1 1 0; color: transparent; font-size: 0; border-radius: 4px; }
 .wr65-landing-hotlinks a:is(:hover, :focus-visible) { outline: 3px solid #fff4c6; outline-offset: 2px; }
@@ -150,33 +145,31 @@
 /* The HOME banner already includes its title and CTA. Preserve the map. */
 .wr-page.wr-home .wr-hero.wr65-jungle-hero {
   height: auto;
-  aspect-ratio: 1535 / 436;
   min-height: 0;
   background: #304e3d;
   border-bottom: 5px solid #79613e;
 }
+.wr65-hero-art { position: relative; isolation: isolate; }
 .wr-page.wr-home .wr65-jungle-hero .wr-landscape {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
+  display: block;
+  position: relative;
+  width: 100%; height: auto;
   object-fit: contain;
-  object-position: center;
 }
-.wr-page.wr-home .wr65-jungle-hero .wr-home-sign { display: none; }
 .wr-page.wr-home .wr65-jungle-hero::after { display: none; }
-.wr-page.wr-home .wr65-jungle-hero .wr-hero-entry {
+.wr-page.wr-home .wr65-jungle-hero .wr65-hero-art-entry {
   position: absolute;
   z-index: 3;
-  top: 55.5%;
-  left: 43.3%;
-  width: 21.1%;
-  height: 23.4%;
-  margin: 0;
-  padding: 0;
-  bottom: auto;
+  top: 67.2%; left: 53.85%;
+  translate: -50% -50%;
+  width: 21.1%; height: 23.4%;
+  min-height: 44px;
+  margin: 0; padding: 0;
+  right: auto; bottom: auto;
   background: transparent;
 }
-.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher {
+.wr-page.wr-home .wr65-jungle-hero .wr65-hero-art-entry .wr-play-launcher {
+  position: relative;
   width: 100%; height: 100%;
   min-height: 44px;
   padding: 0;
@@ -185,23 +178,19 @@
   box-shadow: none;
   color: transparent;
   font-size: 0 !important;
+  transform: none;
 }
-.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher span { font-size: 0; }
-.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher:is(:hover,:focus-visible) {
-  outline: 3px solid #f2dda1;
-  outline-offset: 0;
-  box-shadow: 0 0 0 6px #213f39a8;
-}
+.wr-page.wr-home .wr65-jungle-hero .wr65-hero-art-entry .wr-play-launcher span { font-size: 0; }
+.wr-page.wr-home .wr65-jungle-hero .wr65-hero-mobile-entry { display: none; }
 @media (max-width: 700px) {
-  .wr-page.wr-home .wr-hero.wr65-jungle-hero { aspect-ratio: auto; }
-  .wr-page.wr-home .wr65-jungle-hero .wr-landscape { position: relative; height: auto; display: block; }
-  .wr-page.wr-home .wr65-jungle-hero .wr-hero-entry {
+  .wr-page.wr-home .wr65-jungle-hero .wr65-hero-mobile-entry {
+    display: block;
     position: relative;
     inset: auto;
-    width: auto; height: auto;
     margin: 14px 16px 18px;
   }
-  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher {
+  .wr-page.wr-home .wr65-jungle-hero .wr65-hero-mobile-entry .wr-play-launcher {
+    width: 100%;
     min-height: 52px;
     padding: 10px 18px;
     border: 2px solid #c5a263;
@@ -210,8 +199,7 @@
     font-size: 17px !important;
     box-shadow: 0 4px 0 #243c6d;
   }
-  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher span { font-size: inherit; }
-  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher:is(:hover,:focus-visible) {
+  .wr-page.wr-home .wr65-jungle-hero .wr65-hero-mobile-entry .wr-play-launcher:is(:hover,:focus-visible) {
     background: #2e4579;
     outline: 3px solid #f2dda1;
     outline-offset: 3px;

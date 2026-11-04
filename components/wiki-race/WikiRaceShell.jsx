@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import { LOBBY_PATH } from "../../utils/appRoutes";
 import ProfileAvatar from "../ProfileAvatar.jsx";
@@ -38,8 +38,27 @@ export function ExpeditionTrail() {
 }
 
 export default function WikiRaceShell({ user, level, onLogout, onNavigate, view = "home", children }) {
+  const sideArt = useRef(null);
+  useEffect(() => {
+    const art = sideArt.current;
+    if (!art || !["home", "play"].includes(view)) return undefined;
+    let inView = typeof IntersectionObserver !== "function";
+    const sync = () => art.classList.toggle("is-paused", document.hidden || !inView);
+    const observer = !inView ? new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      sync();
+    }) : null;
+    observer?.observe(art);
+    document.addEventListener("visibilitychange", sync);
+    sync();
+    return () => {
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [view]);
+
   return <div className={`wr-page wr-${view}${["ranking", "profile", "achievements", "updates"].includes(view) ? " wr65-field" : ""}`}>
-    <div className="wr-home-side-art" aria-hidden="true">
+    <div className="wr-home-side-art" ref={sideArt} aria-hidden="true">
       <span className="wr-home-side-art-left" />
       <span className="wr-home-side-art-right" />
     </div>

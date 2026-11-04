@@ -1,4 +1,4 @@
-/* Jungle Alive v1: vector depth over existing APPROVED bitmap, never animate
+/* Jungle Alive: light and particles over the approved artwork. Never animate
    the artwork itself (it contains actual title, CTA, and text). */
 .wr65-atmosphere {
   position: absolute;
@@ -14,28 +14,9 @@
   --wr65-far-y: 0px;
 }
 .wr65-atmosphere :is(span, svg) { position: absolute; pointer-events: none; }
-.wr65-atmosphere :is(.wr65-alive-canopy, .wr65-alive-mist, .wr65-alive-birds) {
+.wr65-atmosphere .wr65-alive-mist {
   transition: transform 240ms ease-out;
 }
-.wr65-alive-canopy {
-  top: -12px;
-  width: clamp(130px, 20%, 350px);
-  height: auto;
-  opacity: .86;
-  transform: translate3d(var(--wr65-near-x), var(--wr65-near-y), 0);
-  filter: drop-shadow(0 8px 5px #173a2629);
-}
-.wr65-alive-canopy--left { left: -16px; }
-.wr65-alive-canopy--right {
-  right: -16px;
-  transform: translate3d(var(--wr65-near-x), var(--wr65-near-y), 0) scaleX(-1);
-}
-.wr65-alive-canopy__sway {
-  transform-origin: 16% 0%;
-  transform-box: fill-box;
-  animation: wr65-canopy-wind 5.9s ease-in-out infinite alternate;
-}
-.wr65-alive-canopy--right .wr65-alive-canopy__sway { animation-delay: -2.3s; animation-duration: 7.2s; }
 .wr65-alive-mist {
   width: 33%;
   height: 26%;
@@ -65,6 +46,8 @@
   opacity: 0;
   background: #fff8c2;
   box-shadow: 0 0 9px 3px #ffe6a2a6, 0 0 23px 5px #f9de9269;
+  translate: var(--wr65-near-x) var(--wr65-near-y);
+  transition: translate 240ms ease-out;
   animation: wr65-firefly-dance 9s ease-in-out infinite;
 }
 .wr65-alive-leaf-track {
@@ -93,24 +76,107 @@
   transform: translate3d(var(--wr65-far-x),var(--wr65-far-y),0);
   animation: wr65-bird-glide 28s ease-in-out infinite alternate;
 }
-.wr65-atmosphere--landing .wr65-alive-canopy { width: clamp(170px, 22%, 380px); opacity: .9; }
-.wr65-atmosphere--landing .wr65-alive-canopy--left { left: -22px; top: -22px; }
-.wr65-atmosphere--landing .wr65-alive-canopy--right { right: -22px; top: -20px; }
 .wr65-atmosphere--landing .wr65-alive-mist { bottom: 12%; }
 .wr65-atmosphere--landing .wr65-alive-sunbeam--left { left: 9%; }
 .wr65-atmosphere--landing .wr65-alive-birds { top: 10%; left: 29%; width: 6.5%; }
-.wr65-atmosphere--hero .wr65-alive-canopy { width: clamp(95px, 12%, 170px); opacity: .75; }
-.wr65-atmosphere--hero .wr65-alive-canopy--left { top: -32px; left: -10px; }
-.wr65-atmosphere--hero .wr65-alive-canopy--right { top: -32px; right: -10px; }
 .wr65-atmosphere--hero .wr65-alive-birds { top: 6%; left: 34%; width: 4%; opacity: .5; }
 .wr65-atmosphere--hero .wr65-alive-mist { height: 30%; opacity: .25; }
 .wr65-atmosphere--hero .wr65-alive-firefly { width: 5px; height: 5px; }
-.wr65-atmosphere.is-paused :is(span, svg, g) { animation-play-state: paused !important; }
-@keyframes wr65-canopy-wind {
-  0% { transform: rotate(-2.5deg) translateX(-3px); }
-  50% { transform: rotate(1.5deg) translateX(2px); }
-  100% { transform: rotate(3.2deg) translateX(4px); }
+.wr65-waterlight {
+  opacity: 0;
+  background: radial-gradient(ellipse, #f0fdffe0, #c5f0ff60 32%, transparent 72%);
+  animation: wr65-water-glint 8s ease-in-out infinite;
 }
+.wr65-waterlight--fall { left: 89.6%; top: 31.7%; width: 1.7%; height: 8%; rotate: 10deg; }
+.wr65-waterlight--river { left: 67.4%; top: 77.4%; width: 11%; height: 3.1%; rotate: 14deg; animation-delay: -3.5s; }
+@keyframes wr65-water-glint {
+  0%, 100% { opacity: 0; transform: scale(.88); }
+  55% { opacity: .36; transform: scale(1.13); }
+}
+.wr65-atmosphere.is-paused :is(span, svg, g) { animation-play-state: paused !important; }
+
+/* The hitboxes follow the artwork. Only light changes, including on press. */
+.wr65-hotspot {
+  position: absolute;
+  z-index: 2;
+  left: var(--x); top: var(--y);
+  translate: -50% -50%;
+  width: var(--w); height: var(--h);
+  min-width: 44px; min-height: 44px;
+  padding: 0; border: 0; border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.wr65-hotspot--lantern { --x: 7.5%; --y: 70.2%; --w: 6%; --h: 16%; }
+.wr65-hotspot--compass { --x: 21.9%; --y: 82%; --w: 9%; --h: 14%; }
+.wr65-hotspot--marker-one { --x: 38%; --y: 74%; --w: 10%; --h: 25%; --glint-x: 30%; --glint-y: 56%; }
+.wr65-hotspot--marker-two { --x: 77.7%; --y: 62.5%; --w: 10%; --h: 26%; --glint-x: 23%; --glint-y: 57%; }
+.wr65-hotspot--marker-three { --x: auto; right: 0; --y: 43.5%; --w: 9.4%; --h: 32%; --glint-x: 31%; --glint-y: 61%; translate: 0 -50%; }
+.wr65-hotspot::before, .wr65-hotspot-pulse {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  left: var(--glint-x, 50%); top: var(--glint-y, 50%);
+  translate: -50% -50%;
+  width: 92%; height: 94%;
+  border-radius: 50%;
+  opacity: 0;
+}
+.wr65-hotspot::before {
+  opacity: .36;
+  background: radial-gradient(ellipse, #fff4b775, #f7ba353a 30%, transparent 71%);
+  transition: opacity 180ms ease;
+}
+.wr65-hotspot--lantern::before {
+  width: 142%; height: 84%;
+  background: radial-gradient(ellipse, #fff2a6cc, #ffbc3d58 36%, transparent 70%);
+  animation: wr65-lantern-idle 5.5s ease-in-out infinite;
+}
+@keyframes wr65-lantern-idle { 0%, 100% { opacity: .36; } 52% { opacity: .7; } 65% { opacity: .5; } }
+.wr65-landing-art:has(> .wr65-atmosphere.is-paused) .wr65-hotspot--lantern::before { animation-play-state: paused; }
+.wr65-hotspot-pulse {
+  background: radial-gradient(ellipse, #fff7b8c9, #ffca5c63 29%, transparent 64%),
+    radial-gradient(ellipse, transparent 49%, #ffe6a48c 51%, transparent 59%);
+}
+.wr65-hotspot--lantern .wr65-hotspot-pulse { width: 165%; height: 100%; }
+.wr65-hotspot--compass .wr65-hotspot-pulse {
+  background: radial-gradient(ellipse at 18% 24%, #fff 0, #ffe7a2b0 6%, transparent 16%),
+    radial-gradient(ellipse at 78% 68%, #fff8cb 0, #ffd2819e 6%, transparent 14%),
+    radial-gradient(ellipse, transparent 49%, #ffe6a48c 51%, transparent 63%);
+}
+.wr65-route-light {
+  position: absolute; inset: 0;
+  z-index: 1;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.wr65-route-light path {
+  fill: none; stroke: #fff2b6; stroke-width: 5;
+  stroke-linecap: round; stroke-dasharray: 9 100;
+  opacity: 0;
+}
+.wr65-art-cta { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.wr65-art-cta::after {
+  content: "";
+  position: absolute; inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 130ms ease-out;
+  background: radial-gradient(ellipse at 10% 1%, #fff7d5, transparent 23%),
+    radial-gradient(ellipse at 92% 99%, #fff1b4, transparent 21%);
+  box-shadow: 0 0 12px 2px #ffdf83b5, inset 0 0 7px 2px #ffe8a099;
+}
+.wr65-art-cta:focus-visible, .wr65-hotspot:focus-visible { outline: 3px solid #fff4c6; outline-offset: 2px; }
+.wr65-art-cta:focus-visible::after, .wr65-hotspot:focus-visible::before { opacity: .8; }
+@media (hover: hover) and (pointer: fine) {
+  .wr65-art-cta:hover::after, .wr65-hotspot:hover::before { opacity: .85; }
+}
+.wr65-art-cta:active::after, .wr65-hotspot:active::before { opacity: 1; transition-duration: 0s; }
+.wr65-hotspot--lantern:is(:hover, :focus-visible, :active)::before { animation: none; }
+.wr65-landing-actions > button:active { box-shadow: 0 0 0 3px #f3e0ac; }
 @keyframes wr65-mist-breathe { from { opacity: .15; } to { opacity: .47; } }
 @keyframes wr65-sunlight {
   0%,100% { opacity: 0; }
@@ -139,12 +205,13 @@
   to { transform: translate3d(calc(var(--wr65-far-x) + 42px),calc(var(--wr65-far-y) + 9px),0); }
 }
 /* Keep the existing approved gutter art, but let it breathe on large screens. */
-@media (min-width: 1280px) {
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   .wr-page.wr-home .wr-home-side-art-left,
   .wr-page.wr-play .wr-home-side-art-left { animation: wr65-gutter-left 17s ease-in-out infinite; }
   .wr-page.wr-home .wr-home-side-art-right,
   .wr-page.wr-play .wr-home-side-art-right { animation: wr65-gutter-right 20s ease-in-out infinite; }
 }
+.wr-home-side-art.is-paused > span { animation-play-state: paused !important; }
 @keyframes wr65-gutter-left { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-9px); } }
 @keyframes wr65-gutter-right { 0%,100% { transform:translateY(-7px); } 50% { transform:translateY(7px); } }
 .wr-page.wr-play .wr-mode { transition: box-shadow 180ms ease, border-color 180ms ease; }
@@ -154,14 +221,14 @@
 }
 @media (max-width: 700px), (pointer: coarse) {
   .wr65-alive-mist, .wr65-alive-birds, .wr65-alive-sunbeam--right,
-  .wr65-alive-canopy--right, .wr65-alive-leaf-track:nth-last-child(-n+4),
-  .wr65-alive-firefly:nth-of-type(n+9) { display: none; }
-  .wr65-atmosphere--hero .wr65-alive-canopy { width: 100px; }
-  .wr65-atmosphere--landing .wr65-alive-canopy { width: 140px; }
+  .wr65-alive-leaf-track:nth-last-child(-n+4), .wr65-waterlight--fall,
+  .wr65-alive-firefly--extra { display: none; }
+  .wr65-hotspot--lantern::before { animation: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wr65-atmosphere { display: none !important; }
   .wr-page.wr-home .wr-home-side-art > span,
   .wr-page.wr-play .wr-home-side-art > span { animation: none !important; transform: none !important; }
   .wr-page.wr-play .wr-mode { transition: none !important; }
+  .wr65-hotspot::before, .wr65-art-cta::after { animation: none; transition: none; }
 }

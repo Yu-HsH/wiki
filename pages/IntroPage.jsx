@@ -5,6 +5,7 @@ import { LOBBY_PATH } from "../utils/appRoutes";
 import LoginPage from "./LoginPage";
 import openingBg from "../Opening.png";
 import JungleAtmosphere from "../components/wiki-race/JungleAtmosphere.jsx";
+import JungleHotspot from "../components/wiki-race/JungleHotspot.jsx";
 import "../css/jungle65.css";
 
 const JUNGLE_LANDING = "/assets/wiki-race/jungle65/landing-final.webp";
@@ -80,15 +81,17 @@ export default function IntroPage() {
               onError={() => setJungleAssetReady(false)}
             />
             <JungleAtmosphere variant="landing" />
-            <button className="wr65-landing-hit wr65-landing-hit-login" type="button"
+            <button className="wr65-landing-hit wr65-landing-hit-login wr65-art-cta" type="button"
               aria-label="Wiki Race 로그인" onClick={() => openAuth("signin")}>로그인</button>
-            <button className="wr65-landing-hit wr65-landing-hit-signup" type="button"
+            <button className="wr65-landing-hit wr65-landing-hit-signup wr65-art-cta" type="button"
               aria-label="Wiki Race 회원가입" onClick={() => openAuth("signup")}>회원가입</button>
             <nav className="wr65-landing-hotlinks" aria-label="서비스 정보">
               <Link to="/about">서비스 소개</Link>
               <Link to="/guide">플레이 가이드</Link>
               <Link to="/privacy">개인정보처리방침</Link>
             </nav>
+            <JungleHotspot kind="lantern" label="랜턴 불빛 밝히기" />
+            <JungleHotspot kind="compass" label="나침반 반짝임 보기" />
           </div>
         ) : <section className="wr65-landing-fallback">
           <img src={openingBg} alt="위키 문서 사이를 잇는 탐험 경로" />
