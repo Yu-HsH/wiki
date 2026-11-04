@@ -266,17 +266,16 @@ try {
     await lantern.hover();
     await expect.poll(() => lantern.evaluate(el => getComputedStyle(el, "::before").opacity)).toBe("0.45");
     check("lantern hover increases localized brightness");
+    await verifyPropReply(page, "lantern");
     await lantern.click();
     await expectPulse(page, ".wr65-hotspot--lantern .wr65-hotspot-pulse", "lantern click brightens original lamp");
     await screenshot(page, "landing-lantern-pressed");
-    await verifyPropReply(page, "lantern");
     const compass = page.getByRole("button", { name: "나침반 반짝임 보기" });
     await compass.press("Enter");
     await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "compass Enter flashes");
     check("hotspots are visual only", new URL(page.url()).pathname === "/" && !landing.authCalls.length);
     await changeMotion(page, "reduce");
     await expect(atmosphere).toBeHidden();
-    await expect(atmosphere).toHaveClass(/is-paused/);
     await compass.press("Space");
     await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "reduced motion keeps a stationary light response", { reduced: true });
     await lantern.press("Enter");
@@ -330,8 +329,9 @@ try {
     const offsets = await route.evaluate(e => e.getAnimations().find(a => a.id === "wr65-scene-pulse")
       ?.effect.getKeyframes().map(f => parseFloat(f.strokeDashoffset)));
     check("route light traverses the painted route in one pass", offsets?.[0] > 0 && offsets.at(-1) === -100);
-    await screenshot(hp, "home-route-pressed");
     for (const id of ["marker-one", "marker-two", "marker-three"]) await verifyPropReply(hp, id);
+    await marker.press("Space");
+    await screenshot(hp, "home-route-pressed");
     check("marker leaves route and auth unchanged", new URL(hp.url()).pathname === "/lobby" && !home.authCalls.length);
     await hp.locator(".wr65-atmosphere").evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await expect(hp.locator(".wr65-atmosphere")).toHaveClass(/is-paused/);

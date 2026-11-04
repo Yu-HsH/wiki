@@ -96,7 +96,8 @@ export default function JungleAtmosphere({ variant = "hero" }) {
     }
     motion?.addEventListener?.("change", onMotionChange);
     document.addEventListener("visibilitychange", onVisibility);
-    observer?.observe(root);
+    // Track the art frame. The atmosphere itself can be hidden by motion preferences.
+    observer?.observe(stage);
     onVisibility();
 
     return () => {
