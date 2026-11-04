@@ -173,34 +173,49 @@ async function verifyPropReply(page, id, { tap = false } = {}) {
     layers.every(layer => !layer.getAnimations().length))).toBe(true);
   const hit = page.locator(".wr65-hotspot--" + id);
   const idle = motionLayer(page, id);
+  await hit.scrollIntoViewIfNeeded();
+  await expect(page.locator(".wr65-atmosphere")).not.toHaveClass(/is-paused/);
   await idle.evaluate(el => { el.qaIdle = el.getAnimations()[0]; });
+  const reply = idle.locator(".wr65-prop-reply");
+  await reply.evaluate((el, id) => {
+    // The document listener runs after React's click handler. Hold the reply
+    // before Playwright returns from the click on a busy runner.
+    document.addEventListener("click", event => {
+      if (!event.target.closest(".wr65-hotspot--" + id)) return;
+      el.qaReply = el.getAnimations()[0];
+      el.qaReply?.pause();
+    }, { once: true });
+  }, id);
   if (tap) await hit.tap();
   else await hit.click();
-  const motion = await idle.locator(".wr65-prop-reply").evaluate(async el => {
-    const animation = el.getAnimations()[0];
+  const motion = await reply.evaluate(async el => {
+    const animation = el.qaReply;
     if (!animation) return null;
     await animation.ready;
     const current = animation.currentTime;
     const sprite = el.querySelector("image").getBBox();
     const [x, y] = el.style.transformOrigin.split(" ").map(parseFloat);
-    const sample = () => {
+    const sample = async time => {
+      animation.currentTime = time;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const matrix = el.parentElement.getCTM().inverse().multiply(el.getCTM());
       const points = [new DOMPoint(sprite.x + sprite.width, sprite.y), new DOMPoint(x, y)]
         .map(point => point.matrixTransform(matrix)).map(point => [point.x, point.y]);
       return { transform: getComputedStyle(el).transform, points };
     };
-    animation.currentTime = 0;
-    const first = sample();
     const peakTime = animation.effect.getTiming().duration * .27;
-    animation.currentTime = peakTime;
-    const peak = sample();
-    animation.currentTime = current;
+    const first = await sample(0);
+    const peak = await sample(peakTime);
+    animation.currentTime = current ?? 0;
+    animation.play();
     return { first, peak, peakTime, active: [...el.closest("svg").querySelectorAll(".wr65-prop-reply")]
       .filter(reply => reply.getAnimations().length).map(reply => reply.parentElement.dataset.jungleProp) };
   });
   const delta = index => Math.hypot(...motion.first.points[index].map((value, axis) => value - motion.peak.points[index][axis]));
   if (motion) result.measurements.push({ id, tap, ...motion, tipDelta: delta(0), pivotDelta: delta(1) });
-  check(id + ": only selected sprite moves, with its pivot fixed", motion?.active.join() === id && delta(0) > 1 && delta(1) < .05);
+  const valid = motion?.active.join() === id && delta(0) > 1 && delta(1) < .05;
+  if (!valid) console.log(JSON.stringify({ id, tap, motion }));
+  check(id + ": only selected sprite moves, with its pivot fixed", valid);
   await expect.poll(() => idle.locator(".wr65-prop-reply").evaluate(el => el.getAnimations().length)).toBe(0);
   check(id + ": reply returns to the same idle animation", await idle.evaluate(el => el.getAnimations()[0] === el.qaIdle));
 }
@@ -261,6 +276,7 @@ try {
     check("hotspots are visual only", new URL(page.url()).pathname === "/" && !landing.authCalls.length);
     await changeMotion(page, "reduce");
     await expect(atmosphere).toBeHidden();
+    await expect(atmosphere).toHaveClass(/is-paused/);
     await compass.press("Space");
     await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "reduced motion keeps a stationary light response", { reduced: true });
     await lantern.press("Enter");
