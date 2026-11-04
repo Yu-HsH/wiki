@@ -109,7 +109,7 @@ try {
 
   const reduced = await pageFor({ reduce: true });
   await reduced.page.goto(base + "/", { waitUntil: "domcontentloaded" });
-  await reduced.page.locator(".wr65-atmosphere").waitFor();
+  await reduced.page.locator(".wr65-atmosphere").waitFor({ state: "attached" });
   check("reduced motion hides animated overlay", await reduced.page.locator(".wr65-atmosphere").evaluate(e => getComputedStyle(e).display === "none"));
   await reduced.ctx.close();
   check("no browser runtime exceptions", result.pageErrors.length === 0);
