@@ -117,6 +117,43 @@ async function measure(page, scene) {
   });
 }
 
+async function verifyLiveCopy(page, scene, label, mobile) {
+  const lines = scene === "landing" ? [
+    [".wr65-landing-wordmark span", /Wiki Race/, 1],
+    [".wr65-landing-tagline", /지식이 모이는, 더 빠른 여정/, 1],
+    [mobile ? ".wr65-landing-mobile-description" : ".wr65-landing-description span", /지식 탐험가가 되어보세요!/, mobile ? 3 : 2],
+    [mobile ? ".wr65-landing-start" : ".wr65-landing-hit-login .wr65-landing-button-label", /로그인/, 1],
+    [mobile ? ".wr65-landing-signup" : ".wr65-landing-hit-signup .wr65-landing-button-label", /회원가입/, 1],
+  ] : [
+    [".wr65-home-wordmark span", /Wiki\s*Race/, 2],
+    [".wr65-home-speech span", /목표 문서까지 탐험하세요\./, 2],
+    [mobile ? ".wr65-hero-mobile-entry .wr65-play-label" : ".wr65-hero-art-entry .wr65-play-label", /탐험 시작/, 1],
+  ];
+  for (const [selector, copy, maxLines] of lines) {
+    const text = page.locator(selector);
+    await expect(text).toBeVisible();
+    await expect(text).toHaveText(copy);
+    assert.ok(await text.evaluate((element, maxLines) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const rows = new Set([...range.getClientRects()]
+        .filter(rect => rect.width > 0)
+        .map(rect => Math.round(rect.top)));
+      const style = getComputedStyle(element);
+      return rows.size <= maxLines && parseFloat(style.fontSize) > 0 && Number(style.fontWeight) >= 800;
+    }, maxLines), label + ": readable text within its intended rows: " + selector);
+  }
+  if (mobile) {
+    if (scene === "landing") {
+      await expect(page.locator(".wr65-landing-description span")).toBeHidden();
+      for (const copy of await page.locator(".wr65-landing-button-label").all()) await expect(copy).toBeHidden();
+    } else {
+      await expect(page.locator(".wr65-hero-art-entry .wr65-play-label")).toBeHidden();
+    }
+  }
+  check(label + ": live HTML copy and button labels use the intended rows");
+}
+
 async function expectPulse(page, selector, name, { reduced = false } = {}) {
   const pulse = page.locator(selector);
   await expect.poll(() => pulse.evaluate(e => e.getAnimations().some(a => a.id === "wr65-scene-pulse"))).toBe(true);
@@ -242,8 +279,7 @@ try {
             check(label + ": no canopy, input aligned, particle budget",
               state.canopies === 0 && targets.every(([, safe]) => safe) &&
               state.leaves === (reduce ? 0 : mobile ? 4 : 8) && state.fireflies === (reduce ? 0 : mobile ? 3 : 7));
-            if (scene === "landing" && mobile) await expect(page.locator(".wr65-landing-start")).toBeVisible();
-            if (scene === "home" && mobile) await expect(page.locator(".wr65-hero-mobile-entry button")).toBeVisible();
+            await verifyLiveCopy(page, scene, label, mobile);
             await verifyIdle(page, scene, label, reduce);
           }
           if (!reduce) await screenshot(page, label);
@@ -390,7 +426,7 @@ try {
     await expect(touch.page.locator(".wr65-hero-mobile-entry button")).toBeVisible();
     await touch.page.locator(".wr65-hero-mobile-entry button").tap();
     await expect(touch.page).toHaveURL(base + "/play");
-    check("both the painted and legible mobile CTA route to PLAY");
+    check("both mobile CTA targets route to PLAY");
     await touch.ctx.close();
 
     const fallback = await pageFor({ guest: true });
