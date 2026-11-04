@@ -75,7 +75,7 @@ export default function IntroPage() {
             <img
               className="wr65-landing-picture"
               src={JUNGLE_LANDING}
-              width="1672" height="941"
+              width="1672" height="941" loading="eager" decoding="async" fetchPriority="high"
               alt="Wiki Race · 지식이 모이는, 더 빠른 여정. 정글의 문서를 탐험하고 가장 먼저 목표에 도달해 보세요."
               onError={() => setJungleAssetReady(false)}
             />

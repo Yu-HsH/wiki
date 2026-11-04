@@ -8,7 +8,7 @@ export default function ExpeditionHero({ onPlay, notebook = false }) {
   const [hasJungleArt, setHasJungleArt] = useState(true);
   return <section className={`wr-hero${sequence ? " is-home-sequence" : ""}${notebook ? hasJungleArt ? " wr65-jungle-hero" : " wr65-hero-fallback" : ""}`} aria-label="Base Camp 탐험 시작">
     <h1 className="wr-visually-hidden">Wiki Race · Base Camp</h1>
-    <img className="wr-landscape" src={notebook && hasJungleArt ? "/assets/wiki-race/jungle65/hero-jungle-expedition.webp" : "/assets/wiki-race/hero-landscape.png"} alt="" onError={() => setHasJungleArt(false)} />
+    <img className="wr-landscape" width={notebook ? 1535 : undefined} height={notebook ? 436 : undefined} loading="eager" decoding="async" fetchPriority="high" src={notebook && hasJungleArt ? "/assets/wiki-race/jungle65/hero-jungle-expedition.webp" : "/assets/wiki-race/hero-landscape.png"} alt="" onError={() => setHasJungleArt(false)} />
     {notebook && hasJungleArt && <JungleAtmosphere variant="hero" />}
     <ExpeditionTrail />
     {!notebook && <img className="wr-explorer" src="/assets/wiki-race/explorer-home.png" alt="" />}
