@@ -43,12 +43,12 @@ values
   ('00000000-0000-0000-06b1-000000000003', 'rm-d', '1', 'RM Daily', 'RM Daily', 1)
 on conflict (snapshot_id, target_page_id) do nothing;
 
--- Today's course (KST) is 'RM Daily'. Any local row for today is replaced
+-- Today's course (KST) is 'RM A' to 'RM Daily'. Any local row for today is replaced
 -- inside this rolled-back transaction.
 delete from public.daily_challenges
  where challenge_date = (now() at time zone 'Asia/Seoul')::date;
-insert into public.daily_challenges (challenge_date, target_title)
-values ((now() at time zone 'Asia/Seoul')::date, 'RM Daily');
+insert into public.daily_challenges (challenge_date, start_title, target_title)
+values ((now() at time zone 'Asia/Seoul')::date, 'RM A', 'RM Daily');
 
 
 create function pg_temp.uid(n integer) returns uuid language sql immutable
@@ -77,7 +77,7 @@ insert into rm_result values ('random-repeat',pg_temp.play('random','rm-a','rm-t
 insert into rm_result values ('custom',pg_temp.play('custom','rm-a','rm-t'));
 insert into rm_result values ('custom-repeat',pg_temp.play('custom','rm-a','rm-t'));
 insert into rm_result values ('daily',pg_temp.play('daily','rm-a','rm-d'));
-insert into rm_result values ('daily-repeat',pg_temp.play('daily','rm-b','rm-d'));
+insert into rm_result values ('daily-repeat',pg_temp.play('daily','rm-a','rm-d'));
 insert into rm_result values ('custom-daily-target',pg_temp.play('custom','rm-c','rm-d'));
 select is(response->'run'->>'run_mode', split_part(key,'-',1), key || ' mode is stored on run')
 from rm_result where key in ('random','custom','daily');

@@ -18,16 +18,18 @@ const dailyBlock = (() => {
 })();
 
 test("daily course starts unknown — the fallback is not the initial state", () => {
-  assert.match(mainPage, /const \[dailyChallenge, setDailyChallenge\] = useState\(null\);/);
+  assert.match(mainPage, /const \[loadedDailyChallenge, setDailyChallenge\] = useState\(null\);/);
   assert.doesNotMatch(mainPage, /useState\(getFallbackDailyChallenge\)/);
+  assert.match(mainPage, /loadedDailyChallenge\?\.challengeDate === dailyCourseDate \? loadedDailyChallenge : null/);
 });
 
 test("the button is disabled and guarded until the course is loaded", () => {
-  assert.match(dailyBlock, /disabled=\{!dailyChallenge \|\| !dailyChallenge.startTitle/);
-  assert.match(dailyBlock, /if \(!dailyChallenge\) return;/);
-  const guard = dailyBlock.indexOf("if (!dailyChallenge) return;");
+  assert.match(mainPage, /dailyCourseAvailable = Boolean\(dailyChallenge\?\.startTitle && \(!isSupabaseConfigured \|\| dailyChallenge.source === "supabase"\)\)/);
+  assert.match(dailyBlock, /disabled=\{!dailyCourseAvailable\}/);
+  const guard = dailyBlock.indexOf("if (!dailyCourseAvailable) return;");
+  const staleDateGuard = dailyBlock.indexOf("if (today !== dailyCourseDate)");
   const nav = dailyBlock.indexOf('navigate("/game"');
-  assert.ok(guard > 0 && nav > guard, "the guard runs before navigate");
+  assert.ok(guard > 0 && staleDateGuard > guard && nav > staleDateGuard, "both guards run before navigate");
 });
 
 test("keyword and target are the same loaded value", () => {

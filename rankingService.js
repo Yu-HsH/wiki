@@ -286,7 +286,10 @@ export async function fetchRankings({ period = "all", limit = 50, client, timing
   if (!db) {
     // Offline practice has no authoritative daily leaderboard.
     if (period === "daily") return [];
-    let records = readLocalRecords().filter(record => (record.timing_contract ?? null) === timingContract);
+    let records = readLocalRecords().filter(record =>
+      (record.timing_contract ?? null) === timingContract &&
+      (period !== "today_runs" || ["random", "custom"].includes(record.run_mode ?? record.runMode ?? record.mode))
+    );
     const periodStartIso = getKSTPeriodStartIso(period);
 
     if (periodStartIso) {
@@ -325,6 +328,9 @@ export async function fetchRankings({ period = "all", limit = 50, client, timing
     .order("created_at", { ascending: true })
     .limit(limit);
   query = timingContract ? query.eq('timing_contract', timingContract) : query.is('timing_contract', null);
+  // Today's free-exploration leaderboard must not double-count official daily courses.
+  // Explicit modes only: historical NULL-mode records are ambiguous and stay out.
+  if (period === "today_runs") query = query.in('run_mode', ['random', 'custom']);
 
   const periodStartIso = getKSTPeriodStartIso(period);
 

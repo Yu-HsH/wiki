@@ -18,6 +18,7 @@ import {
   shouldShowAchievementNotice,
 } from "../utils/achievementDisplay";
 import { fetchTodayDailyChallenge, getFallbackDailyChallenge } from "../services/dailyChallengeService";
+import { getKstCourseDate } from "../utils/dailyCourse.js";
 import "../css/wikiRaceHome.css";
 import "../css/jungle65.css";
 import ProfileCard from "../components/ProfileCard";
@@ -127,7 +128,9 @@ export default function MainPage({ view = "home" }) {
   const [isSearching, setIsSearching] = useState(false);
   // 조회가 끝나기 전에는 코스가 없다. fallback을 초기값으로 두면 조회 전 클릭이 fallback 코스로
   // 게임을 시작하고, 그 완주는 오늘 코스가 아닌 목표 지정(15 XP)으로 분류된다 (15c 스모크 실측).
-  const [dailyChallenge, setDailyChallenge] = useState(null);
+  const [dailyCourseDate, setDailyCourseDate] = useState(getKstCourseDate);
+  const [loadedDailyChallenge, setDailyChallenge] = useState(null);
+  const dailyChallenge = loadedDailyChallenge?.challengeDate === dailyCourseDate ? loadedDailyChallenge : null;
   const dailyCourseAvailable = Boolean(dailyChallenge?.startTitle && (!isSupabaseConfigured || dailyChallenge.source === "supabase"));
 
   // ⬇️ 검색 실행 핸들러 수정
@@ -267,6 +270,18 @@ export default function MainPage({ view = "home" }) {
   }, [user]);
 
   useEffect(() => {
+    const syncCourseDate = () => setDailyCourseDate(getKstCourseDate());
+    // 오늘 KST 날짜의 15:00 UTC는 다음 KST 날짜의 자정이다.
+    const midnight = Date.parse(`${dailyCourseDate}T15:00:00Z`);
+    const timer = window.setTimeout(syncCourseDate, Math.max(0, midnight - Date.now()));
+    document.addEventListener("visibilitychange", syncCourseDate);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", syncCourseDate);
+    };
+  }, [dailyCourseDate]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadDailyChallenge = async () => {
@@ -285,7 +300,7 @@ export default function MainPage({ view = "home" }) {
 
     loadDailyChallenge();
     return () => { cancelled = true; };
-  }, []);
+  }, [dailyCourseDate]);
 
   const handleLogout = async () => {
     await logout();
@@ -425,7 +440,7 @@ export default function MainPage({ view = "home" }) {
         <section className="dashboard-card daily-card" aria-busy={!dailyChallenge} aria-label="오늘의 도전">
           <div className="daily-head">
             <h2 className="daily-badge">오늘의 도전</h2>
-            <span className="daily-date">{new Date().toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" })}</span>
+            <span className="daily-date">{new Date(`${dailyCourseDate}T00:00:00+09:00`).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" })}</span>
           </div>
           {!dailyCourseAvailable && <p className="daily-keyword" role="status">{dailyChallenge ? "오늘의 공식 코스를 확인하지 못했습니다." : "오늘의 탐험을 불러오는 중…"}</p>}
           {dailyChallenge && dailyCourseAvailable && <p className="daily-hint">{dailyChallenge.hint}</p>}
@@ -435,10 +450,14 @@ export default function MainPage({ view = "home" }) {
           <button
             type="button"
             className="app-btn app-btn-primary daily-btn"
-            disabled={!dailyChallenge || !dailyChallenge.startTitle || (isSupabaseConfigured && dailyChallenge.source !== "supabase")}
+            disabled={!dailyCourseAvailable}
             onClick={() => {
-              if (!dailyChallenge) return;
-              if (!dailyChallenge.startTitle || (isSupabaseConfigured && dailyChallenge.source !== "supabase")) return;
+              if (!dailyCourseAvailable) return;
+              const today = getKstCourseDate();
+              if (today !== dailyCourseDate) {
+                setDailyCourseDate(today);
+                return;
+              }
               navigate("/game", {
                 state: {
                   mode: "daily",
