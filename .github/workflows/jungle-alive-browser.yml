@@ -2,12 +2,20 @@ name: Jungle Alive isolated browser QA
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/jungle-alive-depth-v1-20261104]
     paths:
       - "components/wiki-race/JungleAtmosphere.jsx"
+      - "components/wiki-race/JungleHotspot.jsx"
+      - "components/wiki-race/ExpeditionHero.jsx"
+      - "components/wiki-race/WikiRaceShell.jsx"
+      - "pages/IntroPage.jsx"
+      - "css/jungle65.css"
       - "css/wikiRaceAmbient.css"
+      - "css/wikiRaceHome.css"
+      - "css/wikiRaceSequences.css"
       - "utils/jungleParallax.js"
       - "scripts/jungle-alive-browser-smoke.mjs"
+      - ".github/workflows/jungle-alive-browser.yml"
   workflow_dispatch:
 
 permissions:

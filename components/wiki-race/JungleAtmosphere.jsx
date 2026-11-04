@@ -24,45 +24,6 @@ const FIREFLIES = Object.freeze([
   { left: "63%", top: "12%", delay: "-8s", duration: "12s" },
 ]);
 
-// Foreground silhouettes are vector, not blurry enlargements of the WebP.
-// Limit them to the outer edges to protect baked-in headline/CTA artwork.
-function ForegroundCanopy({ side }) {
-  return (
-    <svg className={"wr65-alive-canopy wr65-alive-canopy--" + side} viewBox="0 0 300 325"
-      preserveAspectRatio="xMinYMin meet" focusable="false" aria-hidden="true">
-      <defs>
-        <linearGradient id={"wr65-leaf-gradient-" + side} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#73904b" />
-          <stop offset=".42" stopColor="#2e5939" />
-          <stop offset="1" stopColor="#173a2b" />
-        </linearGradient>
-      </defs>
-      <g className="wr65-alive-canopy__sway">
-        <path d="M-14 -18 C43 7 58 42 83 91 S112 163 148 206"
-          fill="none" stroke="#243423" strokeWidth="18" strokeLinecap="round" />
-        <path d="M43 32 C92 42 140 68 177 110 M82 94 C105 135 152 158 195 161"
-          fill="none" stroke="#35482e" strokeWidth="7" strokeLinecap="round" />
-        <g fill={"url(#wr65-leaf-gradient-" + side + ")"} stroke="#173b27" strokeWidth="1.2">
-          <path d="M5 29 Q56 4 72 49 Q39 72 5 29Z" />
-          <path d="M30 56 Q-1 39 6 105 Q51 101 30 56Z" />
-          <path d="M58 43 Q87 2 127 24 Q107 78 58 43Z" />
-          <path d="M91 67 Q132 26 165 65 Q142 109 91 67Z" />
-          <path d="M108 90 Q145 80 173 125 Q135 154 108 90Z" />
-          <path d="M70 100 Q35 114 48 156 Q94 143 70 100Z" />
-          <path d="M104 134 Q128 109 162 159 Q141 191 104 134Z" />
-          <path d="M150 149 Q191 110 216 150 Q196 186 150 149Z" />
-          <path d="M156 165 Q186 174 204 219 Q161 233 156 165Z" />
-          <path d="M18 12 Q33 -25 76 -7 Q67 36 18 12Z" />
-          <path d="M108 20 Q131 -13 166 12 Q153 48 108 20Z" />
-        </g>
-        <g fill="none" stroke="#a9ba77" strokeWidth="1.6" opacity=".48">
-          <path d="M13 30L62 48 M65 44L115 27 M100 66L152 66 M114 92L163 126 M71 108L53 148 M154 151L200 153" />
-        </g>
-      </g>
-    </svg>
-  );
-}
-
 function DistantBirds() {
   return (
     <svg className="wr65-alive-birds" viewBox="0 0 190 45" focusable="false" aria-hidden="true">
@@ -107,14 +68,19 @@ export default function JungleAtmosphere({ variant = "hero" }) {
       applyOffsets(getJungleParallaxOffsets(position.x, position.y, stage.getBoundingClientRect()));
     };
     const move = (event) => {
-      if (!finePointer || !inView || motion?.matches) return;
+      if (!finePointer || event.pointerType === "touch" || !inView || document.hidden || motion?.matches) return;
       position = { x: event.clientX, y: event.clientY };
       if (!frame) frame = window.requestAnimationFrame(draw);
     };
     const onVisibility = () => {
       const paused = !inView || document.hidden;
       root.classList.toggle("is-paused", paused);
-      if (paused) reset();
+      if (paused) {
+        reset();
+        for (const animation of stage.getAnimations?.({ subtree: true }) ?? []) {
+          if (animation.id === "wr65-scene-pulse") animation.cancel();
+        }
+      }
     };
     const onMotionChange = () => { if (motion?.matches) reset(); };
     const observer = typeof IntersectionObserver === "function"
@@ -152,11 +118,13 @@ export default function JungleAtmosphere({ variant = "hero" }) {
       <span className="wr65-alive-mist wr65-alive-mist--right" />
       <span className="wr65-alive-sunbeam wr65-alive-sunbeam--left" />
       <span className="wr65-alive-sunbeam wr65-alive-sunbeam--right" />
-      <ForegroundCanopy side="left" />
-      <ForegroundCanopy side="right" />
+      {variant === "landing" && <>
+        <span className="wr65-waterlight wr65-waterlight--fall" />
+        <span className="wr65-waterlight wr65-waterlight--river" />
+      </>}
       <DistantBirds />
       {FIREFLIES.map((firefly, index) => (
-        <span key={"firefly-" + index} className="wr65-alive-firefly"
+        <span key={"firefly-" + index} className={`wr65-alive-firefly${index >= 3 ? " wr65-alive-firefly--extra" : ""}`}
           style={{ left: firefly.left, top: firefly.top,
             animationDelay: firefly.delay, animationDuration: firefly.duration }} />
       ))}

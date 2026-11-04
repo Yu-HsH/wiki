@@ -20,10 +20,10 @@
 .wr-result--group .wr-journal-seal { white-space: normal; word-break: keep-all; }
 .wr-result.is-journal-arrival .wr-rcard { animation: none; }
 @media (prefers-reduced-motion:no-preference) {
-  .wr-home .is-home-sequence .wr-landscape { animation: wr-scene-map 300ms ease-out; }
+  .wr-home .is-home-sequence:not(.wr65-jungle-hero) .wr-landscape { animation: wr-scene-map 300ms ease-out; }
   .wr-home .is-home-sequence .wr-home-sign { animation: wr-scene-sign 320ms ease-out 100ms backwards; }
   .wr-home .is-home-sequence .wr-expedition-trail { animation: wr-scene-trail 380ms ease-out 180ms backwards; }
-  .wr-home .is-home-sequence .wr-hero-entry { animation: wr-scene-note 320ms ease-out 400ms backwards; }
+  .wr-home .is-home-sequence:not(.wr65-jungle-hero) .wr-hero-entry { animation: wr-scene-note 320ms ease-out 400ms backwards; }
   .is-start-sequence .wr-start-course, .is-duel-sequence .vs-players, .is-group-sequence .wr-start-roster li { animation: wr-scene-note 300ms ease-out backwards; }
   .is-duel-sequence .vs-course, .is-group-sequence .wr-start-course { animation: wr-scene-note 360ms ease-out 180ms backwards; }
   .is-start-sequence .wr-start-path { animation: wr-scene-path 300ms ease-out 120ms backwards; }

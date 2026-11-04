@@ -1,4 +1,4 @@
-// Local-only real Chromium UI check. External APIs/fonts are intercepted.
+// Local Chromium only. Auth, daily course, analytics and other API calls are fixtures.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -7,12 +7,15 @@ import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const port = 5276, base = "http://127.0.0.1:" + port, api = "http://127.0.0.1:54329";
-const out = path.join(root, ".temp/jungle-alive-browser");
+const baseline = process.argv.includes("--baseline");
+const source = baseline ? path.join(root, ".temp/jungle-baseline") : root;
+const port = baseline ? 5277 : 5276;
+const base = "http://127.0.0.1:" + port, api = "http://127.0.0.1:54329";
+const out = path.join(root, ".temp/jungle-alive-browser", baseline ? "before" : "after");
 fs.mkdirSync(out, { recursive: true });
-const result = { checks: [], pageErrors: [], screenshots: [], backendCalls: 0 };
-const check = (name, condition) => { assert.ok(condition, name); result.checks.push(name); console.log("PASS " + name); };
-const server = await createServer({ root, configFile: false, envFile: false,
+const result = { checks: [], pageErrors: [], screenshots: [], measurements: [], backendCalls: 0 };
+const check = (name, condition = true) => { assert.ok(condition, name); result.checks.push(name); console.log("PASS " + name); };
+const server = await createServer({ root: source, configFile: false, envFile: false,
   define: {
     "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(api),
     "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify("local-test-public-only"),
@@ -21,97 +24,273 @@ const server = await createServer({ root, configFile: false, envFile: false,
   server: { host: "127.0.0.1", port, strictPort: true },
 });
 let browser;
-async function pageFor({ width = 1440, height = 900, mobile = false, reduce = false, guest = false }) {
+const fixtureEmail = "jungle-qa@example.invalid";
+const fixtureUser = { id: "43809350-d51f-4fc5-9272-9870f826a8f1", email: fixtureEmail, aud: "authenticated",
+  role: "authenticated", user_metadata: { username: "jungle-qa", nickname: "정글 검수" } };
+
+async function pageFor({ width = 1440, height = 900, mobile = false, reduce = false, dpr = 1, guest = false } = {}) {
   const ctx = await browser.newContext({
-    viewport: { width, height }, isMobile: mobile, hasTouch: mobile,
+    viewport: { width, height }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: dpr,
     reducedMotion: reduce ? "reduce" : "no-preference", serviceWorkers: "block",
   });
   if (guest) await ctx.addInitScript(() => localStorage.setItem("wiki_game_local_user", JSON.stringify({
     id: "guest-jungle-ui", displayName: "정글 검수", isGuest: true, mode: "local",
   })));
+  const authCalls = [];
   await ctx.route("**/*", route => {
-    const u = new URL(route.request().url());
+    const req = route.request();
+    const u = new URL(req.url());
     if (u.origin === base) return route.continue();
-    if (u.origin === api) { result.backendCalls++; return route.fulfill({ status: 200, json: [],
-      headers: { "access-control-allow-origin": "*", "content-range": "0-0/0" } }); }
-    return route.fulfill({ status: 200, body: "", contentType: "text/plain" });
+    if (u.origin !== api) return route.fulfill({ status: 200, body: "", contentType: "text/plain" });
+    const headers = { "access-control-allow-origin": "*", "access-control-allow-methods": "*",
+      "access-control-allow-headers": req.headers()["access-control-request-headers"] || "*", "content-range": "0-0/0" };
+    if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers });
+    result.backendCalls++;
+    let json = [];
+    if (u.pathname === "/functions/v1/username-lookup") {
+      authCalls.push("lookup");
+      assert.equal(req.postDataJSON().username, "jungle-qa");
+      json = { syntheticEmail: fixtureEmail };
+    } else if (u.pathname === "/functions/v1/username-signup") {
+      authCalls.push("signup");
+      assert.equal(req.postDataJSON().nickname, "정글 검수");
+      json = { ok: true };
+    } else if (u.pathname === "/auth/v1/token") {
+      authCalls.push("token");
+      assert.equal(req.postDataJSON().email, fixtureEmail);
+      json = { access_token: "fixture-only", refresh_token: "fixture-refresh", expires_in: 3600,
+        token_type: "bearer", user: fixtureUser };
+    } else if (u.pathname === "/rest/v1/rpc/ensure_today_daily_challenge") {
+      json = [{ challenge_date: "2026-11-04", start_title: "대한민국", target_title: "서울특별시", hint: "로컬 검증용 코스" }];
+    }
+    return route.fulfill({ status: 200, json, headers });
   });
+  await ctx.routeWebSocket(url => new URL(url).host !== new URL(base).host, socket => socket.close());
   const page = await ctx.newPage();
-  page.setDefaultTimeout(15000);
+  page.setDefaultTimeout(10000);
   page.on("pageerror", e => result.pageErrors.push(e.message));
-  return { ctx, page };
+  return { ctx, page, authCalls };
 }
 async function screenshot(page, name) {
   await page.screenshot({ path: path.join(out, name + ".png"), fullPage: true, animations: "allow" });
   result.screenshots.push(name);
 }
+
+const artSelector = { landing: ".wr65-landing-picture", home: ".wr65-jungle-hero .wr-landscape" };
+async function openScene(page, scene) {
+  await page.goto(base + (scene === "home" ? "/lobby" : "/"), { waitUntil: "domcontentloaded" });
+  await page.locator(artSelector[scene]).evaluate(img => img.decode());
+  await page.locator(".wr65-atmosphere").waitFor({ state: "attached" });
+}
+async function measure(page, scene) {
+  return page.locator(artSelector[scene]).evaluate((img) => {
+    const box = img.getBoundingClientRect();
+    const style = getComputedStyle(img);
+    const overlay = document.querySelector(".wr65-atmosphere");
+    const countVisible = selector => getComputedStyle(overlay).display === "none" ? 0 :
+      [...overlay.querySelectorAll(selector)].filter(e => getComputedStyle(e).display !== "none").length;
+    const hot = (selector, x, y) => document.querySelector(selector)?.contains(
+      document.elementFromPoint(box.x + box.width * x, box.y + box.height * y)) ?? false;
+    return {
+      viewport: innerWidth, dpr: devicePixelRatio, reduce: matchMedia("(prefers-reduced-motion: reduce)").matches,
+      native: [img.naturalWidth, img.naturalHeight], rendered: [box.width, box.height],
+      devicePixelsPerSourcePixel: +(box.width * devicePixelRatio / img.naturalWidth).toFixed(3),
+      overflow: document.documentElement.scrollWidth > innerWidth + 1,
+      transform: style.transform, objectFit: style.objectFit,
+      canopies: overlay.querySelectorAll(".wr65-alive-canopy").length,
+      leaves: countVisible(".wr65-alive-leaf-track"), fireflies: countVisible(".wr65-alive-firefly"),
+      safe: img.classList.contains("wr65-landing-picture") ? {
+        login: hot(".wr65-landing-hit-login", .43, .615),
+        signup: hot(".wr65-landing-hit-signup", .58, .615),
+        lantern: hot(".wr65-hotspot--lantern", .075, .702),
+        compass: hot(".wr65-hotspot--compass", .219, .82),
+      } : {
+        play: hot(".wr65-hero-art-entry button", .5385, .672),
+        first: hot(".wr65-hotspot--marker-one", .357, .726),
+        second: hot(".wr65-hotspot--marker-two", .751, .606),
+        third: hot(".wr65-hotspot--marker-three", .933, .462),
+        firstFlag: hot(".wr65-hotspot--marker-one", .402, .673),
+        secondFlag: hot(".wr65-hotspot--marker-two", .801, .545),
+        thirdFlag: hot(".wr65-hotspot--marker-three", .978, .359),
+      },
+    };
+  });
+}
+
+async function expectPulse(page, selector, name, { reduced = false } = {}) {
+  const pulse = page.locator(selector);
+  await expect.poll(() => pulse.evaluate(e => e.getAnimations().some(a => a.id === "wr65-scene-pulse"))).toBe(true);
+  const frames = await pulse.evaluate(e => e.getAnimations().find(a => a.id === "wr65-scene-pulse")?.effect.getKeyframes() || []);
+  check(name, frames.length >= 2 && frames.some(f => "opacity" in f) && (!reduced || frames.every(f => !("transform" in f))));
+}
+
 try {
   await server.listen();
   browser = await chromium.launch({ headless: true });
-  const landing = await pageFor({});
-  await landing.page.goto(base + "/", { waitUntil: "domcontentloaded" });
-  await landing.page.locator(".wr65-landing-art .wr65-atmosphere").waitFor();
-  const state = await landing.page.evaluate(() => {
-    const root = document.querySelector(".wr65-landing-art .wr65-atmosphere");
-    const img = document.querySelector(".wr65-landing-picture");
-    const btn = document.querySelector(".wr65-landing-hit-login");
-    const r = btn.getBoundingClientRect();
-    return {
-      width: img.naturalWidth, height: img.naturalHeight,
-      leaves: root.querySelectorAll(".wr65-alive-leaf-track").length,
-      fireflies: root.querySelectorAll(".wr65-alive-firefly").length,
-      canopies: root.querySelectorAll(".wr65-alive-canopy").length,
-      safe: document.elementFromPoint(r.left + r.width/2, r.top + r.height/2) === btn,
-      overflow: document.documentElement.scrollWidth > innerWidth + 1,
-      imageTransform: getComputedStyle(img).transform,
-    };
-  });
-  check("landing native 1672x941 preserved", state.width === 1672 && state.height === 941);
-  check("two vector canopies, eight leaves and seven fireflies", state.canopies === 2 && state.leaves === 8 && state.fireflies === 7);
-  check("login hit target unobstructed and image unmoved", state.safe && state.imageTransform === "none");
-  check("desktop landing no horizontal overflow", !state.overflow);
-  const r = await landing.page.locator(".wr65-landing-art").boundingBox();
-  await landing.page.mouse.move(r.x + r.width * .88, r.y + r.height * .7);
-  await expect.poll(() => landing.page.locator(".wr65-atmosphere").evaluate(e =>
-    e.style.getPropertyValue("--wr65-near-x"))).not.toBe("0px");
-  check("mouse updates only decoration parallax", true);
-  await screenshot(landing.page, "landing-1440");
-  await landing.page.getByRole("button", { name: "Wiki Race 로그인" }).click();
-  await expect(landing.page.locator(".intro-modal-card")).toBeVisible();
-  check("real login modal still opens", true);
-  await landing.ctx.close();
+  for (const [width, height] of [[1440, 900], [1920, 1080], [320, 760], [390, 844]]) {
+    const mobile = width < 700;
+    for (const dpr of [1, 2]) for (const reduce of baseline ? [false] : [false, true]) {
+      for (const scene of ["landing", "home"]) {
+        const { page, ctx } = await pageFor({ width, height, mobile, reduce, dpr, guest: scene === "home" });
+        try {
+          await openScene(page, scene);
+          if (baseline && scene === "home") await page.waitForTimeout(760); // v1 entrance animation.
+          const state = await measure(page, scene);
+          const label = [scene, width, "dpr" + dpr, reduce ? "reduced" : "motion"].join("-");
+          result.measurements.push({ scene, ...state });
+          const dimensions = scene === "landing" ? "1672,941" : "1535,436";
+          check(label + ": original decoded, fixed geometry, no horizontal overflow",
+            String(state.native) === dimensions && !state.overflow && state.transform === "none" && state.objectFit === "contain");
+          if (!baseline) {
+            const targets = Object.entries(state.safe).filter(([name]) => !mobile || !["login", "signup"].includes(name));
+            check(label + ": no canopy, input aligned, particle budget",
+              state.canopies === 0 && targets.every(([, safe]) => safe) &&
+              state.leaves === (reduce ? 0 : mobile ? 4 : 8) && state.fireflies === (reduce ? 0 : mobile ? 3 : 7));
+            if (scene === "landing" && mobile) await expect(page.locator(".wr65-landing-start")).toBeVisible();
+            if (scene === "home" && mobile) await expect(page.locator(".wr65-hero-mobile-entry button")).toBeVisible();
+          }
+          if (!reduce) await screenshot(page, label);
+        } finally { await ctx.close(); }
+      }
+    }
+  }
 
-  const home = await pageFor({ guest: true });
-  await home.page.goto(base + "/lobby", { waitUntil: "domcontentloaded" });
-  await home.page.locator(".wr65-jungle-hero .wr65-atmosphere").waitFor();
-  await home.page.waitForTimeout(950); // Existing 720ms notebook entrance must finish.
-  const hero = await home.page.evaluate(() => {
-    const img = document.querySelector(".wr65-jungle-hero .wr-landscape");
-    const btn = document.querySelector(".wr65-jungle-hero .wr-play-launcher");
-    const r = btn.getBoundingClientRect();
-    return { width: img.naturalWidth, height: img.naturalHeight,
-      safe: btn.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)),
-      moved: getComputedStyle(img).transform !== "none" };
-  });
-  console.log("HOME hit diagnostics " + JSON.stringify(hero));
-  check("HOME native 1535x436 preserved", hero.width === 1535 && hero.height === 436);
-  check("HOME CTA remains clickable", hero.safe && !hero.moved);
-  await screenshot(home.page, "home-1440");
-  await home.ctx.close();
+  if (!baseline) {
+    const landing = await pageFor();
+    const { page } = landing;
+    await openScene(page, "landing");
+    const box = await page.locator(".wr65-landing-art").boundingBox();
+    await page.mouse.move(box.x + box.width * .88, box.y + box.height * .7);
+    const atmosphere = page.locator(".wr65-atmosphere");
+    await expect.poll(() => atmosphere.evaluate(e => e.style.getPropertyValue("--wr65-near-x"))).not.toBe("0px");
+    check("fine pointer moves parallax without transforming the artwork",
+      await page.locator(artSelector.landing).evaluate(e => getComputedStyle(e).transform === "none"));
+    const lantern = page.getByRole("button", { name: "랜턴 불빛 밝히기" });
+    await lantern.click();
+    await expectPulse(page, ".wr65-hotspot--lantern .wr65-hotspot-pulse", "lantern click brightens original lamp");
+    await screenshot(page, "landing-lantern-pressed");
+    const compass = page.getByRole("button", { name: "나침반 반짝임 보기" });
+    await compass.press("Enter");
+    await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "compass Enter flashes");
+    check("hotspots are visual only", new URL(page.url()).pathname === "/" && !landing.authCalls.length);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(atmosphere).toBeHidden();
+    await compass.press("Space");
+    await expectPulse(page, ".wr65-hotspot--compass .wr65-hotspot-pulse", "reduced motion keeps a stationary light response", { reduced: true });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    const signin = page.getByRole("button", { name: "Wiki Race 로그인" });
+    await signin.hover();
+    await expect.poll(() => signin.evaluate(e => Number(getComputedStyle(e, "::after").opacity))).toBeGreaterThan(.7);
+    await page.mouse.down();
+    check("login has press feedback before any navigation", await signin.evaluate(e => getComputedStyle(e, "::after").opacity === "1"));
+    await page.mouse.up();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.locator(".auth-tab.active")).toHaveText("로그인");
+    await page.keyboard.press("Escape");
+    await expect(signin).toBeFocused();
+    await signin.press("Enter");
+    await dialog.getByLabel("아이디").fill("jungle-qa");
+    await dialog.getByLabel("비밀번호").fill("fixture-password");
+    await dialog.locator("button[type=submit]").click();
+    await expect(page).toHaveURL(base + "/lobby");
+    check("real login form reaches HOME using fixture", String(landing.authCalls) === "lookup,token");
+    await landing.ctx.close();
 
-  const mobile = await pageFor({ width: 390, height: 844, mobile: true });
-  await mobile.page.goto(base + "/", { waitUntil: "domcontentloaded" });
-  await mobile.page.locator(".wr65-landing-mobile-controls").waitFor();
-  check("mobile login visible", await mobile.page.locator(".wr65-landing-start").isVisible());
-  check("mobile no horizontal overflow", await mobile.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1));
-  await screenshot(mobile.page, "landing-390");
-  await mobile.ctx.close();
+    const signup = await pageFor({ width: 390, height: 844, mobile: true, dpr: 2 });
+    await openScene(signup.page, "landing");
+    await signup.page.getByRole("button", { name: "랜턴 불빛 밝히기" }).tap();
+    await expectPulse(signup.page, ".wr65-hotspot--lantern .wr65-hotspot-pulse", "mobile lantern responds to tap");
+    await signup.page.locator(".wr65-landing-signup").tap();
+    const signDialog = signup.page.getByRole("dialog");
+    await expect(signDialog.locator(".auth-tab.active")).toHaveText("회원가입");
+    await signDialog.getByLabel("아이디").fill("jungle-qa");
+    await signDialog.getByLabel("닉네임").fill("정글 검수");
+    await signDialog.getByLabel("비밀번호").fill("fixture-password");
+    await signDialog.locator("button[type=submit]").tap();
+    await expect(signup.page).toHaveURL(base + "/lobby");
+    check("real signup form signs in using fixture", String(signup.authCalls) === "signup,lookup,token");
+    await signup.ctx.close();
 
-  const reduced = await pageFor({ reduce: true });
-  await reduced.page.goto(base + "/", { waitUntil: "domcontentloaded" });
-  await reduced.page.locator(".wr65-atmosphere").waitFor({ state: "attached" });
-  check("reduced motion hides animated overlay", await reduced.page.locator(".wr65-atmosphere").evaluate(e => getComputedStyle(e).display === "none"));
-  await reduced.ctx.close();
+    const home = await pageFor({ guest: true });
+    const hp = home.page;
+    await openScene(hp, "home");
+    const marker = hp.getByRole("button", { name: "두 번째 경로 마커와 깃발에 빛 비추기" });
+    await marker.focus();
+    check("keyboard focus is visible on a marker", await marker.evaluate(e => getComputedStyle(e).outlineStyle === "solid"));
+    await marker.press("Space");
+    await expectPulse(hp, ".wr65-hotspot--marker-two .wr65-hotspot-pulse", "HOME marker flashes on keyboard activation");
+    const route = hp.locator(".wr65-route-light path");
+    const offsets = await route.evaluate(e => e.getAnimations().find(a => a.id === "wr65-scene-pulse")
+      ?.effect.getKeyframes().map(f => parseFloat(f.strokeDashoffset)));
+    check("route light traverses the painted route in one pass", offsets?.[0] > 0 && offsets.at(-1) === -100);
+    await screenshot(hp, "home-route-pressed");
+    check("marker leaves route and auth unchanged", new URL(hp.url()).pathname === "/lobby" && !home.authCalls.length);
+    await hp.locator(".wr65-atmosphere").evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await expect(hp.locator(".wr65-atmosphere")).toHaveClass(/is-paused/);
+    check("offscreen effects pause", await hp.locator(".wr65-alive-leaf").first().evaluate(e => getComputedStyle(e).animationPlayState === "paused"));
+    await hp.evaluate(() => {
+      window.scrollTo(0, 0);
+      Object.defineProperty(document, "hidden", { configurable: true, value: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(hp.locator(".wr-home-side-art")).toHaveClass(/is-paused/);
+    await expect(hp.locator(".wr65-atmosphere")).toHaveClass(/is-paused/);
+    await hp.evaluate(() => {
+      delete document.hidden;
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(hp.locator(".wr65-atmosphere")).not.toHaveClass(/is-paused/);
+    check("visibility change pauses and restores ambient effects");
+
+    const daily = hp.getByRole("region", { name: "오늘의 도전" });
+    await expect(daily.getByRole("button")).toBeEnabled();
+    await daily.hover();
+    check("daily card responds to hover", await daily.evaluate(e => getComputedStyle(e).boxShadow.includes("inset")));
+    const tab = hp.locator(".ranking-tabs button").nth(1);
+    await tab.press("Enter");
+    await expect(tab).toHaveAttribute("aria-pressed", "true");
+    check("ranking selector still works via keyboard");
+    const updates = hp.getByRole("link", { name: /소식/ });
+    await expect(updates.locator(".wr-updates-dot")).toBeVisible();
+    await updates.click();
+    await expect(hp.getByRole("heading", { name: "탐험대 소식" })).toBeVisible();
+    await hp.locator(".wr-updates-item").nth(1).click();
+    await expect(hp.locator(".wr-updates-article h2")).toHaveText("Wiki Race 2.0 업데이트");
+    await hp.getByRole("link", { name: "HOME", exact: true }).click();
+    await expect(hp.getByRole("link", { name: "소식" }).locator(".wr-updates-dot")).toHaveCount(0);
+    check("updates list, details and read indicator work");
+    const play = hp.locator(".wr65-hero-art-entry button");
+    await play.hover();
+    await expect.poll(() => play.evaluate(e => Number(getComputedStyle(e, "::after").opacity))).toBeGreaterThan(.7);
+    await hp.mouse.down();
+    check("HOME CTA has press feedback before navigation", await play.evaluate(e => getComputedStyle(e, "::after").opacity === "1"));
+    await hp.mouse.up();
+    await expect(hp).toHaveURL(base + "/play");
+    check("HOME banner CTA routes to PLAY on desktop");
+    await home.ctx.close();
+
+    const touch = await pageFor({ width: 320, height: 760, mobile: true, dpr: 2, guest: true });
+    await openScene(touch.page, "home");
+    await touch.page.locator(".wr65-hotspot--marker-three").tap();
+    await expectPulse(touch.page, ".wr65-hotspot--marker-three .wr65-hotspot-pulse", "HOME marker responds on 320px touch viewport");
+    await touch.page.locator(".wr65-hero-art-entry button").tap();
+    await expect(touch.page).toHaveURL(base + "/play");
+    await touch.page.goBack();
+    await expect(touch.page.locator(".wr65-hero-mobile-entry button")).toBeVisible();
+    await touch.page.locator(".wr65-hero-mobile-entry button").tap();
+    await expect(touch.page).toHaveURL(base + "/play");
+    check("both the painted and legible mobile CTA route to PLAY");
+    await touch.ctx.close();
+
+    const fallback = await pageFor({ guest: true });
+    await fallback.page.route("**/hero-jungle-expedition.webp", route => route.fulfill({ status: 404, body: "" }));
+    await fallback.page.goto(base + "/lobby");
+    await expect(fallback.page.locator(".wr65-hero-fallback .wr65-hotspot")).toHaveCount(0);
+    await fallback.page.locator(".wr65-hero-fallback .wr-play-launcher").click();
+    await expect(fallback.page).toHaveURL(base + "/play");
+    check("missing HOME art still offers the original fallback action");
+    await fallback.ctx.close();
+  }
   check("no browser runtime exceptions", result.pageErrors.length === 0);
 } catch (error) { result.failure = String(error.stack || error); throw error; }
 finally {
