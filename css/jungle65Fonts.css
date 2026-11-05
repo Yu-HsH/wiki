@@ -18,7 +18,7 @@
   src: url("https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2") format("woff2");
 }
 
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) {
   --wr65-font-body: "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --wr65-font-display: "Cafe24 Ssurround", var(--wr65-font-body);
   --wr65-font-paper: "Maru Buri", "Nanum Myeongjo", "Batang", serif;
@@ -31,38 +31,38 @@
   font-family: var(--wr65-font-body);
   font-synthesis: none;
 }
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(h1, .wr-brand, .mp-mode-card strong) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(h1, .wr-brand, .mp-mode-card strong) {
   font-family: var(--wr65-font-display);
   font-weight: 400;
   line-height: 1.4;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.mp-card-title, .mp-public-board__header h2, .wr-candidate-title, .wr-duel-center-title) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.mp-card-title, .mp-public-board__header h2, .wr-candidate-title, .wr-duel-center-title) {
   font-family: var(--wr65-font-paper);
   font-weight: 700;
   line-height: 1.5;
 }
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.wr-kicker, .wr-section-label, .mp-mode-card, .wr-btn, .wr-link-btn, input, select, .help-modal) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.wr-kicker, .wr-section-label, .mp-mode-card, .wr-btn, .wr-link-btn, input, select, .help-modal) {
   font-family: var(--wr65-font-body);
 }
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.wr65-player-name, .wr-name-btn, .pcard-name, .wr-header-user > a > span:first-child) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.wr65-player-name, .wr-name-btn, .pcard-name, .wr-header-user > a > span:first-child) {
   font-family: var(--wr65-font-player);
   font-weight: 600;
   line-height: 1.5;
 }
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.mp-action-btn, .wr-btn--primary) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.mp-action-btn, .wr-btn--primary) {
   font-family: var(--wr65-font-display);
   font-weight: 400;
   line-height: 1.5;
 }
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.wr65-room-count, .wr-duel-level, .wr-party-count, .wr-party-ready, .wr-lobby-count, .wr-course-count, .wr-room-code-value, .pcard-level, .wr-rule-strip) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) :is(.wr65-room-count, .wr-duel-level, .wr-party-count, .wr-party-ready, .wr-lobby-count, .wr-course-count, .wr-room-code-value, .pcard-level, .wr-rule-strip) {
   font-family: var(--wr65-font-numeric);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 /* Help headings are journal subtitles, while descriptions stay in the body face. */
-:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) .help-modal :is(h2, h3, h4) {
+:is(.wr-page.wr-entry, .wr-page.wr-lobby, .wr-page.wr65-field, .wr-page.wr-home, .wr-page.wr-updates, .wr-page.wr-play, .wr-page.wr-single-start, .wr-page.wr-start-overlay, .intro-page.wr65-intro, .public-page.wr65-public, .wr-duel-end, .wr-audio) .help-modal :is(h2, h3, h4) {
   font-family: var(--wr65-font-paper);
   font-weight: 700;
   line-height: 1.5;
