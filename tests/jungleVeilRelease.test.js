@@ -40,7 +40,7 @@ test("Jungle Veil has a static fallback and keyboard-activated semantic button",
 test("Jungle65 font stylesheet is loaded and covers landing, HOME, PLAY and updates", () => {
   const styles = readFileSync(new URL("../appStyles.js", import.meta.url), "utf8");
   const fonts = readFileSync(new URL("../css/jungle65Fonts.css", import.meta.url), "utf8");
-  assert.match(styles, /import "\\.\\/css\\/jungle65Fonts\\.css"/);
+  assert.ok(styles.includes('import "./css/jungle65Fonts.css";'));
   assert.match(fonts, /\\.wr-page\\.wr-home, \\.wr-page\\.wr-updates, \\.wr-page\\.wr-play/);
   assert.match(fonts, /--wr65-font-display: "Cafe24 Ssurround"/);
   assert.match(fonts, /--wr65-font-paper: "Maru Buri"/);
