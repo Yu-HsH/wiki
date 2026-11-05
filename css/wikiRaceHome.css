@@ -347,3 +347,9 @@
   .wr-page.wr-home .ranking-rotate-list .wi-medal { width: 30px; height: 30px; font-size: 12px; }
   .wr-page.wr-home .wr-ranked-score strong { font-size: 13px; }
 }
+
+/* Keep important HOME panels visible immediately: the global 220ms
+   enter animation uses 'backwards' fill and creates an empty mobile screen
+   during screenshots, initial render and slow device paints. */
+.wr-page.wr-home .wr-explorer-featured,
+.wr-page.wr-home .recent-card { animation: none; }
