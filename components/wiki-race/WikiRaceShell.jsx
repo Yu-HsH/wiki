@@ -38,6 +38,8 @@ export function ExpeditionTrail() {
   </svg>;
 }
 
+const SHARED_HUB_VIEWS = new Set(["home", "play", "ranking", "achievements", "updates"]);
+
 export default function WikiRaceShell({ user, level, onLogout, onNavigate, view = "home", children }) {
   const sideArt = useRef(null);
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function WikiRaceShell({ user, level, onLogout, onNavigate, view 
     };
   }, [view]);
 
-  return <div className={`wr-page wr-${view}${["ranking", "profile", "achievements", "updates"].includes(view) ? " wr65-field" : ""}`}>
+  return <div className={`wr-page wr-${view}${["ranking", "profile", "achievements", "updates"].includes(view) ? " wr65-field" : ""}${SHARED_HUB_VIEWS.has(view) ? " wr-shared-hub" : ""}`}>
     <div className="wr-home-side-art" ref={sideArt} aria-hidden="true">
       <span className="wr-home-side-art-left" />
       <span className="wr-home-side-art-right" />

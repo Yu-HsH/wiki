@@ -290,6 +290,47 @@ async function verifyEntry(page, trigger, activate, reduce, label) {
     Number.isFinite(ms) && (reduce ? ms < 100 : ms >= 400 && ms <= 700));
 }
 
+async function verifySharedHub(page, route, width) {
+  await page.setViewportSize({ width, height: width <= 390 ? 844 : 900 });
+  await page.goto(base + route, { waitUntil: "domcontentloaded" });
+  const hub = page.locator(".wr-page.wr-shared-hub");
+  await expect(hub).toBeVisible();
+  const metrics = await hub.evaluate(root => {
+    const shell = root.querySelector(".wr-shell");
+    const art = root.querySelector(".wr-home-side-art");
+    const left = art.querySelector(".wr-home-side-art-left");
+    const right = art.querySelector(".wr-home-side-art-right");
+    const rect = shell.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect();
+    return {
+      shellWidth: rect.width,
+      centered: Math.abs(rect.left - (rootRect.left + (rootRect.width - rect.width) / 2)) < 2,
+      backdrop: getComputedStyle(root).backgroundColor,
+      artVisible: getComputedStyle(art).display !== "none",
+      artLeft: getComputedStyle(left).backgroundImage,
+      artRight: getComputedStyle(right).backgroundImage,
+      guttersFit: Math.abs(left.getBoundingClientRect().width - (rootRect.width - rect.width) / 2) < 3,
+      noOverflow: document.documentElement.scrollWidth <= innerWidth + 1,
+      headerWood: getComputedStyle(root.querySelector(".wr-header")).backgroundImage.includes("repeating-linear-gradient"),
+    };
+  });
+  const desktop = width >= 1280;
+  result.measurements.push({ label: "shared-hub-" + route + "-" + width, ...metrics });
+  check("shared hub " + route + " " + width + "px uses HOME frame and image gutters",
+    metrics.centered && metrics.shellWidth <= Math.min(1120, width) + 2 &&
+    (desktop ? Math.abs(metrics.shellWidth - 1120) < 2 : Math.abs(metrics.shellWidth - (width - 24)) < 2) &&
+    metrics.backdrop === "rgb(233, 224, 201)" &&
+    metrics.headerWood && metrics.noOverflow &&
+    (desktop ? metrics.artVisible && metrics.guttersFit &&
+      metrics.artLeft.includes("wiki-home-left-decoration.webp") &&
+      metrics.artRight.includes("wiki-home-right-decoration.webp") : !metrics.artVisible));
+  if (width !== 320) {
+    const name = "shared-hub-" + route.replaceAll("/", "") + "-" + width;
+    await page.screenshot({ path: path.join(out, name + ".png"), fullPage: false, animations: "disabled" });
+    result.screenshots.push(name);
+  }
+}
+
 async function verifyHome(width, height, dpr, reduce) {
   const mobile = width < 700;
   const { page, ctx } = await pageFor({ width, height, mobile, reduce, dpr, guest: true });
@@ -422,6 +463,11 @@ try {
     await dialog.locator("button[type=submit]").click();
     await expect(page).toHaveURL(base + "/lobby");
     check("real login form reaches HOME using fixture", String(landing.authCalls) === "lookup,token");
+    for (const width of [1440, 390, 320]) {
+      for (const route of ["/lobby", "/play", "/ranking", "/achievements", "/updates"]) {
+        await verifySharedHub(page, route, width);
+      }
+    }
     await landing.ctx.close();
 
     const signup = await pageFor({ width: 390, height: 844, mobile: true, dpr: 2 });

@@ -1,0 +1,50 @@
+/* Shared expedition frame for HOME, PLAY, ranking, achievements and updates.
+   Match HOME's 1120px shell while allowing content height to grow naturally. */
+.wr-page.wr-shared-hub:not(.wr-result-layer--overlay) {
+  background: #e9e0c9;
+}
+.wr-page.wr-shared-hub:is(.wr-home, .wr-play, .wr-ranking, .wr-achievements, .wr-updates) > .wr-shell {
+  width: min(1120px, 100%);
+  background: #faf5e7;
+  border: 1px solid var(--wr-frame);
+  border-radius: var(--wr-radius-shell);
+  box-shadow: 0 10px 48px #40351f28;
+}
+.wr-page.wr-shared-hub .wr-header {
+  background: repeating-linear-gradient(0deg, #66452d 0 3px, #684930 4px 7px, #6b4a30 8px 10px);
+  border-bottom: 4px solid #ad8753;
+  color: #f9edc8;
+}
+.wr-page.wr-shared-hub .wr-header :is(.wr-brand, a, button) { color: #fff3d2 !important; }
+.wr-page.wr-shared-hub .wr-brand span,
+.wr-page.wr-shared-hub .wr-header nav a.active { color: #f8d38e !important; }
+.wr-page.wr-shared-hub .wr-header nav a.active { border-color: #e6bf69; }
+
+/* The two images already used on HOME are spans inside .wr-home-side-art,
+   not direct page children as the original base stylesheet assumed. */
+@media (min-width: 1280px) {
+  .wr-page.wr-shared-hub > .wr-home-side-art > span {
+    width: max(0px, calc((100% - 1120px) / 2));
+  }
+  .wr-page.wr-shared-hub .wr-home-side-art-left {
+    left: 0;
+    background-image: url('/assets/wiki-race/home/wiki-home-left-decoration.webp');
+    background-position: left top;
+    mask-image: linear-gradient(to right, #000 35%, #000b 68%, transparent 100%);
+  }
+  .wr-page.wr-shared-hub .wr-home-side-art-right {
+    right: 0;
+    background-image: url('/assets/wiki-race/home/wiki-home-right-decoration.webp');
+    background-position: right top;
+    mask-image: linear-gradient(to left, #000 35%, #000b 68%, transparent 100%);
+  }
+}
+/* Below 1280px the existing base rules hide the decorative image container. */
+
+/* At <=760px the Jungle65 field override used 10px side padding, while
+   HOME uses 12px. Keep the navigation sheet width identical on phones. */
+@media (max-width: 760px) {
+  .wr-page.wr-shared-hub:is(.wr-home, .wr-play, .wr-ranking, .wr-achievements, .wr-updates) {
+    padding: 12px 12px 28px;
+  }
+}

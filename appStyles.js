@@ -42,3 +42,6 @@ import "./css/wikiRaceAmbient.css";
 
 /* Keep the selected Jungle65 webfonts on HOME, landing, PLAY and updates. */
 import "./css/jungle65Fonts.css";
+
+/* Five navigation pages share one HOME-sized notebook and the same scenery. */
+import "./css/wikiRaceSharedHub.css";
