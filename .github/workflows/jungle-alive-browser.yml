@@ -18,6 +18,7 @@ on:
       - "css/jungle65.css"
       - "css/wikiRaceAmbient.css"
       - "css/wikiRaceHome.css"
+      - "css/wikiRaceSharedHub.css"
       - "css/wikiRaceSequences.css"
       - "utils/jungleParallax.js"
       - "scripts/jungle-alive-browser-smoke.mjs"
