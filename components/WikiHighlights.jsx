@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import HorizontalPager from './wiki-race/HorizontalPager.jsx';
 import { fetchWikiHighlights } from '../services/wikiHighlightsService.js';
 const source = 'https://ko.wikipedia.org/wiki/위키백과:대문';
 function Picture({ image, className = '' }) {
@@ -7,14 +8,25 @@ function Picture({ image, className = '' }) {
 }
 export default function WikiHighlights() {
   const [data, setData] = useState(null);
+  const [noteIndex, setNoteIndex] = useState(0);
+  const noteNames = ["알찬 글", "알고 계십니까?", "오늘의 역사", "오늘의 그림"];
   useEffect(() => { let active = true; fetchWikiHighlights().then(value => { if (active) setData(value); }).catch(() => { if (active) setData({}); }); return () => { active = false; }; }, []);
   const missing = data ? '현재 콘텐츠를 가져오지 못했습니다. 출처에서 확인해 주세요.' : '불러오는 중…';
   return <section className="wr-wiki-highlights" aria-labelledby="wr-discovery-title" aria-busy={!data}>
-    <header className="wr-discovery-heading"><h2 id="wr-discovery-title">위키백과 탐험 노트</h2><p>다음 탐험의 실마리를 찾아보세요.</p></header>
+    <header className="wr-discovery-heading">
+      <div><h2 id="wr-discovery-title">위키백과 탐험 노트</h2><p>다음 탐험의 실마리를 찾아보세요.</p></div>
+      <div className="wr-pager-controls" aria-label="탐험 노트 넘기기">
+        <button type="button" aria-label="이전 탐험 노트" disabled={noteIndex === 0} onClick={() => setNoteIndex(i => Math.max(0, i - 1))}>←</button>
+        <span aria-live="polite">{noteIndex + 1} / {noteNames.length} · {noteNames[noteIndex]}</span>
+        <button type="button" aria-label="다음 탐험 노트" disabled={noteIndex >= noteNames.length - 1} onClick={() => setNoteIndex(i => Math.min(noteNames.length - 1, i + 1))}>→</button>
+      </div>
+    </header>
+    <HorizontalPager index={noteIndex} onChange={setNoteIndex} label="위키백과 탐험 노트 슬라이드" className="wr-notes-pager">
     <section className="wr-note wr-note-featured"><h3>알찬 글</h3><Picture image={data?.featured?.image} /><h4>{data?.featured?.title?.replace(/^알찬 글:\s*/, '')}</h4><p>{data?.featured?.text || missing}</p><a className="wr-note-action" href={data?.featured?.url || source} target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></section>
     <section className="wr-note wr-note-facts"><h3>알고 계십니까?</h3><div className="wr-memo-stack">{(data?.facts?.items?.length ? data.facts.items : [data?.facts?.text || missing]).map((text,i) => <p className="wr-memo" key={i}>{text}</p>)}</div><a className="wr-note-action" href={data?.facts?.url || source} target="_blank" rel="noopener noreferrer">흥미로운 사실 더 보기 ↗</a></section>
     <section className="wr-note wr-note-history"><h3>오늘의 역사</h3><ol className="wr-history-line">{(data?.history?.items?.length ? data.history.items : [data?.history?.text || missing]).map((text,i) => <li key={i}>{text}</li>)}</ol><a className="wr-note-action" href={data?.history?.url || source} target="_blank" rel="noopener noreferrer">오늘의 역사 더 보기 ↗</a></section>
     <section className="wr-note wr-note-picture"><h3>오늘의 그림</h3><Picture image={data?.image} className="wr-photo" />{data?.image ? <p>{data.image.alt}</p> : <p>{data ? '그림 또는 라이선스를 확인하지 못했습니다.' : missing}</p>}<a className="wr-note-action" href={data?.image?.url || source} target="_blank" rel="noopener noreferrer">자세히 보기 ↗</a></section>
+    </HorizontalPager>
     <small>출처: 한국어 위키백과 · 텍스트 <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a> · 30분 캐시{data?.fetchedAt && ` · 조회 ${new Date(data.fetchedAt).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul' })}`}</small>
   </section>;
 }

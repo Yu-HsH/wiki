@@ -358,6 +358,8 @@ async function verifyHome(width, height, dpr, reduce) {
     const veil = page.locator(".wr-veil");
     const trigger = veil.getByRole("button");
     await expect(trigger).toHaveAccessibleName("Wiki Race 눌러서 탐험 시작");
+    await expect(veil.locator(".wr-veil-start-visual")).toContainText("게임 시작");
+    await expect(veil.locator(".wr-veil-copy")).toHaveCSS("pointer-events", "none");
     await expect(veil.getByRole("heading")).toHaveCSS("font-family", /Georgia/);
     const layers = veil.locator(".wr-veil-left, .wr-veil-right");
     if (reduce) await expect(layers.first()).toHaveCSS("transition-duration", "0s");
@@ -497,6 +499,17 @@ try {
     await tab.press("Enter");
     await expect(tab).toHaveAttribute("aria-pressed", "true");
     check("ranking selector still works via keyboard");
+    await expect(hp.locator(".wr-ranking-pager")).toHaveAttribute("data-active-index", "1");
+    await expect(hp.locator(".wr-ranking-pager .wr-horizontal-pager-track")).toHaveCSS("transition-duration", "0.36s");
+    await expect.poll(() => hp.locator(".wr-ranking-pager .wr-horizontal-pager-track")
+      .evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41)).toBeLessThan(-50);
+    check("ranking tabs slide horizontally instead of replacing cards");
+    const notes = hp.locator(".wr-notes-pager");
+    await expect(notes).toHaveAttribute("data-active-index", "0");
+    await hp.getByRole("button", { name: "다음 탐험 노트" }).click();
+    await expect(notes).toHaveAttribute("data-active-index", "1");
+    await expect(notes.locator(".wr-horizontal-pager-slide").first()).toHaveAttribute("inert", "");
+    check("Wikipedia notes move by arrow with hidden slides removed from focus");
     const updates = hp.getByRole("link", { name: /소식/ });
     await expect(updates.locator(".wr-updates-dot")).toBeVisible();
     await updates.click();

@@ -25,6 +25,8 @@ import ProfileCard from "../components/ProfileCard";
 import useProfileCards from "../hooks/useProfileCards.js";
 import { buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
 import WikiHighlights from "../components/WikiHighlights";
+import HorizontalPager from "../components/wiki-race/HorizontalPager.jsx";
+import "../css/wikiRaceHomeSlides.css";
 import { fetchExplorerXpRankings } from "../rankingService";
 import useOwnProfileCard from "../hooks/useOwnProfileCard.js";
 import { HOME_RANKING_TABS, nextHomeRankingTab, homeRankUsesTime } from "../utils/homeRanking.js";
@@ -84,6 +86,7 @@ export default function MainPage({ view = "home" }) {
 
   const rewardCards = useProfileCards(view === "home" ? [...Object.values(rankingTabs).flat().map(row => row.userId), ...(!user.isGuest ? [user.id] : [])] : []);
   const [rankingView, setRankingView] = useState("today");
+  const [recentIndex, setRecentIndex] = useState(0);
   const [rankingPaused, setRankingPaused] = useState(false);
   const manualRotationPause = useRef(0);
   // 헤더의 Lv. 표시. 게스트는 XP가 없으므로 항상 null이다 (15 §2).
@@ -114,7 +117,9 @@ export default function MainPage({ view = "home" }) {
     manualRotationPause.current = Date.now() + 30000;
     setRankingView(tab);
   };
-  const activeRanking = HOME_RANKING_TABS.find(tab => tab.key === rankingView) ?? HOME_RANKING_TABS[0];
+  const activeRankingIndex = Math.max(0, HOME_RANKING_TABS.findIndex(tab => tab.key === rankingView));
+  const recentRecords = stats.recentRecords.slice(0, 3);
+  const activeRecentIndex = Math.min(recentIndex, Math.max(0, recentRecords.length - 1));
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -491,58 +496,63 @@ export default function MainPage({ view = "home" }) {
           onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRankingPaused(false); }}>
           <div className="recent-head">
             <div>
-              <h2>{activeRanking.title} <small>TOP 3</small></h2>
-              <p className="wr-ranking-help">{activeRanking.help}</p>
+              <h2>탐험 랭킹 <small>TOP 3</small></h2>
               <div className="ranking-tabs" role="group" aria-label="홈 랭킹 종류">
                 {HOME_RANKING_TABS.map(tab => (
                   <button key={tab.key} type="button"
                     aria-pressed={rankingView === tab.key}
                     className={rankingView === tab.key ? "active" : ""}
-                    onClick={() => selectHomeRanking(tab.key)}>
-                    {tab.label}
-                  </button>
+                    onClick={() => selectHomeRanking(tab.key)}>{tab.label}</button>
                 ))}
               </div>
             </div>
             {!user.isGuest && (
-              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
-                전체 보기 →
-              </button>
+              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>전체 보기 →</button>
             )}
           </div>
-          {user.isGuest ? (
-            <p className="dashboard-muted">로그인하면 전체 랭킹을 볼 수 있어요.</p>
-          ) : loading ? (
-            <p className="dashboard-muted" role="status">랭킹을 불러오는 중…</p>
-          ) : rankingErrors[rankingView] ? (
-            <p className="dashboard-muted" role="status">랭킹을 불러오지 못했습니다. <button type="button" className="text-btn" onClick={() => setReloadKey(value => value + 1)}>랭킹 다시 불러오기</button></p>
-          ) : rankingTabs[rankingView].length === 0 ? (
-            <p className="dashboard-muted">
-              {rankingView === "today" ? "오늘 완주 기록이 아직 없습니다."
-                : rankingView === "weekly" ? "이번 주 획득한 게임 XP가 아직 없습니다."
-                : rankingView === "challenge" ? "오늘의 도전 완주 기록이 아직 없습니다."
-                : "누적 XP 기록이 아직 없습니다."}
-            </p>
-          ) : (
-            <ol className="weekly-list ranking-rotate-list" aria-live="off">
-              {rankingTabs[rankingView].map((r, i) => (
-                <li key={r.id ?? `${rankingView}-${r.userId}-${i}`} className="weekly-item" data-rank={r.rank || i + 1}>
-                  <span className="wi-medal" aria-label={`기록 ${r.rank || i + 1}번`}>{String(r.rank || i + 1).padStart(2, "0")}</span>
-                  <div className="wr-rank-content">
-                    <ProfileCard size="sm" density="compact" card={mergeRewardSlots(buildProfileCard({ userId: r.userId, nickname: r.nickname || r.playerName, level: r.level, legacyImageUrl: r.profileImageUrl, source: "live" }), rewardCards[r.userId])} />
-                    {rankingView === "today" && <div className="wr-ranked-route" title={`${r.startTitle || "시작 미상"} → ${r.targetTitle || "목표 미상"}`}>
-                      <span>{r.startTitle || "시작 문서"}</span><span aria-hidden="true">→</span><strong>{r.targetTitle || "목표 문서"}</strong>
-                    </div>}
-                    {rankingView === "challenge" && <span className="wr-ranked-route">오늘의 동일 코스 · {r.clickCount ?? "-"}회 이동</span>}
-                  </div>
-                  <div className="wr-ranked-score">
-                    <strong>{homeRankUsesTime(rankingView) ? formatDuration(r.elapsedSeconds) : `${r.rankingXp?.toLocaleString("ko-KR") ?? 0} XP`}</strong>
-                    {rankingView === "all" && <small>Lv.{r.level ?? "-"}</small>}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          )}
+          <HorizontalPager index={activeRankingIndex}
+            label="탐험 랭킹 슬라이드" className="wr-ranking-pager"
+            onChange={index => selectHomeRanking(HOME_RANKING_TABS[index].key)}>
+            {HOME_RANKING_TABS.map(tab => (
+              <section className="wr-ranking-pane" key={tab.key} aria-label={tab.title}>
+                <h3>{tab.title}</h3>
+                <p className="wr-ranking-help">{tab.help}</p>
+                {user.isGuest ? (
+                  <p className="dashboard-muted">로그인하면 전체 랭킹을 볼 수 있어요.</p>
+                ) : loading ? (
+                  <p className="dashboard-muted" role="status">랭킹을 불러오는 중…</p>
+                ) : rankingErrors[tab.key] ? (
+                  <p className="dashboard-muted" role="status">랭킹을 불러오지 못했습니다. <button type="button" className="text-btn" onClick={() => setReloadKey(value => value + 1)}>랭킹 다시 불러오기</button></p>
+                ) : rankingTabs[tab.key].length === 0 ? (
+                  <p className="dashboard-muted">
+                    {tab.key === "today" ? "오늘 완주 기록이 아직 없습니다."
+                      : tab.key === "weekly" ? "이번 주 획득한 게임 XP가 아직 없습니다."
+                      : tab.key === "challenge" ? "오늘의 도전 완주 기록이 아직 없습니다."
+                      : "누적 XP 기록이 아직 없습니다."}
+                  </p>
+                ) : (
+                  <ol className="weekly-list ranking-rotate-list" aria-live="off">
+                    {rankingTabs[tab.key].map((r, i) => (
+                      <li key={r.id ?? `${tab.key}-${r.userId}-${i}`} className="weekly-item" data-rank={r.rank || i + 1}>
+                        <span className="wi-medal" aria-label={`기록 ${r.rank || i + 1}번`}>{String(r.rank || i + 1).padStart(2, "0")}</span>
+                        <div className="wr-rank-content">
+                          <ProfileCard size="sm" density="compact" card={mergeRewardSlots(buildProfileCard({ userId: r.userId, nickname: r.nickname || r.playerName, level: r.level, legacyImageUrl: r.profileImageUrl, source: "live" }), rewardCards[r.userId])} />
+                          {tab.key === "today" && <div className="wr-ranked-route" title={`${r.startTitle || "시작 미상"} → ${r.targetTitle || "목표 미상"}`}>
+                            <span>{r.startTitle || "시작 문서"}</span><span aria-hidden="true">→</span><strong>{r.targetTitle || "목표 문서"}</strong>
+                          </div>}
+                          {tab.key === "challenge" && <span className="wr-ranked-route">오늘의 동일 코스 · {r.clickCount ?? "-"}회 이동</span>}
+                        </div>
+                        <div className="wr-ranked-score">
+                          <strong>{homeRankUsesTime(tab.key) ? formatDuration(r.elapsedSeconds) : `${r.rankingXp?.toLocaleString("ko-KR") ?? 0} XP`}</strong>
+                          {tab.key === "all" && <small>Lv.{r.level ?? "-"}</small>}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </section>
+            ))}
+          </HorizontalPager>
           <div className="wr-rank-rotation-note">10초마다 자동 전환 · 직접 선택하면 30초간 유지</div>
         </section>
 
@@ -551,11 +561,18 @@ export default function MainPage({ view = "home" }) {
         <section className="dashboard-card recent-card">
           <div className="recent-head">
             <h2>최근 탐험 일지</h2>
-            {!user.isGuest && (
-              <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>
-                전체 랭킹 →
-              </button>
-            )}
+            <div className="wr-diary-head-actions">
+              {!user.isGuest && recentRecords.length > 1 && (
+                <div className="wr-pager-controls" aria-label="최근 탐험 일지 넘기기">
+                  <button type="button" aria-label="이전 탐험 기록" disabled={activeRecentIndex === 0}
+                    onClick={() => setRecentIndex(value => Math.max(0, value - 1))}>←</button>
+                  <span aria-live="polite">{activeRecentIndex + 1} / {recentRecords.length}</span>
+                  <button type="button" aria-label="다음 탐험 기록" disabled={activeRecentIndex >= recentRecords.length - 1}
+                    onClick={() => setRecentIndex(value => Math.min(recentRecords.length - 1, value + 1))}>→</button>
+                </div>
+              )}
+              {!user.isGuest && <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>전체 랭킹 →</button>}
+            </div>
           </div>
           {error && <div role="alert"><p className="app-error">{error}</p><button type="button" className="app-btn app-btn-ghost" onClick={() => setReloadKey(value => value + 1)}>탐험 기록 다시 불러오기</button></div>}
           {!error && user.isGuest && (
@@ -567,22 +584,26 @@ export default function MainPage({ view = "home" }) {
           {!error && !loading && !user.isGuest && stats.recentRecords.length === 0 && (
             <p className="dashboard-muted">첫 탐험을 떠나 나만의 기록을 남겨보세요.</p>
           )}
-          {!user.isGuest && stats.recentRecords.length > 0 && (
-            <ul className="recent-list">
-              {stats.recentRecords.slice(0, 3).map((record, index) => (
-                <li key={`${record.createdAt}-${index}`} className="recent-item">
-                  <div className="wr-record-route">
-                    {record.startTitle && <><a href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(record.startTitle)}`} target="_blank" rel="noopener noreferrer"><small>시작 문서</small>{record.startTitle}</a><span aria-hidden="true">→</span></>}
-                    <a className="ri-title" href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(record.targetTitle)}`} target="_blank" rel="noopener noreferrer"><small>목표 문서</small>{record.targetTitle}</a>
-                    {record.pathTitles?.length > 0 && <details className="wr-record-path"><summary>기록된 경로 · {record.pathTitles.length}개 문서</summary><ol>{record.pathTitles.map((title, step) => <li key={step}><a href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(title)}`} target="_blank" rel="noopener noreferrer">{title}</a></li>)}</ol></details>}
-                  </div>
-                  <span className="ri-time">{formatDuration(record.elapsedSeconds)}</span>
-                  <span className="ri-clicks">{record.clickCount}회 클릭</span>
-                  <span className="ri-date">{formatDate(record.createdAt)}</span>
-                </li>
+          {!user.isGuest && recentRecords.length > 0 && (
+            <HorizontalPager index={activeRecentIndex} onChange={setRecentIndex}
+              label="최근 탐험 일지 슬라이드" className="wr-diary-pager">
+              {recentRecords.map((record, index) => (
+                <ul className="recent-list" key={`${record.createdAt}-${index}`}>
+                  <li className="recent-item">
+                    <div className="wr-record-route">
+                      {record.startTitle && <><a href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(record.startTitle)}`} target="_blank" rel="noopener noreferrer"><small>시작 문서</small>{record.startTitle}</a><span aria-hidden="true">→</span></>}
+                      <a className="ri-title" href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(record.targetTitle)}`} target="_blank" rel="noopener noreferrer"><small>목표 문서</small>{record.targetTitle}</a>
+                      {record.pathTitles?.length > 0 && <details className="wr-record-path"><summary>기록된 경로 · {record.pathTitles.length}개 문서</summary><ol>{record.pathTitles.map((title, step) => <li key={step}><a href={`https://ko.wikipedia.org/wiki/${encodeURIComponent(title)}`} target="_blank" rel="noopener noreferrer">{title}</a></li>)}</ol></details>}
+                    </div>
+                    <span className="ri-time">{formatDuration(record.elapsedSeconds)}</span>
+                    <span className="ri-clicks">{record.clickCount}회 클릭</span>
+                    <span className="ri-date">{formatDate(record.createdAt)}</span>
+                  </li>
+                </ul>
               ))}
-            </ul>
+            </HorizontalPager>
           )}
+
         </section>
 
         <section className="wr-base-board" aria-labelledby="wr-board-heading"><h2 id="wr-board-heading">누적 탐험 전적</h2>

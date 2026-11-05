@@ -36,9 +36,11 @@ export default function ExpeditionHero({ onPlay }) {
         <p className="wr-veil-sub" id={copyId}>숨겨진 길을 찾아, 지식의 정글을 돌파하라.</p>
         <p className="wr-veil-cue" id={cueId}>
           {launching ? "탐험을 시작합니다…" : <>
-            <span className="wr-veil-cue-idle">눌러서 탐험 시작</span>
-            <span className="wr-veil-cue-open">숲길로 들어가기</span>
-            <span className="wr-veil-arrow" aria-hidden="true">→</span>
+            <span className="wr-veil-start-visual" aria-hidden="true">게임 시작 <span className="wr-veil-arrow">→</span></span>
+            <span className="wr-visually-hidden">
+              <span className="wr-veil-cue-idle">눌러서 탐험 시작</span>
+              <span className="wr-veil-cue-open">숲길로 들어가기</span>
+            </span>
           </>}
         </p>
       </div>
