@@ -1,0 +1,53 @@
+name: Jungle Alive isolated browser QA
+
+on:
+  pull_request:
+    branches: [main, feat/jungle-alive-depth-v1-20261104, feat/jungle-alive-interactions-20261104, feat/jungle65-layer-integration-20261104]
+    paths:
+      - "components/wiki-race/JungleAtmosphere.jsx"
+      - "components/wiki-race/JungleHotspot.jsx"
+      - "components/wiki-race/JunglePropLayers.jsx"
+      - "components/wiki-race/junglePropAssets.js"
+      - "public/assets/wiki-race/jungle65/layers/**"
+      - "components/wiki-race/ExpeditionHero.jsx"
+      - "components/wiki-race/JungleVeilArt.jsx"
+      - "css/jungleVeil.css"
+      - "public/assets/wiki-race/jungle-veil/**"
+      - "components/wiki-race/WikiRaceShell.jsx"
+      - "pages/IntroPage.jsx"
+      - "css/jungle65.css"
+      - "css/wikiRaceAmbient.css"
+      - "css/wikiRaceHome.css"
+      - "css/wikiRaceSequences.css"
+      - "utils/jungleParallax.js"
+      - "scripts/jungle-alive-browser-smoke.mjs"
+      - ".github/workflows/jungle-alive-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  atmosphere:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Fixture browser smoke (no production APIs)
+        run: node scripts/jungle-alive-browser-smoke.mjs
+      - name: Upload screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jungle-alive-browser
+          path: .temp/jungle-alive-browser/
+          if-no-files-found: ignore
+          retention-days: 7

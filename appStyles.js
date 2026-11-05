@@ -36,3 +36,9 @@ import "./css/wikiRaceSequences.css";
 import "./css/wikiRaceCinematic.css";
 import "./css/wikiRaceDuelFeedback.css";
 import "./css/jungle65Expedition.css";
+
+import "./css/wikiRaceUpdates.css";
+import "./css/wikiRaceAmbient.css";
+
+/* Keep the selected Jungle65 webfonts on HOME, landing, PLAY and updates. */
+import "./css/jungle65Fonts.css";

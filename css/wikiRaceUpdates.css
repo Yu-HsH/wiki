@@ -1,0 +1,31 @@
+/* Updates journal — decorative only; existing gameplay routes untouched. */
+.wr-updates-link { display: inline-flex; position: relative; align-items: center; gap: 5px; }
+.wr-updates-dot { display: inline-block; width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: #e9ab48; box-shadow: 0 0 0 2px #4e3524; }
+.wr-page.wr-updates .wr-shell { width: min(1400px,100%); background: #f7efdc; }
+.wr-page.wr-updates .wr-header { background: repeating-linear-gradient(0deg,#66452d 0 3px,#684930 4px 7px,#6b4a30 8px 10px); border-bottom: 4px solid #ad8753; color: #f9edc8; }
+.wr-page.wr-updates .wr-header :is(a,button), .wr-page.wr-updates .wr-brand { color: #fff3d2 !important; }
+.wr-page.wr-updates .wr-brand span { color: #f8d38e; }
+.wr-page.wr-updates .wr-header nav a.active { color:#f8d38e; border-color:#e6bf69; }
+.wr-updates-page { min-height: 68vh; padding: clamp(18px,4vw,42px); color:#29392e; background:linear-gradient(155deg,#f9f1df,#eee2c7); }
+.wr-updates-heading { padding:22px 24px; margin-bottom:18px; background:#705037; color:#fff2d2; border:3px solid #aa8653; border-radius:10px; box-shadow:0 4px 0 #443525; }
+.wr-updates-heading .wr-kicker { color:#f4d58e; }
+.wr-updates-heading h1 { margin:0 0 9px; font:750 clamp(25px,3vw,35px)/1.35 var(--wr65-heading,serif); }
+.wr-updates-heading p:last-child { margin:0; font-size:14px; line-height:1.7; }
+.wr-updates-layout { display:grid; grid-template-columns:minmax(260px,.85fr) minmax(0,1.5fr); gap:16px; align-items:start; }
+.wr-updates-list { display:grid; gap:10px; min-width:0; }
+.wr-updates-item { display:flex; flex-direction:column; gap:8px; width:100%; min-height:110px; padding:17px 18px; text-align:left; background:#fff9ea; border:2px solid #c5ae84; border-radius:9px; color:#344235; cursor:pointer; box-shadow:0 3px 0 #d7c6a4; transition:border-color 180ms ease,transform 180ms ease,background 180ms ease; }
+.wr-updates-item:hover { transform:translateY(-2px); border-color:#846b44; }
+.wr-updates-item.is-selected { background:#f5e7c7; border-color:#8c682e; }
+.wr-updates-item-meta { display:flex; gap:10px; font-size:11px; color:#735c38; }
+.wr-updates-item strong { font-size:16px; line-height:1.5; overflow-wrap:anywhere; }
+.wr-updates-item > span:last-child { font-size:13px; line-height:1.7; }
+.wr-updates-article { min-height:255px; padding:clamp(18px,3vw,32px); background:#fffaf0; border:2px solid #ae9465; border-radius:10px; box-shadow:inset 0 0 0 5px #f7eed9; }
+.wr-updates-article-meta { display:flex; gap:12px; align-items:center; font-size:12px; color:#79603b; }
+.wr-updates-article-meta span { border:1px solid #bca16b; border-radius:4px; padding:3px 7px; background:#f4e9ce; }
+.wr-updates-article h2 { margin:14px 0; font:750 clamp(21px,2.5vw,28px)/1.45 var(--wr65-heading,serif); overflow-wrap:anywhere; }
+.wr-updates-article-summary { font-size:15px; font-weight:650; line-height:1.8; }
+.wr-updates-article ul { margin:18px 0 0; padding-left:21px; }
+.wr-updates-article li { margin-bottom:12px; font-size:14px; line-height:1.85; overflow-wrap:anywhere; }
+.wr-updates-item:focus-visible, .wr-page.wr-updates .wr-header :is(a,button):focus-visible { outline:3px solid #27618b; outline-offset:3px; }
+@media (max-width:760px) { .wr-updates-page { padding:16px; } .wr-updates-layout { grid-template-columns:minmax(0,1fr); } .wr-updates-item { min-height:0; } }
+@media (prefers-reduced-motion: reduce) { .wr-updates-item { transition:none; } .wr-updates-item:hover { transform:none; } }

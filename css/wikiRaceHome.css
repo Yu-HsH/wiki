@@ -1,6 +1,6 @@
 /* HOME owns its central layout regardless of the shared CSS loading order. */
 .wr-page.wr-home { background-color: #e9e0c9; }
-.wr-page.wr-home .wr-shell { width: min(1200px, 100%); background: #faf5e7; box-shadow: 0 10px 48px #40351f28; }
+.wr-page.wr-home .wr-shell { width: min(1120px, 100%); background: #faf5e7; box-shadow: 0 10px 48px #40351f28; }
 .wr-page.wr-home .wr-header-user, .wr-page.wr-home .wr-header-user a { min-width: 0; }
 .wr-page.wr-home .wr-header-user a > span { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wr-home #wr-content { display: block; }
@@ -119,7 +119,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    width: calc((100% - 1200px) / 2);
+    width: calc((100% - 1120px) / 2);
     background-repeat: no-repeat;
     background-size: auto 100%;
     filter: saturate(.86);
@@ -259,6 +259,24 @@
 }
 .wr-page.wr-home .weekly-card .ranking-tabs { display: flex; flex-wrap: wrap; }
 .wr-page.wr-home .weekly-card .ranking-tabs button { font-size: 12px; padding-inline: 11px; }
+
+/* Highlight the card around its own controls without shifting the layout. */
+.wr-page.wr-home :is(.daily-card, .weekly-card):focus-within {
+  box-shadow: inset 0 0 0 2px #bc9858;
+}
+@media (hover: hover) and (pointer: fine) {
+  .wr-page.wr-home :is(.daily-card, .weekly-card):hover { box-shadow: inset 0 0 0 2px #bc9858; }
+  .wr-page.wr-home :is(.wr-header nav a, .daily-btn, .ranking-tabs button):hover {
+    box-shadow: 0 0 0 2px #c49e605c;
+  }
+}
+.wr-page.wr-home :is(.wr-header nav a, .daily-btn, .ranking-tabs button, .text-btn):focus-visible {
+  outline: 2px solid #345886;
+  outline-offset: 3px;
+}
+.wr-page.wr-home :is(.wr-header nav a, .daily-btn, .ranking-tabs button, .text-btn, .wr65-hero-mobile-entry .wr-play-launcher):not(:disabled):active {
+  box-shadow: inset 0 0 0 2px #d5af68;
+}
 .wr-page.wr-home .ranking-rotate-list {
   display: grid;
   gap: 8px;
@@ -329,3 +347,9 @@
   .wr-page.wr-home .ranking-rotate-list .wi-medal { width: 30px; height: 30px; font-size: 12px; }
   .wr-page.wr-home .wr-ranked-score strong { font-size: 13px; }
 }
+
+/* Keep important HOME panels visible immediately: the global 220ms
+   enter animation uses 'backwards' fill and creates an empty mobile screen
+   during screenshots, initial render and slow device paints. */
+.wr-page.wr-home .wr-explorer-featured,
+.wr-page.wr-home .recent-card { animation: none; }

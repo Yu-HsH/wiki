@@ -25,6 +25,7 @@ import IntroPage from "./pages/IntroPage";
 import GroupRoomPage from "./pages/GroupRoomPage";
 import GroupGamePage from "./pages/GroupGamePage";
 import PublicContentPage from "./pages/PublicContentPage";
+import UpdatesPage from "./pages/UpdatesPage";
 import {
   clearGuestSingleGameProgress,
   getSingleGameAccess,
@@ -104,6 +105,14 @@ function LobbyRoute({ view = "home" }) {
   }
 
   return <MainPage view={view} />;
+}
+
+function LobbyUpdatesRoute() {
+  const { user, loading } = useAuth();
+  const access = getLobbyAccess({ loading, user });
+  if (access === "loading") return <div className="app-center"><p className="app-muted">세션 확인 중...</p></div>;
+  if (access === "login") return <Navigate to={LOGIN_PATH} replace />;
+  return <UpdatesPage />;
 }
 
 function GameRoute({ isGuestRecovery = false }) {
@@ -200,6 +209,7 @@ function AppRoutes() {
       {/* 기존 로그인 페이지도 유지 가능 */}
       <Route path={LOGIN_PATH} element={<LoginRoute />} />
 
+      <Route path="/updates" element={<LobbyUpdatesRoute />} />
       <Route path="/about" element={<PublicContentPage />} />
       <Route path="/guide" element={<PublicContentPage />} />
       <Route path="/privacy" element={<PublicContentPage />} />
