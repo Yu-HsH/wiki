@@ -333,7 +333,7 @@ export default function MainPage({ view = "home" }) {
             onSingle={() => { setKeyword(""); setShowKeywordModal(true); }}
             onMultiplayer={(mode) => navigate(`/multiplayer?mode=${mode}`)}
           />
-        ) : <ExpeditionHero notebook onPlay={() => navigate("/play")} />}
+        ) : <ExpeditionHero onPlay={() => navigate("/play")} />}
 
         {/* ── 키워드 입력 및 검색 모달 ── */}
         {showKeywordModal && (

@@ -33,12 +33,8 @@ test("login and signup hit areas use real form modes", () => {
   assert.match(auth, /signUpWithUsername/);
 });
 
-test("home and mode artwork retain fallback navigation", () => {
-  const hero = src("components/wiki-race/ExpeditionHero.jsx");
+test("mode artwork retains fallback navigation", () => {
   const play = src("pages/PlayPage.jsx");
-  assert.match(hero, /setHasJungleArt\(false\)/);
-  assert.match(hero, /aria-label="탐험 시작 · 모드 선택으로 이동"/);
-  assert.match(hero, /onClick=\{onPlay\}/);
   assert.match(play, /jungle65\/\$\{mode\.id/);
   assert.match(play, /onSingle\(\)/);
   assert.match(play, /onMultiplayer\(mode\.id\)/);

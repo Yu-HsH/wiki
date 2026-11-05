@@ -11,7 +11,7 @@
   --wr65-body: "Noto Sans CJK KR", "Nanum Gothic", "Segoe UI", sans-serif;
 }
 
-/* Preserve the complete branded art. Real controls never cover its logo/copy. */
+/* Keep the illustration frame and replace its painted glyphs with live type. */
 .intro-page.wr65-intro {
   background: #152c23;
   color: #fdf9ee;
@@ -40,6 +40,7 @@
   aspect-ratio: 1672 / 941;
   flex: none;
   isolation: isolate;
+  container-type: inline-size;
 }
 .wr65-landing-picture {
   display: block;
@@ -51,24 +52,97 @@
 .wr65-landing-hit {
   position: absolute;
   z-index: 2;
-  top: 57.9%;
+  top: 61.7%;
+  translate: 0 -50%;
   height: 7.6%;
   min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1cqi;
+  isolation: isolate;
   border: 0;
   padding: 0;
-  color: transparent;
+  color: #fff9e9;
   background: transparent;
-  font-size: 0;
+  font: 900 clamp(14px, 1.5cqi, 26px)/1 var(--wr65-body);
+  letter-spacing: -.025em;
+  text-shadow: 0 .07em .04em #141f58;
   cursor: pointer;
   border-radius: 8px;
   transition: box-shadow 160ms ease;
 }
+.wr65-landing-hit::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-inline: 5%;
+  top: 50%;
+  translate: 0 -50%;
+  height: 3.05cqi;
+  border-radius: 3px;
+  background: linear-gradient(#3d51a7, #354796 68%, #34458e);
+  mask-image: radial-gradient(ellipse 65% 92%, #000 74%, transparent 100%);
+}
 .wr65-landing-hit-login { left: 36.3%; width: 13.7%; }
-.wr65-landing-hit-signup { left: 51.8%; width: 13.4%; }
-.wr65-landing-hit:is(:hover, :focus-visible) {
-  outline: 3px solid #fff4c6;
-  outline-offset: 2px;
-  box-shadow: 0 0 0 6px #2a4d61a6;
+.wr65-landing-hit-signup { left: 51.8%; width: 13.4%; color: #35210f; text-shadow: 0 .05em #fff7df; }
+.wr65-landing-hit-signup::before { background: linear-gradient(#fbf2db, #f5e8ca); }
+.wr65-art-paper {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  text-align: center;
+  color: #39220f;
+  isolation: isolate;
+  pointer-events: none;
+}
+.wr65-art-paper::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: var(--wr65-paper-surface, radial-gradient(ellipse at 50% 40%, #ffe9b9, #f0cf93));
+  mask-image: linear-gradient(to right, transparent, #000 6% 94%, transparent),
+    linear-gradient(to bottom, transparent, #000 12% 88%, transparent);
+  mask-composite: intersect;
+}
+.wr65-landing-wordmark {
+  font: 900 var(--wr65-wordmark-size)/.9 Georgia, "Times New Roman", serif;
+  letter-spacing: -.04em;
+  -webkit-text-stroke: .012em #35200d;
+  text-shadow: 0 .025em #fff1c8, 0 -.012em #513219;
+}
+.wr65-landing-wordmark {
+  --wr65-wordmark-size: 6.35cqi;
+  inset: 28.3% 32.1% 58.8% 34%;
+  white-space: nowrap;
+}
+.wr65-landing-wordmark::before {
+  mask-image: linear-gradient(to right, transparent, #000 3% 97%, transparent),
+    linear-gradient(to bottom, transparent, #000 7% 93%, transparent);
+}
+.wr65-landing-tagline {
+  inset: 24.75% 40% 71% 41%;
+  font: 850 1.42cqi/1.15 var(--wr65-body);
+  letter-spacing: -.025em;
+  white-space: nowrap;
+}
+.wr65-landing-description {
+  inset: 43.5% 35.4% 48.6% 36.1%;
+  font: 800 1.23cqi/1.48 var(--wr65-body);
+  letter-spacing: -.025em;
+  white-space: nowrap;
+}
+.wr65-landing-mobile-description {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #fff1d0;
+  font: 800 15px/1.55 var(--wr65-body);
+  text-align: center;
+  word-break: keep-all;
+  text-wrap: balance;
 }
 .wr65-landing-hotlinks { position: absolute; z-index: 2; left: 39%; top: 68.5%; width: 23.1%; height: 4.3%; display: flex; gap: 1.5%; }
 .wr65-landing-hotlinks a { flex: 1 1 0; color: transparent; font-size: 0; border-radius: 4px; }
@@ -78,7 +152,7 @@
   display: flex; align-items: center; justify-content: center; gap: 20px;
   min-height: 52px; padding: 12px 20px;
   border: 2px solid #c5a263; border-radius: 8px;
-  font: 750 17px/1.5 var(--wr65-body); cursor: pointer;
+  font: 850 17px/1.5 var(--wr65-body); cursor: pointer;
   transition: background 160ms ease, box-shadow 160ms ease;
 }
 .wr65-landing-start { color: #fff; background: #3b5893; box-shadow: 0 4px 0 #243c6d; }
@@ -138,7 +212,8 @@
 @media (max-width: 900px) {
   .wr65-landing-stage { justify-content: flex-start; padding-block: 24px; }
   .wr65-landing-art { width: 100%; }
-  .wr65-landing-hit, .wr65-landing-hotlinks { display: none; }
+  .wr65-landing-hotlinks, .wr65-landing-description span, .wr65-landing-button-label { display: none; }
+  .wr65-landing-hit { font-size: clamp(10px, 2.15cqi, 18px); }
   .wr65-landing-mobile-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: min(520px, calc(100% - 32px)); margin: 20px auto 0; }
 }
 @media (max-width: 720px) {
@@ -147,89 +222,13 @@
   .wr65-intro .auth-card { padding: 30px 20px 20px; }
 }
 
-/* The HOME banner already includes its title and CTA. Preserve the map. */
-.wr-page.wr-home .wr-hero.wr65-jungle-hero {
-  height: auto;
-  aspect-ratio: 1535 / 436;
-  min-height: 0;
-  background: #304e3d;
-  border-bottom: 5px solid #79613e;
-}
-.wr-page.wr-home .wr65-jungle-hero .wr-landscape {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-.wr-page.wr-home .wr65-jungle-hero .wr-home-sign { display: none; }
-.wr-page.wr-home .wr65-jungle-hero::after { display: none; }
-.wr-page.wr-home .wr65-jungle-hero .wr-hero-entry {
-  position: absolute;
-  z-index: 3;
-  top: 55.5%;
-  left: 43.3%;
-  width: 21.1%;
-  height: 23.4%;
-  margin: 0;
-  padding: 0;
-  bottom: auto;
-  background: transparent;
-}
-.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher {
-  width: 100%; height: 100%;
-  min-height: 44px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  color: transparent;
-  font-size: 0 !important;
-}
-.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher span { font-size: 0; }
-.wr-page.wr-home .wr65-jungle-hero .wr-play-launcher:is(:hover,:focus-visible) {
-  outline: 3px solid #f2dda1;
-  outline-offset: 0;
-  box-shadow: 0 0 0 6px #213f39a8;
-}
-@media (max-width: 700px) {
-  .wr-page.wr-home .wr-hero.wr65-jungle-hero { aspect-ratio: auto; }
-  .wr-page.wr-home .wr65-jungle-hero .wr-landscape { position: relative; height: auto; display: block; }
-  .wr-page.wr-home .wr65-jungle-hero .wr-hero-entry {
-    position: relative;
-    inset: auto;
-    width: auto; height: auto;
-    margin: 14px 16px 18px;
-  }
-  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher {
-    min-height: 52px;
-    padding: 10px 18px;
-    border: 2px solid #c5a263;
-    background: #3b5893;
-    color: #fff;
-    font-size: 17px !important;
-    box-shadow: 0 4px 0 #243c6d;
-  }
-  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher span { font-size: inherit; }
-  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher:is(:hover,:focus-visible) {
-    background: #2e4579;
-    outline: 3px solid #f2dda1;
-    outline-offset: 3px;
-  }
-}
-/* A missing banner uses the existing text-free landscape, with copy below. */
-.wr-page.wr-home .wr-hero.wr65-hero-fallback { height: auto; min-height: 0; background: #304e3d; }
-.wr-page.wr-home .wr65-hero-fallback::after { display: none; }
-.wr-page.wr-home .wr65-hero-fallback .wr-landscape { position: relative; inset: auto; display: block; width: 100%; height: auto; object-fit: contain; }
-.wr-page.wr-home .wr65-hero-fallback .wr-hero-entry { position: relative; inset: auto; padding: 20px; }
-.wr-page.wr-home .wr65-hero-fallback .wr-hero-intro { padding: 0; margin: 0 0 14px; background: transparent; color: #fff3d8; font-size: 20px; }
-.wr-page.wr-home .wr65-hero-fallback .wr-play-launcher { width: 100%; font-size: 17px !important; }
-
-/* Approved moderate wooden notebook treatment; single content semantics
-   and existing rankings remain untouched. */
-.wr-page.wr-home .wr-shell, .wr-page.wr-play .wr-shell { width: min(1400px, 100%); }
+/* HOME is a centered expedition notebook (not a full-width billboard).
+   Keep PLAY's existing roomier shell independently. Natural artwork ratios,
+   SVG viewBoxes and interactive hotspots remain unchanged. */
+.wr-page.wr-home .wr-shell { width: min(1120px, 100%); }
+.wr-page.wr-play .wr-shell { width: min(1400px, 100%); }
 @media (min-width: 1280px) {
-  .wr-page.wr-home .wr-home-side-art > span { width: max(0px, calc((100% - 1400px) / 2)); }
+  .wr-page.wr-home .wr-home-side-art > span { width: max(0px, calc((100% - 1120px) / 2)); }
 }
 .wr-page.wr-home .wr-header,
 .wr-page.wr-play .wr-header {
@@ -380,7 +379,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .wr65-landing-actions button, .wr65-landing-hit, .wr65-intro .intro-modal-card,
-  .wr-page.wr-home .wr65-jungle-hero .wr-play-launcher, .wr-page.wr-play .wr-mode-action {
+  .wr-page.wr-play .wr-mode-action {
     transition: none;
     animation: none;
   }

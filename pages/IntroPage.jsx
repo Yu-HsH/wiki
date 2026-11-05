@@ -4,13 +4,17 @@ import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
 import LoginPage from "./LoginPage";
 import openingBg from "../Opening.png";
+import JungleAtmosphere from "../components/wiki-race/JungleAtmosphere.jsx";
+import JungleHotspot from "../components/wiki-race/JungleHotspot.jsx";
+import JunglePropLayers, { reactJungleProp } from "../components/wiki-race/JunglePropLayers.jsx";
 import "../css/jungle65.css";
 
 const JUNGLE_LANDING = "/assets/wiki-race/jungle65/landing-final.webp";
+const landingDescription = <>다양한 문서를 빠르게 탐험하고,<br />가장 먼저 목표에 도달하는 지식 탐험가가 되어보세요!</>;
 
 /**
- * The approved art includes its logo, copy and controls: keep it unobscured.
- * Desktop hotspots and separate small-screen buttons use the same real form.
+ * The artwork supplies the frame. Live text and controls share its coordinates.
+ * The artwork and small-screen buttons use the same real form.
  * Authentication stays in LoginPage; no mockup navigation or fake login.
  */
 export default function IntroPage() {
@@ -74,24 +78,36 @@ export default function IntroPage() {
             <img
               className="wr65-landing-picture"
               src={JUNGLE_LANDING}
-              width="1672" height="941"
-              alt="Wiki Race · 지식이 모이는, 더 빠른 여정. 정글의 문서를 탐험하고 가장 먼저 목표에 도달해 보세요."
+              width="1672" height="941" loading="eager" decoding="async" fetchPriority="high"
+              alt=""
               onError={() => setJungleAssetReady(false)}
             />
-            <button className="wr65-landing-hit wr65-landing-hit-login" type="button"
-              aria-label="Wiki Race 로그인" onClick={() => openAuth("signin")}>로그인</button>
-            <button className="wr65-landing-hit wr65-landing-hit-signup" type="button"
-              aria-label="Wiki Race 회원가입" onClick={() => openAuth("signup")}>회원가입</button>
+            <JunglePropLayers scene="landing" />
+            <JungleAtmosphere variant="landing" />
+            <p className="wr65-landing-tagline wr65-art-paper">지식이 모이는, 더 빠른 여정</p>
+            <div className="wr65-landing-wordmark wr65-art-paper" aria-hidden="true"><span>Wiki Race</span></div>
+            <p className="wr65-landing-description wr65-art-paper"><span>{landingDescription}</span></p>
+            <button className="wr65-landing-hit wr65-landing-hit-login wr65-art-cta" type="button"
+              aria-label="Wiki Race 로그인" onClick={() => openAuth("signin")}>
+              <span className="wr65-landing-button-label">로그인</span><span aria-hidden="true">→</span>
+            </button>
+            <button className="wr65-landing-hit wr65-landing-hit-signup wr65-art-cta" type="button"
+              aria-label="Wiki Race 회원가입" onClick={() => openAuth("signup")}>
+              <span className="wr65-landing-button-label">회원가입</span><span aria-hidden="true">→</span>
+            </button>
             <nav className="wr65-landing-hotlinks" aria-label="서비스 정보">
               <Link to="/about">서비스 소개</Link>
               <Link to="/guide">플레이 가이드</Link>
               <Link to="/privacy">개인정보처리방침</Link>
             </nav>
+            <JungleHotspot kind="lantern" label="랜턴 불빛 밝히기" onReveal={event => reactJungleProp("landing", "lantern", event)} />
+            <JungleHotspot kind="compass" label="나침반 반짝임 보기" />
           </div>
         ) : <section className="wr65-landing-fallback">
           <img src={openingBg} alt="위키 문서 사이를 잇는 탐험 경로" />
         </section>}
         <div className={`wr65-landing-mobile-controls wr65-landing-actions${jungleAssetReady ? "" : " wr65-fallback-controls"}`}>
+          <p className="wr65-landing-mobile-description">{landingDescription}</p>
           <button type="button" className="wr65-landing-start" onClick={() => openAuth("signin")}>로그인 <span aria-hidden="true">→</span></button>
           <button type="button" className="wr65-landing-signup" onClick={() => openAuth("signup")}>회원가입 <span aria-hidden="true">→</span></button>
           <nav className="wr65-landing-links" aria-label="서비스 정보">
