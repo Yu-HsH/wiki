@@ -40,3 +40,11 @@
   }
 }
 /* Below 1280px the existing base rules hide the decorative image container. */
+
+/* At <=760px the Jungle65 field override used 10px side padding, while
+   HOME uses 12px. Keep the navigation sheet width identical on phones. */
+@media (max-width: 760px) {
+  .wr-page.wr-shared-hub:is(.wr-home, .wr-play, .wr-ranking, .wr-achievements, .wr-updates) {
+    padding: 12px 12px 28px;
+  }
+}

@@ -318,15 +318,17 @@ async function verifySharedHub(page, route, width) {
   result.measurements.push({ label: "shared-hub-" + route + "-" + width, ...metrics });
   check("shared hub " + route + " " + width + "px uses HOME frame and image gutters",
     metrics.centered && metrics.shellWidth <= Math.min(1120, width) + 2 &&
-    (desktop ? Math.abs(metrics.shellWidth - 1120) < 2 : metrics.shellWidth > width - 60) &&
+    (desktop ? Math.abs(metrics.shellWidth - 1120) < 2 : Math.abs(metrics.shellWidth - (width - 24)) < 2) &&
     metrics.backdrop === "rgb(233, 224, 201)" &&
     metrics.headerWood && metrics.noOverflow &&
     (desktop ? metrics.artVisible && metrics.guttersFit &&
       metrics.artLeft.includes("wiki-home-left-decoration.webp") &&
       metrics.artRight.includes("wiki-home-right-decoration.webp") : !metrics.artVisible));
-  const name = "shared-hub-" + route.replaceAll("/", "") + "-" + width;
-  await page.screenshot({ path: path.join(out, name + ".png"), fullPage: false, animations: "disabled" });
-  result.screenshots.push(name);
+  if (width !== 320) {
+    const name = "shared-hub-" + route.replaceAll("/", "") + "-" + width;
+    await page.screenshot({ path: path.join(out, name + ".png"), fullPage: false, animations: "disabled" });
+    result.screenshots.push(name);
+  }
 }
 
 async function verifyHome(width, height, dpr, reduce) {
@@ -461,7 +463,7 @@ try {
     await dialog.locator("button[type=submit]").click();
     await expect(page).toHaveURL(base + "/lobby");
     check("real login form reaches HOME using fixture", String(landing.authCalls) === "lookup,token");
-    for (const width of [1440, 390]) {
+    for (const width of [1440, 390, 320]) {
       for (const route of ["/lobby", "/play", "/ranking", "/achievements", "/updates"]) {
         await verifySharedHub(page, route, width);
       }
