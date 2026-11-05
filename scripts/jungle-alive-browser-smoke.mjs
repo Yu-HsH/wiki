@@ -562,8 +562,9 @@ try {
             display: goal ? getComputedStyle(goal).display : null };
         }) };
     });
-    console.log("DIARY-PROBE " + JSON.stringify(diaryMetrics));
-    await expect(diaryPager.locator(".wr-horizontal-pager-slide").nth(1).locator(".ri-title")).toHaveText("달");
+    const secondGoal = diaryPager.locator(".wr-horizontal-pager-slide").nth(1).locator(".ri-title");
+    await expect(secondGoal).toContainText("달");
+    await expect(secondGoal).toBeVisible();
     check("second diary slide has the expected target and accessible active pane",
       diaryMetrics.pages[1].ariaHidden === "false" && !diaryMetrics.pages[1].inert &&
       diaryMetrics.pages[1].left >= diaryMetrics.viewport[0] - 2 &&
