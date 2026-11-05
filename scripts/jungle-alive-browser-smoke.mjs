@@ -547,7 +547,27 @@ try {
     await expect(diaryPager).toHaveAttribute("data-active-index", "0");
     await dp.getByRole("button", { name: "다음 탐험 기록" }).click();
     await expect(diaryPager).toHaveAttribute("data-active-index", "1");
-    await expect(diaryPager.getByText("달", { exact: true })).toBeVisible();
+    await dp.waitForTimeout(450);
+    const diaryMetrics = await diaryPager.evaluate(root => {
+      const viewport = root.getBoundingClientRect();
+      return { viewport: [viewport.left, viewport.right, viewport.top, viewport.bottom],
+        trackTransform: getComputedStyle(root.querySelector(".wr-horizontal-pager-track")).transform,
+        pages: [...root.querySelectorAll(".wr-horizontal-pager-slide")].map((slide, index) => {
+          const rect = slide.getBoundingClientRect();
+          const goal = slide.querySelector(".ri-title");
+          const goalRect = goal?.getBoundingClientRect();
+          return { index, ariaHidden: slide.getAttribute("aria-hidden"), inert: slide.hasAttribute("inert"),
+            text: goal?.textContent, left: rect.left, width: rect.width,
+            goalRect: goalRect ? [goalRect.left, goalRect.right, goalRect.top, goalRect.bottom] : null,
+            display: goal ? getComputedStyle(goal).display : null };
+        }) };
+    });
+    console.log("DIARY-PROBE " + JSON.stringify(diaryMetrics));
+    await expect(diaryPager.locator(".wr-horizontal-pager-slide").nth(1).locator(".ri-title")).toHaveText("달");
+    check("second diary slide has the expected target and accessible active pane",
+      diaryMetrics.pages[1].ariaHidden === "false" && !diaryMetrics.pages[1].inert &&
+      diaryMetrics.pages[1].left >= diaryMetrics.viewport[0] - 2 &&
+      diaryMetrics.pages[1].left < diaryMetrics.viewport[1]);
     await dp.getByRole("button", { name: "이전 탐험 기록" }).click();
     await expect(diaryPager).toHaveAttribute("data-active-index", "0");
     check("authenticated diary slides through three real-shaped record fixtures and preserves links");
