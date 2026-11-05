@@ -29,7 +29,7 @@ const fixtureEmail = "jungle-qa@example.invalid";
 const fixtureUser = { id: "43809350-d51f-4fc5-9272-9870f826a8f1", email: fixtureEmail, aud: "authenticated",
   role: "authenticated", user_metadata: { username: "jungle-qa", nickname: "정글 검수" } };
 
-async function pageFor({ width = 1440, height = 900, mobile = false, reduce = false, dpr = 1, guest = false } = {}) {
+async function pageFor({ width = 1440, height = 900, mobile = false, reduce = false, dpr = 1, guest = false, diaryFixture = false } = {}) {
   const ctx = await browser.newContext({
     viewport: { width, height }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: dpr,
     reducedMotion: reduce ? "reduce" : "no-preference", serviceWorkers: "block",
@@ -61,6 +61,18 @@ async function pageFor({ width = 1440, height = 900, mobile = false, reduce = fa
       assert.equal(req.postDataJSON().email, fixtureEmail);
       json = { access_token: "fixture-only", refresh_token: "fixture-refresh", expires_in: 3600,
         token_type: "bearer", user: fixtureUser };
+    } else if (u.pathname === "/rest/v1/game_records" && diaryFixture) {
+      json = [
+        { id: 1, run_id: "fixture-run-1", user_id: fixtureUser.id, player_name: "정글 검수",
+          start_title: "대한민국", target_title: "서울특별시", elapsed_seconds: 42, click_count: 3,
+          path_titles: ["대한민국", "서울특별시"], created_at: "2026-11-05T02:00:00Z" },
+        { id: 2, run_id: "fixture-run-2", user_id: fixtureUser.id, player_name: "정글 검수",
+          start_title: "태양", target_title: "달", elapsed_seconds: 81, click_count: 7,
+          path_titles: ["태양", "천문학", "달"], created_at: "2026-11-05T01:00:00Z" },
+        { id: 3, run_id: "fixture-run-3", user_id: fixtureUser.id, player_name: "정글 검수",
+          start_title: "역사", target_title: "과학", elapsed_seconds: 133, click_count: 11,
+          path_titles: ["역사", "과학"], created_at: "2026-11-05T00:00:00Z" },
+      ];
     } else if (u.pathname === "/rest/v1/rpc/ensure_today_daily_challenge") {
       json = [{ challenge_date: getKstCourseDate(), start_title: "대한민국", target_title: "서울특별시", hint: "로컬 검증용 코스" }];
     }
@@ -520,6 +532,26 @@ try {
     await expect(hp.getByRole("link", { name: "소식" }).locator(".wr-updates-dot")).toHaveCount(0);
     check("updates list, details and read indicator work");
     await home.ctx.close();
+
+    const diary = await pageFor({ diaryFixture: true });
+    const dp = diary.page;
+    await openScene(dp, "landing");
+    await dp.getByRole("button", { name: "Wiki Race 로그인" }).click();
+    const loginBox = dp.getByRole("dialog");
+    await loginBox.getByLabel("아이디").fill("jungle-qa");
+    await loginBox.getByLabel("비밀번호").fill("fixture-password");
+    await loginBox.locator("button[type=submit]").click();
+    await expect(dp).toHaveURL(base + "/lobby");
+    const diaryPager = dp.locator(".wr-diary-pager");
+    await expect(diaryPager).toBeVisible();
+    await expect(diaryPager).toHaveAttribute("data-active-index", "0");
+    await dp.getByRole("button", { name: "다음 탐험 기록" }).click();
+    await expect(diaryPager).toHaveAttribute("data-active-index", "1");
+    await expect(diaryPager.getByText("달", { exact: true })).toBeVisible();
+    await dp.getByRole("button", { name: "이전 탐험 기록" }).click();
+    await expect(diaryPager).toHaveAttribute("data-active-index", "0");
+    check("authenticated diary slides through three real-shaped record fixtures and preserves links");
+    await diary.ctx.close();
 
     for (const [key, reduce] of [["Enter", false], ["Space", false], ["Space", true]]) {
       const keyboard = await pageFor({ guest: true, reduce });
