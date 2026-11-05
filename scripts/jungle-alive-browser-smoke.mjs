@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
+import { getKstCourseDate } from "../utils/dailyCourse.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const baseline = process.argv.includes("--baseline");
@@ -61,7 +62,7 @@ async function pageFor({ width = 1440, height = 900, mobile = false, reduce = fa
       json = { access_token: "fixture-only", refresh_token: "fixture-refresh", expires_in: 3600,
         token_type: "bearer", user: fixtureUser };
     } else if (u.pathname === "/rest/v1/rpc/ensure_today_daily_challenge") {
-      json = [{ challenge_date: "2026-11-04", start_title: "대한민국", target_title: "서울특별시", hint: "로컬 검증용 코스" }];
+      json = [{ challenge_date: getKstCourseDate(), start_title: "대한민국", target_title: "서울특별시", hint: "로컬 검증용 코스" }];
     }
     return route.fulfill({ status: 200, json, headers });
   });
@@ -442,7 +443,7 @@ try {
     await expect(updates.locator(".wr-updates-dot")).toBeVisible();
     await updates.click();
     await expect(hp.getByRole("heading", { name: "탐험대 소식" })).toBeVisible();
-    await hp.locator(".wr-updates-item").nth(1).click();
+    await hp.getByRole("button", { name: /Wiki Race 2\.0 업데이트/ }).click();
     await expect(hp.locator(".wr-updates-article h2")).toHaveText("Wiki Race 2.0 업데이트");
     await hp.getByRole("link", { name: "HOME", exact: true }).click();
     await expect(hp.getByRole("link", { name: "소식" }).locator(".wr-updates-dot")).toHaveCount(0);
@@ -468,6 +469,7 @@ try {
     await fallback.page.route("**/jungle-veil/*.svg", route => route.fulfill({ status: 404, body: "" }));
     await openVeil(fallback.page);
     await expect(fallback.page.locator(".wr-veil-cue")).toBeVisible();
+    await expect(fallback.page.locator(".wr-veil-fallback")).toBeVisible();
     await fallback.page.locator(".wr-veil-trigger").click();
     await expect(fallback.page).toHaveURL(base + "/play");
     check("missing HOME artwork leaves the text and full navigation target");
