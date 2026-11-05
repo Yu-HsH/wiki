@@ -317,7 +317,7 @@ async function verifyHome(width, height, dpr, reduce) {
     const veil = page.locator(".wr-veil");
     const trigger = veil.getByRole("button");
     await expect(trigger).toHaveAccessibleName("Wiki Race 눌러서 탐험 시작");
-    await expect(veil.getByRole("heading")).toHaveCSS("font-family", /Cafe24 Ssurround/);
+    await expect(veil.getByRole("heading")).toHaveCSS("font-family", /Georgia/);
     const layers = veil.locator(".wr-veil-left, .wr-veil-right");
     if (reduce) await expect(layers.first()).toHaveCSS("transition-duration", "0s");
     if (!reduce && dpr === 1) await screenshot(page, label + "-idle");
