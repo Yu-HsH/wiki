@@ -442,7 +442,7 @@ try {
     const updates = hp.getByRole("link", { name: /소식/ });
     await expect(updates.locator(".wr-updates-dot")).toBeVisible();
     await updates.click();
-    await expect(hp.getByRole("heading", { name: "탐험대 소식" })).toBeVisible();
+    await expect(hp.getByRole("heading", { name: "탐험대 소식", exact: true })).toBeVisible();
     await hp.getByRole("button", { name: /Wiki Race 2\.0 업데이트/ }).click();
     await expect(hp.locator(".wr-updates-article h2")).toHaveText("Wiki Race 2.0 업데이트");
     await hp.getByRole("link", { name: "HOME", exact: true }).click();
