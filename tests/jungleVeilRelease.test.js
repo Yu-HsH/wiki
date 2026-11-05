@@ -41,8 +41,10 @@ test("Jungle65 font stylesheet is loaded and covers landing, HOME, PLAY and upda
   const styles = readFileSync(new URL("../appStyles.js", import.meta.url), "utf8");
   const fonts = readFileSync(new URL("../css/jungle65Fonts.css", import.meta.url), "utf8");
   assert.ok(styles.includes('import "./css/jungle65Fonts.css";'));
-  assert.match(fonts, /\\.wr-page\\.wr-home, \\.wr-page\\.wr-updates, \\.wr-page\\.wr-play/);
-  assert.match(fonts, /--wr65-font-display: "Cafe24 Ssurround"/);
-  assert.match(fonts, /--wr65-font-paper: "Maru Buri"/);
-  assert.match(fonts, /--wr65-font-body: "Pretendard Variable"/);
+  for (const page of [".wr-page.wr-home", ".wr-page.wr-updates", ".wr-page.wr-play", ".intro-page.wr65-intro"]) {
+    assert.ok(fonts.includes(page), page);
+  }
+  assert.ok(fonts.includes('--wr65-font-display: "Cafe24 Ssurround"'));
+  assert.ok(fonts.includes('--wr65-font-paper: "Maru Buri"'));
+  assert.ok(fonts.includes('--wr65-font-body: "Pretendard Variable"'));
 });
