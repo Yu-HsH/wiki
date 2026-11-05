@@ -571,7 +571,7 @@ export default function MainPage({ view = "home" }) {
                     onClick={() => setRecentIndex(value => Math.min(recentRecords.length - 1, value + 1))}>→</button>
                 </div>
               )}
-              {!user.isGuest && <button type="button" className="text-btn" onClick={() => navigate("/ranking")}>전체 랭킹 →</button>}
+              {!user.isGuest && (<button type="button" className="text-btn" onClick={() => navigate("/ranking")}>전체 랭킹 →</button>)}
             </div>
           </div>
           {error && <div role="alert"><p className="app-error">{error}</p><button type="button" className="app-btn app-btn-ghost" onClick={() => setReloadKey(value => value + 1)}>탐험 기록 다시 불러오기</button></div>}
