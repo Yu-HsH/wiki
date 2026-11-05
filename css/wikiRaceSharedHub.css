@@ -3,7 +3,7 @@
 .wr-page.wr-shared-hub:not(.wr-result-layer--overlay) {
   background: #e9e0c9;
 }
-.wr-page.wr-shared-hub > .wr-shell {
+.wr-page.wr-shared-hub:is(.wr-home, .wr-play, .wr-ranking, .wr-achievements, .wr-updates) > .wr-shell {
   width: min(1120px, 100%);
   background: #faf5e7;
   border: 1px solid var(--wr-frame);
