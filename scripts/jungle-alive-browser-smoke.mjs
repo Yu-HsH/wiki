@@ -29,7 +29,7 @@ const fixtureEmail = "jungle-qa@example.invalid";
 const fixtureUser = { id: "43809350-d51f-4fc5-9272-9870f826a8f1", email: fixtureEmail, aud: "authenticated",
   role: "authenticated", user_metadata: { username: "jungle-qa", nickname: "정글 검수" } };
 
-async function pageFor({ width = 1440, height = 900, mobile = false, reduce = false, dpr = 1, guest = false } = {}) {
+async function pageFor({ width = 1440, height = 900, mobile = false, reduce = false, dpr = 1, guest = false, diaryFixture = false } = {}) {
   const ctx = await browser.newContext({
     viewport: { width, height }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: dpr,
     reducedMotion: reduce ? "reduce" : "no-preference", serviceWorkers: "block",
@@ -61,6 +61,18 @@ async function pageFor({ width = 1440, height = 900, mobile = false, reduce = fa
       assert.equal(req.postDataJSON().email, fixtureEmail);
       json = { access_token: "fixture-only", refresh_token: "fixture-refresh", expires_in: 3600,
         token_type: "bearer", user: fixtureUser };
+    } else if (u.pathname === "/rest/v1/game_records" && diaryFixture) {
+      json = [
+        { id: 1, run_id: "fixture-run-1", user_id: fixtureUser.id, player_name: "정글 검수",
+          start_title: "대한민국", target_title: "서울특별시", elapsed_seconds: 42, click_count: 3,
+          path_titles: ["대한민국", "서울특별시"], created_at: "2026-11-05T02:00:00Z" },
+        { id: 2, run_id: "fixture-run-2", user_id: fixtureUser.id, player_name: "정글 검수",
+          start_title: "태양", target_title: "달", elapsed_seconds: 81, click_count: 7,
+          path_titles: ["태양", "천문학", "달"], created_at: "2026-11-05T01:00:00Z" },
+        { id: 3, run_id: "fixture-run-3", user_id: fixtureUser.id, player_name: "정글 검수",
+          start_title: "역사", target_title: "과학", elapsed_seconds: 133, click_count: 11,
+          path_titles: ["역사", "과학"], created_at: "2026-11-05T00:00:00Z" },
+      ];
     } else if (u.pathname === "/rest/v1/rpc/ensure_today_daily_challenge") {
       json = [{ challenge_date: getKstCourseDate(), start_title: "대한민국", target_title: "서울특별시", hint: "로컬 검증용 코스" }];
     }
@@ -358,6 +370,8 @@ async function verifyHome(width, height, dpr, reduce) {
     const veil = page.locator(".wr-veil");
     const trigger = veil.getByRole("button");
     await expect(trigger).toHaveAccessibleName("Wiki Race 눌러서 탐험 시작");
+    await expect(veil.locator(".wr-veil-start-visual")).toContainText("게임 시작");
+    await expect(veil.locator(".wr-veil-copy")).toHaveCSS("pointer-events", "none");
     await expect(veil.getByRole("heading")).toHaveCSS("font-family", /Georgia/);
     const layers = veil.locator(".wr-veil-left, .wr-veil-right");
     if (reduce) await expect(layers.first()).toHaveCSS("transition-duration", "0s");
@@ -497,6 +511,17 @@ try {
     await tab.press("Enter");
     await expect(tab).toHaveAttribute("aria-pressed", "true");
     check("ranking selector still works via keyboard");
+    await expect(hp.locator(".wr-ranking-pager")).toHaveAttribute("data-active-index", "1");
+    await expect(hp.locator(".wr-ranking-pager .wr-horizontal-pager-track")).toHaveCSS("transition-duration", "0.36s");
+    await expect.poll(() => hp.locator(".wr-ranking-pager .wr-horizontal-pager-track")
+      .evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41)).toBeLessThan(-50);
+    check("ranking tabs slide horizontally instead of replacing cards");
+    const notes = hp.locator(".wr-notes-pager");
+    await expect(notes).toHaveAttribute("data-active-index", "0");
+    await hp.getByRole("button", { name: "다음 탐험 노트" }).click();
+    await expect(notes).toHaveAttribute("data-active-index", "1");
+    await expect(notes.locator(".wr-horizontal-pager-slide").first()).toHaveAttribute("inert", "");
+    check("Wikipedia notes move by arrow with hidden slides removed from focus");
     const updates = hp.getByRole("link", { name: /소식/ });
     await expect(updates.locator(".wr-updates-dot")).toBeVisible();
     await updates.click();
@@ -507,6 +532,47 @@ try {
     await expect(hp.getByRole("link", { name: "소식" }).locator(".wr-updates-dot")).toHaveCount(0);
     check("updates list, details and read indicator work");
     await home.ctx.close();
+
+    const diary = await pageFor({ diaryFixture: true });
+    const dp = diary.page;
+    await openScene(dp, "landing");
+    await dp.getByRole("button", { name: "Wiki Race 로그인" }).click();
+    const loginBox = dp.getByRole("dialog");
+    await loginBox.getByLabel("아이디").fill("jungle-qa");
+    await loginBox.getByLabel("비밀번호").fill("fixture-password");
+    await loginBox.locator("button[type=submit]").click();
+    await expect(dp).toHaveURL(base + "/lobby");
+    const diaryPager = dp.locator(".wr-diary-pager");
+    await expect(diaryPager).toBeVisible();
+    await expect(diaryPager).toHaveAttribute("data-active-index", "0");
+    await dp.getByRole("button", { name: "다음 탐험 기록" }).click();
+    await expect(diaryPager).toHaveAttribute("data-active-index", "1");
+    await dp.waitForTimeout(450);
+    const diaryMetrics = await diaryPager.evaluate(root => {
+      const viewport = root.getBoundingClientRect();
+      return { viewport: [viewport.left, viewport.right, viewport.top, viewport.bottom],
+        trackTransform: getComputedStyle(root.querySelector(".wr-horizontal-pager-track")).transform,
+        pages: [...root.querySelectorAll(".wr-horizontal-pager-slide")].map((slide, index) => {
+          const rect = slide.getBoundingClientRect();
+          const goal = slide.querySelector(".ri-title");
+          const goalRect = goal?.getBoundingClientRect();
+          return { index, ariaHidden: slide.getAttribute("aria-hidden"), inert: slide.hasAttribute("inert"),
+            text: goal?.textContent, left: rect.left, width: rect.width,
+            goalRect: goalRect ? [goalRect.left, goalRect.right, goalRect.top, goalRect.bottom] : null,
+            display: goal ? getComputedStyle(goal).display : null };
+        }) };
+    });
+    const secondGoal = diaryPager.locator(".wr-horizontal-pager-slide").nth(1).locator(".ri-title");
+    await expect(secondGoal).toContainText("달");
+    await expect(secondGoal).toBeVisible();
+    check("second diary slide has the expected target and accessible active pane",
+      diaryMetrics.pages[1].ariaHidden === "false" && !diaryMetrics.pages[1].inert &&
+      diaryMetrics.pages[1].left >= diaryMetrics.viewport[0] - 2 &&
+      diaryMetrics.pages[1].left < diaryMetrics.viewport[1]);
+    await dp.getByRole("button", { name: "이전 탐험 기록" }).click();
+    await expect(diaryPager).toHaveAttribute("data-active-index", "0");
+    check("authenticated diary slides through three real-shaped record fixtures and preserves links");
+    await diary.ctx.close();
 
     for (const [key, reduce] of [["Enter", false], ["Space", false], ["Space", true]]) {
       const keyboard = await pageFor({ guest: true, reduce });

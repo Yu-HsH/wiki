@@ -157,3 +157,38 @@
   filter: saturate(.78) brightness(.64);
   pointer-events: none;
 }
+
+/* A visible GAME START cue sits inside non-interactive copy. The existing
+   full-banner semantic button above it remains the only hit target. */
+.wr-veil-start-visual {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  min-height: 48px;
+  padding: 10px 22px;
+  border: 1px solid #a5c9fc;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #5082c5 0%, #294b87 100%);
+  color: #fff8e5;
+  box-shadow: inset 0 1px #d9e6ff65, 0 4px 0 #193052c7, 0 10px 22px #0b241e91;
+  font: 750 clamp(15px, 1.6vw, 18px)/1.4 var(--wr65-body, system-ui);
+  letter-spacing: .03em;
+  text-shadow: 0 1px 3px #101f35;
+  transition: filter 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+}
+.wr-veil[data-hovered="true"] .wr-veil-start-visual,
+.wr-veil:has(.wr-veil-trigger:focus-visible) .wr-veil-start-visual {
+  filter: brightness(1.13);
+  transform: translateY(-2px);
+}
+.wr-veil[data-state="launch"] .wr-veil-cue {
+  color: #ffe4a1;
+  font-size: 17px;
+}
+@media (max-width: 720px) {
+  .wr-veil-start-visual { min-height: 46px; padding: 10px 19px; gap: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-veil-start-visual { transition: none; transform: none !important; }
+}
