@@ -111,9 +111,6 @@
 }
 .wr65-hotspot--lantern { --x: 7.5%; --y: 70.2%; --w: 6%; --h: 16%; }
 .wr65-hotspot--compass { --x: 21.9%; --y: 82%; --w: 9%; --h: 14%; }
-.wr65-hotspot--marker-one { --x: 38%; --y: 74%; --w: 10%; --h: 25%; --glint-x: 30%; --glint-y: 56%; }
-.wr65-hotspot--marker-two { --x: 77.7%; --y: 62.5%; --w: 10%; --h: 26%; --glint-x: 23%; --glint-y: 57%; }
-.wr65-hotspot--marker-three { --x: auto; right: 0; --y: 43.5%; --w: 9.4%; --h: 32%; --glint-x: 31%; --glint-y: 61%; translate: 0 -50%; }
 .wr65-hotspot::before, .wr65-hotspot-pulse {
   content: "";
   position: absolute;
@@ -145,17 +142,6 @@
   background: radial-gradient(ellipse at 18% 24%, #fff 0, #ffe7a2b0 6%, transparent 16%),
     radial-gradient(ellipse at 78% 68%, #fff8cb 0, #ffd2819e 6%, transparent 14%),
     radial-gradient(ellipse, transparent 49%, #ffe6a48c 51%, transparent 63%);
-}
-.wr65-route-light {
-  position: absolute; inset: 0;
-  z-index: 1;
-  width: 100%; height: 100%;
-  pointer-events: none;
-}
-.wr65-route-light path {
-  fill: none; stroke: #fff2b6; stroke-width: 5;
-  stroke-linecap: round; stroke-dasharray: 9 100;
-  opacity: 0;
 }
 .wr65-art-cta { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .wr65-art-cta::after {
@@ -190,7 +176,7 @@
     ease-in-out var(--wr-prop-phase) infinite;
 }
 .wr65-prop-flame { animation: wr65-prop-flame calc(1800ms * var(--wr-prop-pace, 1)) ease-in-out infinite; }
-:is(.wr65-landing-art, .wr65-hero-art):has(> .wr65-atmosphere.is-paused) :is(.wr65-prop-idle, .wr65-prop-flame) {
+.wr65-landing-art:has(> .wr65-atmosphere.is-paused) :is(.wr65-prop-idle, .wr65-prop-flame) {
   animation-play-state: paused;
 }
 .wr65-landing-art:has(> .wr65-prop-layers) > .wr65-hotspot--lantern::before { animation: none; opacity: .08; }
