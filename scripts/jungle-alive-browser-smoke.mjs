@@ -296,6 +296,18 @@ async function verifyHome(width, height, dpr, reduce) {
   const label = ["home", width, "dpr" + dpr, reduce ? "reduced" : "motion"].join("-");
   try {
     await openVeil(page);
+    if (width === 390 && dpr === 1 && !reduce) {
+      const samples = await page.evaluate(() => [".daily-card", ".wr-explorer-featured",
+        ".wr-my-explorer", ".weekly-card", ".recent-card", ".wr-base-board"].map(selector => {
+        const el = document.querySelector(selector);
+        if (!el) return { selector, missing: true };
+        const box = el.getBoundingClientRect(), style = getComputedStyle(el);
+        return { selector, top: Math.round(box.top), height: Math.round(box.height),
+          display: style.display, visibility: style.visibility, opacity: style.opacity,
+          bg: style.backgroundColor, text: el.textContent?.trim().slice(0, 60) };
+      }));
+      console.log("MOBILE-HOME-LAYOUT " + JSON.stringify(samples));
+    }
     const layout = await measureVeil(page);
     result.measurements.push({ label, ...layout });
     check(label + ": centered and full banner hit area, four art layers and readable copy",
