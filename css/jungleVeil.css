@@ -71,7 +71,7 @@
 .wr-page.wr-home .wr-veil .wr-veil-copy h1 {
   margin: 0;
   color: #fff4d7;
-  font: bold clamp(45px, 5.4vw, 73px)/.98 Georgia, "Times New Roman", serif;
+  font: 750 clamp(45px, 5.4vw, 73px)/1.08 var(--wr65-heading);
   letter-spacing: -.05em;
   text-shadow: 0 4px #241c145e, 0 12px 27px #0a1f17aa;
 }
