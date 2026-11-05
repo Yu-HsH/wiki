@@ -220,13 +220,120 @@ async function verifyPropReply(page, id, { tap = false } = {}) {
   check(id + ": reply returns to the same idle animation", await idle.evaluate(el => el.getAnimations()[0] === el.qaIdle));
 }
 
+async function openVeil(page) {
+  await page.goto(base + "/lobby", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".wr-veil-trigger")).toBeVisible();
+}
+
+async function measureVeil(page) {
+  return page.locator(".wr-veil").evaluate(async veil => {
+    const frame = document.querySelector(".wr-page.wr-home").getBoundingClientRect();
+    const shell = document.querySelector(".wr-page.wr-home .wr-shell").getBoundingClientRect();
+    const gutters = [...document.querySelectorAll(".wr-home-side-art > span")];
+    const banner = veil.getBoundingClientRect();
+    const trigger = veil.querySelector(".wr-veil-trigger");
+    const points = [[.02, .05], [.98, .05], [.02, .95], [.98, .95], [.5, .5]];
+    const cue = veil.querySelector(".wr-veil-cue").getBoundingClientRect();
+    const copy = veil.querySelector(".wr-veil-sub").getBoundingClientRect();
+    const art = [...veil.querySelectorAll("image")];
+    await Promise.all(art.map(layer => {
+      const img = new Image();
+      img.src = layer.getAttribute("href");
+      return img.decode();
+    }));
+    return {
+      aligned: Math.abs(shell.left - (frame.left + (frame.width - shell.width) / 2)) < 2 &&
+        Math.abs(banner.left - shell.left) < 2 && Math.abs(banner.width - shell.width) <= 2,
+      shellWidth: shell.width,
+      sideArt: gutters.length === 2 && gutters.every(gutter =>
+        Math.abs(gutter.getBoundingClientRect().width - (frame.width - shell.width) / 2) < 2),
+      overflow: document.documentElement.scrollWidth > innerWidth + 1,
+      fullHit: points.every(([x, y]) => document.elementFromPoint(
+        banner.left + banner.width * x, banner.top + banner.height * y) === trigger),
+      copyClear: cue.top >= copy.bottom && cue.left >= banner.left && cue.right <= banner.right,
+      layers: art.length,
+      buttonCount: veil.querySelectorAll("button").length,
+      legacyOverlay: Boolean(veil.querySelector(".wr65-hotspot, .wr65-prop-layers, .wr65-route-light, .wr65-home-speech")),
+    };
+  });
+}
+
+async function verifyEntry(page, trigger, activate, reduce, label) {
+  await page.evaluate(() => {
+    const veil = document.querySelector(".wr-veil");
+    document.addEventListener("click", event => {
+      if (veil.contains(event.target)) window.veilClickAt = performance.now();
+    }, { capture: true, once: true });
+    const pushState = history.pushState;
+    history.pushState = function (state, unused, url) {
+      if (url && new URL(url, location.href).pathname === "/play") {
+        window.veilNavigationMs = performance.now() - window.veilClickAt;
+      }
+      return pushState.apply(this, arguments);
+    };
+  });
+  await activate();
+  if (!reduce) {
+    await expect(trigger).toHaveAttribute("aria-disabled", "true");
+    await expect(page.locator(".wr-veil-cue")).toHaveText("탐험을 시작합니다…");
+    await expect.poll(() => page.locator(".wr-veil-world").evaluate(el => {
+      const transform = getComputedStyle(el).transform;
+      return transform === "none" ? 1 : new DOMMatrix(transform).a;
+    }), { intervals: [30, 45, 60] }).toBeGreaterThan(1.04);
+  }
+  await expect(page).toHaveURL(base + "/play");
+  await expect(page.getByRole("heading", { name: "탐험 모드를 선택하세요" })).toBeVisible();
+  const ms = await page.evaluate(() => Math.round(window.veilNavigationMs));
+  result.measurements.push({ label, navigationMs: ms, reducedMotion: reduce });
+  check(label + ": existing mode selection reached within expected delay (" + ms + "ms)",
+    Number.isFinite(ms) && (reduce ? ms < 100 : ms >= 400 && ms <= 700));
+}
+
+async function verifyHome(width, height, dpr, reduce) {
+  const mobile = width < 700;
+  const { page, ctx } = await pageFor({ width, height, mobile, reduce, dpr, guest: true });
+  const label = ["home", width, "dpr" + dpr, reduce ? "reduced" : "motion"].join("-");
+  try {
+    await openVeil(page);
+    const layout = await measureVeil(page);
+    result.measurements.push({ label, ...layout });
+    check(label + ": centered and full banner hit area, four art layers and readable copy",
+      layout.aligned && layout.fullHit && layout.copyClear && !layout.overflow &&
+      layout.layers === 4 && layout.buttonCount === 1 && !layout.legacyOverlay &&
+      (width < 1280 || (Math.abs(layout.shellWidth - 1120) < 2 && layout.sideArt)));
+    const veil = page.locator(".wr-veil");
+    const trigger = veil.getByRole("button");
+    await expect(trigger).toHaveAccessibleName("Wiki Race 눌러서 탐험 시작");
+    await expect(veil.getByRole("heading")).toHaveCSS("font-family", /Georgia/);
+    const layers = veil.locator(".wr-veil-left, .wr-veil-right");
+    if (reduce) await expect(layers.first()).toHaveCSS("transition-duration", "0s");
+    if (!reduce && dpr === 1) await screenshot(page, label + "-idle");
+    if (!mobile) {
+      await trigger.hover();
+      await expect(trigger).toHaveAccessibleName("Wiki Race 숲길로 들어가기");
+      await expect.poll(() => layers.evaluateAll(elements => elements.map(el => {
+        const transform = getComputedStyle(el).transform;
+        return transform === "none" ? 0 : Math.round(new DOMMatrix(transform).e);
+      }))).toEqual([-141, 132]);
+      check(label + ": hover reveals the trail by opening both curtains");
+      if (!reduce && dpr === 1) await screenshot(page, label + "-hover");
+      await page.mouse.move(0, 0);
+      await expect(trigger).toHaveAccessibleName("Wiki Race 눌러서 탐험 시작");
+    }
+    const box = await trigger.boundingBox();
+    const x = box.x + box.width - 12, y = box.y + box.height - 12;
+    await verifyEntry(page, trigger, () => mobile ? page.touchscreen.tap(x, y) : page.mouse.click(x, y),
+      reduce, label + (mobile ? " first tap" : " corner click"));
+  } finally { await ctx.close(); }
+}
+
 try {
   await server.listen();
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_EXECUTABLE });
   for (const [width, height] of [[1440, 900], [1920, 1080], [320, 760], [390, 844]]) {
     const mobile = width < 700;
     for (const dpr of [1, 2]) for (const reduce of baseline ? [false] : [false, true]) {
-      for (const scene of ["landing", "home"]) {
+      for (const scene of baseline ? ["landing", "home"] : ["landing"]) {
         const { page, ctx } = await pageFor({ width, height, mobile, reduce, dpr, guest: scene === "home" });
         try {
           await openScene(page, scene);
@@ -243,12 +350,12 @@ try {
               state.canopies === 0 && targets.every(([, safe]) => safe) &&
               state.leaves === (reduce ? 0 : mobile ? 4 : 8) && state.fireflies === (reduce ? 0 : mobile ? 3 : 7));
             if (scene === "landing" && mobile) await expect(page.locator(".wr65-landing-start")).toBeVisible();
-            if (scene === "home" && mobile) await expect(page.locator(".wr65-hero-mobile-entry button")).toBeVisible();
             await verifyIdle(page, scene, label, reduce);
           }
           if (!reduce) await screenshot(page, label);
         } finally { await ctx.close(); }
       }
+      if (!baseline) await verifyHome(width, height, dpr, reduce);
     }
   }
 
@@ -283,6 +390,9 @@ try {
     check("reduced motion lantern stays still on activation",
       await motionLayer(page, "lantern").locator(".wr65-prop-reply").evaluate(el => getComputedStyle(el).transform === "none"));
     await changeMotion(page, "no-preference");
+    await expect(page.locator(".wr65-landing-wordmark")).toBeVisible();
+    await expect(page.locator(".wr65-landing-description")).toBeVisible();
+    check("landing renders the selected PR 19 HTML text");
     const signin = page.getByRole("button", { name: "Wiki Race 로그인" });
     await signin.hover();
     await expect.poll(() => signin.evaluate(e => Number(getComputedStyle(e, "::after").opacity))).toBeGreaterThan(.7);
@@ -319,39 +429,7 @@ try {
 
     const home = await pageFor({ guest: true });
     const hp = home.page;
-    await openScene(hp, "home");
-    const marker = hp.getByRole("button", { name: "두 번째 경로 마커와 깃발에 빛 비추기" });
-    await marker.focus();
-    check("keyboard focus is visible on a marker", await marker.evaluate(e => getComputedStyle(e).outlineStyle === "solid"));
-    await marker.press("Space");
-    await expectPulse(hp, ".wr65-hotspot--marker-two .wr65-hotspot-pulse", "HOME marker flashes on keyboard activation");
-    const route = hp.locator(".wr65-route-light path");
-    const offsets = await route.evaluate(e => e.getAnimations().find(a => a.id === "wr65-scene-pulse")
-      ?.effect.getKeyframes().map(f => parseFloat(f.strokeDashoffset)));
-    check("route light traverses the painted route in one pass", offsets?.[0] > 0 && offsets.at(-1) === -100);
-    for (const id of ["marker-one", "marker-two", "marker-three"]) await verifyPropReply(hp, id);
-    await marker.press("Space");
-    await screenshot(hp, "home-route-pressed");
-    check("marker leaves route and auth unchanged", new URL(hp.url()).pathname === "/lobby" && !home.authCalls.length);
-    await hp.locator(".wr65-atmosphere").evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await expect(hp.locator(".wr65-atmosphere")).toHaveClass(/is-paused/);
-    check("offscreen effects pause", await hp.locator(".wr65-alive-leaf").first().evaluate(e => getComputedStyle(e).animationPlayState === "paused"));
-    check("offscreen flags pause", await motionLayer(hp, "marker-one").evaluate(e => getComputedStyle(e).animationPlayState === "paused"));
-    await hp.evaluate(() => {
-      window.scrollTo(0, 0);
-      Object.defineProperty(document, "hidden", { configurable: true, value: true });
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-    await expect(hp.locator(".wr-home-side-art")).toHaveClass(/is-paused/);
-    await expect(hp.locator(".wr65-atmosphere")).toHaveClass(/is-paused/);
-    check("hidden flags pause", await motionLayer(hp, "marker-three").evaluate(e => getComputedStyle(e).animationPlayState === "paused"));
-    await hp.evaluate(() => {
-      delete document.hidden;
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-    await expect(hp.locator(".wr65-atmosphere")).not.toHaveClass(/is-paused/);
-    check("visibility change pauses and restores ambient effects");
-
+    await openVeil(hp);
     const daily = hp.getByRole("region", { name: "오늘의 도전" });
     await expect(daily.getByRole("button")).toBeEnabled();
     await daily.hover();
@@ -369,51 +447,42 @@ try {
     await hp.getByRole("link", { name: "HOME", exact: true }).click();
     await expect(hp.getByRole("link", { name: "소식" }).locator(".wr-updates-dot")).toHaveCount(0);
     check("updates list, details and read indicator work");
-    const play = hp.locator(".wr65-hero-art-entry button");
-    await play.hover();
-    await expect.poll(() => play.evaluate(e => Number(getComputedStyle(e, "::after").opacity))).toBeGreaterThan(.7);
-    await hp.mouse.down();
-    check("HOME CTA has press feedback before navigation", await play.evaluate(e => getComputedStyle(e, "::after").opacity === "1"));
-    await hp.mouse.up();
-    await expect(hp).toHaveURL(base + "/play");
-    check("HOME banner CTA routes to PLAY on desktop");
     await home.ctx.close();
 
-    const touch = await pageFor({ width: 320, height: 760, mobile: true, dpr: 2, guest: true });
-    await openScene(touch.page, "home");
-    await touch.page.locator(".wr65-hotspot--marker-three").tap();
-    await expectPulse(touch.page, ".wr65-hotspot--marker-three .wr65-hotspot-pulse", "HOME marker responds on 320px touch viewport");
-    await verifyPropReply(touch.page, "marker-three", { tap: true });
-    await touch.page.locator(".wr65-hero-art-entry button").tap();
-    await expect(touch.page).toHaveURL(base + "/play");
-    await touch.page.goBack();
-    await expect(touch.page.locator(".wr65-hero-mobile-entry button")).toBeVisible();
-    await touch.page.locator(".wr65-hero-mobile-entry button").tap();
-    await expect(touch.page).toHaveURL(base + "/play");
-    check("both the painted and legible mobile CTA route to PLAY");
-    await touch.ctx.close();
+    for (const [key, reduce] of [["Enter", false], ["Space", false], ["Space", true]]) {
+      const keyboard = await pageFor({ guest: true, reduce });
+      const { page } = keyboard;
+      await openVeil(page);
+      const trigger = page.locator(".wr-veil-trigger");
+      for (let index = 0; index < 20 && !await trigger.evaluate(el => el === document.activeElement); index++) {
+        await page.keyboard.press("Tab");
+      }
+      await expect(trigger).toBeFocused();
+      await expect(trigger).toHaveCSS("outline-style", "solid");
+      await expect(trigger).toHaveAccessibleName("Wiki Race 숲길로 들어가기");
+      await verifyEntry(page, trigger, () => page.keyboard.press(key), reduce, "keyboard " + key + " reduce=" + reduce);
+      await keyboard.ctx.close();
+    }
 
-    const fallback = await pageFor({ guest: true });
-    await fallback.page.route("**/hero-jungle-expedition.webp", route => route.fulfill({ status: 404, body: "" }));
-    await fallback.page.goto(base + "/lobby");
-    await expect(fallback.page.locator(".wr65-hero-fallback .wr65-hotspot")).toHaveCount(0);
-    await fallback.page.locator(".wr65-hero-fallback .wr-play-launcher").click();
+    const fallback = await pageFor({ guest: true, reduce: true });
+    await fallback.page.route("**/jungle-veil/*.svg", route => route.fulfill({ status: 404, body: "" }));
+    await openVeil(fallback.page);
+    await expect(fallback.page.locator(".wr-veil-cue")).toBeVisible();
+    await fallback.page.locator(".wr-veil-trigger").click();
     await expect(fallback.page).toHaveURL(base + "/play");
-    check("missing HOME art still offers the original fallback action");
+    check("missing HOME artwork leaves the text and full navigation target");
     await fallback.ctx.close();
 
-    for (const scene of ["landing", "home"]) {
-      const missing = await pageFor({ guest: scene === "home" });
-      const tile = scene === "landing" ? "lantern-flame.png" : "flag-three-sprite.png";
-      await missing.page.route("**/" + tile, route => route.fulfill({ status: 404, body: "" }));
-      const failure = missing.page.waitForResponse(response => response.url().endsWith(tile) && response.status() === 404);
-      await openScene(missing.page, scene);
-      await failure;
-      await expect(missing.page.locator(".wr65-prop-layers")).toHaveCount(0);
-      await expect(missing.page.locator(artSelector[scene])).toBeVisible();
-      check(scene + ": missing sprite leaves complete original artwork");
-      await missing.ctx.close();
-    }
+    const missing = await pageFor();
+    const tile = "lantern-flame.png";
+    await missing.page.route("**/" + tile, route => route.fulfill({ status: 404, body: "" }));
+    const failure = missing.page.waitForResponse(response => response.url().endsWith(tile) && response.status() === 404);
+    await openScene(missing.page, "landing");
+    await failure;
+    await expect(missing.page.locator(".wr65-prop-layers")).toHaveCount(0);
+    await expect(missing.page.locator(artSelector.landing)).toBeVisible();
+    check("landing missing sprite leaves complete original artwork");
+    await missing.ctx.close();
   }
   check("no browser runtime exceptions", result.pageErrors.length === 0);
 } catch (error) { result.failure = String(error.stack || error); throw error; }

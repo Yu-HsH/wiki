@@ -27,15 +27,12 @@ test("invalid or detached bounding boxes remain neutral", () => {
 test("approved art, input guards and reduced-motion contract stay intact", () => {
   const jsx = readFileSync(new URL("../components/wiki-race/JungleAtmosphere.jsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../css/wikiRaceAmbient.css", import.meta.url), "utf8");
-  const hero = readFileSync(new URL("../components/wiki-race/ExpeditionHero.jsx", import.meta.url), "utf8");
   const intro = readFileSync(new URL("../pages/IntroPage.jsx", import.meta.url), "utf8");
   assert.match(jsx, /aria-hidden="true"/);
   assert.match(css, /pointer-events: none/);
   assert.match(css, /prefers-reduced-motion: reduce/);
   assert.match(jsx, /IntersectionObserver/);
   assert.doesNotMatch(jsx + css, /ForegroundCanopy|wr65-alive-canopy/);
-  assert.match(hero, /hero-jungle-expedition\.webp/);
-  assert.match(hero, /wr-play-launcher/);
   assert.match(intro, /landing-final\.webp/);
   assert.match(intro, /wr65-landing-hit-login/);
 });
