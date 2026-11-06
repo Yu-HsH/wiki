@@ -26,7 +26,9 @@
 .wr-page.wr-home .daily-badge { margin: 0; color: var(--wr-ink); font-size: 21px; font-weight: 750; background: none; padding: 0; letter-spacing: 0; }
 .wr-page.wr-home .daily-date { font-size: 12px; }
 .wr-page.wr-home .daily-keyword { grid-column: 1; margin: 0; color: var(--wr-ink-2); font-size: 15px; }
-.wr-page.wr-home .daily-hint { grid-column: 1; margin: 0; font-size: 13px; }
+.wr-page.wr-home .daily-goal-guide { grid-column: 1; width: 100%; max-width: 790px; padding: 10px 14px; border-left: 3px solid #B18A39; border-radius: 0 8px 8px 0; background: #FFF9E9; }
+.wr-page.wr-home .daily-hint-label { display: block; margin-bottom: 4px; color: #7A612C; font-size: 12px; font-weight: 800; }
+.wr-page.wr-home .daily-hint { margin: 0; color: #4E5E50; font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
 .wr-page.wr-home .daily-course { grid-column: 1; padding: 0; margin: 0; gap: 14px; flex-wrap: nowrap; }
 .wr-page.wr-home .daily-endpoint { flex: 1; min-width: 0; padding: 8px 0; border: 0; background: transparent; }
 .wr-page.wr-home .daily-endpoint strong { font-size: 18px; overflow-wrap: anywhere; }

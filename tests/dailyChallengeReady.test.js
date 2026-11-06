@@ -40,7 +40,8 @@ test("loading and unverified courses have explicit status; only verified courses
   assert.match(dailyBlock, /!dailyCourseAvailable && <p className="daily-keyword" role="status"/);
   assert.match(dailyBlock, /오늘의 공식 코스를 확인하지 못했습니다/);
   assert.match(dailyBlock, /오늘의 탐험을 불러오는 중…/);
-  assert.match(dailyBlock, /\{dailyChallenge && dailyCourseAvailable && <p className="daily-hint">/);
+  assert.match(dailyBlock, /\{dailyChallenge && dailyCourseAvailable && <div className="daily-goal-guide"/);
+  assert.match(dailyBlock, /<p className="daily-hint">\{dailyChallenge\.hint\}<\/p>/);
   assert.match(dailyBlock, /\{dailyChallenge && dailyCourseAvailable && <div className="daily-course"/);
   assert.match(dailyBlock, /aria-busy=\{!dailyChallenge\}/);
 });

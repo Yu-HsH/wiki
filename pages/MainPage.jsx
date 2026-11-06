@@ -448,9 +448,12 @@ export default function MainPage({ view = "home" }) {
             <span className="daily-date">{new Date(`${dailyCourseDate}T00:00:00+09:00`).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" })}</span>
           </div>
           {!dailyCourseAvailable && <p className="daily-keyword" role="status">{dailyChallenge ? "오늘의 공식 코스를 확인하지 못했습니다." : "오늘의 탐험을 불러오는 중…"}</p>}
-          {dailyChallenge && dailyCourseAvailable && <p className="daily-hint">{dailyChallenge.hint}</p>}
           {dailyChallenge && dailyCourseAvailable && <div className="daily-course" aria-label="오늘의 탐험 경로">
             <span className="daily-endpoint"><small>시작 문서</small><strong>{dailyChallenge.startTitle || "공식 시작 문서 확인 필요"}</strong></span><span className="daily-direction" aria-hidden="true">→</span><span className="daily-endpoint"><small>목표 문서</small><strong>{dailyChallenge.keyword}</strong></span>
+          </div>}
+          {dailyChallenge && dailyCourseAvailable && <div className="daily-goal-guide" aria-label="목표 문서 설명">
+            <span className="daily-hint-label">목표 설명</span>
+            <p className="daily-hint">{dailyChallenge.hint}</p>
           </div>}
           <button
             type="button"
