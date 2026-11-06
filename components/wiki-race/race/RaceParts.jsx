@@ -133,8 +133,8 @@ export function RouteChain({ path = [], reachedTarget = false, max = 5 }) {
 }
 
 /** Neutral holding / waiting panel inside the race shell (no mock content). */
-export function RaceHold({ kicker, title, children, actions }) {
-  return <div className="wr-race-hold" role="status">
+export function RaceHold({ kicker, title, children, actions, className = "" }) {
+  return <div className={`wr-race-hold${className ? ` ${className}` : ""}`} role="status">
     {kicker && <span className="wr-hud-label">{kicker}</span>}
     <h1>{title}</h1>
     {children}
