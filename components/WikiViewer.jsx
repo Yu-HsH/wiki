@@ -560,15 +560,15 @@ export default function WikiViewer({
         </div>
       )}
 
-      {/* 목표 설명 — HUD에는 목표 제목만 있다. 설명은 접힌 상태로 본문 위에 둔다 */}
+      {/* 목표 설명 — HUD의 목표 제목과 연결되는 읽기 전용 설명. 게임 이동 권한과 무관하다. */}
       {hasTargetBrief && (
         <details className="wr-target-brief" open={targetBriefOpen} onToggle={(event) => setTargetBriefOpen(event.currentTarget.open)}>
           <summary>
-            <span className="wr-hud-label">목표 설명</span>
+            <span className="wr-hud-label">목표 문서 설명</span>
             <strong>{target.title || "목표 문서"}</strong>
           </summary>
           <div className="wr-target-brief-body">
-            {target.requestedKeyword && (
+            {target.requestedKeyword && normalizeTitle(target.requestedKeyword) !== normalizeTitle(target.title || "") && (
               <p className="target-meta">입력 키워드: <strong>{target.requestedKeyword}</strong></p>
             )}
             {hasCanonicalTargetTitle && (
@@ -583,6 +583,7 @@ export default function WikiViewer({
             )}
             {target.summaryStatus === TARGET_SUMMARY_STATUS.SUCCESS && (
               <>
+                <p className="target-summary-label">어떤 문서인가요?</p>
                 <p
                   ref={targetSummaryRef}
                   className={`target-summary ${
