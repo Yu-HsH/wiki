@@ -978,8 +978,9 @@ export default function GamePage({
             <HudBrand mode="싱글" />
           </RaceHud>
           {(hasPresetMode || isLoading || phase === PHASE.PREPARING) && !error ? (
-            <RaceHold kicker="SINGLE · 준비" title="위키 문서를 준비하는 중...">
-              <p>목표 문서와 시작 문서를 불러오고 있습니다.</p>
+            <RaceHold className="wr-single-prepare-status" kicker="SINGLE · 준비" title="탐험을 준비하고 있어요">
+              <span className="wr-single-prepare-spinner" aria-hidden="true" />
+              <p>목표와 시작 문서를 확인하고 있습니다. 준비가 끝나면 탐험을 시작할 수 있어요.</p>
             </RaceHold>
           ) : (
             <RaceHold kicker="SINGLE" title="게임을 설정할 수 없습니다.">
