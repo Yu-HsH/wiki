@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
+import { resolveDailyGoalHint } from "../data/dailyGoalDescriptions.js";
 
 const FALLBACK_DAILY_POOL = [
   {
@@ -82,7 +83,7 @@ export async function fetchTodayDailyChallenge() {
 
     return {
       keyword: challenge.target_title,
-      hint: challenge.hint || "오늘의 도전이 준비됐습니다.",
+      hint: resolveDailyGoalHint(challenge.target_title, challenge.hint),
       startTitle: challenge.start_title || null,
       challengeDate: challenge.challenge_date,
       source: "supabase",
@@ -101,7 +102,7 @@ export async function fetchTodayDailyChallenge() {
 
   return {
     keyword: data.target_title,
-    hint: data.hint || "Today's Supabase challenge is ready.",
+    hint: resolveDailyGoalHint(data.target_title, data.hint),
     startTitle: data.start_title || null,
     challengeDate: data.challenge_date,
     source: "supabase",

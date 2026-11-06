@@ -424,7 +424,6 @@ export default function GamePage({
       let failed = false;
       const request = pageRequestManagerRef.current.begin();
       const overlap = createWikiSnapshotOverlap({ ensureSnapshot: ensureWikiSnapshot, signal: request.signal });
-      setClickCount((prev) => prev + 1);
       setIsLoading(true);
       setIsPageLoading(true);
       setError("");
@@ -483,6 +482,7 @@ export default function GamePage({
 
         const newPath = authoritativeMove?.run?.path_title_snapshots || [...pathTitles, page.title];
         const nextClickCount = authoritativeMove?.run?.move_count ?? clickCount + 1;
+        setClickCount(nextClickCount);
         setPathTitles(newPath);
         if (authoritativeMove?.run?.id && authoritativeMove.run.state_version != null) {
           approveMoveMotion(`${authoritativeMove.run.id}:${authoritativeMove.run.state_version}`, newPath.length > pathTitles.length);
@@ -1033,6 +1033,7 @@ export default function GamePage({
                 clickCount={clickCount}
                 startTitle={startTitle}
                 onLinkClick={handleMove}
+                openTargetBriefByDefault
                 readOnly={isReservedSingle(serverRun) && phase !== PHASE.PLAYING}
               />
             </main>
