@@ -146,13 +146,15 @@
 .wr-race .state-text.error { color: #A4402E; }
 
 /* Target brief (목표 설명) */
-.wr-target-brief { margin: 14px 36px 0; border: 1px solid var(--wr-divider); border-radius: 8px; background: var(--wr-paper); font-size: 13px; color: var(--wr-ink-2); }
-.wr-target-brief > summary { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; list-style: none; }
+.wr-target-brief { margin: 14px 36px 0; border: 1px solid #CCBC8F; border-radius: 8px; background: #FFFBEE; font-size: 13px; color: var(--wr-ink-2); }
+.wr-target-brief > summary { display: flex; align-items: center; gap: 8px; padding: 10px 14px; cursor: pointer; list-style: none; }
 .wr-target-brief > summary::-webkit-details-marker { display: none; }
 .wr-target-brief > summary strong { color: #8E6B1C; font-family: var(--wr-font-heading); font-size: 14px; }
 .wr-target-brief > summary::after { content: "▾"; margin-left: auto; color: var(--wr-ink-3); }
 .wr-target-brief[open] > summary::after { content: "▴"; }
-.wr-target-brief-body { padding: 0 12px 10px; }
+.wr-target-brief-body { padding: 0 14px 12px; }
+.wr-race .target-summary-label { margin: 0 0 4px; color: #7A612C; font-size: 11px; font-weight: 750; }
+.wr-race .wr-target-brief .target-summary { font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 .wr-race .target-summary, .wr-race .target-summary-status, .wr-race .target-meta { margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: var(--wr-ink-2); }
 .wr-race .target-summary--collapsed { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .wr-race .target-summary-toggle, .wr-race .target-summary-retry { border: 0; background: none; padding: 0; color: var(--wr-blue); font-size: 12px; text-decoration: underline; cursor: pointer; }
@@ -299,6 +301,13 @@ button.wr-prow:hover { background: var(--wr-paper-2); }
 .wr-race-hold h1 { font: 600 26px/1.15 var(--wr-font-heading); color: var(--wr-ink); }
 .wr-race-hold p { font-size: 14px; line-height: 1.7; color: var(--wr-ink-2); }
 .wr-race-hold-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+
+/* Single preparation only: keep the game shell balanced without a fake percentage. */
+.wr-race-hold.wr-single-prepare-status { align-self: center; justify-content: center; align-items: center; text-align: center; width: min(660px, 100%); max-width: 100%; min-height: min(68vh, 620px); padding: 48px 22px 64px; margin-block: auto; }
+.wr-single-prepare-spinner { order: -1; display: block; width: 46px; height: 46px; border: 4px solid #E7E2C8; border-top-color: #27877D; border-radius: 50%; animation: wr-single-preparing 1s linear infinite; }
+.wr-race-hold.wr-single-prepare-status > p { max-width: 360px; }
+@keyframes wr-single-preparing { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .wr-single-prepare-spinner { animation: none; border-top-color: #27877D; } }
 
 /* ── Group Result A (완주 · 경기 진행 중) — Freeze 08 6c ───────── */
 .wr-page.wr-race.wr-result-a { padding: 24px 16px 40px; }
@@ -451,6 +460,7 @@ button.wr-prow:hover { background: var(--wr-paper-2); }
   .wr-compare-row > .wr-chain { grid-column: 1 / -1; }
   .wr-reaction-dock { display: none; }
   .wr-race-hold { padding: 32px 16px 40px; }
+  .wr-race-hold.wr-single-prepare-status { min-height: 56vh; padding: 32px 20px 48px; }
 
   /* Group bottom sheet */
   .wr-group-sheet { display: block; position: sticky; bottom: 0; z-index: 42; background: var(--wr-paper); border-top: 1px solid var(--wr-frame); border-radius: 14px 14px 0 0; box-shadow: 0 -10px 24px rgb(36 52 48 / 10%); }
