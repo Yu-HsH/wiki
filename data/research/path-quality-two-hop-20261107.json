@@ -1,0 +1,656 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-11-07",
+  "source": "Read-only latest cached Wiki Race snapshot links, page ID-joined",
+  "limitations": [
+    "Two-hop paths include only intermediates already cached as source snapshots; not a complete Wikipedia path search.",
+    "Ordinal is link anchor sequence, NOT screen scroll position or fold/section placement.",
+    "Public Wikipedia revisions can differ from cached source snapshots.",
+    "No user identifiers or personal gameplay traces.",
+    "Some pairs have >20 cached alternatives; route_sample shows up to 20 witnesses but cached_two_hop_total retains the counted total."
+  ],
+  "pairs": [
+    {
+      "start": "SQL",
+      "goal": "월드 와이드 웹",
+      "cached_two_hop_total": 13,
+      "route_sample": [
+        {
+          "via": "XML",
+          "firstOrdinal": 35,
+          "firstOutbound": 438,
+          "secondOrdinal": 14,
+          "secondOutbound": 267
+        },
+        {
+          "via": "프로그래밍 언어",
+          "firstOrdinal": 1,
+          "firstOutbound": 438,
+          "secondOrdinal": 66,
+          "secondOutbound": 414
+        },
+        {
+          "via": "컴퓨터 망",
+          "firstOrdinal": 114,
+          "firstOutbound": 438,
+          "secondOrdinal": 27,
+          "secondOutbound": 596
+        },
+        {
+          "via": "전자 도서관",
+          "firstOrdinal": 178,
+          "firstOutbound": 438,
+          "secondOrdinal": 1,
+          "secondOutbound": 36
+        },
+        {
+          "via": "데이터베이스",
+          "firstOrdinal": 45,
+          "firstOutbound": 438,
+          "secondOrdinal": 144,
+          "secondOutbound": 251
+        },
+        {
+          "via": "운영체제",
+          "firstOrdinal": 108,
+          "firstOutbound": 438,
+          "secondOrdinal": 117,
+          "secondOutbound": 399
+        },
+        {
+          "via": "관계형 데이터베이스",
+          "firstOrdinal": 16,
+          "firstOutbound": 438,
+          "secondOrdinal": 217,
+          "secondOutbound": 302
+        },
+        {
+          "via": "전자 상거래",
+          "firstOrdinal": 244,
+          "firstOutbound": 438,
+          "secondOrdinal": 7,
+          "secondOutbound": 26
+        },
+        {
+          "via": "소프트웨어 유지보수",
+          "firstOrdinal": 144,
+          "firstOutbound": 438,
+          "secondOrdinal": 168,
+          "secondOutbound": 599
+        },
+        {
+          "via": "소프트웨어 개발",
+          "firstOrdinal": 136,
+          "firstOutbound": 438,
+          "secondOrdinal": 208,
+          "secondOutbound": 289
+        },
+        {
+          "via": "암호학",
+          "firstOrdinal": 189,
+          "firstOutbound": 438,
+          "secondOrdinal": 160,
+          "secondOutbound": 435
+        },
+        {
+          "via": "통신 프로토콜",
+          "firstOrdinal": 121,
+          "firstOutbound": 438,
+          "secondOrdinal": 260,
+          "secondOutbound": 429
+        },
+        {
+          "via": "컴퓨터 보안",
+          "firstOrdinal": 186,
+          "firstOutbound": 438,
+          "secondOrdinal": 206,
+          "secondOutbound": 310
+        }
+      ]
+    },
+    {
+      "start": "김치",
+      "goal": "SQL",
+      "cached_two_hop_total": 2,
+      "route_sample": [
+        {
+          "via": "국제 표준 연속 간행물 번호",
+          "firstOrdinal": 318,
+          "firstOutbound": 321,
+          "secondOrdinal": 100,
+          "secondOutbound": 163
+        },
+        {
+          "via": "국제 표준 도서 번호",
+          "firstOrdinal": 315,
+          "firstOutbound": 321,
+          "secondOrdinal": 125,
+          "secondOutbound": 188
+        }
+      ]
+    },
+    {
+      "start": "대한민국",
+      "goal": "훈민정음",
+      "cached_two_hop_total": 12,
+      "route_sample": [
+        {
+          "via": "한글",
+          "firstOrdinal": 60,
+          "firstOutbound": 1397,
+          "secondOrdinal": 0,
+          "secondOutbound": 346
+        },
+        {
+          "via": "한국인",
+          "firstOrdinal": 62,
+          "firstOutbound": 1397,
+          "secondOrdinal": 49,
+          "secondOutbound": 67
+        },
+        {
+          "via": "한국어 한자",
+          "firstOrdinal": 90,
+          "firstOutbound": 1397,
+          "secondOrdinal": 45,
+          "secondOutbound": 117
+        },
+        {
+          "via": "조선",
+          "firstOrdinal": 127,
+          "firstOutbound": 1397,
+          "secondOrdinal": 21,
+          "secondOutbound": 819
+        },
+        {
+          "via": "한국어",
+          "firstOrdinal": 57,
+          "firstOutbound": 1397,
+          "secondOrdinal": 141,
+          "secondOutbound": 347
+        },
+        {
+          "via": "너구리",
+          "firstOrdinal": 440,
+          "firstOutbound": 1397,
+          "secondOrdinal": 24,
+          "secondOutbound": 251
+        },
+        {
+          "via": "5·18 광주 민주화 운동",
+          "firstOrdinal": 250,
+          "firstOutbound": 1397,
+          "secondOrdinal": 329,
+          "secondOutbound": 345
+        },
+        {
+          "via": "한국",
+          "firstOrdinal": 599,
+          "firstOutbound": 1397,
+          "secondOrdinal": 147,
+          "secondOutbound": 441
+        },
+        {
+          "via": "국채보상운동",
+          "firstOrdinal": 720,
+          "firstOutbound": 1397,
+          "secondOrdinal": 65,
+          "secondOutbound": 82
+        },
+        {
+          "via": "한글전용과 국한문혼용",
+          "firstOrdinal": 921,
+          "firstOutbound": 1397,
+          "secondOrdinal": 18,
+          "secondOutbound": 115
+        },
+        {
+          "via": "세종",
+          "firstOrdinal": 915,
+          "firstOutbound": 1397,
+          "secondOrdinal": 37,
+          "secondOutbound": 806
+        },
+        {
+          "via": "한국의 역사",
+          "firstOrdinal": 1180,
+          "firstOutbound": 1397,
+          "secondOrdinal": 344,
+          "secondOutbound": 717
+        }
+      ]
+    },
+    {
+      "start": "메이플스토리",
+      "goal": "GPT (언어 모델)",
+      "cached_two_hop_total": 0,
+      "route_sample": []
+    },
+    {
+      "start": "미국의 하늘에 잘린 달 2",
+      "goal": "2010년 FIFA 월드컵 남미 지역 예선",
+      "cached_two_hop_total": 0,
+      "route_sample": []
+    },
+    {
+      "start": "음식",
+      "goal": "김치",
+      "cached_two_hop_total": 4,
+      "route_sample": [
+        {
+          "via": "아침 (식사)",
+          "firstOrdinal": 2,
+          "firstOutbound": 587,
+          "secondOrdinal": 45,
+          "secondOutbound": 357
+        },
+        {
+          "via": "참고등어",
+          "firstOrdinal": 117,
+          "firstOutbound": 587,
+          "secondOrdinal": 36,
+          "secondOutbound": 239
+        },
+        {
+          "via": "육회",
+          "firstOrdinal": 163,
+          "firstOutbound": 587,
+          "secondOrdinal": 141,
+          "secondOutbound": 207
+        },
+        {
+          "via": "한국 요리",
+          "firstOrdinal": 491,
+          "firstOutbound": 587,
+          "secondOrdinal": 13,
+          "secondOutbound": 622
+        }
+      ]
+    },
+    {
+      "start": "김치",
+      "goal": "한강",
+      "cached_two_hop_total": 2,
+      "route_sample": [
+        {
+          "via": "서울특별시",
+          "firstOrdinal": 237,
+          "firstOutbound": 321,
+          "secondOrdinal": 29,
+          "secondOutbound": 1163
+        },
+        {
+          "via": "삼국 시대",
+          "firstOrdinal": 163,
+          "firstOutbound": 321,
+          "secondOrdinal": 153,
+          "secondOutbound": 598
+        }
+      ]
+    },
+    {
+      "start": "대한민국",
+      "goal": "한강",
+      "cached_two_hop_total": 21,
+      "route_sample": [
+        {
+          "via": "서울특별시",
+          "firstOrdinal": 6,
+          "firstOutbound": 1397,
+          "secondOrdinal": 29,
+          "secondOutbound": 1163
+        },
+        {
+          "via": "동아시아",
+          "firstOrdinal": 91,
+          "firstOutbound": 1397,
+          "secondOrdinal": 72,
+          "secondOutbound": 135
+        },
+        {
+          "via": "한반도",
+          "firstOrdinal": 119,
+          "firstOutbound": 1397,
+          "secondOrdinal": 56,
+          "secondOutbound": 408
+        },
+        {
+          "via": "3·1 운동",
+          "firstOrdinal": 28,
+          "firstOutbound": 1397,
+          "secondOrdinal": 186,
+          "secondOutbound": 239
+        },
+        {
+          "via": "낙동강",
+          "firstOrdinal": 194,
+          "firstOutbound": 1397,
+          "secondOrdinal": 138,
+          "secondOutbound": 403
+        },
+        {
+          "via": "대한민국의 지리",
+          "firstOrdinal": 370,
+          "firstOutbound": 1397,
+          "secondOrdinal": 19,
+          "secondOutbound": 279
+        },
+        {
+          "via": "금강",
+          "firstOrdinal": 382,
+          "firstOutbound": 1397,
+          "secondOrdinal": 24,
+          "secondOutbound": 182
+        },
+        {
+          "via": "황해",
+          "firstOrdinal": 395,
+          "firstOutbound": 1397,
+          "secondOrdinal": 18,
+          "secondOutbound": 543
+        },
+        {
+          "via": "남해",
+          "firstOrdinal": 398,
+          "firstOutbound": 1397,
+          "secondOrdinal": 140,
+          "secondOutbound": 653
+        },
+        {
+          "via": "6.25 전쟁",
+          "firstOrdinal": 187,
+          "firstOutbound": 1397,
+          "secondOrdinal": 405,
+          "secondOutbound": 990
+        },
+        {
+          "via": "인천광역시",
+          "firstOrdinal": 552,
+          "firstOutbound": 1397,
+          "secondOrdinal": 44,
+          "secondOutbound": 701
+        },
+        {
+          "via": "대한민국의 행정 구역",
+          "firstOrdinal": 549,
+          "firstOutbound": 1397,
+          "secondOrdinal": 81,
+          "secondOutbound": 627
+        },
+        {
+          "via": "박정희",
+          "firstOrdinal": 219,
+          "firstOutbound": 1397,
+          "secondOrdinal": 428,
+          "secondOutbound": 913
+        },
+        {
+          "via": "무인 항공기",
+          "firstOrdinal": 670,
+          "firstOutbound": 1397,
+          "secondOrdinal": 46,
+          "secondOutbound": 109
+        },
+        {
+          "via": "김대중",
+          "firstOrdinal": 282,
+          "firstOutbound": 1397,
+          "secondOrdinal": 469,
+          "secondOutbound": 1239
+        },
+        {
+          "via": "롯데월드타워",
+          "firstOrdinal": 701,
+          "firstOutbound": 1397,
+          "secondOrdinal": 98,
+          "secondOutbound": 884
+        },
+        {
+          "via": "대구광역시",
+          "firstOrdinal": 559,
+          "firstOutbound": 1397,
+          "secondOrdinal": 357,
+          "secondOutbound": 536
+        },
+        {
+          "via": "삼국 시대",
+          "firstOrdinal": 875,
+          "firstOutbound": 1397,
+          "secondOrdinal": 153,
+          "secondOutbound": 598
+        },
+        {
+          "via": "한강의 기적",
+          "firstOrdinal": 1186,
+          "firstOutbound": 1397,
+          "secondOrdinal": 5,
+          "secondOutbound": 88
+        },
+        {
+          "via": "대한민국의 섬 목록",
+          "firstOrdinal": 1191,
+          "firstOutbound": 1397,
+          "secondOrdinal": 78,
+          "secondOutbound": 112
+        }
+      ]
+    },
+    {
+      "start": "서울특별시",
+      "goal": "한강",
+      "cached_two_hop_total": 15,
+      "route_sample": [
+        {
+          "via": "황해",
+          "firstOrdinal": 28,
+          "firstOutbound": 1163,
+          "secondOrdinal": 18,
+          "secondOutbound": 543
+        },
+        {
+          "via": "인천광역시",
+          "firstOrdinal": 31,
+          "firstOutbound": 1163,
+          "secondOrdinal": 44,
+          "secondOutbound": 701
+        },
+        {
+          "via": "롯데월드타워",
+          "firstOrdinal": 8,
+          "firstOutbound": 1163,
+          "secondOrdinal": 98,
+          "secondOutbound": 884
+        },
+        {
+          "via": "강남구",
+          "firstOrdinal": 138,
+          "firstOutbound": 1163,
+          "secondOrdinal": 23,
+          "secondOutbound": 257
+        },
+        {
+          "via": "삼국 시대",
+          "firstOrdinal": 65,
+          "firstOutbound": 1163,
+          "secondOrdinal": 153,
+          "secondOutbound": 598
+        },
+        {
+          "via": "용산구",
+          "firstOrdinal": 260,
+          "firstOutbound": 1163,
+          "secondOrdinal": 15,
+          "secondOutbound": 360
+        },
+        {
+          "via": "영등포구",
+          "firstOrdinal": 285,
+          "firstOutbound": 1163,
+          "secondOrdinal": 28,
+          "secondOutbound": 231
+        },
+        {
+          "via": "3·1 운동",
+          "firstOrdinal": 135,
+          "firstOutbound": 1163,
+          "secondOrdinal": 186,
+          "secondOutbound": 239
+        },
+        {
+          "via": "대한민국",
+          "firstOrdinal": 10,
+          "firstOutbound": 1163,
+          "secondOrdinal": 381,
+          "secondOutbound": 1397
+        },
+        {
+          "via": "강남 (서울)",
+          "firstOrdinal": 324,
+          "firstOutbound": 1163,
+          "secondOrdinal": 88,
+          "secondOutbound": 165
+        },
+        {
+          "via": "6.25 전쟁",
+          "firstOrdinal": 43,
+          "firstOutbound": 1163,
+          "secondOrdinal": 405,
+          "secondOutbound": 990
+        },
+        {
+          "via": "대한민국의 지리",
+          "firstOrdinal": 675,
+          "firstOutbound": 1163,
+          "secondOrdinal": 19,
+          "secondOutbound": 279
+        },
+        {
+          "via": "롯데월드",
+          "firstOrdinal": 540,
+          "firstOutbound": 1163,
+          "secondOrdinal": 333,
+          "secondOutbound": 404
+        },
+        {
+          "via": "대한민국의 행정 구역",
+          "firstOrdinal": 968,
+          "firstOutbound": 1163,
+          "secondOrdinal": 81,
+          "secondOutbound": 627
+        },
+        {
+          "via": "대구광역시",
+          "firstOrdinal": 972,
+          "firstOutbound": 1163,
+          "secondOrdinal": 357,
+          "secondOutbound": 536
+        }
+      ]
+    },
+    {
+      "start": "컴퓨터",
+      "goal": "월드 와이드 웹",
+      "cached_two_hop_total": 8,
+      "route_sample": [
+        {
+          "via": "서버",
+          "firstOrdinal": 107,
+          "firstOutbound": 185,
+          "secondOrdinal": 4,
+          "secondOutbound": 137
+        },
+        {
+          "via": "인터넷",
+          "firstOrdinal": 135,
+          "firstOutbound": 185,
+          "secondOrdinal": 41,
+          "secondOutbound": 316
+        },
+        {
+          "via": "컴퓨터 프로그래밍",
+          "firstOrdinal": 17,
+          "firstOutbound": 185,
+          "secondOrdinal": 162,
+          "secondOutbound": 318
+        },
+        {
+          "via": "컴퓨터 망",
+          "firstOrdinal": 177,
+          "firstOutbound": 185,
+          "secondOrdinal": 27,
+          "secondOutbound": 596
+        },
+        {
+          "via": "프로그래밍 언어",
+          "firstOrdinal": 171,
+          "firstOutbound": 185,
+          "secondOrdinal": 66,
+          "secondOutbound": 414
+        },
+        {
+          "via": "운영체제",
+          "firstOrdinal": 124,
+          "firstOutbound": 185,
+          "secondOrdinal": 117,
+          "secondOutbound": 399
+        },
+        {
+          "via": "컴퓨터 보안",
+          "firstOrdinal": 176,
+          "firstOutbound": 185,
+          "secondOrdinal": 206,
+          "secondOutbound": 310
+        },
+        {
+          "via": "이더넷",
+          "firstOrdinal": 141,
+          "firstOutbound": 185,
+          "secondOrdinal": 294,
+          "secondOutbound": 295
+        }
+      ]
+    },
+    {
+      "start": "훈민정음",
+      "goal": "한강",
+      "cached_two_hop_total": 5,
+      "route_sample": [
+        {
+          "via": "서울특별시",
+          "firstOrdinal": 7,
+          "firstOutbound": 527,
+          "secondOrdinal": 29,
+          "secondOutbound": 1163
+        },
+        {
+          "via": "대한민국",
+          "firstOrdinal": 2,
+          "firstOutbound": 527,
+          "secondOrdinal": 381,
+          "secondOutbound": 1397
+        },
+        {
+          "via": "6.25 전쟁",
+          "firstOrdinal": 50,
+          "firstOutbound": 527,
+          "secondOrdinal": 405,
+          "secondOutbound": 990
+        },
+        {
+          "via": "한반도",
+          "firstOrdinal": 513,
+          "firstOutbound": 527,
+          "secondOrdinal": 56,
+          "secondOutbound": 408
+        },
+        {
+          "via": "한국의 역사",
+          "firstOrdinal": 512,
+          "firstOutbound": 527,
+          "secondOrdinal": 236,
+          "secondOutbound": 717
+        }
+      ]
+    }
+  ]
+}
