@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { allocationTransport, selectRandomCourse } from '../supabase/functions/single-run/random.mjs';
+import { allocationTransport, selectRandomCourse, isDisambiguationPage } from '../supabase/functions/single-run/random.mjs';
 import { handleSingleStart } from '../supabase/functions/single-run/start.mjs';
 import { saveGuestSingleGameSession, readGuestSingleGameSession } from '../utils/singleGameSession.js';
 
@@ -27,7 +27,8 @@ test('random draws two independent namespace-0 identities and pins both exact re
   assert.equal(draws.length, 2);
   for (const { url, options } of draws) {
     assert.equal(url.searchParams.get('generator'), 'random'); assert.equal(url.searchParams.get('grnlimit'), '1');
-    assert.equal(url.searchParams.get('grnnamespace'), '0'); assert.equal(url.searchParams.get('prop'), 'info|revisions');
+    assert.equal(url.searchParams.get('grnnamespace'), '0'); assert.equal(url.searchParams.get('prop'), 'info|revisions|pageprops');
+    assert.equal(url.searchParams.get('ppprop'), 'disambiguation');
     assert.ok(options.headers['User-Agent']); assert.ok(options.signal);
   }
   assert.deepEqual(f.calls.filter(call=>call.options.body).map(call=>JSON.parse(call.options.body)), [
@@ -122,4 +123,145 @@ test('random deadline is shared across draws and snapshots rather than renewed p
   let now=0,calls=0;
   const f=fixture();const transport=allocationTransport(async(...args)=>{calls++;now+=10000;return f.fetcher(...args);},{now:()=>now});
   await assert.rejects(selectRandomCourse({...f.options,transport}),{code:'ALLOCATION_EXPIRED'});assert.equal(calls,3);
+});
+
+
+test('MediaWiki empty-string disambiguation property is detected by PRESENCE, not truthiness', () => {
+  assert.equal(isDisambiguationPage({ pageprops: { disambiguation: '' } }), true);
+  assert.equal(isDisambiguationPage({ pageprops: { disambiguation: true } }), true);
+  assert.equal(isDisambiguationPage({ pageprops: { description: 'article' } }), false);
+  assert.equal(isDisambiguationPage({}), false);
+  assert.equal(isDisambiguationPage(null), false);
+});
+
+test('an automatically drawn disambiguation START is accepted, a GOAL is redrawn before snapshot', async () => {
+  const f = fixture([
+    page(1, { title: '화성 (동음이의)', pageprops: { disambiguation: '' } }),
+    page(2, { title: '덕곡면', pageprops: { disambiguation: '' } }),
+    page(3, { title: '덕곡면 (합천군)' }),
+  ]);
+  const { start, goal } = await selectRandomCourse(f.options);
+  assert.equal(start.canonicalTitle, '화성 (동음이의)');
+  assert.equal(goal.canonicalTitle, '덕곡면 (합천군)');
+  assert.equal(f.calls.filter(c => c.url.hostname === 'ko.wikipedia.org').length, 3);
+  const snapshots = f.calls.filter(c => c.url.pathname.endsWith('/wiki-snapshot'));
+  assert.equal(snapshots.length, 2);
+  assert.deepEqual(snapshots.map(c => JSON.parse(c.options.body).title), [
+    '화성 (동음이의)', '덕곡면 (합천군)',
+  ]);
+});
+
+test('goal rerolls share twelve total tries without exhausting extra snapshot or remote requests', async () => {
+  const disambiguation = page(2, { title: '포니아토프스키', pageprops: { disambiguation: '' } });
+  const f = fixture([page(1), ...Array.from({ length: 11 }, () => disambiguation)]);
+  await assert.rejects(selectRandomCourse(f.options), { code: 'RANDOM_DOCUMENT_UNAVAILABLE' });
+  assert.equal(f.calls.filter(c => c.url.hostname === 'ko.wikipedia.org').length, 12);
+  assert.equal(f.calls.filter(c => c.url.pathname.endsWith('/wiki-snapshot')).length, 1);
+});
+
+test('the API declaring pageprops but omitting it for an ordinary goal does not cause false rejection', async () => {
+  const f = fixture([page(1), page(2, { pageprops: {} })]);
+  const course = await selectRandomCourse(f.options);
+  assert.equal(course.goal.pageId, '2');
+  assert.equal(f.calls.filter(c => c.url.hostname === 'ko.wikipedia.org').length, 2);
+});
+
+test('the guest Edge random allocation commits a non-disambiguation goal and preserves disambiguation start', async () => {
+  const f = fixture([
+    page(1, { pageprops: { disambiguation: '' } }),
+    page(2, { pageprops: { disambiguation: '' } }),
+    page(3),
+  ]);
+  const calls = [];
+  const result = await handleSingleStart(new Request('http://local'), request(), edgeOptions(f, async (name, args) => {
+    calls.push({ name, args });
+    return { data: name === 'claim_single_course_v1'
+      ? { code: 'SELECT_COURSE', mode: 'random', allocationId: 'allocation' }
+      : { ok: true, run: { id: 'run' } } };
+  }));
+  assert.equal((await result.json()).ok, true);
+  assert.deepEqual(calls.map(x => x.name), ['claim_single_course_v1', 'commit_single_course_v1']);
+  assert.equal(calls[1].args.p_start.pageId, '1');
+  assert.equal(calls[1].args.p_goal.pageId, '3');
+});
+
+test('automatically rejected goals do not extend the monotonic allocation budget', async () => {
+  let now = 0;
+  const f = fixture([
+    page(1), page(2, { pageprops: { disambiguation: '' } }), page(3),
+  ]);
+  const transport = allocationTransport(async (...args) => {
+    now += 6000;
+    return f.fetcher(...args);
+  }, { now: () => now, totalMs: 29000 });
+  await assert.rejects(selectRandomCourse({ ...f.options, transport }), { code: 'ALLOCATION_EXPIRED' });
+  // Draw 1 + snapshot 1 + draw 2(disambiguation) + draw 3 passes 24s,
+  // snapshot 3 moves the shared clock beyond 29s: no final course commits.
+  assert.equal(f.calls.filter(c => c.url.hostname === 'ko.wikipedia.org').length, 3);
+});
+
+test('random allocation uses one identity query per draw; no new sequential pageprops lookup', async () => {
+  const f = fixture([
+    page(1), page(2, { pageprops: { disambiguation: '' } }), page(3),
+  ]);
+  const course = await selectRandomCourse(f.options);
+  assert.equal(course.goal.pageId, '3');
+  const calls = f.calls;
+  assert.equal(calls.length, 5);
+  assert.equal(calls.filter(c => c.url.hostname === 'ko.wikipedia.org').length, 3);
+  for (const c of calls.filter(c => c.url.hostname === 'ko.wikipedia.org')) {
+    assert.equal(c.url.searchParams.get('prop'), 'info|revisions|pageprops');
+    assert.equal(c.url.searchParams.get('ppprop'), 'disambiguation');
+  }
+});
+
+
+test('user-specified custom disambiguation goal is kept; only random auto goals are filtered', async () => {
+  const wikiCalls=[], commits=[];
+  const fetcher=async(address,options={})=>{
+    const u=String(address);
+    wikiCalls.push(u);
+    if(u.endsWith('/wiki-snapshot')){
+      const body=JSON.parse(options.body);
+      return response({snapshotId:'s-'+body.title,pageId:body.title==='덕곡면'?'11':'22',revisionId:'33',canonicalTitle:body.title});
+    }
+    return response({query:{random:[{title:'출발 문서'}]}});
+  };
+  const edge={
+    url:'http://127.0.0.1:55421',serviceKey:'test-only',fetcher,
+    sha256:async()=>'a'.repeat(64),json:(data,status=200)=>new Response(JSON.stringify(data),{status}),
+    db:{rpc:async(name,args)=>{
+      if(name==='claim_single_course_v1')return {data:{code:'SELECT_COURSE',mode:'custom',target:'덕곡면',allocationId:'allocation'}};
+      if(name==='commit_single_course_v1'){commits.push(args);return {data:{ok:true}};}
+      throw Error('Unexpected RPC '+name);
+    }}
+  };
+  const reply=await handleSingleStart(new Request('http://local'),request({mode:'custom',customTarget:'덕곡면'}),edge);
+  assert.equal((await reply.json()).ok,true);
+  assert.equal(commits.length,1);
+  assert.equal(commits[0].p_goal.canonicalTitle,'덕곡면');
+  assert.equal(wikiCalls.filter(x=>x.includes('wiki-snapshot')).length,2);
+});
+
+test('an already server-selected daily goal is never redrawn or silently changed by random goal policy', async () => {
+  const commits=[],snapshotTitles=[];
+  const edge={
+    url:'http://127.0.0.1:55421',serviceKey:'test-only',
+    sha256:async()=>'a'.repeat(64),json:(data,status=200)=>new Response(JSON.stringify(data),{status}),
+    fetcher:async(address,options={})=>{
+      if(!String(address).includes('/wiki-snapshot'))throw Error('No new random API call permitted for daily');
+      const body=JSON.parse(options.body);snapshotTitles.push(body.title);
+      return response({snapshotId:'s-'+body.title,pageId:body.title==='섹시'?'11':'22',revisionId:'33',canonicalTitle:body.title});
+    },
+    db:{rpc:async(name,args)=>{
+      if(name==='claim_single_course_v1')return {data:{code:'SELECT_COURSE',mode:'daily',allocationId:'allocation'}};
+      if(name==='ensure_today_daily_challenge')return {data:[{start_title:'출발 문서',target_title:'섹시',challenge_date:'2026-11-07'}]};
+      if(name==='commit_single_course_v1'){commits.push(args);return {data:{ok:true}};}
+      throw Error('Unexpected RPC '+name);
+    }}
+  };
+  const reply=await handleSingleStart(new Request('http://local'),request({mode:'daily'}),edge);
+  assert.equal((await reply.json()).ok,true);
+  assert.deepEqual(snapshotTitles,['섹시','출발 문서']);
+  assert.equal(commits[0].p_goal.canonicalTitle,'섹시');
 });
