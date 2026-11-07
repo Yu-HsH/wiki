@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "source": "Official Korean Wikipedia Action API pageprops/categories; GitHub Actions run 42368980106",
+  "disclaimer": "Categorization is context evidence, not a verified sexual/safety/age rating. No automatic content moderation in production.",
+  "articles": [
+    {
+      "requestedTitle": "섹시",
+      "canonicalTitle": "섹시",
+      "missing": false,
+      "disambiguation": true,
+      "categoriesSample": [
+        "분류:동음이의어 문서"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "폭유",
+      "canonicalTitle": "폭유",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:성 속어",
+        "분류:유행어",
+        "분류:일본어 낱말"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "수간",
+      "canonicalTitle": "수간",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:성행위",
+        "분류:인간과 동물"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "Shut up",
+      "canonicalTitle": "Shut up",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:관용구",
+        "분류:속어",
+        "분류:영어 어구"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "곁주머니",
+      "canonicalTitle": "곁주머니",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:의학 용어"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "맹자",
+      "canonicalTitle": "맹자",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:기원전 289년 사망",
+        "분류:기원전 372년 출생",
+        "분류:기원전 3세기 중국 사람",
+        "분류:기원전 4세기 중국 사람",
+        "분류:기원전 4세기 철학자",
+        "분류:도덕철학자",
+        "분류:맹씨",
+        "분류:맹자",
+        "분류:사회철학자",
+        "분류:산둥성 출신",
+        "분류:중국의 유학자",
+        "분류:중국의 정치철학자"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "문혁 (배우)",
+      "canonicalTitle": "문혁 (배우)",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:1981년 출생",
+        "분류:대한민국의 남자 뮤지컬 배우",
+        "분류:대한민국의 남자 배우",
+        "분류:대한민국의 남자 어린이 배우",
+        "분류:대한민국의 남자 연극 배우",
+        "분류:대한민국의 남자 텔레비전 배우",
+        "분류:살아있는 사람",
+        "분류:서울예술대학교 동문",
+        "분류:서울특별시 출신",
+        "분류:청룡영화상 수상자"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "포메라니안",
+      "canonicalTitle": "포메라니안",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:강아지",
+        "분류:독일산 개 품종",
+        "분류:반려견",
+        "분류:스피츠견"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "성적 매력",
+      "canonicalTitle": "성적 매력",
+      "missing": false,
+      "disambiguation": false,
+      "categoriesSample": [
+        "분류:미학",
+        "분류:사랑",
+        "분류:성적 매력",
+        "분류:성적 지향",
+        "분류:용모"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "덕곡면",
+      "canonicalTitle": "덕곡면",
+      "missing": false,
+      "disambiguation": true,
+      "categoriesSample": [
+        "분류:동음이의어 면",
+        "분류:동음이의어 문서"
+      ],
+      "categoriesTruncated": false
+    },
+    {
+      "requestedTitle": "포니아토프스키",
+      "canonicalTitle": "포니아토프스키",
+      "missing": false,
+      "disambiguation": true,
+      "categoriesSample": [
+        "분류:동명이인 문서",
+        "분류:동음이의어 문서"
+      ],
+      "categoriesTruncated": false
+    }
+  ]
+}
