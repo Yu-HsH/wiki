@@ -1,0 +1,33 @@
+name: Course quality research (read only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "data/research/course-quality-sample-20261107.json"
+      - "utils/courseQualityEvidence.js"
+      - "tests/courseQualityEvidence.test.js"
+      - "scripts/report-course-quality-evidence.mjs"
+      - "scripts/probe-course-backlinks.mjs"
+      - "scripts/sql/course-quality-50-readonly.sql"
+      - "docs/research/course-quality-50-snapshot-20261107.md"
+      - ".github/workflows/course-quality-research.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Offline reproducible baseline
+        run: |
+          node --test tests/courseQualityEvidence.test.js
+          node scripts/report-course-quality-evidence.mjs
+      - name: Wikimedia public API comparison (research only)
+        run: node scripts/probe-course-backlinks.mjs --limit=13
