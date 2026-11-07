@@ -129,3 +129,31 @@ test("research dataset excludes identities and path telemetry", () => {
     assert.equal(row.players,row.finished+row.retired);
   }
 });
+
+
+const publicMetadata=JSON.parse(readFileSync(new URL("../data/research/entryway-target-metadata-20261107.json",import.meta.url),"utf8"));
+const byPublicTitle=new Map(publicMetadata.articles.map(x=>[x.requestedTitle,x]));
+test("11 official Wikipedia metadata samples include disambiguation and context counterexamples",()=>{
+  assert.equal(publicMetadata.articles.length,11);
+  for(const name of ["섹시","덕곡면","포니아토프스키"]){
+    assert.equal(byPublicTitle.get(name).disambiguation,true);
+  }
+  assert.ok(byPublicTitle.get("폭유").categoriesSample.includes("분류:성 속어"));
+  assert.ok(byPublicTitle.get("수간").categoriesSample.includes("분류:성행위"));
+  assert.ok(byPublicTitle.get("곁주머니").categoriesSample.includes("분류:의학 용어"));
+  assert.ok(byPublicTitle.get("Shut up").categoriesSample.includes("분류:관용구"));
+});
+test("public category name alone never becomes confirmed content safety tier",()=>{
+  for(const name of ["폭유","수간","성적 매력","Shut up","곁주머니"]){
+    const wiki=byPublicTitle.get(name);
+    const value=proposeTargetHandling({title:name,categories:wiki.categoriesSample,
+      pageprops:{disambiguation:wiki.disambiguation}},
+      {surface:"automatic_target"});
+    assert.equal(value.reviewedTier,"unreviewed");
+    assert.equal(value.enforcementActive,false);
+    assert.equal(value.proposal,"no_automatic_block");
+  }
+  assert.equal(proposeTargetHandling({
+    pageprops:{disambiguation:byPublicTitle.get("섹시").disambiguation}
+  },{surface:"automatic_target"}).proposal,"exclude_from_automatic_target_pool");
+});
