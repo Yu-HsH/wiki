@@ -1,0 +1,35 @@
+name: Entryway and target suitability research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "utils/courseEntrywayResearch.js"
+      - "utils/courseTargetSuitabilityResearch.js"
+      - "tests/courseEntrywaySuitabilityResearch.test.js"
+      - "scripts/report-entryway-suitability.mjs"
+      - "scripts/probe-course-target-metadata.mjs"
+      - "data/research/entryway-validation-*.json"
+      - "data/research/entryway-target-metadata-*.json"
+      - "scripts/sql/entryway-17-group-readonly.sql"
+      - "docs/research/entryway-suitability-*.md"
+      - ".github/workflows/entryway-suitability-research.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-evidence-and-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate offline evidence and policy separation
+        run: node --test tests/courseEntrywaySuitabilityResearch.test.js
+      - name: Report 17 real group room entryway signals
+        run: node scripts/report-entryway-suitability.mjs
+      - name: Observe Wikipedia pageprops and categories (metadata only; no enforcement)
+        run: node scripts/probe-course-target-metadata.mjs

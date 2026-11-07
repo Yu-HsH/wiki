@@ -1,0 +1,920 @@
+{
+  "schemaVersion": 1,
+  "measurementDate": "2026-11-07",
+  "origin": "Read-only Supabase production public group game result titles and latest Wiki Race snapshot inbound links",
+  "cohort": "17 handpicked group rooms of >=3 player results, includes challenging and successful cases (not random sample)",
+  "privacy": "Public encyclopedia titles and room-level aggregates only; no account IDs, nicknames, room IDs or individual paths.",
+  "limitations": [
+    "Room outcomes are not independently randomized or causally attributable to course difficulty.",
+    "Retired results may reflect voluntary quitting or time limits, not navigational impossibility.",
+    "Cached inbound source=0 only means no latest stored source snapshot links to the goal; it does not prove no Wikipedia backlink or path.",
+    "Source link ordinal is not rendered viewport location; aliases may be obvious.",
+    "incomingSample holds at most 16 source links; whole-source counts come from the aggregate."
+  ],
+  "cases": [
+    {
+      "caseId": "G01",
+      "start": "강감찬",
+      "goal": "Shut up",
+      "players": 5,
+      "finished": 0,
+      "retired": 5,
+      "averageMoves": 35,
+      "exitReasons": [
+        "forfeited"
+      ],
+      "cachedIncomingSources": 0,
+      "cachedFirst50Links": 0,
+      "aliasLabeledIncoming": 0,
+      "incomingSample": []
+    },
+    {
+      "caseId": "G02",
+      "start": "영남대학교",
+      "goal": "곁주머니",
+      "players": 5,
+      "finished": 0,
+      "retired": 5,
+      "averageMoves": 23.8,
+      "exitReasons": [
+        "forfeited",
+        "time_limit"
+      ],
+      "cachedIncomingSources": 0,
+      "cachedFirst50Links": 0,
+      "aliasLabeledIncoming": 0,
+      "incomingSample": []
+    },
+    {
+      "caseId": "G03",
+      "start": "육회",
+      "goal": "섹시",
+      "players": 4,
+      "finished": 0,
+      "retired": 4,
+      "averageMoves": 52.8,
+      "exitReasons": [
+        "time_limit"
+      ],
+      "cachedIncomingSources": 0,
+      "cachedFirst50Links": 0,
+      "aliasLabeledIncoming": 0,
+      "incomingSample": []
+    },
+    {
+      "caseId": "G04",
+      "start": "아르헨티노사우루스",
+      "goal": "하품",
+      "players": 4,
+      "finished": 1,
+      "retired": 3,
+      "averageMoves": 22.8,
+      "exitReasons": [
+        "forfeited"
+      ],
+      "cachedIncomingSources": 3,
+      "cachedFirst50Links": 2,
+      "aliasLabeledIncoming": 0,
+      "incomingSample": [
+        {
+          "label": "하품",
+          "ordinal": 42,
+          "sourceTitle": "오르가슴",
+          "sourceLinkCount": 200
+        },
+        {
+          "label": "하품",
+          "ordinal": 48,
+          "sourceTitle": "용모",
+          "sourceLinkCount": 115
+        },
+        {
+          "label": "하품",
+          "ordinal": 69,
+          "sourceTitle": "수면 부족",
+          "sourceLinkCount": 171
+        }
+      ]
+    },
+    {
+      "caseId": "G05",
+      "start": "바람막이",
+      "goal": "문혁 (배우)",
+      "players": 6,
+      "finished": 2,
+      "retired": 4,
+      "averageMoves": 9.2,
+      "exitReasons": [
+        "forfeited",
+        "time_limit"
+      ],
+      "cachedIncomingSources": 1,
+      "cachedFirst50Links": 0,
+      "aliasLabeledIncoming": 1,
+      "incomingSample": [
+        {
+          "label": "문혁",
+          "ordinal": 383,
+          "sourceTitle": "1981년",
+          "sourceLinkCount": 1455
+        }
+      ]
+    },
+    {
+      "caseId": "G06",
+      "start": "레디스",
+      "goal": "안데르송 시우바",
+      "players": 3,
+      "finished": 2,
+      "retired": 1,
+      "averageMoves": 36.7,
+      "exitReasons": [
+        "forfeited"
+      ],
+      "cachedIncomingSources": 2,
+      "cachedFirst50Links": 2,
+      "aliasLabeledIncoming": 1,
+      "incomingSample": [
+        {
+          "label": "앤더슨 실바",
+          "ordinal": 20,
+          "sourceTitle": "마이클 비스핑",
+          "sourceLinkCount": 43
+        },
+        {
+          "label": "안데르송 시우바",
+          "ordinal": 34,
+          "sourceTitle": "알레스 페레이라",
+          "sourceLinkCount": 83
+        }
+      ]
+    },
+    {
+      "caseId": "G07",
+      "start": "셜록 홈즈",
+      "goal": "포메라니안",
+      "players": 6,
+      "finished": 3,
+      "retired": 3,
+      "averageMoves": 13.3,
+      "exitReasons": [
+        "grace_timeout"
+      ],
+      "cachedIncomingSources": 4,
+      "cachedFirst50Links": 0,
+      "aliasLabeledIncoming": 0,
+      "incomingSample": [
+        {
+          "label": "포메라니안",
+          "ordinal": 131,
+          "sourceTitle": "반려견",
+          "sourceLinkCount": 139
+        },
+        {
+          "label": "포메라니안",
+          "ordinal": 151,
+          "sourceTitle": "닥스훈트",
+          "sourceLinkCount": 159
+        },
+        {
+          "label": "포메라니안",
+          "ordinal": 152,
+          "sourceTitle": "개 품종",
+          "sourceLinkCount": 158
+        },
+        {
+          "label": "포메라니안",
+          "ordinal": 352,
+          "sourceTitle": "개",
+          "sourceLinkCount": 433
+        }
+      ]
+    },
+    {
+      "caseId": "G08",
+      "start": "러스트 (프로그래밍 언어)",
+      "goal": "김지원 (배우)",
+      "players": 6,
+      "finished": 4,
+      "retired": 2,
+      "averageMoves": 9.7,
+      "exitReasons": [
+        "grace_timeout"
+      ],
+      "cachedIncomingSources": 4,
+      "cachedFirst50Links": 2,
+      "aliasLabeledIncoming": 4,
+      "incomingSample": [
+        {
+          "label": "김지원",
+          "ordinal": 25,
+          "sourceTitle": "쌈 마이웨이",
+          "sourceLinkCount": 305
+        },
+        {
+          "label": "김지원",
+          "ordinal": 28,
+          "sourceTitle": "태양의 후예",
+          "sourceLinkCount": 436
+        },
+        {
+          "label": "김지원",
+          "ordinal": 192,
+          "sourceTitle": "손담비",
+          "sourceLinkCount": 507
+        },
+        {
+          "label": "김지원",
+          "ordinal": 854,
+          "sourceTitle": "KBS 연기대상",
+          "sourceLinkCount": 1311
+        }
+      ]
+    },
+    {
+      "caseId": "G09",
+      "start": "시우민",
+      "goal": "다우기술",
+      "players": 6,
+      "finished": 4,
+      "retired": 2,
+      "averageMoves": 12,
+      "exitReasons": [
+        "grace_timeout"
+      ],
+      "cachedIncomingSources": 33,
+      "cachedFirst50Links": 1,
+      "aliasLabeledIncoming": 1,
+      "incomingSample": [
+        {
+          "label": "다우기술",
+          "ordinal": 8,
+          "sourceTitle": "다우키움그룹",
+          "sourceLinkCount": 112
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 60,
+          "sourceTitle": "대한민국의 대기업",
+          "sourceLinkCount": 310
+        },
+        {
+          "label": "다우키움그룹",
+          "ordinal": 102,
+          "sourceTitle": "CJ엔터테인먼트",
+          "sourceLinkCount": 228
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 169,
+          "sourceTitle": "대한민국의 기업 목록",
+          "sourceLinkCount": 1581
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 194,
+          "sourceTitle": "빙그레",
+          "sourceLinkCount": 353
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 222,
+          "sourceTitle": "코스닥",
+          "sourceLinkCount": 360
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 249,
+          "sourceTitle": "오리온홀딩스",
+          "sourceLinkCount": 340
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 256,
+          "sourceTitle": "오리온 (대한민국의 기업)",
+          "sourceLinkCount": 349
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 295,
+          "sourceTitle": "키움증권",
+          "sourceLinkCount": 385
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 296,
+          "sourceTitle": "미래에셋증권",
+          "sourceLinkCount": 386
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 300,
+          "sourceTitle": "효성 (기업)",
+          "sourceLinkCount": 451
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 319,
+          "sourceTitle": "엔씨",
+          "sourceLinkCount": 412
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 336,
+          "sourceTitle": "LG에너지솔루션",
+          "sourceLinkCount": 429
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 343,
+          "sourceTitle": "HMM (기업)",
+          "sourceLinkCount": 433
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 349,
+          "sourceTitle": "NH투자증권",
+          "sourceLinkCount": 439
+        },
+        {
+          "label": "다우기술",
+          "ordinal": 367,
+          "sourceTitle": "SK하이닉스",
+          "sourceLinkCount": 459
+        }
+      ]
+    },
+    {
+      "caseId": "G10",
+      "start": "협동",
+      "goal": "실미도",
+      "players": 6,
+      "finished": 4,
+      "retired": 2,
+      "averageMoves": 11,
+      "exitReasons": [
+        "grace_timeout"
+      ],
+      "cachedIncomingSources": 7,
+      "cachedFirst50Links": 3,
+      "aliasLabeledIncoming": 0,
+      "incomingSample": [
+        {
+          "label": "실미도",
+          "ordinal": 2,
+          "sourceTitle": "실미도 사건",
+          "sourceLinkCount": 123
+        },
+        {
+          "label": "실미도",
+          "ordinal": 24,
+          "sourceTitle": "실미도 (영화)",
+          "sourceLinkCount": 188
+        },
+        {
+          "label": "실미도",
+          "ordinal": 44,
+          "sourceTitle": "중구 (인천광역시)",
+          "sourceLinkCount": 159
+        },
+        {
+          "label": "실미도",
+          "ordinal": 57,
+          "sourceTitle": "연평도",
+          "sourceLinkCount": 132
+        },
+        {
+          "label": "실미도",
+          "ordinal": 123,
+          "sourceTitle": "강화도",
+          "sourceLinkCount": 199
+        },
+        {
+          "label": "실미도",
+          "ordinal": 231,
+          "sourceTitle": "옹진군 (인천광역시)",
+          "sourceLinkCount": 299
+        },
+        {
+          "label": "실미도",
+          "ordinal": 424,
+          "sourceTitle": "인천광역시",
+          "sourceLinkCount": 701
+        }
+      ]
+    },
+    {
+      "caseId": "G11",
+      "start": "MOSFET",
+      "goal": "카카오 (기업)",
+      "players": 6,
+      "finished": 4,
+      "retired": 2,
+      "averageMoves": 6.2,
+      "exitReasons": [
+        "grace_timeout"
+      ],
+      "cachedIncomingSources": 322,
+      "cachedFirst50Links": 108,
+      "aliasLabeledIncoming": 321,
+      "incomingSample": [
+        {
+          "label": "카카오 (기업)",
+          "ordinal": 0,
+          "sourceTitle": "카카오 (2006~2014년 기업)",
+          "sourceLinkCount": 28
+        },
+        {
+          "label": "카카오",
+          "ordinal": 1,
+          "sourceTitle": "운송주선업",
+          "sourceLinkCount": 11
+        },
+        {
+          "label": "카카오",
+          "ordinal": 3,
+          "sourceTitle": "러시안 마피아",
+          "sourceLinkCount": 4
+        },
+        {
+          "label": "카카오",
+          "ordinal": 4,
+          "sourceTitle": "뿌리골무",
+          "sourceLinkCount": 5
+        },
+        {
+          "label": "카카오",
+          "ordinal": 4,
+          "sourceTitle": "컨테이너리제이션",
+          "sourceLinkCount": 5
+        },
+        {
+          "label": "카카오",
+          "ordinal": 5,
+          "sourceTitle": "소매 (상업)",
+          "sourceLinkCount": 6
+        },
+        {
+          "label": "카카오",
+          "ordinal": 6,
+          "sourceTitle": "리브 포 라이프",
+          "sourceLinkCount": 7
+        },
+        {
+          "label": "카카오",
+          "ordinal": 6,
+          "sourceTitle": "전우치전",
+          "sourceLinkCount": 7
+        },
+        {
+          "label": "카카오",
+          "ordinal": 6,
+          "sourceTitle": "체감 온도",
+          "sourceLinkCount": 7
+        },
+        {
+          "label": "카카오",
+          "ordinal": 7,
+          "sourceTitle": "김범수 (기업인)",
+          "sourceLinkCount": 146
+        },
+        {
+          "label": "카카오",
+          "ordinal": 7,
+          "sourceTitle": "남극해양생물자원 보존조약",
+          "sourceLinkCount": 8
+        },
+        {
+          "label": "카카오",
+          "ordinal": 8,
+          "sourceTitle": "다음",
+          "sourceLinkCount": 153
+        },
+        {
+          "label": "카카오",
+          "ordinal": 8,
+          "sourceTitle": "상장법인",
+          "sourceLinkCount": 9
+        },
+        {
+          "label": "카카오",
+          "ordinal": 8,
+          "sourceTitle": "제품",
+          "sourceLinkCount": 9
+        },
+        {
+          "label": "카카오",
+          "ordinal": 9,
+          "sourceTitle": "계면활성제",
+          "sourceLinkCount": 11
+        },
+        {
+          "label": "카카오",
+          "ordinal": 9,
+          "sourceTitle": "방광",
+          "sourceLinkCount": 135
+        }
+      ]
+    },
+    {
+      "caseId": "G12",
+      "start": "커피",
+      "goal": "쿠로바 카이토",
+      "players": 5,
+      "finished": 4,
+      "retired": 1,
+      "averageMoves": 10.4,
+      "exitReasons": [
+        "grace_timeout"
+      ],
+      "cachedIncomingSources": 7,
+      "cachedFirst50Links": 3,
+      "aliasLabeledIncoming": 7,
+      "incomingSample": [
+        {
+          "label": "괴도 키드",
+          "ordinal": 14,
+          "sourceTitle": "명탐정 코난: 세기말의 마술사",
+          "sourceLinkCount": 140
+        },
+        {
+          "label": "괴도 키드",
+          "ordinal": 18,
+          "sourceTitle": "명탐정 코난의 등장인물 목록",
+          "sourceLinkCount": 363
+        },
+        {
+          "label": "괴도 키드",
+          "ordinal": 22,
+          "sourceTitle": "명탐정 코난: 은빛 날개의 마술사",
+          "sourceLinkCount": 175
+        },
+        {
+          "label": "괴도 키드",
+          "ordinal": 139,
+          "sourceTitle": "명탐정 코난: 베이커가의 망령",
+          "sourceLinkCount": 182
+        },
+        {
+          "label": "괴도 키드",
+          "ordinal": 186,
+          "sourceTitle": "명탐정 코난",
+          "sourceLinkCount": 256
+        },
+        {
+          "label": "괴도 키드",
+          "ordinal": 186,
+          "sourceTitle": "명탐정 코난의 영화 목록",
+          "sourceLinkCount": 190
+        },
+        {
+          "label": "괴도 키드",
+          "ordinal": 405,
+          "sourceTitle": "명탐정 코난 (애니메이션)",
+          "sourceLinkCount": 478
+        }
+      ]
+    },
+    {
+      "caseId": "G13",
+      "start": "트리케라톱스",
+      "goal": "맹자",
+      "players": 6,
+      "finished": 5,
+      "retired": 1,
+      "averageMoves": 11,
+      "exitReasons": [
+        "grace_timeout"
+      ],
+      "cachedIncomingSources": 16,
+      "cachedFirst50Links": 7,
+      "aliasLabeledIncoming": 0,
+      "incomingSample": [
+        {
+          "label": "맹자",
+          "ordinal": 8,
+          "sourceTitle": "공자의 제자",
+          "sourceLinkCount": 208
+        },
+        {
+          "label": "맹자",
+          "ordinal": 9,
+          "sourceTitle": "맹자 (책)",
+          "sourceLinkCount": 145
+        },
+        {
+          "label": "맹자",
+          "ordinal": 9,
+          "sourceTitle": "성리학",
+          "sourceLinkCount": 557
+        },
+        {
+          "label": "맹자",
+          "ordinal": 10,
+          "sourceTitle": "과거제",
+          "sourceLinkCount": 175
+        },
+        {
+          "label": "맹자",
+          "ordinal": 14,
+          "sourceTitle": "공자",
+          "sourceLinkCount": 479
+        },
+        {
+          "label": "맹자",
+          "ordinal": 15,
+          "sourceTitle": "교육",
+          "sourceLinkCount": 198
+        },
+        {
+          "label": "맹자",
+          "ordinal": 24,
+          "sourceTitle": "유교",
+          "sourceLinkCount": 474
+        },
+        {
+          "label": "맹자",
+          "ordinal": 53,
+          "sourceTitle": "기업 윤리",
+          "sourceLinkCount": 123
+        },
+        {
+          "label": "맹자",
+          "ordinal": 87,
+          "sourceTitle": "철학",
+          "sourceLinkCount": 472
+        },
+        {
+          "label": "맹자",
+          "ordinal": 98,
+          "sourceTitle": "노자",
+          "sourceLinkCount": 614
+        },
+        {
+          "label": "맹자",
+          "ordinal": 115,
+          "sourceTitle": "신뢰",
+          "sourceLinkCount": 187
+        },
+        {
+          "label": "맹자",
+          "ordinal": 118,
+          "sourceTitle": "주 문왕",
+          "sourceLinkCount": 124
+        },
+        {
+          "label": "맹자",
+          "ordinal": 127,
+          "sourceTitle": "아리스토텔레스",
+          "sourceLinkCount": 399
+        },
+        {
+          "label": "맹자",
+          "ordinal": 148,
+          "sourceTitle": "주나라",
+          "sourceLinkCount": 201
+        },
+        {
+          "label": "맹자",
+          "ordinal": 219,
+          "sourceTitle": "불교",
+          "sourceLinkCount": 793
+        },
+        {
+          "label": "맹자",
+          "ordinal": 979,
+          "sourceTitle": "권위주의",
+          "sourceLinkCount": 1109
+        }
+      ]
+    },
+    {
+      "caseId": "G14",
+      "start": "조성진 (피아니스트)",
+      "goal": "금산군",
+      "players": 5,
+      "finished": 5,
+      "retired": 0,
+      "averageMoves": 3.4,
+      "exitReasons": [],
+      "cachedIncomingSources": 14,
+      "cachedFirst50Links": 6,
+      "aliasLabeledIncoming": 7,
+      "incomingSample": [
+        {
+          "label": "금산군청 건설과",
+          "ordinal": 0,
+          "sourceTitle": "금산군의 농어촌버스",
+          "sourceLinkCount": 113
+        },
+        {
+          "label": "금산군",
+          "ordinal": 1,
+          "sourceTitle": "한일교통",
+          "sourceLinkCount": 52
+        },
+        {
+          "label": "금산군",
+          "ordinal": 2,
+          "sourceTitle": "금산인삼축제",
+          "sourceLinkCount": 31
+        },
+        {
+          "label": "금산군",
+          "ordinal": 22,
+          "sourceTitle": "홍주성역사관",
+          "sourceLinkCount": 49
+        },
+        {
+          "label": "금산",
+          "ordinal": 28,
+          "sourceTitle": "금강",
+          "sourceLinkCount": 182
+        },
+        {
+          "label": "금산군",
+          "ordinal": 44,
+          "sourceTitle": "인삼",
+          "sourceLinkCount": 194
+        },
+        {
+          "label": "금산군",
+          "ordinal": 54,
+          "sourceTitle": "광역철도",
+          "sourceLinkCount": 324
+        },
+        {
+          "label": "금산군",
+          "ordinal": 60,
+          "sourceTitle": "대한민국의 행정 구역",
+          "sourceLinkCount": 627
+        },
+        {
+          "label": "금산",
+          "ordinal": 61,
+          "sourceTitle": "한우",
+          "sourceLinkCount": 127
+        },
+        {
+          "label": "금산",
+          "ordinal": 95,
+          "sourceTitle": "충청남도",
+          "sourceLinkCount": 733
+        },
+        {
+          "label": "금산군",
+          "ordinal": 267,
+          "sourceTitle": "독립기념관 (대한민국)",
+          "sourceLinkCount": 293
+        },
+        {
+          "label": "금산",
+          "ordinal": 276,
+          "sourceTitle": "한반도",
+          "sourceLinkCount": 408
+        },
+        {
+          "label": "금산",
+          "ordinal": 285,
+          "sourceTitle": "녹차",
+          "sourceLinkCount": 345
+        },
+        {
+          "label": "금산",
+          "ordinal": 667,
+          "sourceTitle": "쌀",
+          "sourceLinkCount": 731
+        }
+      ]
+    },
+    {
+      "caseId": "G15",
+      "start": "서부저지고릴라",
+      "goal": "젤다의 전설 시간의 오카리나",
+      "players": 6,
+      "finished": 6,
+      "retired": 0,
+      "averageMoves": 7.5,
+      "exitReasons": [],
+      "cachedIncomingSources": 2,
+      "cachedFirst50Links": 1,
+      "aliasLabeledIncoming": 2,
+      "incomingSample": [
+        {
+          "label": "시간의 오카리나",
+          "ordinal": 25,
+          "sourceTitle": "젤다의 전설",
+          "sourceLinkCount": 167
+        },
+        {
+          "label": "시간의 오카리나",
+          "ordinal": 427,
+          "sourceTitle": "닌텐도",
+          "sourceLinkCount": 555
+        }
+      ]
+    },
+    {
+      "caseId": "G16",
+      "start": "레킹볼",
+      "goal": "카리나 (가수)",
+      "players": 6,
+      "finished": 6,
+      "retired": 0,
+      "averageMoves": 8.5,
+      "exitReasons": [],
+      "cachedIncomingSources": 6,
+      "cachedFirst50Links": 1,
+      "aliasLabeledIncoming": 6,
+      "incomingSample": [
+        {
+          "label": "카리나",
+          "ordinal": 12,
+          "sourceTitle": "Aespa",
+          "sourceLinkCount": 631
+        },
+        {
+          "label": "카리나",
+          "ordinal": 118,
+          "sourceTitle": "SM 엔터테인먼트",
+          "sourceLinkCount": 705
+        },
+        {
+          "label": "카리나",
+          "ordinal": 139,
+          "sourceTitle": "시우민",
+          "sourceLinkCount": 307
+        },
+        {
+          "label": "카리나",
+          "ordinal": 400,
+          "sourceTitle": "태연",
+          "sourceLinkCount": 558
+        },
+        {
+          "label": "카리나",
+          "ordinal": 461,
+          "sourceTitle": "대한민국의 걸 그룹 목록",
+          "sourceLinkCount": 645
+        },
+        {
+          "label": "카리나",
+          "ordinal": 547,
+          "sourceTitle": "소녀시대",
+          "sourceLinkCount": 726
+        }
+      ]
+    },
+    {
+      "caseId": "G17",
+      "start": "샹구스",
+      "goal": "할로윈",
+      "players": 6,
+      "finished": 6,
+      "retired": 0,
+      "averageMoves": 10.7,
+      "exitReasons": [],
+      "cachedIncomingSources": 6,
+      "cachedFirst50Links": 1,
+      "aliasLabeledIncoming": 3,
+      "incomingSample": [
+        {
+          "label": "핼러윈",
+          "ordinal": 10,
+          "sourceTitle": "이태원 참사",
+          "sourceLinkCount": 209
+        },
+        {
+          "label": "할로윈",
+          "ordinal": 56,
+          "sourceTitle": "미국의 문화",
+          "sourceLinkCount": 83
+        },
+        {
+          "label": "핼러윈",
+          "ordinal": 86,
+          "sourceTitle": "10월",
+          "sourceLinkCount": 164
+        },
+        {
+          "label": "할로윈",
+          "ordinal": 92,
+          "sourceTitle": "사탕",
+          "sourceLinkCount": 152
+        },
+        {
+          "label": "핼러윈",
+          "ordinal": 299,
+          "sourceTitle": "아일랜드",
+          "sourceLinkCount": 487
+        },
+        {
+          "label": "할로윈",
+          "ordinal": 354,
+          "sourceTitle": "10월 31일",
+          "sourceLinkCount": 369
+        }
+      ]
+    }
+  ]
+}
