@@ -10,6 +10,8 @@ on:
       - "scripts/report-entryway-suitability.mjs"
       - "scripts/probe-course-target-metadata.mjs"
       - "data/research/entryway-validation-*.json"
+      - "data/research/entryway-target-metadata-*.json"
+      - "scripts/sql/entryway-17-group-readonly.sql"
       - "docs/research/entryway-suitability-*.md"
       - ".github/workflows/entryway-suitability-research.yml"
 
