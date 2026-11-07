@@ -1,0 +1,32 @@
+name: Course path research QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "utils/coursePathEvidence.js"
+      - "tests/coursePathEvidence.test.js"
+      - "scripts/report-path-quality.mjs"
+      - "data/research/path-quality-*.json"
+      - "scripts/sql/path-quality-*.sql"
+      - "docs/research/path-quality-*.md"
+      - ".github/workflows/course-path-research.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run offline graph and privacy tests
+        run: node --test tests/coursePathEvidence.test.js
+      - name: Generate reproducible route report without external services
+        run: node scripts/report-path-quality.mjs
