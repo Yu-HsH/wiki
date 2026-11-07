@@ -1,0 +1,99 @@
+{
+  "measuredAt": "2026-11-07",
+  "method": "Wikimedia Action API list=backlinks, blnamespace=0, blfilterredir=nonredirects, bllimit=50; independent external benchmark",
+  "provenance": "GitHub Actions run 42344240153, job 128318404077",
+  "note": "apiHasMore true means at least 50; no backlinks may still have links through redirects or wiki markup/rendered links.",
+  "rows": [
+    {
+      "title": "2010년 FIFA 월드컵 남미 지역 예선",
+      "cachedInbound": 1,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "GPT (언어 모델)",
+      "cachedInbound": 1,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "SQL",
+      "cachedInbound": 16,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "고래상어",
+      "cachedInbound": 2,
+      "apiSampleCount": 43,
+      "apiHasMore": false,
+      "apiCountKind": "complete"
+    },
+    {
+      "title": "김치",
+      "cachedInbound": 23,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "메이플스토리",
+      "cachedInbound": 10,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "미국의 하늘에 잘린 달 2",
+      "cachedInbound": 0,
+      "apiSampleCount": 0,
+      "apiHasMore": false,
+      "apiCountKind": "complete"
+    },
+    {
+      "title": "백준 온라인 저지",
+      "cachedInbound": 0,
+      "apiSampleCount": 2,
+      "apiHasMore": false,
+      "apiCountKind": "complete"
+    },
+    {
+      "title": "서울특별시",
+      "cachedInbound": 300,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "월드 와이드 웹",
+      "cachedInbound": 52,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "한강",
+      "cachedInbound": 29,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "화성",
+      "cachedInbound": 14,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    },
+    {
+      "title": "훈민정음",
+      "cachedInbound": 21,
+      "apiSampleCount": 50,
+      "apiHasMore": true,
+      "apiCountKind": "at_least"
+    }
+  ]
+}
