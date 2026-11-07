@@ -10,6 +10,7 @@ export function assessDocumentEvidence(document) {
   const outbound = finiteCount(document?.outbound_links);
   const inbound = finiteCount(document?.cached_inbound_sources);
   const inboundEarly = finiteCount(document?.cached_inbound_early50);
+  const hubExits = finiteCount(document?.observed_hub_exits_20);
   const flags = [];
 
   if (outbound == null) flags.push("OUTBOUND_NOT_MEASURED");
@@ -20,6 +21,10 @@ export function assessDocumentEvidence(document) {
   else if (inbound === 0) flags.push("NO_INBOUND_IN_CACHED_SAMPLE");
   else if (inbound <= 2) flags.push("FEW_INBOUND_IN_CACHED_SAMPLE");
 
+  if (outbound !== null && outbound < 20 && hubExits !== null && hubExits >= 2) {
+    flags.push("MULTIPLE_CACHED_HUB_EXITS_DESPITE_FEW_LINKS");
+  }
+
   if (inbound != null && inbound > 0 && inboundEarly === 0) {
     flags.push("NO_EARLY_INBOUND_IN_CACHED_SAMPLE");
   }
@@ -27,6 +32,7 @@ export function assessDocumentEvidence(document) {
     flags,
     outboundLinks: outbound,
     cachedInboundSources: inbound,
+    observedHubExits: hubExits,
     // Inbound is a lower bound from the cached sample, not Wikipedia's full graph.
     interpretation: "OBSERVATION_ONLY",
     autoReject: false,
@@ -34,12 +40,19 @@ export function assessDocumentEvidence(document) {
 }
 
 /** Triages the need for manual inspection; NEVER re-rolls a game. */
-export function assessCourseEvidence(startDocument, goalDocument) {
+export function assessCourseEvidence(startDocument, goalDocument, { liveGoal } = {}) {
   const start = assessDocumentEvidence(startDocument);
   const goal = assessDocumentEvidence(goalDocument);
-  const startThin = start.outboundLinks !== null && start.outboundLinks < 20;
-  const goalSparse = goal.cachedInboundSources !== null && goal.cachedInboundSources <= 2;
-  const unknown = start.outboundLinks === null || goal.cachedInboundSources === null;
+  // A narrow page with multiple observed exits into highly connected pages
+  // should not be condemned solely because it has <20 total links.
+  const startThin = start.outboundLinks !== null && start.outboundLinks < 20
+    && (start.observedHubExits === null || start.observedHubExits < 2);
+  const live = assessLiveBacklinkEvidence(liveGoal);
+  const goalSparse = live.status === "unknown"
+    ? goal.cachedInboundSources !== null && goal.cachedInboundSources <= 2
+    : ["no_direct_backlinks_observed", "very_few_direct_backlinks"].includes(live.status);
+  const unknown = start.outboundLinks === null
+    || (goal.cachedInboundSources === null && live.status === "unknown");
   const priority = unknown ? "unknown"
     : startThin && goalSparse ? "priority_review"
     : startThin || goalSparse ? "review"
