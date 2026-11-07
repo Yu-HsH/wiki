@@ -7,7 +7,9 @@ with latest as (
 pairs(start_title,goal_title) as (
   values ('대한민국','훈민정음'),('음식','김치'),('김치','SQL'),('SQL','월드 와이드 웹'),
     ('미국의 하늘에 잘린 달 2','2010년 FIFA 월드컵 남미 지역 예선'),
-    ('메이플스토리','GPT (언어 모델)')
+    ('메이플스토리','GPT (언어 모델)'),
+    ('대한민국','한강'),('컴퓨터','월드 와이드 웹'),('훈민정음','한강'),
+    ('서울특별시','한강'),('김치','한강')
 ),
 p as (
   select x.start_title,x.goal_title,s.id start_sid,g.page_id goal_id
