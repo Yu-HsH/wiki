@@ -1,0 +1,42 @@
+name: Auto-goal disambiguation QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/functions/single-run/random.mjs"
+      - "tests/singleRandomStart.test.js"
+      - "scripts/benchmark-random-pageprops-readonly.mjs"
+      - "scripts/audit-daily-goal-disambiguation-readonly.mjs"
+      - "scripts/smoke-random-pageprops-readonly.mjs"
+      - "docs/research/auto-goal-disambiguation-20261107.md"
+      - ".github/workflows/auto-goal-disambiguation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test-without-network:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Server-owned random selection regression suite
+        run: node --test tests/singleRandomStart.test.js
+  live-api-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify exact random generator query
+        run: node scripts/smoke-random-pageprops-readonly.mjs
+      - name: Compare paired Wiki query latency and payload (no DB or game writes)
+        run: node scripts/benchmark-random-pageprops-readonly.mjs
+      - name: Audit 17 existing daily auto-target words without modifying challenge
+        run: node scripts/audit-daily-goal-disambiguation-readonly.mjs
