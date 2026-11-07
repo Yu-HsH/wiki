@@ -8,6 +8,7 @@ on:
       - "tests/coursePathEvidence.test.js"
       - "scripts/report-path-quality.mjs"
       - "scripts/probe-played-goals-mediawiki.mjs"
+      - "scripts/probe-played-goal-sources.mjs"
       - "data/research/path-quality-*.json"
       - "scripts/sql/path-quality-*.sql"
       - "docs/research/path-quality-*.md"
@@ -33,3 +34,5 @@ jobs:
         run: node scripts/report-path-quality.mjs
       - name: Inspect official public Wikipedia goal backlinks and disambiguation flags
         run: node scripts/probe-played-goals-mediawiki.mjs --limit=15
+      - name: Inspect source document titles of narrow goals (public articles only)
+        run: node scripts/probe-played-goal-sources.mjs
