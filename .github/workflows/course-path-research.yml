@@ -6,12 +6,15 @@ on:
     paths:
       - "utils/coursePathEvidence.js"
       - "tests/coursePathEvidence.test.js"
+      - "tests/playedGoalSourcesAudit.test.js"
       - "scripts/report-path-quality.mjs"
       - "scripts/probe-played-goals-mediawiki.mjs"
       - "scripts/probe-played-goal-sources.mjs"
       - "data/research/path-quality-*.json"
+      - "data/research/play-goal-backlinks-*.json"
       - "scripts/sql/path-quality-*.sql"
       - "docs/research/path-quality-*.md"
+      - "docs/research/played-cases-*.md"
       - ".github/workflows/course-path-research.yml"
 
 permissions:
@@ -29,7 +32,7 @@ jobs:
         with:
           node-version: "22"
       - name: Run offline graph and privacy tests
-        run: node --test tests/coursePathEvidence.test.js
+        run: node --test tests/coursePathEvidence.test.js tests/playedGoalSourcesAudit.test.js
       - name: Generate reproducible route report without external services
         run: node scripts/report-path-quality.mjs
       - name: Inspect official public Wikipedia goal backlinks and disambiguation flags
