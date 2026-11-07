@@ -214,3 +214,54 @@ test('random allocation uses one identity query per draw; no new sequential page
     assert.equal(c.url.searchParams.get('ppprop'), 'disambiguation');
   }
 });
+
+
+test('user-specified custom disambiguation goal is kept; only random auto goals are filtered', async () => {
+  const wikiCalls=[], commits=[];
+  const fetcher=async(address,options={})=>{
+    const u=String(address);
+    wikiCalls.push(u);
+    if(u.endsWith('/wiki-snapshot')){
+      const body=JSON.parse(options.body);
+      return response({snapshotId:'s-'+body.title,pageId:body.title==='덕곡면'?'11':'22',revisionId:'33',canonicalTitle:body.title});
+    }
+    return response({query:{random:[{title:'출발 문서'}]}});
+  };
+  const edge={
+    url:'http://127.0.0.1:55421',serviceKey:'test-only',fetcher,
+    sha256:async()=>'a'.repeat(64),json:(data,status=200)=>new Response(JSON.stringify(data),{status}),
+    db:{rpc:async(name,args)=>{
+      if(name==='claim_single_course_v1')return {data:{code:'SELECT_COURSE',mode:'custom',target:'덕곡면',allocationId:'allocation'}};
+      if(name==='commit_single_course_v1'){commits.push(args);return {data:{ok:true}};}
+      throw Error('Unexpected RPC '+name);
+    }}
+  };
+  const reply=await handleSingleStart(new Request('http://local'),request({mode:'custom',customTarget:'덕곡면'}),edge);
+  assert.equal((await reply.json()).ok,true);
+  assert.equal(commits.length,1);
+  assert.equal(commits[0].p_goal.canonicalTitle,'덕곡면');
+  assert.equal(wikiCalls.filter(x=>x.includes('wiki-snapshot')).length,2);
+});
+
+test('an already server-selected daily goal is never redrawn or silently changed by random goal policy', async () => {
+  const commits=[],snapshotTitles=[];
+  const edge={
+    url:'http://127.0.0.1:55421',serviceKey:'test-only',
+    sha256:async()=>'a'.repeat(64),json:(data,status=200)=>new Response(JSON.stringify(data),{status}),
+    fetcher:async(address,options={})=>{
+      if(!String(address).includes('/wiki-snapshot'))throw Error('No new random API call permitted for daily');
+      const body=JSON.parse(options.body);snapshotTitles.push(body.title);
+      return response({snapshotId:'s-'+body.title,pageId:body.title==='섹시'?'11':'22',revisionId:'33',canonicalTitle:body.title});
+    },
+    db:{rpc:async(name,args)=>{
+      if(name==='claim_single_course_v1')return {data:{code:'SELECT_COURSE',mode:'daily',allocationId:'allocation'}};
+      if(name==='ensure_today_daily_challenge')return {data:[{start_title:'출발 문서',target_title:'섹시',challenge_date:'2026-11-07'}]};
+      if(name==='commit_single_course_v1'){commits.push(args);return {data:{ok:true}};}
+      throw Error('Unexpected RPC '+name);
+    }}
+  };
+  const reply=await handleSingleStart(new Request('http://local'),request({mode:'daily'}),edge);
+  assert.equal((await reply.json()).ok,true);
+  assert.deepEqual(snapshotTitles,['섹시','출발 문서']);
+  assert.equal(commits[0].p_goal.canonicalTitle,'섹시');
+});
