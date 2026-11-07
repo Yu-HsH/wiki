@@ -6,7 +6,8 @@
     "Only cached source snapshots count toward inbound links, not Wikipedia-wide backlinks.",
     "Source link ordinal <=50 is a rough early-anchor proxy, not visual viewport position.",
     "Document existence here means cached in Wiki Race, not necessarily current Wikipedia content.",
-    "Numbers are neither an absolute difficulty nor a proof of reachability."
+    "Numbers are neither an absolute difficulty nor a proof of reachability.",
+    "Hub exits are source links to targets cited by >=20 (or >=50) cached latest source pages; this is a relative proxy and not a semantic assessment."
   ],
   "sample": [
     {
@@ -16,7 +17,9 @@
       "outbound_links": 205,
       "outbound_early50": 51,
       "cached_inbound_sources": 1,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 42,
+      "observed_hub_exits_50": 16
     },
     {
       "cohort": "focus",
@@ -25,7 +28,9 @@
       "outbound_links": 261,
       "outbound_early50": 51,
       "cached_inbound_sources": 1,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 8,
+      "observed_hub_exits_50": 2
     },
     {
       "cohort": "focus",
@@ -34,7 +39,9 @@
       "outbound_links": 438,
       "outbound_early50": 51,
       "cached_inbound_sources": 16,
-      "cached_inbound_early50": 4
+      "cached_inbound_early50": 4,
+      "observed_hub_exits_20": 96,
+      "observed_hub_exits_50": 12
     },
     {
       "cohort": "focus",
@@ -43,7 +50,9 @@
       "outbound_links": 123,
       "outbound_early50": 51,
       "cached_inbound_sources": 2,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 48,
+      "observed_hub_exits_50": 32
     },
     {
       "cohort": "focus",
@@ -52,7 +61,9 @@
       "outbound_links": 321,
       "outbound_early50": 51,
       "cached_inbound_sources": 23,
-      "cached_inbound_early50": 13
+      "cached_inbound_early50": 13,
+      "observed_hub_exits_20": 65,
+      "observed_hub_exits_50": 26
     },
     {
       "cohort": "focus",
@@ -61,7 +72,9 @@
       "outbound_links": 143,
       "outbound_early50": 51,
       "cached_inbound_sources": 10,
-      "cached_inbound_early50": 9
+      "cached_inbound_early50": 9,
+      "observed_hub_exits_20": 46,
+      "observed_hub_exits_50": 33
     },
     {
       "cohort": "focus",
@@ -70,7 +83,9 @@
       "outbound_links": 17,
       "outbound_early50": 17,
       "cached_inbound_sources": 0,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 11,
+      "observed_hub_exits_50": 10
     },
     {
       "cohort": "focus",
@@ -79,7 +94,9 @@
       "outbound_links": 1,
       "outbound_early50": 1,
       "cached_inbound_sources": 0,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 1,
+      "observed_hub_exits_50": 0
     },
     {
       "cohort": "focus",
@@ -88,7 +105,9 @@
       "outbound_links": 1163,
       "outbound_early50": 51,
       "cached_inbound_sources": 300,
-      "cached_inbound_early50": 201
+      "cached_inbound_early50": 201,
+      "observed_hub_exits_20": 253,
+      "observed_hub_exits_50": 100
     },
     {
       "cohort": "focus",
@@ -97,7 +116,9 @@
       "outbound_links": 334,
       "outbound_early50": 51,
       "cached_inbound_sources": 52,
-      "cached_inbound_early50": 19
+      "cached_inbound_early50": 19,
+      "observed_hub_exits_20": 43,
+      "observed_hub_exits_50": 11
     },
     {
       "cohort": "focus",
@@ -106,7 +127,9 @@
       "outbound_links": 446,
       "outbound_early50": 51,
       "cached_inbound_sources": 29,
-      "cached_inbound_early50": 11
+      "cached_inbound_early50": 11,
+      "observed_hub_exits_20": 81,
+      "observed_hub_exits_50": 49
     },
     {
       "cohort": "focus",
@@ -115,7 +138,9 @@
       "outbound_links": 246,
       "outbound_early50": 51,
       "cached_inbound_sources": 14,
-      "cached_inbound_early50": 6
+      "cached_inbound_early50": 6,
+      "observed_hub_exits_20": 42,
+      "observed_hub_exits_50": 19
     },
     {
       "cohort": "focus",
@@ -124,7 +149,9 @@
       "outbound_links": 527,
       "outbound_early50": 51,
       "cached_inbound_sources": 21,
-      "cached_inbound_early50": 13
+      "cached_inbound_early50": 13,
+      "observed_hub_exits_20": 42,
+      "observed_hub_exits_50": 19
     },
     {
       "cohort": "random_snapshot",
@@ -133,7 +160,9 @@
       "outbound_links": 1166,
       "outbound_early50": 51,
       "cached_inbound_sources": 136,
-      "cached_inbound_early50": 50
+      "cached_inbound_early50": 50,
+      "observed_hub_exits_20": 511,
+      "observed_hub_exits_50": 141
     },
     {
       "cohort": "random_snapshot",
@@ -142,7 +171,9 @@
       "outbound_links": 22,
       "outbound_early50": 22,
       "cached_inbound_sources": 0,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 5,
+      "observed_hub_exits_50": 3
     },
     {
       "cohort": "random_snapshot",
@@ -151,7 +182,9 @@
       "outbound_links": 288,
       "outbound_early50": 51,
       "cached_inbound_sources": 8,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 9,
+      "observed_hub_exits_50": 7
     },
     {
       "cohort": "random_snapshot",
@@ -160,7 +193,9 @@
       "outbound_links": 15,
       "outbound_early50": 15,
       "cached_inbound_sources": 0,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 9,
+      "observed_hub_exits_50": 1
     },
     {
       "cohort": "random_snapshot",
@@ -169,7 +204,9 @@
       "outbound_links": 109,
       "outbound_early50": 51,
       "cached_inbound_sources": 1,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 18,
+      "observed_hub_exits_50": 14
     },
     {
       "cohort": "random_snapshot",
@@ -178,7 +215,9 @@
       "outbound_links": 164,
       "outbound_early50": 51,
       "cached_inbound_sources": 2,
-      "cached_inbound_early50": 2
+      "cached_inbound_early50": 2,
+      "observed_hub_exits_20": 5,
+      "observed_hub_exits_50": 3
     },
     {
       "cohort": "random_snapshot",
@@ -187,7 +226,9 @@
       "outbound_links": 273,
       "outbound_early50": 51,
       "cached_inbound_sources": 9,
-      "cached_inbound_early50": 7
+      "cached_inbound_early50": 7,
+      "observed_hub_exits_20": 1,
+      "observed_hub_exits_50": 1
     },
     {
       "cohort": "random_snapshot",
@@ -196,7 +237,9 @@
       "outbound_links": 645,
       "outbound_early50": 51,
       "cached_inbound_sources": 2,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 20,
+      "observed_hub_exits_50": 6
     },
     {
       "cohort": "random_snapshot",
@@ -205,7 +248,9 @@
       "outbound_links": 36,
       "outbound_early50": 36,
       "cached_inbound_sources": 7,
-      "cached_inbound_early50": 4
+      "cached_inbound_early50": 4,
+      "observed_hub_exits_20": 3,
+      "observed_hub_exits_50": 2
     },
     {
       "cohort": "random_snapshot",
@@ -214,7 +259,9 @@
       "outbound_links": 352,
       "outbound_early50": 51,
       "cached_inbound_sources": 64,
-      "cached_inbound_early50": 27
+      "cached_inbound_early50": 27,
+      "observed_hub_exits_20": 100,
+      "observed_hub_exits_50": 59
     },
     {
       "cohort": "random_snapshot",
@@ -223,7 +270,9 @@
       "outbound_links": 174,
       "outbound_early50": 51,
       "cached_inbound_sources": 52,
-      "cached_inbound_early50": 27
+      "cached_inbound_early50": 27,
+      "observed_hub_exits_20": 30,
+      "observed_hub_exits_50": 6
     },
     {
       "cohort": "random_snapshot",
@@ -232,7 +281,9 @@
       "outbound_links": 145,
       "outbound_early50": 51,
       "cached_inbound_sources": 29,
-      "cached_inbound_early50": 22
+      "cached_inbound_early50": 22,
+      "observed_hub_exits_20": 61,
+      "observed_hub_exits_50": 24
     },
     {
       "cohort": "random_snapshot",
@@ -241,7 +292,9 @@
       "outbound_links": 367,
       "outbound_early50": 51,
       "cached_inbound_sources": 13,
-      "cached_inbound_early50": 4
+      "cached_inbound_early50": 4,
+      "observed_hub_exits_20": 94,
+      "observed_hub_exits_50": 33
     },
     {
       "cohort": "random_snapshot",
@@ -250,7 +303,9 @@
       "outbound_links": 75,
       "outbound_early50": 51,
       "cached_inbound_sources": 2,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 7,
+      "observed_hub_exits_50": 5
     },
     {
       "cohort": "random_snapshot",
@@ -259,7 +314,9 @@
       "outbound_links": 138,
       "outbound_early50": 51,
       "cached_inbound_sources": 1,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 2,
+      "observed_hub_exits_50": 1
     },
     {
       "cohort": "random_snapshot",
@@ -268,7 +325,9 @@
       "outbound_links": 590,
       "outbound_early50": 51,
       "cached_inbound_sources": 7,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 25,
+      "observed_hub_exits_50": 8
     },
     {
       "cohort": "random_snapshot",
@@ -277,7 +336,9 @@
       "outbound_links": 64,
       "outbound_early50": 51,
       "cached_inbound_sources": 8,
-      "cached_inbound_early50": 3
+      "cached_inbound_early50": 3,
+      "observed_hub_exits_20": 8,
+      "observed_hub_exits_50": 5
     },
     {
       "cohort": "random_snapshot",
@@ -286,7 +347,9 @@
       "outbound_links": 312,
       "outbound_early50": 51,
       "cached_inbound_sources": 9,
-      "cached_inbound_early50": 3
+      "cached_inbound_early50": 3,
+      "observed_hub_exits_20": 29,
+      "observed_hub_exits_50": 10
     },
     {
       "cohort": "random_snapshot",
@@ -295,7 +358,9 @@
       "outbound_links": 68,
       "outbound_early50": 51,
       "cached_inbound_sources": 2,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 9,
+      "observed_hub_exits_50": 5
     },
     {
       "cohort": "random_snapshot",
@@ -304,7 +369,9 @@
       "outbound_links": 67,
       "outbound_early50": 51,
       "cached_inbound_sources": 8,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 14,
+      "observed_hub_exits_50": 8
     },
     {
       "cohort": "random_snapshot",
@@ -313,7 +380,9 @@
       "outbound_links": 106,
       "outbound_early50": 51,
       "cached_inbound_sources": 12,
-      "cached_inbound_early50": 8
+      "cached_inbound_early50": 8,
+      "observed_hub_exits_20": 10,
+      "observed_hub_exits_50": 5
     },
     {
       "cohort": "random_snapshot",
@@ -322,7 +391,9 @@
       "outbound_links": 577,
       "outbound_early50": 51,
       "cached_inbound_sources": 122,
-      "cached_inbound_early50": 31
+      "cached_inbound_early50": 31,
+      "observed_hub_exits_20": 176,
+      "observed_hub_exits_50": 123
     },
     {
       "cohort": "random_snapshot",
@@ -331,7 +402,9 @@
       "outbound_links": 647,
       "outbound_early50": 51,
       "cached_inbound_sources": 102,
-      "cached_inbound_early50": 26
+      "cached_inbound_early50": 26,
+      "observed_hub_exits_20": 86,
+      "observed_hub_exits_50": 47
     },
     {
       "cohort": "random_snapshot",
@@ -340,7 +413,9 @@
       "outbound_links": 19,
       "outbound_early50": 19,
       "cached_inbound_sources": 5,
-      "cached_inbound_early50": 5
+      "cached_inbound_early50": 5,
+      "observed_hub_exits_20": 6,
+      "observed_hub_exits_50": 3
     },
     {
       "cohort": "random_snapshot",
@@ -349,7 +424,9 @@
       "outbound_links": 129,
       "outbound_early50": 51,
       "cached_inbound_sources": 3,
-      "cached_inbound_early50": 3
+      "cached_inbound_early50": 3,
+      "observed_hub_exits_20": 14,
+      "observed_hub_exits_50": 8
     },
     {
       "cohort": "random_snapshot",
@@ -358,7 +435,9 @@
       "outbound_links": 97,
       "outbound_early50": 51,
       "cached_inbound_sources": 14,
-      "cached_inbound_early50": 2
+      "cached_inbound_early50": 2,
+      "observed_hub_exits_20": 16,
+      "observed_hub_exits_50": 12
     },
     {
       "cohort": "random_snapshot",
@@ -367,7 +446,9 @@
       "outbound_links": 123,
       "outbound_early50": 51,
       "cached_inbound_sources": 10,
-      "cached_inbound_early50": 4
+      "cached_inbound_early50": 4,
+      "observed_hub_exits_20": 18,
+      "observed_hub_exits_50": 8
     },
     {
       "cohort": "random_snapshot",
@@ -376,7 +457,9 @@
       "outbound_links": 217,
       "outbound_early50": 51,
       "cached_inbound_sources": 43,
-      "cached_inbound_early50": 17
+      "cached_inbound_early50": 17,
+      "observed_hub_exits_20": 19,
+      "observed_hub_exits_50": 4
     },
     {
       "cohort": "random_snapshot",
@@ -385,7 +468,9 @@
       "outbound_links": 16,
       "outbound_early50": 16,
       "cached_inbound_sources": 9,
-      "cached_inbound_early50": 7
+      "cached_inbound_early50": 7,
+      "observed_hub_exits_20": 6,
+      "observed_hub_exits_50": 2
     },
     {
       "cohort": "random_snapshot",
@@ -394,7 +479,9 @@
       "outbound_links": 25,
       "outbound_early50": 25,
       "cached_inbound_sources": 1,
-      "cached_inbound_early50": 0
+      "cached_inbound_early50": 0,
+      "observed_hub_exits_20": 1,
+      "observed_hub_exits_50": 0
     },
     {
       "cohort": "random_snapshot",
@@ -403,7 +490,9 @@
       "outbound_links": 199,
       "outbound_early50": 51,
       "cached_inbound_sources": 3,
-      "cached_inbound_early50": 2
+      "cached_inbound_early50": 2,
+      "observed_hub_exits_20": 30,
+      "observed_hub_exits_50": 23
     },
     {
       "cohort": "random_snapshot",
@@ -412,7 +501,9 @@
       "outbound_links": 109,
       "outbound_early50": 51,
       "cached_inbound_sources": 7,
-      "cached_inbound_early50": 3
+      "cached_inbound_early50": 3,
+      "observed_hub_exits_20": 5,
+      "observed_hub_exits_50": 4
     },
     {
       "cohort": "random_snapshot",
@@ -421,7 +512,9 @@
       "outbound_links": 24,
       "outbound_early50": 24,
       "cached_inbound_sources": 4,
-      "cached_inbound_early50": 2
+      "cached_inbound_early50": 2,
+      "observed_hub_exits_20": 7,
+      "observed_hub_exits_50": 1
     },
     {
       "cohort": "random_snapshot",
@@ -430,7 +523,9 @@
       "outbound_links": 29,
       "outbound_early50": 29,
       "cached_inbound_sources": 1,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 6,
+      "observed_hub_exits_50": 6
     },
     {
       "cohort": "random_snapshot",
@@ -439,7 +534,9 @@
       "outbound_links": 160,
       "outbound_early50": 51,
       "cached_inbound_sources": 13,
-      "cached_inbound_early50": 5
+      "cached_inbound_early50": 5,
+      "observed_hub_exits_20": 44,
+      "observed_hub_exits_50": 14
     },
     {
       "cohort": "random_snapshot",
@@ -448,7 +545,9 @@
       "outbound_links": 133,
       "outbound_early50": 51,
       "cached_inbound_sources": 21,
-      "cached_inbound_early50": 18
+      "cached_inbound_early50": 18,
+      "observed_hub_exits_20": 33,
+      "observed_hub_exits_50": 20
     },
     {
       "cohort": "random_snapshot",
@@ -457,7 +556,9 @@
       "outbound_links": 322,
       "outbound_early50": 51,
       "cached_inbound_sources": 3,
-      "cached_inbound_early50": 1
+      "cached_inbound_early50": 1,
+      "observed_hub_exits_20": 36,
+      "observed_hub_exits_50": 16
     }
   ]
 }
