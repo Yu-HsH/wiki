@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "source": "Read-only production Supabase latest wiki_page_snapshots/wiki_snapshot_links; 13 hand-picked focus + 37 reproducible hash sample",
+  "limitations": [
+    "Only cached source snapshots count toward inbound links, not Wikipedia-wide backlinks.",
+    "Source link ordinal <=50 is a rough early-anchor proxy, not visual viewport position.",
+    "Document existence here means cached in Wiki Race, not necessarily current Wikipedia content.",
+    "Numbers are neither an absolute difficulty nor a proof of reachability."
+  ],
+  "sample": [
+    {
+      "cohort": "focus",
+      "title": "2010년 FIFA 월드컵 남미 지역 예선",
+      "page_id": "106346",
+      "outbound_links": 205,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 1,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "focus",
+      "title": "GPT (언어 모델)",
+      "page_id": "3620589",
+      "outbound_links": 261,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 1,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "focus",
+      "title": "SQL",
+      "page_id": "151961",
+      "outbound_links": 438,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 16,
+      "cached_inbound_early50": 4
+    },
+    {
+      "cohort": "focus",
+      "title": "고래상어",
+      "page_id": "42284",
+      "outbound_links": 123,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 2,
+      "cached_inbound_early50": 1
+    },
+    {
+      "cohort": "focus",
+      "title": "김치",
+      "page_id": "436065",
+      "outbound_links": 321,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 23,
+      "cached_inbound_early50": 13
+    },
+    {
+      "cohort": "focus",
+      "title": "메이플스토리",
+      "page_id": "32669",
+      "outbound_links": 143,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 10,
+      "cached_inbound_early50": 9
+    },
+    {
+      "cohort": "focus",
+      "title": "미국의 하늘에 잘린 달 2",
+      "page_id": "1846601",
+      "outbound_links": 17,
+      "outbound_early50": 17,
+      "cached_inbound_sources": 0,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "focus",
+      "title": "백준 온라인 저지",
+      "page_id": "1876762",
+      "outbound_links": 1,
+      "outbound_early50": 1,
+      "cached_inbound_sources": 0,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "focus",
+      "title": "서울특별시",
+      "page_id": "259",
+      "outbound_links": 1163,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 300,
+      "cached_inbound_early50": 201
+    },
+    {
+      "cohort": "focus",
+      "title": "월드 와이드 웹",
+      "page_id": "84645",
+      "outbound_links": 334,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 52,
+      "cached_inbound_early50": 19
+    },
+    {
+      "cohort": "focus",
+      "title": "한강",
+      "page_id": "6160",
+      "outbound_links": 446,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 29,
+      "cached_inbound_early50": 11
+    },
+    {
+      "cohort": "focus",
+      "title": "화성",
+      "page_id": "518",
+      "outbound_links": 246,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 14,
+      "cached_inbound_early50": 6
+    },
+    {
+      "cohort": "focus",
+      "title": "훈민정음",
+      "page_id": "5786",
+      "outbound_links": 527,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 21,
+      "cached_inbound_early50": 13
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "2013년",
+      "page_id": "12498",
+      "outbound_links": 1166,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 136,
+      "cached_inbound_early50": 50
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "Shut up",
+      "page_id": "714283",
+      "outbound_links": 22,
+      "outbound_early50": 22,
+      "cached_inbound_sources": 0,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "WWE 명예의 전당",
+      "page_id": "472529",
+      "outbound_links": 288,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 8,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "곁주머니",
+      "page_id": "772978",
+      "outbound_links": 15,
+      "outbound_early50": 15,
+      "cached_inbound_sources": 0,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "그레고리 쿠페",
+      "page_id": "652888",
+      "outbound_links": 109,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 1,
+      "cached_inbound_early50": 1
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "다음에 올 만화대상",
+      "page_id": "3320155",
+      "outbound_links": 164,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 2,
+      "cached_inbound_early50": 2
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "대한민국 상법",
+      "page_id": "1014576",
+      "outbound_links": 273,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 9,
+      "cached_inbound_early50": 7
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "대한민국의 걸 그룹 목록",
+      "page_id": "3606574",
+      "outbound_links": 645,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 2,
+      "cached_inbound_early50": 1
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "동적 계획법",
+      "page_id": "53622",
+      "outbound_links": 36,
+      "outbound_early50": 36,
+      "cached_inbound_sources": 7,
+      "cached_inbound_early50": 4
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "로스앤젤레스",
+      "page_id": "3373",
+      "outbound_links": 352,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 64,
+      "cached_inbound_early50": 27
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "문화",
+      "page_id": "47166",
+      "outbound_links": 174,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 52,
+      "cached_inbound_early50": 27
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "미국 영어",
+      "page_id": "14896",
+      "outbound_links": 145,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 29,
+      "cached_inbound_early50": 22
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "미국의 정치",
+      "page_id": "263176",
+      "outbound_links": 367,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 13,
+      "cached_inbound_early50": 4
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "미키시",
+      "page_id": "419224",
+      "outbound_links": 75,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 2,
+      "cached_inbound_early50": 1
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "벤치 클리어링",
+      "page_id": "242637",
+      "outbound_links": 138,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 1,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "뿌리깊은 나무 (2011년 드라마)",
+      "page_id": "684972",
+      "outbound_links": 590,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 7,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "수면 경련",
+      "page_id": "3947646",
+      "outbound_links": 64,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 8,
+      "cached_inbound_early50": 3
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "스푸트니크 충격",
+      "page_id": "142067",
+      "outbound_links": 312,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 9,
+      "cached_inbound_early50": 3
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "시리아 사막",
+      "page_id": "323566",
+      "outbound_links": 68,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 2,
+      "cached_inbound_early50": 1
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "에라토스테네스",
+      "page_id": "29350",
+      "outbound_links": 67,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 8,
+      "cached_inbound_early50": 1
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "웹 서비스",
+      "page_id": "54793",
+      "outbound_links": 106,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 12,
+      "cached_inbound_early50": 8
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "유엔",
+      "page_id": "5430",
+      "outbound_links": 577,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 122,
+      "cached_inbound_early50": 31
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "유튜브",
+      "page_id": "84071",
+      "outbound_links": 647,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 102,
+      "cached_inbound_early50": 26
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "이스라엘 아데산야",
+      "page_id": "4038189",
+      "outbound_links": 19,
+      "outbound_early50": 19,
+      "cached_inbound_sources": 5,
+      "cached_inbound_early50": 5
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "이코노미 클래스",
+      "page_id": "771952",
+      "outbound_links": 129,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 3,
+      "cached_inbound_early50": 3
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "전차",
+      "page_id": "32941",
+      "outbound_links": 97,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 14,
+      "cached_inbound_early50": 2
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "졸림",
+      "page_id": "156656",
+      "outbound_links": 123,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 10,
+      "cached_inbound_early50": 4
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "철도",
+      "page_id": "56443",
+      "outbound_links": 217,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 43,
+      "cached_inbound_early50": 17
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "축구 선수",
+      "page_id": "473124",
+      "outbound_links": 16,
+      "outbound_early50": 16,
+      "cached_inbound_sources": 9,
+      "cached_inbound_early50": 7
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "캪틴큐",
+      "page_id": "1370606",
+      "outbound_links": 25,
+      "outbound_early50": 25,
+      "cached_inbound_sources": 1,
+      "cached_inbound_early50": 0
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "코리아 그랑프리",
+      "page_id": "303283",
+      "outbound_links": 199,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 3,
+      "cached_inbound_early50": 2
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "쿠로바 카이토",
+      "page_id": "173985",
+      "outbound_links": 109,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 7,
+      "cached_inbound_early50": 3
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "폼 (HTML)",
+      "page_id": "1385035",
+      "outbound_links": 24,
+      "outbound_early50": 24,
+      "cached_inbound_sources": 4,
+      "cached_inbound_early50": 2
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "피트니스",
+      "page_id": "970567",
+      "outbound_links": 29,
+      "outbound_early50": 29,
+      "cached_inbound_sources": 1,
+      "cached_inbound_early50": 1
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "합천군",
+      "page_id": "32751",
+      "outbound_links": 160,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 13,
+      "cached_inbound_early50": 5
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "해리 포터",
+      "page_id": "30269",
+      "outbound_links": 133,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 21,
+      "cached_inbound_early50": 18
+    },
+    {
+      "cohort": "random_snapshot",
+      "title": "혁신도시",
+      "page_id": "640966",
+      "outbound_links": 322,
+      "outbound_early50": 51,
+      "cached_inbound_sources": 3,
+      "cached_inbound_early50": 1
+    }
+  ]
+}
