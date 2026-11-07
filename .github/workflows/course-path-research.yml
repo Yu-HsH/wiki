@@ -13,8 +13,10 @@ on:
       - "data/research/path-quality-*.json"
       - "data/research/play-goal-backlinks-*.json"
       - "scripts/sql/path-quality-*.sql"
+      - "scripts/sql/multiplayer-course-review-readonly.sql"
       - "docs/research/path-quality-*.md"
       - "docs/research/played-cases-*.md"
+      - "docs/research/multiplayer-course-*.md"
       - ".github/workflows/course-path-research.yml"
 
 permissions:
