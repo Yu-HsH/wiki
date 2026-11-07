@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-11-07",
+  "source": "Read-only latest cached Wiki Race snapshot links, page ID-joined",
+  "limitations": [
+    "Two-hop paths include only intermediates already cached as source snapshots; not a complete Wikipedia path search.",
+    "Ordinal is link anchor sequence, NOT screen scroll position or fold/section placement.",
+    "Public Wikipedia revisions can differ from cached source snapshots.",
+    "No user identifiers or personal gameplay traces."
+  ],
+  "pairs": [
+    {
+      "start": "SQL",
+      "goal": "월드 와이드 웹",
+      "cached_two_hop_total": 13,
+      "route_sample": [
+        {
+          "via": "XML",
+          "firstOrdinal": 35,
+          "firstOutbound": 438,
+          "secondOrdinal": 14,
+          "secondOutbound": 267
+        },
+        {
+          "via": "프로그래밍 언어",
+          "firstOrdinal": 1,
+          "firstOutbound": 438,
+          "secondOrdinal": 66,
+          "secondOutbound": 414
+        },
+        {
+          "via": "컴퓨터 망",
+          "firstOrdinal": 114,
+          "firstOutbound": 438,
+          "secondOrdinal": 27,
+          "secondOutbound": 596
+        },
+        {
+          "via": "전자 도서관",
+          "firstOrdinal": 178,
+          "firstOutbound": 438,
+          "secondOrdinal": 1,
+          "secondOutbound": 36
+        },
+        {
+          "via": "데이터베이스",
+          "firstOrdinal": 45,
+          "firstOutbound": 438,
+          "secondOrdinal": 144,
+          "secondOutbound": 251
+        },
+        {
+          "via": "운영체제",
+          "firstOrdinal": 108,
+          "firstOutbound": 438,
+          "secondOrdinal": 117,
+          "secondOutbound": 399
+        },
+        {
+          "via": "관계형 데이터베이스",
+          "firstOrdinal": 16,
+          "firstOutbound": 438,
+          "secondOrdinal": 217,
+          "secondOutbound": 302
+        },
+        {
+          "via": "전자 상거래",
+          "firstOrdinal": 244,
+          "firstOutbound": 438,
+          "secondOrdinal": 7,
+          "secondOutbound": 26
+        },
+        {
+          "via": "소프트웨어 유지보수",
+          "firstOrdinal": 144,
+          "firstOutbound": 438,
+          "secondOrdinal": 168,
+          "secondOutbound": 599
+        },
+        {
+          "via": "소프트웨어 개발",
+          "firstOrdinal": 136,
+          "firstOutbound": 438,
+          "secondOrdinal": 208,
+          "secondOutbound": 289
+        },
+        {
+          "via": "암호학",
+          "firstOrdinal": 189,
+          "firstOutbound": 438,
+          "secondOrdinal": 160,
+          "secondOutbound": 435
+        },
+        {
+          "via": "통신 프로토콜",
+          "firstOrdinal": 121,
+          "firstOutbound": 438,
+          "secondOrdinal": 260,
+          "secondOutbound": 429
+        },
+        {
+          "via": "컴퓨터 보안",
+          "firstOrdinal": 186,
+          "firstOutbound": 438,
+          "secondOrdinal": 206,
+          "secondOutbound": 310
+        }
+      ]
+    },
+    {
+      "start": "김치",
+      "goal": "SQL",
+      "cached_two_hop_total": 2,
+      "route_sample": [
+        {
+          "via": "국제 표준 연속 간행물 번호",
+          "firstOrdinal": 318,
+          "firstOutbound": 321,
+          "secondOrdinal": 100,
+          "secondOutbound": 163
+        },
+        {
+          "via": "국제 표준 도서 번호",
+          "firstOrdinal": 315,
+          "firstOutbound": 321,
+          "secondOrdinal": 125,
+          "secondOutbound": 188
+        }
+      ]
+    },
+    {
+      "start": "대한민국",
+      "goal": "훈민정음",
+      "cached_two_hop_total": 12,
+      "route_sample": [
+        {
+          "via": "한글",
+          "firstOrdinal": 60,
+          "firstOutbound": 1397,
+          "secondOrdinal": 0,
+          "secondOutbound": 346
+        },
+        {
+          "via": "한국인",
+          "firstOrdinal": 62,
+          "firstOutbound": 1397,
+          "secondOrdinal": 49,
+          "secondOutbound": 67
+        },
+        {
+          "via": "한국어 한자",
+          "firstOrdinal": 90,
+          "firstOutbound": 1397,
+          "secondOrdinal": 45,
+          "secondOutbound": 117
+        },
+        {
+          "via": "조선",
+          "firstOrdinal": 127,
+          "firstOutbound": 1397,
+          "secondOrdinal": 21,
+          "secondOutbound": 819
+        },
+        {
+          "via": "한국어",
+          "firstOrdinal": 57,
+          "firstOutbound": 1397,
+          "secondOrdinal": 141,
+          "secondOutbound": 347
+        },
+        {
+          "via": "너구리",
+          "firstOrdinal": 440,
+          "firstOutbound": 1397,
+          "secondOrdinal": 24,
+          "secondOutbound": 251
+        },
+        {
+          "via": "5·18 광주 민주화 운동",
+          "firstOrdinal": 250,
+          "firstOutbound": 1397,
+          "secondOrdinal": 329,
+          "secondOutbound": 345
+        },
+        {
+          "via": "한국",
+          "firstOrdinal": 599,
+          "firstOutbound": 1397,
+          "secondOrdinal": 147,
+          "secondOutbound": 441
+        },
+        {
+          "via": "국채보상운동",
+          "firstOrdinal": 720,
+          "firstOutbound": 1397,
+          "secondOrdinal": 65,
+          "secondOutbound": 82
+        },
+        {
+          "via": "한글전용과 국한문혼용",
+          "firstOrdinal": 921,
+          "firstOutbound": 1397,
+          "secondOrdinal": 18,
+          "secondOutbound": 115
+        },
+        {
+          "via": "세종",
+          "firstOrdinal": 915,
+          "firstOutbound": 1397,
+          "secondOrdinal": 37,
+          "secondOutbound": 806
+        },
+        {
+          "via": "한국의 역사",
+          "firstOrdinal": 1180,
+          "firstOutbound": 1397,
+          "secondOrdinal": 344,
+          "secondOutbound": 717
+        }
+      ]
+    },
+    {
+      "start": "메이플스토리",
+      "goal": "GPT (언어 모델)",
+      "cached_two_hop_total": 0,
+      "route_sample": []
+    },
+    {
+      "start": "미국의 하늘에 잘린 달 2",
+      "goal": "2010년 FIFA 월드컵 남미 지역 예선",
+      "cached_two_hop_total": 0,
+      "route_sample": []
+    },
+    {
+      "start": "음식",
+      "goal": "김치",
+      "cached_two_hop_total": 4,
+      "route_sample": [
+        {
+          "via": "아침 (식사)",
+          "firstOrdinal": 2,
+          "firstOutbound": 587,
+          "secondOrdinal": 45,
+          "secondOutbound": 357
+        },
+        {
+          "via": "참고등어",
+          "firstOrdinal": 117,
+          "firstOutbound": 587,
+          "secondOrdinal": 36,
+          "secondOutbound": 239
+        },
+        {
+          "via": "육회",
+          "firstOrdinal": 163,
+          "firstOutbound": 587,
+          "secondOrdinal": 141,
+          "secondOutbound": 207
+        },
+        {
+          "via": "한국 요리",
+          "firstOrdinal": 491,
+          "firstOutbound": 587,
+          "secondOrdinal": 13,
+          "secondOutbound": 622
+        }
+      ]
+    }
+  ]
+}
