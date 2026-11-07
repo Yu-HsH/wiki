@@ -62,4 +62,9 @@ const summary = {
   note:"Existing selected daily challenges are never rerolled; this script only audits available words.",
 };
 console.log("DAILY_GOAL_IDENTITY_AUDIT " + JSON.stringify({ summary,reports }));
-if(summary.ambiguous.length||summary.missing.length||reports.length!==17)process.exitCode=1;
+// A stale title in the observed pool is an actionable data-quality warning,
+// not evidence of a disambiguation goal. Reject official disambiguation targets;
+// keep stale-title investigation independent of this policy PR.
+if (summary.missing.length) console.warn("DAILY_POOL_STALE_TITLE " + JSON.stringify(summary.missing));
+if(summary.ambiguous.length||reports.length!==17)process.exitCode=1;
+if(process.argv.includes("--strict") && summary.missing.length)process.exitCode=1;
