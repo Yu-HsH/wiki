@@ -14,8 +14,8 @@ const lookup = (from, to) => {
   return result;
 };
 
-test("six real two-hop public-document graph observations are reproducible", () => {
-  assert.equal(pairs.length, 6);
+test("eleven real two-hop public-document graph observations are reproducible", () => {
+  assert.equal(pairs.length, 11);
   assert.equal(lookup("대한민국", "훈민정음").cached_two_hop_total, 12);
   assert.equal(lookup("김치", "SQL").cached_two_hop_total, 2);
   assert.equal(lookup("SQL", "월드 와이드 웹").cached_two_hop_total, 13);
@@ -146,4 +146,19 @@ test("invalid and partial historical path profiles cannot increase coverage", ()
   ];
   assert.equal(summarizeCompletedPathProfiles(rows).sessions, 1);
   assert.equal(summarizeCompletedPathProfiles(rows).coverageRatio, 1);
+});
+
+
+test("new public daily-style cases provide more paths without claiming an exhaustive graph", () => {
+  const koreaRiver = summarizeTwoHopWitness(lookup("대한민국", "한강"));
+  assert.equal(koreaRiver.cachedTwoHopMidpoints, 21);
+  assert.equal(koreaRiver.inspectedWitnesses, 20);
+  assert.equal(koreaRiver.witnessesTruncated, true);
+  assert.equal(koreaRiver.earliestFirstLinkOrdinal, 6);
+  const computing = summarizeTwoHopWitness(lookup("컴퓨터", "월드 와이드 웹"));
+  assert.equal(computing.cachedTwoHopMidpoints, 8);
+  assert.equal(computing.witnessesTruncated, false);
+  assert.equal(summarizeTwoHopWitness(lookup("김치", "한강")).cachedTwoHopMidpoints, 2);
+  assert.equal(summarizeTwoHopWitness(lookup("서울특별시", "한강")).cachedTwoHopMidpoints, 15);
+  assert.equal(summarizeTwoHopWitness(lookup("훈민정음", "한강")).cachedTwoHopMidpoints, 5);
 });
