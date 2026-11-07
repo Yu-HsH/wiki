@@ -17,12 +17,14 @@ test("50 actual observed snapshots include 13 focus and 37 deterministic random 
   assert.equal(new Set(sample.map(row => row.page_id)).size, 50);
 });
 
-test("a previous frustrating random pair is prioritized for review, NOT banned", () => {
+test("a previously frustrating pair remains a manual review candidate on cached evidence", () => {
   const result = assessCourseEvidence(
     byTitle["미국의 하늘에 잘린 달 2"],
     byTitle["2010년 FIFA 월드컵 남미 지역 예선"],
   );
-  assert.equal(result.priority, "priority_review");
+  assert.equal(result.priority, "review");
+  assert.equal(assessDocumentEvidence(byTitle["미국의 하늘에 잘린 달 2"]).observedHubExits, 11);
+  assert.ok(result.startFlags.includes("MULTIPLE_CACHED_HUB_EXITS_DESPITE_FEW_LINKS"));
   assert.equal(result.autoReject, false);
   assert.equal(result.verifiedReachable, false);
   assert.ok(result.startFlags.includes("FEW_OUTGOING_LINKS"));
@@ -100,4 +102,25 @@ test("missing or invalid live observation is unknown, not zero", () => {
   assert.equal(assessLiveBacklinkEvidence(undefined).status, "unknown");
   assert.equal(assessLiveBacklinkEvidence({ apiSampleCount: 0 }).status, "unknown");
   assert.equal(assessLiveBacklinkEvidence({ apiSampleCount: -3, apiHasMore: false }).status, "unknown");
+});
+
+
+test("a sparse-looking movie start has 11 direct exits into connected cached hubs", () => {
+  const movie = byTitle["미국의 하늘에 잘린 달 2"];
+  assert.equal(movie.outbound_links, 17);
+  assert.equal(movie.observed_hub_exits_20, 11);
+  assert.equal(movie.observed_hub_exits_50, 10);
+});
+
+test("even when direct backlink and hub signals look sufficient, perceived difficulty remains unproven", () => {
+  const result = assessCourseEvidence(
+    byTitle["미국의 하늘에 잘린 달 2"],
+    byTitle["2010년 FIFA 월드컵 남미 지역 예선"],
+    { liveGoal: liveByTitle["2010년 FIFA 월드컵 남미 지역 예선"] },
+  );
+  assert.equal(result.priority, "baseline_observed");
+  assert.equal(result.autoReject, false);
+  assert.equal(result.verifiedReachable, false);
+  // A previously reported frustrating course can look fine under these counts.
+  // Therefore this audit is NOT suitable for enforcing automatic rerolls.
 });
