@@ -73,3 +73,22 @@ export function summarizeEvidence(sample = []) {
     // This is NOT the number of truly unreachable pages.
   };
 }
+
+/**
+ * Interpret an OFFLINE live-API observation (not a runtime request).
+ * The API reports direct backlinks only, not necessarily clickable game links.
+ * A truncated result is "at least N"; no exact count is invented.
+ */
+export function assessLiveBacklinkEvidence(live) {
+  const count = finiteCount(live?.apiSampleCount);
+  if (count === null || typeof live?.apiHasMore !== "boolean") {
+    return { status: "unknown", lowerBound: null, exact: false, autoReject: false };
+  }
+  const exact = !live.apiHasMore;
+  const status = !exact ? "at_least_limit"
+    : count === 0 ? "no_direct_backlinks_observed"
+    : count <= 2 ? "very_few_direct_backlinks"
+    : count < 10 ? "few_direct_backlinks"
+    : "direct_backlinks_observed";
+  return { status, lowerBound: count, exact, autoReject: false };
+}
