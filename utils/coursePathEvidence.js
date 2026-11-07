@@ -144,6 +144,7 @@ export function summarizeTwoHopWitness(course) {
     start: graph.start, goal: graph.goal,
     cachedTwoHopMidpoints: knownTotal,
     inspectedWitnesses: observed.foundCount,
+    witnessesTruncated: knownTotal !== null && knownTotal > observed.foundCount,
     distinctFirstHops: observed.distinctFirstHops,
     earliestFirstLinkOrdinal: first.length ? Math.min(...course.route_sample.map(x => x.firstOrdinal)) : null,
     firstLinkInFirst50Count: (course?.route_sample || []).filter(x => isCount(x.firstOrdinal) && x.firstOrdinal < 50).length,
