@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "measurement_date": "2026-11-07",
+  "origin": "Official Korean Wikipedia Action API list=backlinks, blnamespace=0, blfilterredir=nonredirects, bllimit=50; pageprops disambiguation",
+  "provenance": {
+    "goal_counts": "GitHub Actions 42359889197",
+    "inbound_sources": "GitHub Actions 42359999647"
+  },
+  "privacy": "Only public article title/metadata. No player IDs, raw session paths or exact player timestamps.",
+  "limitations": [
+    "Direct Wikipedia backlinks do not guarantee that an incoming link remains playable after Wiki Race's rendering/sanitization and page snapshot pinning.",
+    "A backlink count of 50 with backlinksCapped=true means at least 50, not exactly 50.",
+    "The Wiki Race latest cached snapshot graph is incomplete and cannot prove no other path exists.",
+    "Disambiguation classification uses MediaWiki pageprops at observed date.",
+    "Source title sample (<=50) is not topic-distribution-random; for these eight goals the returned list is complete."
+  ],
+  "target_articles": [
+    {
+      "title": "황리아",
+      "ok": true,
+      "canonicalTitle": "황리아",
+      "pageId": 1108017,
+      "disambiguation": false,
+      "ns0Backlinks": 2,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "2월 11일",
+        "1987년"
+      ]
+    },
+    {
+      "title": "덕곡면",
+      "ok": true,
+      "canonicalTitle": "덕곡면",
+      "pageId": 372581,
+      "disambiguation": true,
+      "ns0Backlinks": 9,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "수륜면",
+        "초계시외버스정류장",
+        "대한민국의 면 목록",
+        "덕곡",
+        "진주층 (지층)",
+        "칠곡층",
+        "합천군의 지질",
+        "고령군의 지질",
+        "우곡수리암장"
+      ]
+    },
+    {
+      "title": "영웅필살",
+      "ok": true,
+      "canonicalTitle": "영웅필살",
+      "pageId": 2666534,
+      "disambiguation": false,
+      "ns0Backlinks": 5,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "박세범",
+        "문미봉",
+        "남포동 (배우)",
+        "송경철",
+        "1990년 대한민국의 영화 목록"
+      ]
+    },
+    {
+      "title": "주런던 홍콩 경제무역대표부",
+      "ok": true,
+      "canonicalTitle": "주런던 홍콩 경제무역대표부",
+      "pageId": 3298409,
+      "disambiguation": false,
+      "ns0Backlinks": 21,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "홍콩 경제무역대표부",
+        "주시드니 홍콩 경제무역대표부",
+        "주토론토 홍콩 경제무역대표부",
+        "주뉴욕 홍콩 경제무역대표부",
+        "주샌프란시스코 홍콩 경제무역대표부",
+        "주워싱턴 홍콩 경제무역대표부",
+        "주브뤼셀 홍콩 경제무역대표부",
+        "주제네바 홍콩 경제무역대표부",
+        "주베를린 홍콩 경제무역대표부",
+        "주도쿄 홍콩 경제무역대표부",
+        "홍콩 경제무역대표부 서울 사무소",
+        "주싱가포르 홍콩 경제무역대표부",
+        "주자카르타 홍콩 경제무역대표부",
+        "주방콕 홍콩 경제무역대표부",
+        "주두바이 홍콩 경제무역대표부",
+        "주베이징 홍콩 특별행정구 정부 판사처",
+        "주광둥 홍콩 특별행정구 정부 경제무역판사처",
+        "주상하이 홍콩 특별행정구 정부 경제무역판사처",
+        "주청두 홍콩 특별행정구 정부 경제무역판사처",
+        "주우한 홍콩 특별행정구 정부 경제무역판사처",
+        "홍콩 경제무역문화판사처"
+      ]
+    },
+    {
+      "title": "원성하오",
+      "ok": true,
+      "canonicalTitle": "원성하오",
+      "pageId": 2581288,
+      "disambiguation": false,
+      "ns0Backlinks": 3,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "패견여왕",
+        "개창자",
+        "추애 (드라마)"
+      ]
+    },
+    {
+      "title": "포니아토프스키",
+      "ok": true,
+      "canonicalTitle": "포니아토프스키",
+      "pageId": 2462229,
+      "disambiguation": true,
+      "ns0Backlinks": 1,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "폴란드의 군주 목록"
+      ]
+    },
+    {
+      "title": "대체물",
+      "ok": true,
+      "canonicalTitle": "대체물",
+      "pageId": 3308157,
+      "disambiguation": false,
+      "ns0Backlinks": 3,
+      "backlinksCapped": false
+    },
+    {
+      "title": "연애특강",
+      "ok": true,
+      "canonicalTitle": "연애특강",
+      "pageId": 3218845,
+      "disambiguation": false,
+      "ns0Backlinks": 10,
+      "backlinksCapped": false
+    },
+    {
+      "title": "랑시퐁루즈역",
+      "ok": true,
+      "canonicalTitle": "랑시퐁루즈역",
+      "pageId": 3216701,
+      "disambiguation": false,
+      "ns0Backlinks": 4,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "제네바",
+        "랑시",
+        "레만 익스프레스",
+        "랑시-바쉐역"
+      ]
+    },
+    {
+      "title": "김용운 (야구 선수)",
+      "ok": true,
+      "canonicalTitle": "김용운 (야구 선수)",
+      "pageId": 154148,
+      "disambiguation": false,
+      "ns0Backlinks": 36,
+      "backlinksCapped": false,
+      "incomingPublicPages": [
+        "6월 5일",
+        "1955년",
+        "심재원 (야구인)",
+        "진갑용",
+        "김동수 (야구인)",
+        "박경완",
+        "조인성 (야구인)",
+        "이만수",
+        "유승안",
+        "김상훈 (1977년)",
+        "강민호",
+        "홍성흔",
+        "KBO 골든글러브",
+        "1982년 한국프로야구",
+        "노히트 노런",
+        "장채근",
+        "한문연",
+        "양의지",
+        "KBO 골든글러브 포수 수상자 목록",
+        "1982년 한국프로야구 올스타전",
+        "1984년 한국프로야구 올스타전",
+        "KBO 리그 안타 관련 기록 - 개인",
+        "LG 트윈스의 KBO 리그 상 수상자 목록",
+        "1982년~1989년 MBC 청룡 시즌",
+        "LG 트윈스의 선수 목록",
+        "김정행",
+        "MBC 청룡의 선수 목록",
+        "롯데 자이언츠의 선수 목록 (1982년~1990년)",
+        "푸방 가디언스",
+        "김용운",
+        "한국전력공사 야구단",
+        "1985년 롯데 자이언츠 시즌",
+        "1989년 롯데 자이언츠 시즌",
+        "1987년 롯데 자이언츠 시즌",
+        "1988년 롯데 자이언츠 시즌",
+        "1990년 롯데 자이언츠 시즌"
+      ]
+    },
+    {
+      "title": "SQL",
+      "ok": true,
+      "canonicalTitle": "SQL",
+      "pageId": 151961,
+      "disambiguation": false,
+      "ns0Backlinks": 50,
+      "backlinksCapped": true
+    },
+    {
+      "title": "훈민정음",
+      "ok": true,
+      "canonicalTitle": "훈민정음",
+      "pageId": 5786,
+      "disambiguation": false,
+      "ns0Backlinks": 50,
+      "backlinksCapped": true
+    },
+    {
+      "title": "흘러가는 나날, 밥은 맛있어",
+      "ok": true,
+      "canonicalTitle": "흘러가는 나날, 밥은 맛있어",
+      "pageId": 3988971,
+      "disambiguation": false,
+      "ns0Backlinks": 50,
+      "backlinksCapped": true
+    },
+    {
+      "title": "GPT (언어 모델)",
+      "ok": true,
+      "canonicalTitle": "GPT (언어 모델)",
+      "pageId": 3620589,
+      "disambiguation": false,
+      "ns0Backlinks": 50,
+      "backlinksCapped": true
+    },
+    {
+      "title": "덕곡면 (합천군)",
+      "ok": true,
+      "canonicalTitle": "덕곡면 (합천군)",
+      "pageId": 390259,
+      "disambiguation": false,
+      "ns0Backlinks": 43,
+      "backlinksCapped": false
+    }
+  ]
+}
