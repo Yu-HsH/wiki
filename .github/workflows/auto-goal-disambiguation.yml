@@ -9,6 +9,7 @@ on:
       - "scripts/benchmark-random-pageprops-readonly.mjs"
       - "scripts/audit-daily-goal-disambiguation-readonly.mjs"
       - "scripts/smoke-random-pageprops-readonly.mjs"
+      - "scripts/sample-random-disambiguations-readonly.mjs"
       - "docs/research/auto-goal-disambiguation-20261107.md"
       - ".github/workflows/auto-goal-disambiguation.yml"
 
@@ -40,3 +41,5 @@ jobs:
         run: node scripts/benchmark-random-pageprops-readonly.mjs
       - name: Audit 17 existing daily auto-target words without modifying challenge
         run: node scripts/audit-daily-goal-disambiguation-readonly.mjs
+      - name: Estimate disambiguation prevalence in random page batches
+        run: node scripts/sample-random-disambiguations-readonly.mjs
