@@ -6,6 +6,7 @@ on:
     paths:
       - "supabase/functions/single-run/random.mjs"
       - "tests/singleRandomStart.test.js"
+      - "tests/singleRandomIsolatedHttp.test.js"
       - "scripts/benchmark-random-pageprops-readonly.mjs"
       - "scripts/audit-daily-goal-disambiguation-readonly.mjs"
       - "scripts/smoke-random-pageprops-readonly.mjs"
@@ -43,3 +44,14 @@ jobs:
         run: node scripts/audit-daily-goal-disambiguation-readonly.mjs
       - name: Estimate disambiguation prevalence in random page batches
         run: node scripts/sample-random-disambiguations-readonly.mjs
+
+  isolated-http-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run isolated real HTTP server, fake RPC and Wiki snapshot recovery tests
+        run: node --test tests/singleRandomIsolatedHttp.test.js
