@@ -21,8 +21,8 @@ const allocation=(id=randomUUID(),actor='guest')=>({action:'allocate',actor,gues
  *
  * This is NOT a deployed Supabase hosted Edge Runtime or real PostgreSQL RPC.
  */
-async function startHarness({ sequence=[], wikiDelayMs=0, wikiStatus=null, wikiResponder=null }={}) {
-  const calls={ wiki:[], snapshot:[], claim:[], commit:[], control:[] };
+async function startHarness({ sequence=[], wikiDelayMs=0, wikiStatus=null, wikiResponder=null, liveWiki=false }={}) {
+  const calls={ wiki:[], wikiObserved:[], snapshot:[], claim:[], commit:[], control:[] };
   const store={ selected:null, pending:null, run:null };
   const draws=[...sequence]; let seq=10000;
   const db={
@@ -71,6 +71,18 @@ async function startHarness({ sequence=[], wikiDelayMs=0, wikiStatus=null, wikiR
       if(wikiDelayMs) await new Promise(resolve=>setTimeout(resolve,wikiDelayMs));
       if(wikiStatus!==null) return new Response('error',{status:wikiStatus});
       if(wikiResponder)return wikiResponder(requestURL,calls.wiki.length);
+      if(liveWiki){
+        const response=await fetch(address,options);
+        const data=response.ok?await response.clone().json().catch(()=>null):null;
+        const page=Object.values(data?.query?.pages??{})[0];
+        calls.wikiObserved.push({
+          status:response.status,
+          pageId:page?.pageid==null?null:String(page.pageid),
+          disambiguation:Boolean(page&&Object.prototype.hasOwnProperty.call(page.pageprops||{},'disambiguation')),
+          title:page?.title??null,
+        });
+        return response;
+      }
       const candidate=draws.shift()??mkPage(seq++);
       return bodyJson({query:{pages:[candidate]}});
     }
@@ -262,4 +274,44 @@ test('isolated HTTP: 24 warm fake-backed allocations measure round trip, without
   console.log('STAGING_HTTP_LATENCY '+JSON.stringify(summary));
   assert.equal(latencies.length,24);
   assert.ok(summary.maxMs<3000,'local synthetic HTTP smoke unusually slow');
+});
+
+
+test('live Wikimedia random draw + isolated HTTP snapshot and RPC end-to-end timing', {
+  skip:process.env.RUN_LIVE_WIKI_E2E!=='1',
+  timeout:90000,
+}, async()=>{
+  const samples=[];
+  for(let i=0;i<4;i++){
+    const h=await startHarness({liveWiki:true});
+    const start=performance.now();
+    try{
+      const outcome=await h.invoke(allocation(randomUUID()));
+      const elapsedMs=Math.round(performance.now()-start);
+      if(outcome.body.ok){
+        assert.equal(h.calls.snapshot.length,2);
+        assert.equal(h.calls.commit.length,1);
+        const target=h.calls.snapshot[1];
+        const page=h.calls.wikiObserved.find(x=>x.pageId===String(target.pageId));
+        assert.ok(page,'goal identity must originate in Wikimedia response');
+        assert.equal(page.disambiguation,false,'committed goal must not be disambiguation');
+        assert.ok(h.calls.wiki.length>=2&&h.calls.wiki.length<=12);
+        samples.push({ok:true,elapsedMs,draws:h.calls.wiki.length,verifiedGoal:true});
+      }else{
+        assert.equal(h.calls.commit.length,0);
+        samples.push({ok:false,elapsedMs,code:outcome.body.code});
+      }
+    }finally{await h.close();}
+    await new Promise(resolve=>setTimeout(resolve,700));
+  }
+  const ok=samples.filter(x=>x.ok).map(x=>x.elapsedMs).sort((a,b)=>a-b);
+  const result={
+    attempts:samples.length,succeeded:ok.length,
+    p50Ms:ok.length?ok[Math.floor(ok.length*.5)]:null,
+    maxMs:ok.length?ok.at(-1):null,
+    samples,
+    limitation:'GitHub Actions runner + live Wikipedia + local HTTP snapshot + mocked RPC, NOT hosted Supabase Edge latency',
+  };
+  console.log('STAGING_LIVE_WIKIMEDIA_HTTP '+JSON.stringify(result));
+  assert.ok(ok.length>=3,'real Wikipedia random end-to-end sample success threshold');
 });
