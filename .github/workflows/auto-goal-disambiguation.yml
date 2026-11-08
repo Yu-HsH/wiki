@@ -12,6 +12,7 @@ on:
       - "scripts/smoke-random-pageprops-readonly.mjs"
       - "scripts/sample-random-disambiguations-readonly.mjs"
       - "docs/research/auto-goal-disambiguation-20261107.md"
+      - "docs/research/auto-goal-isolated-http-validation-20261108.md"
       - ".github/workflows/auto-goal-disambiguation.yml"
 
 permissions:
