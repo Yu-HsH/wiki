@@ -34,7 +34,24 @@ try{
       const el=document.querySelector(".wiki-nav-rail");
       return {position:el && getComputedStyle(el).position,
         html:el?.outerHTML.slice(0,400),styles:document.styleSheets.length,
-        body:document.body.className,root:document.querySelector(".wr-race")?.className};
+        body:document.body.className,root:document.querySelector(".wr-race")?.className,
+        rules:[...document.styleSheets].flatMap(sheet=>{
+          try{
+            const found=[];
+            const scan=(rules,media="")=>{
+              for(const rule of rules){
+                if(rule.cssRules){scan(rule.cssRules,media+" "+(rule.conditionText||""));continue;}
+                if(!rule.selectorText)continue;
+                if(rule.selectorText.includes("wiki-nav-rail")||rule.style?.position==="static"){
+                  let matched=false;try{matched=el.matches(rule.selectorText);}catch{}
+                  found.push({selector:rule.selectorText,position:rule.style?.position,matched,
+                    media:media.trim(),styles:rule.cssText.slice(0,220)});
+                }
+              }
+            };
+            scan(sheet.cssRules);return found;
+          }catch{return [];}
+        }).slice(-35)};
     }));
     throw error;
   }
