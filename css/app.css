@@ -945,6 +945,24 @@ body {
   }
 }
 
+/* #49: In multiplayer races the TOC owns the right edge. On split-screen,
+   small phones and short windows, place "back to top" at the opposite edge
+   above the item dock instead of stacking two fixed controls together.
+   Default (non-race) scroll buttons keep their previous position. */
+@media (max-width: 900px), (max-height: 700px) {
+  .scroll-top-btn--race {
+    left: max(10px, env(safe-area-inset-left, 0px));
+    right: auto;
+    bottom: calc(var(--race-dock-h, 62px) + 16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Expanded TOC can span most of a narrow phone. Give it the touch area. */
+  body:has(.wr-race .wiki-nav-rail.is-expanded) .scroll-top-btn--race {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
 @keyframes hudFadeIn {
   from {
     opacity: 0;
