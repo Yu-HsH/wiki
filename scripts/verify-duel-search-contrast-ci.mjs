@@ -112,6 +112,50 @@ try{
     });
     await context.close();
   }
+  // Explicitly test a Korean IME composition keydown and a real 15s permit
+  // timeout. The UI must not search on an Enter key consumed by the IME.
+  {
+    const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2});
+    const page=await context.newPage();
+    await page.goto(base+"/tests/browser-fixtures/duel-search-contrast.html");
+    const input=page.getByRole("textbox",{name:"현재 문서에서 찾을 단어"});
+    await input.waitFor({state:"visible",timeout:10000});
+    await input.fill("반도체");
+    await input.evaluate(el=>{
+      el.dispatchEvent(new CompositionEvent("compositionstart",{bubbles:true,data:"반도체"}));
+      el.dispatchEvent(new KeyboardEvent("keydown",{
+        key:"Enter",code:"Enter",isComposing:true,bubbles:true,cancelable:true
+      }));
+    });
+    await page.waitForTimeout(350);
+    assert.equal(await page.locator('[data-testid="qa-state"]').getAttribute("data-query"),
+      "", "Korean IME Enter must not submit search");
+    assert.equal(await page.locator('[data-testid="qa-state"]').getAttribute("data-count"),
+      "0","IME confirmation never consumes an item");
+    await input.evaluate(el=>el.dispatchEvent(
+      new CompositionEvent("compositionend",{bubbles:true,data:"반도체"})));
+    await input.press("Enter");
+    await page.getByRole("status").filter({hasText:"3개 발견"}).waitFor({timeout:5000});
+    assert.equal(await page.locator('[data-testid="qa-state"]').getAttribute("data-count"),
+      "1","normal Enter after composition consumes once");
+    console.log("PASS #10 Korean IME Enter ignored until composition completes");
+    await context.close();
+  }
+  {
+    const context=await browser.newContext({viewport:{width:390,height:844}});
+    const page=await context.newPage();
+    await page.goto(base+"/tests/browser-fixtures/duel-search-contrast.html?expiryMs=15000");
+    const input=page.getByRole("textbox",{name:"현재 문서에서 찾을 단어"});
+    await input.waitFor({state:"visible",timeout:10000});
+    const started=Date.now();
+    await page.locator(".game-search-panel").waitFor({state:"hidden",timeout:21000});
+    const elapsed=Date.now()-started;
+    assert.ok(elapsed>=13000 && elapsed<=21000,"15-second permit closes visibly: "+elapsed+"ms");
+    assert.equal(await page.locator('[data-testid="qa-state"]').getAttribute("data-count"),
+      "0","expiry does not spend the item");
+    console.log("PASS #10 15-second duel search permit expires and closes without consumption");
+    await context.close();
+  }
   console.log("PASS #10 search contrast all 4 responsive viewports and zero/once/reject behavior");
 }finally{
   if(browser)await browser.close().catch(()=>{});
