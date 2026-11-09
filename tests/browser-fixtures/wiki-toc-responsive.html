@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wiki TOC responsive fixture</title></head>
+<body>
+<div id="root"></div>
+<script type="module">
+  import React from "react";
+  import {createRoot} from "react-dom/client";
+  import "../../appStyles.js";
+  import WikiViewer from "../../components/WikiViewer.jsx";
+  const html=Array.from({length:18},(_,i)=>
+    '<h2 id="toc-'+(i+1)+'">'+(i+1)+'장 문서 목차</h2>'+
+    '<p>'+('위키백과 자료를 읽으면서 목표 링크를 탐색합니다. '.repeat(18))+'</p>').join("");
+  function Page() {
+    return React.createElement("div",{className:"wr-page wr-race wr65-field wr-race--duel"},
+      React.createElement("div",{className:"wr-race-shell"},
+        React.createElement("header",{className:"wr-race-hud"},React.createElement("span",null,"경기 HUD · 목차 QA")),
+        React.createElement("div",{className:"wr-race-strip"},React.createElement("span",null,"상대 상태")),
+        React.createElement(WikiViewer,{
+          currentTitle:"모바일 목차 테스트",
+          currentDocumentHtml:html,
+          target:{title:"목표 문서"},
+          links:[],isLoading:false,
+        }),
+        React.createElement("div",{className:"wr-race-dock"},React.createElement("span",null,"아래쪽 아이템 바"))
+      )
+    );
+  }
+  createRoot(document.getElementById("root")).render(React.createElement(Page));
+</script>
+</body>
+</html>
