@@ -76,8 +76,7 @@ select lives_ok($$ select public.create_rematch_room_v1('00000000-0000-0000-0b42
   'Host creates the private duel successor');
 select is(
   public.create_rematch_room_v1('00000000-0000-0000-0b42-000000000001'),
-  (select next_room_id from private.room_rematches_v1 where source_room_id =
-    '00000000-0000-0000-0b42-000000000001'::uuid),
+  public.get_rematch_room_v1('00000000-0000-0000-0b42-000000000001'),
   'Repeated duel creation returns the SAME room id');
 select lives_ok($$ select public.create_rematch_room_v1('00000000-0000-0000-0b42-000000000002') $$,
   'Host creates the private group successor');
@@ -107,13 +106,22 @@ select is((select status from public.game_rooms where room_code='RMG002'),'finis
 
 -- Attacker guessing either six-character successor code is stopped by the
 -- room_players BEFORE INSERT trigger, even when calling legacy join RPCs.
+-- The postgres fixture stores the values as session-local settings only;
+-- authenticated callers still have no access to the private mapping table.
+select set_config('rematch.qa_duel_code', (
+  select r.room_code from public.game_rooms r
+  join private.room_rematches_v1 link on link.next_room_id=r.id
+  where link.source_room_id='00000000-0000-0000-0b42-000000000001'::uuid), true);
+select set_config('rematch.qa_group_id', (
+  select next_room_id::text from private.room_rematches_v1
+  where source_room_id='00000000-0000-0000-0b42-000000000002'::uuid), true);
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0b41-000000000004';
 select throws_ok(
-  'select public.join_duel_room_v2((select r.room_code from public.game_rooms r join private.room_rematches_v1 l on l.next_room_id=r.id where l.source_room_id=''00000000-0000-0000-0b42-000000000001''::uuid))',
+  'select public.join_duel_room_v2(current_setting(''rematch.qa_duel_code''))',
   'P0001','REMATCH_MEMBERS_ONLY','Uninvited user cannot join duel by guessed code');
 select throws_ok(
-  'select public.join_group_room((select next_room_id from private.room_rematches_v1 where source_room_id=''00000000-0000-0000-0b42-000000000002''::uuid))',
+  'select public.join_group_room(current_setting(''rematch.qa_group_id'')::uuid)',
   'P0001','REMATCH_MEMBERS_ONLY','Uninvited user cannot join group by guessed id');
 select throws_ok($$ select public.join_rematch_room_v1('00000000-0000-0000-0b42-000000000002') $$,
   'P0001','REMATCH_MEMBERS_ONLY','Outsider cannot use invitation-only group join API');
