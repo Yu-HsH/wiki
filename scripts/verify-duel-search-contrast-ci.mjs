@@ -34,9 +34,20 @@ try{
     const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:width<=390?2:1,hasTouch:width<=390});
     const page=await context.newPage();
     const errors=[];page.on("pageerror",e=>errors.push(e.message));
-    await page.goto(base+"/tests/browser-fixtures/duel-search-contrast.html");
+    page.on("console",m=>{if(m.type()==="error")errors.push("console: "+m.text());});
+    const res=await page.goto(base+"/tests/browser-fixtures/duel-search-contrast.html");
     const input=page.getByRole("textbox",{name:"현재 문서에서 찾을 단어"});
-    await input.waitFor({state:"visible",timeout:20000});
+    try {
+      await input.waitFor({state:"visible",timeout:10000});
+    } catch(e) {
+      console.error("Fixture diagnostic",{
+        status:res?.status(),url:page.url(),errors,
+        body:(await page.locator("body").innerText()).slice(0,1500),
+        html:(await page.content()).slice(0,2200),
+      });
+      await page.screenshot({path:path.join(screenshots,`search-debug-${width}.png`)});
+      throw e;
+    }
     const panel=page.locator(".game-search-panel");
     const colors=await page.evaluate(()=>{
       const input=document.querySelector(".game-search-panel__body input");
