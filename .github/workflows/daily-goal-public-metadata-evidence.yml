@@ -1,0 +1,62 @@
+name: Daily goal public metadata evidence
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/daily-goal-public-metadata-evidence.yml"
+      - "data/research/daily-goal-target-review-20261109.json"
+      - "scripts/audit-daily-goal-targets-readonly.mjs"
+      - "utils/dailyGoalTargetReview.js"
+      - "tests/dailyGoalTargetReview.test.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Research manifest and unit tests
+        run: |
+          node --test tests/dailyGoalTargetReview.test.js
+          node scripts/audit-daily-goal-targets-readonly.mjs > /tmp/daily-goal-offline-audit.json
+      - name: Official public Wikipedia metadata and backlink sample
+        id: audit
+        run: |
+          node scripts/audit-daily-goal-targets-readonly.mjs --live --backlinks > /tmp/daily-goal-public-api-audit.json
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const audit=JSON.parse(readFileSync("/tmp/daily-goal-public-api-audit.json","utf8"));
+            console.log("DAILY_GOAL_PUBLIC_REVIEW",JSON.stringify(audit.summary));
+            for(const row of audit.candidates){
+              console.log("GOAL_METADATA",JSON.stringify({
+                title:row.title,
+                state:row.identity?.state??"unavailable",
+                canonicalTitle:row.identity?.canonicalTitle??null,
+                wikiPageId:row.identity?.pageId??null,
+                observedBacklinkSources:row.backlinks?.observedSources??null,
+                sampleTruncated:row.backlinks?.truncated??null,
+                reviewState:row.reviewState,
+                error:row.error??null,
+              }));
+            }
+            if(audit.summary.total!==24||audit.summary.eligibleMetadata+audit.summary.invalidMetadata+audit.summary.apiErrors!==24||audit.summary.apiErrors>0){
+              console.error("PUBLIC_API_VERIFICATION_INCOMPLETE: do not release any goal candidates");
+              process.exitCode=1;
+            }
+          '
+      - name: Preserve public evidence for manual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-goal-public-metadata-evidence
+          if-no-files-found: warn
+          path: |
+            /tmp/daily-goal-offline-audit.json
+            /tmp/daily-goal-public-api-audit.json
+          retention-days: 14
