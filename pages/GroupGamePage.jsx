@@ -84,6 +84,7 @@ import {
     orderGroupParticipants,
 } from "../utils/groupRacePresentation.js";
 import ScrollToTopButton from "../components/ScrollToTopButton";
+import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import GroupPickOverlay from "../components/GroupPickOverlay";
 import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
 import {
@@ -1836,6 +1837,7 @@ export default function GroupGamePage() {
     return (
         <>
             {exitDialog}
+            {isGroupPlaying && isLoading && <PageLoadingOverlay />}
             {phase === GROUP_GAME_PHASE.PICKING && (
                 <GroupPickOverlay
                     candidates={candidates}
