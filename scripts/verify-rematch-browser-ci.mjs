@@ -92,13 +92,26 @@ async function verifyMode(mode,users,actors){
   console.log("PASS "+mode+" outsider cannot discover previous members' private invitation");
   denied=await guest.client.rpc("create_rematch_room_v1",{p_source_room_id:sourceId});
   assert.ok(denied.error?.message.includes("REMATCH_HOST_REQUIRED"));
-  const nextId=await rpc(host,"create_rematch_room_v1",{p_source_room_id:sourceId});
+  // Mount the *real* ResultActions component on a Vite-only result fixture.
+  // It calls the same RPCs and uses the same navigation as production results.
+  const targetUrl=mode==="duel"?"/multiplayer/room/":"/multiplayer/group/room/";
+  const fixture=(isHost)=>base+"/tests/browser-fixtures/rematch-result.html?"+
+    new URLSearchParams({source:sourceId,mode,host:isHost?"1":"0"});
+  for(let i=0;i<(mode==="duel"?2:3);i++){
+    await actors[i].page.goto(fixture(i===0),{waitUntil:"domcontentloaded"});
+  }
+  const waitingButton=actors[1].page.getByRole("button",{name:"방장의 재경기 제안 대기 중"});
+  await waitingButton.waitFor({state:"visible",timeout:10000});
+  assert.equal(await waitingButton.isDisabled(),true,"guest cannot enter before explicit invite");
+  await actors[0].page.getByRole("button",{name:"같은 멤버로 다시 준비하기"}).click();
+  await actors[0].page.waitForURL(url=>url.pathname.startsWith(targetUrl),{timeout:30000});
+  const nextId=actors[0].page.url().split("/").at(-1);
   assert.ok(nextId && nextId!==sourceId);
   const repeated=await rpc(host,"create_rematch_room_v1",{p_source_room_id:sourceId});
   assert.equal(nextId,repeated,"host double click must not create another room");
   const offer=await rpc(guest,"get_rematch_room_v1",{p_source_room_id:sourceId});
   assert.equal(offer,nextId);
-  console.log("PASS "+mode+" host idempotent creation and guest invitation");
+  console.log("PASS "+mode+" result button created ONE private host lobby; guest received invitation");
   const room=JSON.parse(sql("select row_to_json(r) from (select id,status,is_public,mode,use_items,min_players,max_players from public.game_rooms where id="+q(nextId)+") r;"));
   assert.equal(room.is_public,false);
   assert.equal(room.status,"waiting");
@@ -109,12 +122,17 @@ async function verifyMode(mode,users,actors){
     await other.client.rpc("join_duel_room_v2",{p_room_code:code}):
     await other.client.rpc("join_group_room",{p_room_id:nextId});
   assert.ok(denied.error?.message.includes("REMATCH_MEMBERS_ONLY"),"outsider code-join should be blocked");
-  const targetUrl=mode==="duel"?"/multiplayer/room/":"/multiplayer/group/room/";
-  await actors[0].page.goto(base+targetUrl+nextId);
+  // BrowserRouter updates history; reload hands the new URL to the actual
+  // application router so the real waiting room renders.
+  await actors[0].page.reload({waitUntil:"domcontentloaded"});
   for(let i=1;i<(mode==="duel"?2:3);i++){
-    assert.equal(await rpc(users[i],"join_rematch_room_v1",{p_source_room_id:sourceId}),nextId);
-    await actors[i].page.goto(base+targetUrl+nextId);
+    const button=actors[i].page.getByRole("button",{name:"재경기 준비방 참가"});
+    await button.waitFor({state:"visible",timeout:20000});
+    await button.click();
+    await actors[i].page.waitForURL(url=>url.pathname===targetUrl+nextId,{timeout:30000});
+    await actors[i].page.reload({waitUntil:"domcontentloaded"});
   }
+  console.log("PASS "+mode+" each invited guest explicitly clicked rematch on result UI");
   if(mode==="duel"){
     await actors[1].page.getByText("1:1 대전 준비").waitFor({state:"visible",timeout:25000});
     await actors[1].page.locator(".wr-duel-players").waitFor({state:"visible",timeout:25000});
