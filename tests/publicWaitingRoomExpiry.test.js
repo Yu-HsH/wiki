@@ -31,6 +31,9 @@ test("host-only heartbeat and visible-page client pulse are separately authorize
   for (const page of ["pages/RoomPage.jsx", "pages/GroupRoomPage.jsx"]) {
     assert.match(source(page), /usePublicWaitingRoomHeartbeat\(room, user\?\.id, setSubmitError\)/);
     assert.match(source(page), /roomData\.status === "expired"/);
+    if (page === "pages/GroupRoomPage.jsx") {
+      assert.doesNotMatch(source(page), /joinGroupRoom\(roomId\)\.catch\(\(\) => \{ \}\)/);
+    }
   }
   assert.match(sql, /host_user_id is distinct from auth\.uid\(\)/);
   assert.match(sql, /grant execute on function public\.heartbeat_public_waiting_room_v1\(uuid\) to authenticated/);
