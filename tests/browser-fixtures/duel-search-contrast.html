@@ -24,7 +24,7 @@
         if(query === "없음") return {ok:true,code:"SEARCH_FOUND",query,count:0};
         if(count>0)return {ok:false,code:"SEARCH_USED",count:0};
         setCount(n=>n+1);
-        return {ok:true,code:"SEARCH_FOUND",query,count:2};
+        return {ok:true,code:"SEARCH_FOUND",query,count:3};
       };
       return React.createElement("div",{className:"wr-page wr-race wr65-field has-strip"},
         React.createElement("div",{className:"wr-race-shell"},
