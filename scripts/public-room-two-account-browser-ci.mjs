@@ -114,7 +114,7 @@ async function runMode(mode,host,guest) {
   // Host should maintain an authenticated visible waiting-room presence.
   await host.page.waitForURL(url=>url.pathname.endsWith(live.id),{timeout:10000});
   await guest.page.goto(base+"/multiplayer?mode="+mode,{waitUntil:"domcontentloaded"});
-  const listing=guest.page.locator(".mp-public-room");
+  const listing=guest.page.locator(".mp-public-room").filter({hasText:users[0].nickname});
   await listing.first().waitFor({state:"visible",timeout:20000});
   verify(mode+" visible to account B",await listing.count()===1);
   await listing.first().getByRole("button",{name:/참가하기/}).click();
@@ -131,7 +131,7 @@ async function runMode(mode,host,guest) {
   await guest.page.waitForTimeout(700);
   verify(mode+" idle room became expired after list refresh",roomStatus(stale)==="expired");
   verify(mode+" stale room removed from browser list",
-    await guest.page.locator(".mp-public-room").count()===(mode==="duel"?0:1));
+    await guest.page.locator(".mp-public-room").filter({hasText:users[0].nickname}).count()===(mode==="duel"?0:1));
   if(mode==="duel") {
     await assertDenied(users[1].client,"join_duel_room_v2",{p_room_code:stale.room_code},"DUEL_ROOM_NOT_JOINABLE");
   } else {
