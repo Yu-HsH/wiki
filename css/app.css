@@ -956,11 +956,13 @@ body {
     bottom: calc(var(--race-dock-h, 62px) + 16px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Expanded TOC can span most of a narrow phone. Give it the touch area. */
-  body:has(.wr-race .wiki-nav-rail.is-expanded) .scroll-top-btn--race {
-    visibility: hidden;
-    pointer-events: none;
-  }
+}
+
+/* The expanded or hovered TOC can cover the right edge even on desktop.
+   While the outline is in use, give it priority over the scroll shortcut. */
+body:has(.wr-race .wiki-nav-rail:is(:hover, :focus-within, .is-expanded)) .scroll-top-btn--race {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @keyframes hudFadeIn {
