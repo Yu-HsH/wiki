@@ -84,7 +84,20 @@ try{
     assert.equal(await page.locator('[data-testid="qa-state"]').getAttribute("data-count"),"0",`zero results do not consume ${width}`);
     await input.fill("반도체");
     await page.getByRole("button",{name:"찾기"}).click();
-    await page.getByRole("status").filter({hasText:"2개 발견"}).waitFor({timeout:15000});
+    try {
+      await page.getByRole("status").filter({hasText:"2개 발견"}).waitFor({timeout:4500});
+    } catch (error) {
+      console.error("Search result diagnostic",{
+        panel:(await panel.innerText()).slice(0,1600),
+        count:await page.locator('[data-testid="qa-state"]').getAttribute("data-count"),
+        busy:await page.locator('[data-testid="qa-state"]').getAttribute("data-busy"),
+        input:await input.inputValue(),
+        marks:await page.locator("mark.game-search-highlight").count(),
+        errors
+      });
+      await page.screenshot({path:path.join(screenshots,`search-debug-${width}.png`)});
+      throw error;
+    }
     assert.equal(await page.locator('[data-testid="qa-state"]').getAttribute("data-count"),"1",`successful search consumes one use ${width}`);
     await input.fill("반도체");
     await page.getByRole("button",{name:"찾기"}).click();
