@@ -4,7 +4,7 @@ import { audioManager } from "../services/audioManager.js";
 import useDuelFeedback from "../hooks/useDuelFeedback.js";
 import DuelItemFeedback, { DuelFeedbackSymbol, DuelRecentEvents, DuelFeedbackLane } from "../components/DuelItemFeedback.jsx";
 import { selectLiveBlindExpiry } from "../utils/duelFeedback.js";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -212,6 +212,12 @@ function DuelGameSession() {
    * 끝났다"** (결과 화면)와 **"끝난 방에 새로 들어왔다"** (fatal 안내)를 가르는 값이다.
    */
   const reachedPlayingRef = useRef(false);
+  const alignFreshStartRef = useRef(false);
+  useLayoutEffect(() => {
+    if (phase !== PHASE.PLAYING || !alignFreshStartRef.current) return;
+    alignFreshStartRef.current = false;
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [phase]);
 
   useEffect(() => {
     if (phase === PHASE.PLAYING) reachedPlayingRef.current = true;
@@ -1965,6 +1971,7 @@ function DuelGameSession() {
           sceneKey={roomId} mode="duel"
           onComplete={() => {
             saveLocalGameState({ enteredPlaying: true });
+            alignFreshStartRef.current = true;
             setPhase(PHASE.PLAYING);
           }}
         />
