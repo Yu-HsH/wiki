@@ -93,6 +93,8 @@ function makeFixture(){
       fixtures.map((p,i)=>{const next=fixtures[1-i];return "("+[p.snapshotId,next.pageId,next.revisionId,next.title,next.title].map(sqlQuote).join(",")+",0)"}).join(",")+";\ncommit;");
 }
 async function installRoutes(ctx){
+  // Register catch-all first; Playwright resolves the last matching route first.
+  await ctx.route("https://**/*",async route=>route.abort("blockedbyclient"));
   await ctx.route("**/functions/v1/wiki-snapshot",async route=>{
     let req={};try{req=route.request().postDataJSON()||{}}catch{}
     const item=fixtures.find(p=>String(req.pageId)===p.pageId&&String(req.revisionId)===p.revisionId);
@@ -122,7 +124,6 @@ async function installRoutes(ctx){
     }
     await route.fulfill({status:200,json:data,headers:{"access-control-allow-origin":"*"}});
   });
-  await ctx.route("https://**/*",async route=>route.abort("blockedbyclient"));
 }
 async function actor(user){
   const context=await browser.newContext({viewport:{width:1280,height:850},serviceWorkers:"block",reducedMotion:"reduce"});
