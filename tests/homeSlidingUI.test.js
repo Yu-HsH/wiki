@@ -43,3 +43,18 @@ test("notes and personal record diary support manual arrow and touch slides", ()
   assert.ok(carousel.includes('inert={position === active ? undefined : ""}'));
   assert.ok(carousel.includes("aria-hidden={position !== active}"));
 });
+
+test("wiki notes automatically rotate every 10s, with 30s manual hold and accessibility pauses", () => {
+  const notes = source("components/WikiHighlights.jsx");
+  assert.match(notes, /window\.setInterval/);
+  assert.match(notes, /}, 10000\)/);
+  assert.match(notes, /Date\.now\(\) \+ 30000/);
+  assert.match(notes, /setNoteIndex\(index => \(index \+ 1\) % noteNames\.length\)/);
+  assert.match(notes, /rotationPaused \|\| document\.hidden/);
+  assert.match(notes, /prefers-reduced-motion: reduce/);
+  assert.match(notes, /onMouseEnter/);
+  assert.match(notes, /onMouseLeave/);
+  assert.match(notes, /onFocusCapture/);
+  assert.match(notes, /onBlurCapture/);
+  assert.match(notes, /onChange=\{selectNote\}/);
+});
