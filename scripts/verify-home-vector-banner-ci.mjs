@@ -16,7 +16,7 @@ try{
    const layers=await Promise.all(images.map(async im=>{
      const url=im.getAttribute("href"),res=await fetch(url),text=await res.text();
      return {url,status:res.status,type:res.headers.get("content-type"),isSvg:text.trimStart().startsWith("<svg"),
-       hasRaster:/<image\\b|data:image\\/(?:png|jpeg|webp)|\\.(?:png|jpg|jpeg|webp)/i.test(text)};
+       hasRaster:/<image\b|data:image\/(?:png|jpeg|webp)|\.(?:png|jpg|jpeg|webp)/i.test(text)};
    }));
    const banner=document.querySelector(".wr-veil");
    const art=document.querySelector(".wr-veil-art"),headline=document.querySelector(".wr-veil-copy h1"),start=document.querySelector(".wr-veil-start-visual");
