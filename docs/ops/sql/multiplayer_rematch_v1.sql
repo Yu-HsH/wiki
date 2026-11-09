@@ -105,8 +105,8 @@ begin
   if not found then return new; end if;
 
   if auth.uid() is null or new.user_id is distinct from auth.uid() or not exists (
-    select 1 from public.room_players old
-    where old.room_id = v_source and old.user_id = new.user_id
+    select 1 from public.room_players prior_member
+    where prior_member.room_id = v_source and prior_member.user_id = new.user_id
   ) then raise exception 'REMATCH_MEMBERS_ONLY'; end if;
   return new;
 end;
