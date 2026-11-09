@@ -1,0 +1,57 @@
+name: Multiplayer rematch isolated SQL QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/ops/sql/multiplayer_rematch_v1.sql'
+      - 'supabase/migrations/*_multiplayer_rematch_v1.sql'
+      - 'supabase/tests/multiplayer_rematch_v1.sql'
+      - 'scripts/verify-rematch-local-ci.mjs'
+      - '.github/workflows/rematch-local.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disposable-local-db:
+    name: Rematch authority and immutable record pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned CLI
+        run: npm ci
+      - name: Generate staging migration with pinned CLI if absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing=(supabase/migrations/*_multiplayer_rematch_v1.sql)
+          if [ "${#existing[@]}" -eq 0 ]; then
+            npx --no-install supabase migration new multiplayer_rematch_v1
+            generated=(supabase/migrations/*_multiplayer_rematch_v1.sql)
+            test "${#generated[@]}" -eq 1
+            cp docs/ops/sql/multiplayer_rematch_v1.sql "${generated[0]}"
+            echo "GENERATED_MIGRATION=${generated[0]}"
+          else
+            test "${#existing[@]}" -eq 1
+            echo "EXISTING_MIGRATION=${existing[0]}"
+          fi
+      - name: Start disposable local Supabase
+        run: npx --no-install supabase start --yes --exclude vector
+      - name: Apply local-only migrations
+        run: npx --no-install supabase db push --local --include-all --skip-vault --yes
+      - name: Verify rematch pgTAP with authenticated identities
+        run: node scripts/verify-rematch-local-ci.mjs
+      - name: Destroy disposable test database
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true
