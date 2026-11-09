@@ -125,7 +125,8 @@ export default function GroupRoomPage() {
                 }
 
                 if (roomData.status === "waiting") {
-                    await joinGroupRoom(roomId).catch(() => { });
+                    // Never render a fake waiting lobby when server rejects an expired or full room.
+                    await joinGroupRoom(roomId);
                 }
 
                 const playerData = await fetchGroupRoomPlayers(roomId);
