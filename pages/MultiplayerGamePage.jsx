@@ -1972,8 +1972,8 @@ function DuelGameSession() {
         <CountdownOverlay
           sceneKey={roomId} mode="duel"
           onComplete={() => {
-            alignFreshStartRef.current = true;
             saveLocalGameState({ enteredPlaying: true });
+            alignFreshStartRef.current = true;
             setPhase(PHASE.PLAYING);
           }}
         />
