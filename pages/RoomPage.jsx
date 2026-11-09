@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import useLobbyAudio from "../hooks/useLobbyAudio.js";
+import usePublicWaitingRoomHeartbeat from "../hooks/usePublicWaitingRoomHeartbeat.js";
 import { audioManager } from "../services/audioManager.js";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -58,6 +59,7 @@ export default function RoomPage() {
   const [players, setPlayers] = useState([]);
   const [pending, setPending] = useState(true);
   const [submitError, setSubmitError] = useState("");
+  usePublicWaitingRoomHeartbeat(room, user?.id, setSubmitError);
   const [connectionStatus, setConnectionStatus] = useState("CONNECTING");
   const [syncFailed, setSyncFailed] = useState(false);
 
@@ -128,6 +130,9 @@ export default function RoomPage() {
         const roomReadId = ++roomReadRef.current;
         const roomData = await fetchRoom(roomId);
         if (cancelled) return;
+        if (roomData.status === "expired") {
+          throw new Error("장시간 활동이 없어 만료된 대기방입니다. 새로운 방을 선택해 주세요.");
+        }
 
         // waiting 방에 직접 진입한 guest면 join 시도
         if (roomData.status === "waiting") {
