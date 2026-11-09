@@ -1,0 +1,42 @@
+name: Duel initial article scroll synchrony E2E
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'pages/MultiplayerGamePage.jsx'
+      - 'tests/duelInitialScrollSync.test.js'
+      - 'scripts/verify-duel-start-scroll-ci.mjs'
+      - '.github/workflows/duel-start-scroll.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-two-account-scroll:
+    name: Isolated 1v1 two browser scroll alignment
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/verify-duel-start-scroll-ci.mjs
+      - run: npx --no-install supabase start --yes --exclude vector
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-duel-start-scroll-ci.mjs
+      - name: Upload two-client scroll screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: duel-first-page-scroll-qa
+          path: test-results/duel-start-scroll/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Destroy disposable local Supabase volume
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true
