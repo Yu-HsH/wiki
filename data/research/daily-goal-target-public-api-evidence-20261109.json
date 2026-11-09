@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "source": "GitHub Actions official ko.wikipedia.org MediaWiki query + list=backlinks",
+  "auditDate": "2026-11-09",
+  "workflowRunId": 42574544308,
+  "commitSha": "2fb665fa9c9578e27ff9f1d5f4b9f8b6be4437e6",
+  "sampleLimit": 100,
+  "fullBacklinkCrawl": false,
+  "gameplayClickVerified": false,
+  "automaticPoolApproved": false,
+  "summary": {
+    "total": 24,
+    "eligibleMetadata": 24,
+    "invalidMetadata": 0,
+    "apiErrors": 0,
+    "readyForAutomaticPool": 0
+  },
+  "results": [
+    {
+      "title": "커피",
+      "state": "eligible_metadata",
+      "canonicalTitle": "커피",
+      "wikiPageId": 15907,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "발효",
+      "state": "eligible_metadata",
+      "canonicalTitle": "발효",
+      "wikiPageId": 12940,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "전자레인지",
+      "state": "eligible_metadata",
+      "canonicalTitle": "전자레인지",
+      "wikiPageId": 331416,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "공기청정기",
+      "state": "eligible_metadata",
+      "canonicalTitle": "공기청정기",
+      "wikiPageId": 138257,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "태풍",
+      "state": "eligible_metadata",
+      "canonicalTitle": "태풍",
+      "wikiPageId": 6261,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "미세먼지",
+      "state": "eligible_metadata",
+      "canonicalTitle": "미세먼지",
+      "wikiPageId": 48995,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "산호초",
+      "state": "eligible_metadata",
+      "canonicalTitle": "산호초",
+      "wikiPageId": 515290,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "엘니뇨",
+      "state": "eligible_metadata",
+      "canonicalTitle": "엘니뇨",
+      "wikiPageId": 55409,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "카페인",
+      "state": "eligible_metadata",
+      "canonicalTitle": "카페인",
+      "wikiPageId": 64752,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "백신",
+      "state": "eligible_metadata",
+      "canonicalTitle": "백신",
+      "wikiPageId": 9409,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "알레르기",
+      "state": "eligible_metadata",
+      "canonicalTitle": "알레르기",
+      "wikiPageId": 6212,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "도파민",
+      "state": "eligible_metadata",
+      "canonicalTitle": "도파민",
+      "wikiPageId": 204992,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "훈민정음",
+      "state": "eligible_metadata",
+      "canonicalTitle": "훈민정음",
+      "wikiPageId": 5786,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "경복궁",
+      "state": "eligible_metadata",
+      "canonicalTitle": "경복궁",
+      "wikiPageId": 6611,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "비단길",
+      "state": "eligible_metadata",
+      "canonicalTitle": "비단길",
+      "wikiPageId": 89028,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "인플레이션",
+      "state": "eligible_metadata",
+      "canonicalTitle": "인플레이션",
+      "wikiPageId": 32835,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "인공지능",
+      "state": "eligible_metadata",
+      "canonicalTitle": "인공지능",
+      "wikiPageId": 104257,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "카카오톡",
+      "state": "eligible_metadata",
+      "canonicalTitle": "카카오톡",
+      "wikiPageId": 622566,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "챗GPT",
+      "state": "eligible_metadata",
+      "canonicalTitle": "챗GPT",
+      "wikiPageId": 3330767,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "넷플릭스",
+      "state": "eligible_metadata",
+      "canonicalTitle": "넷플릭스",
+      "wikiPageId": 1326170,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "K-pop",
+      "state": "eligible_metadata",
+      "canonicalTitle": "K-pop",
+      "wikiPageId": 329164,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "리그 오브 레전드",
+      "state": "eligible_metadata",
+      "canonicalTitle": "리그 오브 레전드",
+      "wikiPageId": 710049,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "태권도",
+      "state": "eligible_metadata",
+      "canonicalTitle": "태권도",
+      "wikiPageId": 48497,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    },
+    {
+      "title": "웹툰",
+      "state": "eligible_metadata",
+      "canonicalTitle": "웹툰",
+      "wikiPageId": 76811,
+      "observedBacklinkSources": 100,
+      "sampleTruncated": true,
+      "reviewState": "manual_gateway_and_wikiviewer_review",
+      "error": null
+    }
+  ]
+}
