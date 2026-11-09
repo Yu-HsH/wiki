@@ -39,3 +39,12 @@ node scripts/audit-daily-goal-targets-readonly.mjs --live --backlinks
 관련 연구: [PR #26](https://github.com/Yu-HsH/wiki/pull/26), [#27](https://github.com/Yu-HsH/wiki/pull/27), [#28](https://github.com/Yu-HsH/wiki/pull/28), [#29](https://github.com/Yu-HsH/wiki/pull/29).
 
 공식 API 안내: [Pageprops](https://www.mediawiki.org/wiki/API:Pageprops), [Backlinks](https://www.mediawiki.org/wiki/API:Backlinks).
+
+## 2026-11-09 공식 API 및 WikiViewer 실행 증거 (추가)
+
+- [공식 Pageprops + Backlinks Action](https://github.com/Yu-HsH/wiki/actions/runs/42574544308): 24개 목표 모두 `eligible_metadata`, 비본문/미존재/동음이의어 0, API 오류 0. 목표별 공식 직접 역링크 **최소 100개 표본** 확보. 전체 역링크 개수 아님.
+- 실제 공식 MediaWiki pageId와 현재 Wiki Race 캐시의 `wiki_snapshot_links.target_page_id`를 직접 대조: **24개 모두 일치, 불일치 출처 0건**. 부분 캐시에서 24개 모두 최소 1개 이상의 직접 진입 출처 발견.
+- [실제 WikiViewer Playwright Chromium Action](https://github.com/Yu-HsH/wiki/actions/runs/42584064305): 대표 9개 진입 링크 **9 PASS / 0 FAIL**. `fetchPageData`로 실제 문서를 받아 게임 sanitizer를 거쳐 `WikiViewer`에서 링크 클릭 `onLinkClick` 콜백까지 검사.
+- 추가 증거: `data/research/daily-goal-target-public-api-evidence-20261109.json`, `data/research/daily-goal-target-cached-inbound-evidence-20261109.json`, `data/research/daily-goal-wikiviewer-browser-evidence-20261109.json`.
+- **미검증:** 인증된 서버 이동 RPC, 하루 코스 자동 확정, 22개 신규 목표 전수 WikiViewer QA 및 회원 완주/랭킹 회귀.
+- 검증된 후보의 등록 SQL은 [별도 Draft PR #48](https://github.com/Yu-HsH/wiki/pull/48)에서 격리 테스트함. 이 PR #47에는 운영 변경 없음.
