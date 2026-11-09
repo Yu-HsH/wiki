@@ -7,7 +7,7 @@ test("duel start scroll alignment only occurs after countdown's fresh onComplete
   const s=content("pages/MultiplayerGamePage.jsx");
   assert.match(s,/useLayoutEffect\(\(\) => \{\s*if \(phase !== PHASE\.PLAYING \|\| !alignFreshStartRef\.current\) return;/);
   assert.match(s,/alignFreshStartRef\.current = false;\s*window\.scrollTo\(\{ top: 0, behavior: "instant" \}\)/);
-  assert.match(s,/onComplete=\{\(\) => \{\s*alignFreshStartRef\.current = true;\s*saveLocalGameState/);
+  assert.match(s,/onComplete=\{\(\) => \{\s*saveLocalGameState\(\{ enteredPlaying: true \}\);\s*alignFreshStartRef\.current = true/);
   assert.ok(!s.slice(s.indexOf("const recoverGame ="),s.indexOf("const handleReturnToLobby")).includes("alignFreshStartRef.current = true"),"no F5 recovery reset");
 });
 
