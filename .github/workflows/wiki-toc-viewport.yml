@@ -1,0 +1,38 @@
+name: Mobile wiki contents viewport browser QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'css/app.css'
+      - 'tests/browser-fixtures/wiki-toc-responsive.html'
+      - 'tests/mobileWikiTocViewport.test.js'
+      - 'scripts/verify-wiki-toc-viewport-ci.mjs'
+      - '.github/workflows/wiki-toc-viewport.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  responsive-toc:
+    name: Chromium TOC 320-1024 and half-width viewport
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/verify-wiki-toc-viewport-ci.mjs
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-wiki-toc-viewport-ci.mjs
+      - name: Collect responsive screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiki-toc-responsive-screenshots
+          path: test-results/wiki-toc-responsive/*.png
+          if-no-files-found: ignore
+          retention-days: 7
