@@ -8,6 +8,7 @@ on:
       - 'supabase/migrations/*_multiplayer_rematch_v1.sql'
       - 'supabase/tests/multiplayer_rematch_v1.sql'
       - 'scripts/verify-rematch-local-ci.mjs'
+      - 'scripts/verify-rematch-browser-ci.mjs'
       - '.github/workflows/rematch-local.yml'
   workflow_dispatch:
 
@@ -52,6 +53,12 @@ jobs:
         run: npx --no-install supabase db push --local --include-all --skip-vault --yes
       - name: Verify rematch pgTAP with authenticated identities
         run: node scripts/verify-rematch-local-ci.mjs
+      - name: Check rematch browser QA runner syntax
+        run: node --check scripts/verify-rematch-browser-ci.mjs
+      - name: Install isolated Chromium for UI smoke test
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Verify two and three authenticated participants in browser
+        run: node scripts/verify-rematch-browser-ci.mjs
       - name: Destroy disposable test database
         if: always()
         run: npx --no-install supabase stop --no-backup || true
