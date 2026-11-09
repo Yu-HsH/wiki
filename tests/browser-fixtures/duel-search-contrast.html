@@ -10,7 +10,9 @@
     import WikiViewer from "../../components/WikiViewer.jsx";
     const doc = '<h2 id="intro">반도체 기술</h2><p>반도체는 중요한 전자 부품입니다. 반도체를 이용합니다.</p><h2 id="ending">한국의 발전</h2><p>여기에 문서 내 검색 테스트 단어가 있습니다.</p>';
     function Fixture(){
-      const [available,setAvailable] = React.useState(true);
+      const [available,setAvailable] = React.useState(false);
+      // Actual item activation occurs AFTER the article has mounted.
+      React.useEffect(() => { const timer = setTimeout(() => setAvailable(true), 120); return () => clearTimeout(timer); }, []);
       const [expiry,setExpiry] = React.useState(Date.now()+120000);
       const [count,setCount] = React.useState(0);
       const [busy,setBusy] = React.useState(false);
