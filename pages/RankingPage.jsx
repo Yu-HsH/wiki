@@ -148,7 +148,7 @@ export default function RankingPage() {
           </button>
           <button
             type="button"
-            className={period === "daily" ? "toggle-btn active" : "toggle-btn"
+            className={period === "daily" ? "toggle-btn active" : "toggle-btn"}
             aria-pressed={period === "daily"}
             onClick={() => selectPeriod("daily")}
           >
