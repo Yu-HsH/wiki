@@ -7,6 +7,9 @@ on:
       - "scripts/audit-daily-goal-targets-readonly.mjs"
       - "utils/dailyGoalTargetReview.js"
       - "tests/dailyGoalTargetReview.test.js"
+      - "scripts/daily-goal-wikiviewer-browser-smoke.mjs"
+      - "tests/browser-fixtures/daily-goal-entryway-smoke.jsx"
+      - "tests/browser-fixtures/daily-goal-entryway-smoke.html"
   workflow_dispatch:
 
 permissions:
@@ -60,3 +63,18 @@ jobs:
             /tmp/daily-goal-offline-audit.json
             /tmp/daily-goal-public-api-audit.json
           retention-days: 14
+
+  wikiviewer-live-entryway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for real WikiViewer checks
+        run: npx playwright install --with-deps chromium
+      - name: Real public articles through Wiki Race fetchPageData and WikiViewer
+        run: node scripts/daily-goal-wikiviewer-browser-smoke.mjs
