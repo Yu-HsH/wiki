@@ -56,6 +56,6 @@ test("local SQL integration fixtures cover expired duel, group, private, live an
 });
 
 test("copied RPC definitions are terminated before the next statement", () => {
-  assert.doesNotMatch(sql, /^\\$function\\$(?!;)/m);
-  assert.equal((sql.match(/^\\$function\\$;/gm) || []).length, 5);
+  assert.doesNotMatch(sql, /^\$function\$(?!;)/m);
+  assert.equal((sql.match(/^\$function\$;/gm) || []).length, 5);
 });
