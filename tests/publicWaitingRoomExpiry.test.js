@@ -59,3 +59,10 @@ test("copied RPC definitions are terminated before the next statement", () => {
   assert.doesNotMatch(sql, /^\$function\$(?!;)/m);
   assert.equal((sql.match(/^\$function\$;/gm) || []).length, 5);
 });
+
+test("CLI-generated migration and staging SQL have identical executable statements", () => {
+  const migration = source("supabase/migrations/20261109022138_public_waiting_room_expiry_v1.sql");
+  const anchor = "alter table public.game_rooms drop constraint";
+  assert.ok(sql.includes(anchor) && migration.includes(anchor));
+  assert.equal(migration.slice(migration.indexOf(anchor)), sql.slice(sql.indexOf(anchor)));
+});
