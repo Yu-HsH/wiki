@@ -93,6 +93,20 @@ export default function MultiplayerPage() {
     return () => { roomsRequest.current += 1; };
   }, [selectedMode, user?.id, refreshPublicRooms]);
 
+  // Refresh while the lobby stays open: stale cards must disappear without F5.
+  useEffect(() => {
+    if (!selectedMode || !user?.id) return undefined;
+    const refresh = () => {
+      if (!document.hidden && !submitting.current) void refreshPublicRooms(selectedMode);
+    };
+    const timer = window.setInterval(refresh, 60000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [selectedMode, user?.id, refreshPublicRooms]);
+
   const handleJoinPublicRoom = async room => {
     if (submitting.current || !user?.id) return;
     try {
