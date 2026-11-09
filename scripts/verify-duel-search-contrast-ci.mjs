@@ -85,7 +85,7 @@ try{
     await input.fill("반도체");
     await page.getByRole("button",{name:"찾기"}).click();
     try {
-      await page.getByRole("status").filter({hasText:"2개 발견"}).waitFor({timeout:4500});
+      await page.getByRole("status").filter({hasText:"3개 발견"}).waitFor({timeout:4500});
     } catch (error) {
       console.error("Search result diagnostic",{
         panel:(await panel.innerText()).slice(0,1600),
