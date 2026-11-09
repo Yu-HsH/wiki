@@ -37,6 +37,7 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
 import { buildDuelResultPresentation, getDuelResultElapsedSeconds } from "../utils/duelResultPresentation.js";
 import ResultXp from "../components/ResultXp.jsx";
+import RematchResultAction from "../components/RematchResultAction.jsx";
 import {
   ResultActions,
   ResultCard,
@@ -2183,7 +2184,9 @@ function DuelGameSession() {
               )}
             />
             <ResultActions>
-              <button type="button" className="wr-race-btn wr-race-btn--primary wr-race-btn--lg" onClick={handleReturnToLobby} disabled={leaving}>
+              <RematchResultAction sourceRoomId={roomId} mode="duel"
+                isHost={room?.host_user_id === user?.id} enabled={room?.status === "finished"} />
+              <button type="button" className="wr-race-btn wr-race-btn--lg" onClick={handleReturnToLobby} disabled={leaving}>
                 {leaving ? "게임 정리 중..." : "게임 로비로 이동"}
               </button>
             </ResultActions>
