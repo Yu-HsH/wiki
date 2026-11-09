@@ -1916,7 +1916,7 @@ export default function GroupGamePage() {
                 />
             </RaceFrame>
 
-            {isGroupPlaying && <ScrollToTopButton />}
+            {isGroupPlaying && <ScrollToTopButton race />}
         </>
     );
 }

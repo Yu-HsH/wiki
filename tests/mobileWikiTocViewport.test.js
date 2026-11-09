@@ -21,3 +21,18 @@ test("heading toggle, aria-expanded and scroll handlers remain in WikiViewer",()
  assert.match(viewer,/scrollToHeading\(h\.id\)/);
  assert.match(viewer,/aria-label=\"현재 문서 목차\"/);
 });
+
+test("race scroll shortcut stays separate from TOC on short and split screens",()=>{
+ const css=source("css/app.css");
+ const btn=source("components/ScrollToTopButton.jsx");
+ assert.match(css,/\.scroll-top-btn--race \{/);
+ assert.match(css,/@media \(max-width: 900px\), \(max-height: 700px\)/);
+ assert.match(css,/left: max\(10px, env\(safe-area-inset-left, 0px\)\)/);
+ assert.match(css,/right: auto/);
+ assert.match(css,/body:has\(\.wr-race \.wiki-nav-rail:is\(:hover, :focus-within, \.is-expanded\)\)/);
+ assert.match(btn,/race = false/);
+ for (const page of ["pages/MultiplayerGamePage.jsx","pages/GroupGamePage.jsx"])
+   assert.match(source(page),/<ScrollToTopButton race \/>/);
+ const fixture=source("tests/browser-fixtures/wiki-toc-responsive.html");
+ assert.match(fixture,/React\.createElement\(ScrollToTopButton,\{race:true\}\)/);
+});

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-export default function ScrollToTopButton() {
+export default function ScrollToTopButton({ race = false }) {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -18,7 +18,7 @@ export default function ScrollToTopButton() {
     if (!isVisible) return null;
 
     return (
-        <button className="scroll-top-btn" onClick={scrollToTop} aria-label="맨 위로 이동">
+        <button className={`scroll-top-btn${race ? " scroll-top-btn--race" : ""}`} onClick={scrollToTop} aria-label="맨 위로 이동">
             ↑ 맨 위로
         </button>
     );

@@ -8,6 +8,7 @@
   import {createRoot} from "react-dom/client";
   import "../../appStyles.js";
   import WikiViewer from "../../components/WikiViewer.jsx";
+  import ScrollToTopButton from "../../components/ScrollToTopButton.jsx";
   const html=Array.from({length:18},(_,i)=>
     '<h2 id="toc-'+(i+1)+'">'+(i+1)+'장 문서 목차</h2>'+
     '<p>'+('위키백과 자료를 읽으면서 목표 링크를 탐색합니다. '.repeat(18))+'</p>').join("");
@@ -23,7 +24,8 @@
           links:[],isLoading:false,
         }),
         React.createElement("div",{className:"wr-race-dock"},React.createElement("span",null,"아래쪽 아이템 바"))
-      )
+      ),
+      React.createElement(ScrollToTopButton,{race:true})
     );
   }
   createRoot(document.getElementById("root")).render(React.createElement(Page));

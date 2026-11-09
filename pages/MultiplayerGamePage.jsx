@@ -2202,7 +2202,7 @@ function DuelGameSession() {
         </DuelEndSequence>
       )}
 
-      {pageData && <ScrollToTopButton />}
+      {pageData && <ScrollToTopButton race />}
     </>
   );
 }
