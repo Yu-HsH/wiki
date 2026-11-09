@@ -109,7 +109,7 @@ begin
     order by r.created_at desc
     limit 50;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.join_public_room_v1(p_room_id uuid)
@@ -140,7 +140,7 @@ begin
   end if;
   return v_room.id;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.find_room_by_code_v1(p_room_code text, p_mode text)
@@ -165,7 +165,7 @@ begin
   if not found then raise exception 'ROOM_NOT_FOUND'; end if;
   return v_room.id;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.join_duel_room_v2(p_room_code text)
@@ -193,7 +193,7 @@ begin
   values (v_room.id, auth.uid(), 'guest', v_profile.nickname, v_profile.profile_image_url, false, 'waiting') returning * into v_player;
   return v_player;
 end;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.join_group_room(p_room_id uuid)
@@ -246,7 +246,7 @@ begin
   update public.game_rooms set state_version = state_version + 1 where id = p_room_id;
   return v_player;
 end;
-$function$
+$function$;
 
 
 revoke all on function public.list_public_waiting_rooms_v1(text) from public, anon, authenticated;
