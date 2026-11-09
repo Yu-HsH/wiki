@@ -2,6 +2,8 @@
 
 검증일: **2026-11-08 KST**
 
+2026-11-09에 실제 로컬 Edge Runtime·PostgreSQL·회원 Chromium QA를 완료했다. 최신 근거와 운영 전 확인 항목은 [11월 9일 최종 QA 기록](auto-goal-local-edge-qa-20261109.md)을 참고한다. 아래 내용은 11월 8일의 HTTP·CI 결과다.
+
 **결론: 격리 계약·실제 위키백과 API 기반 테스트 PASS / 실제 호스팅 Supabase Edge + 실데이터 스테이징 E2E NOT RUN.**
 
 ## 환경 격리
