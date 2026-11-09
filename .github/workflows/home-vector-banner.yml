@@ -1,0 +1,36 @@
+name: HOME vector banner sharpness QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/browser-fixtures/home-vector-banner.html'
+      - 'scripts/verify-home-vector-banner-ci.mjs'
+      - '.github/workflows/home-vector-banner.yml'
+      - 'components/wiki-race/JungleVeilArt.jsx'
+      - 'components/wiki-race/ExpeditionHero.jsx'
+      - 'css/jungleVeil.css'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  vector:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-home-vector-banner-ci.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: home-banner-vector-screenshots
+          path: test-results/home-banner-vector/*.png
+          if-no-files-found: ignore
+          retention-days: 7
