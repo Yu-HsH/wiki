@@ -30,8 +30,9 @@
   .wr-start-overlay .vs-card { padding: 14px 8px; }
   .vs-course { grid-template-columns: minmax(0,1fr); gap: 12px; }
   .vs-course-arrow { transform: rotate(90deg); justify-self: center; }
-  .wr-race .wiki-nav-rail { position: static; transform: none; width: 100%; max-height: none; display: flex; flex-direction: row; justify-content: flex-start; overflow-x: auto; padding: 0 8px; gap: 4px; border: 1px dashed var(--wr-frame); border-radius: 8px; background: var(--wr-paper-2); box-shadow: none; backdrop-filter: none; }
-  .wr-race .wiki-nav-item { width: 44px; height: 44px; flex: 0 0 44px; }
+  /* Mobile article TOC is controlled by app.css with an explicit compact
+     toggle above the race dock; the old inline full-width rail incorrectly
+     overrode its fixed viewport anchor after app.css loaded. */
 }
 @media (prefers-reduced-motion:no-preference) {
   .vs-journal { animation: wr-appear 220ms ease-out; }
