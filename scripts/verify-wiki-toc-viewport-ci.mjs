@@ -15,7 +15,7 @@ async function ready(){
 try{
  vite=spawn("npm",["run","dev","--","--host","127.0.0.1","--port","5181","--strictPort"],{stdio:"ignore"});
  await ready();browser=await chromium.launch({headless:true});
- for(const [width,height] of [[320,568],[390,844],[500,590],[720,640],[768,720],[1024,768]]){
+ for(const [width,height] of [[320,568],[360,720],[390,844],[430,700],[500,590],[700,480],[720,640],[760,700],[768,720],[780,720],[900,720],[1024,600],[1024,768]]){
   const ctx=await browser.newContext({viewport:{width,height},deviceScaleFactor:width<=500?2:1,hasTouch:width<=500,reducedMotion:"reduce"});
   const page=await ctx.newPage(),errors=[];
   page.on("pageerror",e=>errors.push(e.message));
@@ -61,6 +61,21 @@ try{
     }));
     throw error;
   }
+  // Regression #49: unlike the original TOC-only fixture, a real race has
+  // two floating controls. Verify neither can cover the other at scroll depth.
+  await page.evaluate(()=>window.scrollTo(0,Math.min(800,document.documentElement.scrollHeight-innerHeight)));
+  const scrollTop=page.getByRole("button",{name:"맨 위로 이동"});
+  await scrollTop.waitFor({state:"visible",timeout:10000});
+  const tocBox=await nav.boundingBox(),topBox=await scrollTop.boundingBox();
+  assert.ok(tocBox && topBox,"both race navigation controls mounted");
+  const overlapX=Math.min(tocBox.x+tocBox.width,topBox.x+topBox.width)-Math.max(tocBox.x,topBox.x);
+  const overlapY=Math.min(tocBox.y+tocBox.height,topBox.y+topBox.height)-Math.max(tocBox.y,topBox.y);
+  assert.ok(overlapX<=0 || overlapY<=0,
+    "TOC/scroll-to-top collision at "+width+"x"+height+": "+JSON.stringify({tocBox,topBox}));
+  if(width<=900 || height<=700){
+    assert.ok(topBox.x+topBox.width<width*0.65,
+      "narrow/short race should anchor scroll-to-top on the left");
+  }
   if(width<=760){
     const geom=await nav.evaluate(el=>{
       const rect=el.getBoundingClientRect(),btn=el.querySelector("button").getBoundingClientRect();
@@ -78,6 +93,8 @@ try{
     const expanded=page.getByRole("button",{name:"문서 목차 접기"});
     await expanded.waitFor({state:"visible",timeout:5000});
     assert.equal(await expanded.getAttribute("aria-expanded"),"true");
+    assert.equal(await scrollTop.isVisible(),false,
+      "expanded TOC must take priority over the scroll shortcut");
     const expandedRect=await nav.boundingBox();
     assert.ok(expandedRect && expandedRect.x>=-1 && expandedRect.x+expandedRect.width<=width+1,
       "expanded TOC doesn't overflow horizontally");
@@ -92,7 +109,17 @@ try{
   }else{
     const p=await nav.evaluate(el=>getComputedStyle(el).position);
     assert.equal(p,"fixed");
+    const collapsedButton=page.getByRole("button",{name:"문서 목차 펼치기"});
+    await collapsedButton.click();
+    const expanded=page.getByRole("button",{name:"문서 목차 접기"});
+    await expanded.waitFor({state:"visible",timeout:5000});
+    assert.equal(await scrollTop.isVisible(),false,
+      "expanded desktop TOC must take priority over the scroll shortcut");
+    await expanded.click();
   }
+  await page.mouse.move(0,0);
+  await page.evaluate(()=>document.activeElement?.blur());
+  await scrollTop.waitFor({state:"visible",timeout:8000});
   await page.screenshot({path:path.join(dir,`toc-${width}.png`),animations:"disabled"});
   assert.deepEqual(errors,[],"No renderer errors "+width);
   console.log("PASS #34 TOC responsive",width,"x",height,"toggle and heading scroll");
