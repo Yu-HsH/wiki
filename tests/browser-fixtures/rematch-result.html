@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>Rematch result action E2E fixture</title></head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    // Local Vite-only isolated browser fixture: exercises the actual result
+    // action component, authenticated RPC calls, button polling and navigation.
+    import React from "react";
+    import { createRoot } from "react-dom/client";
+    import { BrowserRouter } from "react-router-dom";
+    import RematchResultAction from "../../components/RematchResultAction.jsx";
+
+    const params = new URLSearchParams(window.location.search);
+    const sourceRoomId = params.get("source");
+    const mode = params.get("mode");
+    const isHost = params.get("host") === "1";
+    if (!sourceRoomId || !["duel", "group"].includes(mode)) {
+      throw new Error("INVALID_REMATCH_BROWSER_FIXTURE");
+    }
+    createRoot(document.getElementById("root")).render(
+      React.createElement(BrowserRouter, null,
+        React.createElement(RematchResultAction, {
+          sourceRoomId, mode, isHost, enabled: true,
+        })
+      )
+    );
+  </script>
+</body>
+</html>

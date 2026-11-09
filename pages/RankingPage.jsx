@@ -35,7 +35,7 @@ function formatDate(value) {
 export default function RankingPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [period, setPeriod] = useState("daily");
+  const [period, setPeriod] = useState("today_runs");
   const [course, setCourse] = useState(null);
   const [dailyRank, setDailyRank] = useState(null);
   const [previousTiming, setPreviousTiming] = useState(false);
@@ -123,9 +123,9 @@ export default function RankingPage() {
       <header className="dashboard-header">
         <div>
           <p className="dashboard-badge">RANKING · 탐험가 명예 기록판</p>
-          <h1>{period === "daily" ? "오늘의 탐험" : period === "weekly" ? "주간 탐험가" : isXpTab ? "탐험가 레벨" : "전체 시간 기록"}</h1>
+          <h1>{period === "today_runs" ? "오늘의 기록" : period === "daily" ? "오늘의 도전" : period === "weekly" ? "주간 탐험가" : isXpTab ? "탐험가 레벨" : "전체 시간 기록"}</h1>
           <p className="dashboard-muted">
-            {period === "weekly" ? `${getKstWeekRange()} · 월요일 00:00부터 정상 플레이로 얻은 XP · 업적 XP 제외` : isXpTab ? "누적 XP가 많은 탐험가 순입니다." : period === "daily" ? "같은 코스의 개인 최고 기록 · 시간 → 이동 횟수 → 기록 시각" : "코스가 서로 다른 기존 기록입니다. 공통 코스 순위와 별도로 참고하세요."}
+            {period === "weekly" ? `${getKstWeekRange()} · 월요일 00:00부터 정상 플레이로 얻은 XP · 업적 XP 제외` : isXpTab ? "누적 XP가 많은 탐험가 순입니다." : period === "daily" ? "오늘의 도전 동일 코스 개인 최고 기록 · 시간 → 이동 횟수 → 기록 시각" : period === "today_runs" ? "오늘 완료한 일반 탐험(랜덤·직접 목표) · 코스별 난도는 다릅니다." : "코스가 서로 다른 기존 기록입니다. 공통 코스 순위와 별도로 참고하세요."}
           </p>
         </div>
         <div className="header-actions">
@@ -140,11 +140,19 @@ export default function RankingPage() {
         <div className="toggle-wrap ranking-filter-tabs">
           <button
             type="button"
+            className={period === "today_runs" ? "toggle-btn active" : "toggle-btn"}
+            aria-pressed={period === "today_runs"}
+            onClick={() => selectPeriod("today_runs")}
+          >
+            오늘의 기록
+          </button>
+          <button
+            type="button"
             className={period === "daily" ? "toggle-btn active" : "toggle-btn"}
             aria-pressed={period === "daily"}
             onClick={() => selectPeriod("daily")}
           >
-            오늘의 탐험
+            오늘의 도전
           </button>
           <button
             type="button"
@@ -251,7 +259,7 @@ export default function RankingPage() {
         )}
 
         {!loading && !error && !isXpTab && records.length === 0 && (
-          <p className="dashboard-muted">아직 완주 기록이 없습니다. 첫 탐험을 시작해 보세요.</p>
+          <p className="dashboard-muted">{period === "today_runs" ? "오늘 완료한 일반 탐험 기록이 없습니다." : period === "daily" ? "오늘의 도전 완주 기록이 없습니다." : "아직 완주 기록이 없습니다. 첫 탐험을 시작해 보세요."}</p>
         )}
 
         {!loading && !error && !isXpTab && listRows.length > 0 && (

@@ -1,0 +1,64 @@
+name: Public waiting room expiry local SQL QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/ops/sql/public_waiting_room_expiry_v1.sql'
+      - 'supabase/migrations/*_public_waiting_room_expiry_v1.sql'
+      - 'supabase/tests/public_waiting_room_expiry_v1.sql'
+      - 'scripts/verify-public-waiting-expiry-ci.mjs'
+      - 'scripts/public-room-two-account-browser-ci.mjs'
+      - '.github/workflows/public-waiting-expiry-local.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disposable-local-db:
+    name: Isolated local Postgres pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked CLI and dependencies
+        run: npm ci
+      - name: Generate staging migration with pinned CLI if absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing=(supabase/migrations/*_public_waiting_room_expiry_v1.sql)
+          if [ "${#existing[@]}" -eq 0 ]; then
+            npx --no-install supabase migration new public_waiting_room_expiry_v1
+            generated=(supabase/migrations/*_public_waiting_room_expiry_v1.sql)
+            test "${#generated[@]}" -eq 1
+            cp docs/ops/sql/public_waiting_room_expiry_v1.sql "${generated[0]}"
+            echo "GENERATED_MIGRATION=${generated[0]}"
+          else
+            test "${#existing[@]}" -eq 1
+            echo "EXISTING_MIGRATION=${existing[0]}"
+          fi
+      - name: Start disposable Supabase local stack
+        run: npx --no-install supabase start --yes --exclude vector
+      - name: Apply only local migrations
+        run: npx --no-install supabase db push --local --include-all --skip-vault --yes
+      - name: Verify SQL behavior with local pgTAP
+        run: node scripts/verify-public-waiting-expiry-ci.mjs
+      - name: Verify two-account runner syntax
+        run: node --check scripts/public-room-two-account-browser-ci.mjs
+      - name: Install Chromium for real browser accounts
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Verify two real accounts in isolated browser contexts
+        run: node scripts/public-room-two-account-browser-ci.mjs
+      - name: Stop disposable local stack
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true

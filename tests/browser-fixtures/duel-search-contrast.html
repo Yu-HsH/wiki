@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>Duel search item contrast QA</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import React from "react";
+    import { createRoot } from "react-dom/client";
+    import "../../appStyles.js";
+    import WikiViewer from "../../components/WikiViewer.jsx";
+    const doc = '<h2 id="intro">반도체 기술</h2><p>반도체는 중요한 전자 부품입니다. 반도체를 이용합니다.</p><h2 id="ending">한국의 발전</h2><p>여기에 문서 내 검색 테스트 단어가 있습니다.</p>';
+    function Fixture(){
+      const [available,setAvailable] = React.useState(false);
+      // Actual item activation occurs AFTER the article has mounted.
+      React.useEffect(() => { const timer = setTimeout(() => setAvailable(true), 120); return () => clearTimeout(timer); }, []);
+      const [expiry,setExpiry] = React.useState(Date.now()+120000);
+      const [count,setCount] = React.useState(0);
+      const [busy,setBusy] = React.useState(false);
+      const [lastQuery,setLastQuery] = React.useState('');
+      const run = async (query) => {
+        setBusy(true); setLastQuery(query);
+        await new Promise(resolve=>setTimeout(resolve,380));
+        setBusy(false);
+        if(query === "없음") return {ok:true,code:"SEARCH_FOUND",query,count:0};
+        if(count>0)return {ok:false,code:"SEARCH_USED",count:0};
+        setCount(n=>n+1);
+        return {ok:true,code:"SEARCH_FOUND",query,count:3};
+      };
+      return React.createElement("div",{className:"wr-page wr-race wr65-field has-strip"},
+        React.createElement("div",{className:"wr-race-shell"},
+          React.createElement("div",{className:"wr-race-hud",style:{height:56}}),
+          React.createElement("div",{className:"wr-race-strip",style:{height:36}}),
+          React.createElement(WikiViewer,{
+            target:{title:"반도체 기술"},
+            currentTitle:"검색 아이템 QA",
+            currentDocumentHtml:doc,
+            links:[],
+            searchAvailable:available,
+            searchExpiresAt:expiry,
+            onAuthorizedSearch:run,
+            onConsumeSearch:()=>{},
+          }),
+          React.createElement("span",{"data-testid":"qa-state","data-count":count,"data-busy":busy,"data-query":lastQuery})
+        ));
+    }
+    createRoot(document.getElementById("root")).render(React.createElement(Fixture));
+  </script>
+</body>
+</html>

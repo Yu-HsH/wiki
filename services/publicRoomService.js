@@ -27,3 +27,14 @@ export async function joinPublicRoom(roomId) {
   if (error) throw error;
   return data;
 }
+
+/** Authenticated room-host lease; server rejects spoofing and expired rooms. */
+export async function heartbeatPublicWaitingRoom(roomId) {
+  requireOnline();
+  if (!roomId) throw new Error("방 정보가 없습니다.");
+  const { data, error } = await supabase.rpc("heartbeat_public_waiting_room_v1", {
+    p_room_id: roomId,
+  });
+  if (error) throw error;
+  return data === true;
+}
