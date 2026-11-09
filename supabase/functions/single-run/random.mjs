@@ -4,6 +4,10 @@ const USER_AGENT = 'WikiRace/2.0 (https://wiki-dusky-one.vercel.app) supabase-ed
 const validId = value => /^[1-9][0-9]*$/.test(String(value ?? ''));
 const failure = code => Object.assign(new Error(code), { code });
 
+// MediaWiki returns pageprops.disambiguation as an empty string for disambiguation
+// pages. Check property PRESENCE, never its truthiness. The departure can be one.
+export const isDisambiguationPage = page => Object.prototype.hasOwnProperty.call(page?.pageprops ?? {}, 'disambiguation');
+
 // The same monotonic budget covers fetch AND JSON body reads, even if a transport
 // ignores abort. Each timeout also cancels the actual fetch where supported.
 export function allocationTransport(fetcher, { now = () => performance.now(), totalMs = 29000, requestMs = 12000 } = {}) {
@@ -50,7 +54,7 @@ export async function selectRandomCourse({ fetcher = fetch, url, serviceKey, tra
       // fixed successor sequence. Resolve namespace and revision in this query.
       const data = await transport.json(WIKI_API + '?' + new URLSearchParams({
         action: 'query', generator: 'random', grnnamespace: '0', grnlimit: '1',
-        grnfilterredir: 'nonredirects', prop: 'info|revisions', rvprop: 'ids',
+        grnfilterredir: 'nonredirects', prop: 'info|revisions|pageprops', ppprop: 'disambiguation', rvprop: 'ids',
         redirects: '1', format: 'json', formatversion: '2',
       }), { headers: { 'User-Agent': USER_AGENT } });
       const pages = Object.values(data?.query?.pages ?? {});
@@ -59,6 +63,10 @@ export async function selectRandomCourse({ fetcher = fetch, url, serviceKey, tra
       if (!page || page.ns !== 0 || page.missing !== undefined || page.invalid !== undefined
         || !validId(page.pageid) || !validId(revision) || typeof page.title !== 'string' || !page.title.trim()) continue;
       if (start && String(page.pageid) === start.pageId) continue;
+      // Only the AUTO-SELECTED GOAL excludes verified disambiguation pages.
+      // No extra Wiki API round trip; reject before snapshot work. Keep start,
+      // normal navigation, and user-supplied targets untouched.
+      if (start && isDisambiguationPage(page)) continue;
       const identity = { pageId: String(page.pageid), revisionId: String(revision), canonicalTitle: page.title, namespace: 0 };
       const saved = await transport.json(`${url}/functions/v1/wiki-snapshot`, {
         method: 'POST', headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, 'Content-Type': 'application/json' },

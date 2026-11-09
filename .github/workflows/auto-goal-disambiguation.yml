@@ -1,0 +1,62 @@
+name: Auto-goal disambiguation QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/functions/single-run/random.mjs"
+      - "tests/singleRandomStart.test.js"
+      - "tests/singleRandomIsolatedHttp.test.js"
+      - "scripts/benchmark-random-pageprops-readonly.mjs"
+      - "scripts/audit-daily-goal-disambiguation-readonly.mjs"
+      - "scripts/smoke-random-pageprops-readonly.mjs"
+      - "scripts/sample-random-disambiguations-readonly.mjs"
+      - "docs/research/auto-goal-disambiguation-20261107.md"
+      - "docs/research/auto-goal-isolated-http-validation-20261108.md"
+      - ".github/workflows/auto-goal-disambiguation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test-without-network:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Server-owned random selection regression suite
+        run: node --test tests/singleRandomStart.test.js
+  live-api-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify exact random generator query
+        run: node scripts/smoke-random-pageprops-readonly.mjs
+      - name: Compare paired Wiki query latency and payload (no DB or game writes)
+        run: node scripts/benchmark-random-pageprops-readonly.mjs
+      - name: Audit 17 existing daily auto-target words without modifying challenge
+        run: node scripts/audit-daily-goal-disambiguation-readonly.mjs
+      - name: Estimate disambiguation prevalence in random page batches
+        run: node scripts/sample-random-disambiguations-readonly.mjs
+      - name: End-to-end Wikipedia random API through isolated HTTP single-run handler
+        env:
+          RUN_LIVE_WIKI_E2E: "1"
+        run: node --test --test-name-pattern="live Wikimedia random draw" tests/singleRandomIsolatedHttp.test.js
+
+  isolated-http-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run isolated real HTTP server, fake RPC and Wiki snapshot recovery tests
+        run: node --test tests/singleRandomIsolatedHttp.test.js
