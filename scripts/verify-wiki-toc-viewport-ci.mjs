@@ -35,6 +35,12 @@ try{
       return {position:el && getComputedStyle(el).position,
         html:el?.outerHTML.slice(0,400),styles:document.styleSheets.length,
         body:document.body.className,root:document.querySelector(".wr-race")?.className,
+        appStyles:[...document.querySelectorAll("style[data-vite-dev-id]")].filter(st=>st.dataset.viteDevId.includes("app.css")).map(st=>({
+          id:st.dataset.viteDevId,length:st.textContent.length,
+          hasNav:st.textContent.includes(".wiki-nav-rail"),
+          nearNav:st.textContent.slice(Math.max(0,st.textContent.indexOf(".wiki-nav-rail")-80),st.textContent.indexOf(".wiki-nav-rail")+120)
+        })),
+        sheets:[...document.styleSheets].slice(0,8).map(sh=>({href:sh.href,owner:sh.ownerNode?.dataset?.viteDevId||'',count:(()=>{try{return sh.cssRules.length}catch{return -1}})()})),
         rules:[...document.styleSheets].flatMap(sheet=>{
           try{
             const found=[];
