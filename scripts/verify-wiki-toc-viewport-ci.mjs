@@ -22,6 +22,22 @@ try{
   await page.goto(base+"/tests/browser-fixtures/wiki-toc-responsive.html");
   const nav=page.getByRole("navigation",{name:"현재 문서 목차"});
   await nav.waitFor({state:"visible",timeout:15000});
+  // Vite injects CSS separately from the JSX, so wait for the stylesheet as
+  // well as the React node before measuring layout.
+  try {
+    await page.waitForFunction(() => {
+      const el=document.querySelector(".wiki-nav-rail");
+      return el && getComputedStyle(el).position==="fixed";
+    },null,{timeout:8000});
+  } catch (error) {
+    console.error("TOC CSS diagnostic",await page.evaluate(()=>{
+      const el=document.querySelector(".wiki-nav-rail");
+      return {position:el && getComputedStyle(el).position,
+        html:el?.outerHTML.slice(0,400),styles:document.styleSheets.length,
+        body:document.body.className,root:document.querySelector(".wr-race")?.className};
+    }));
+    throw error;
+  }
   if(width<=760){
     const geom=await nav.evaluate(el=>{
       const rect=el.getBoundingClientRect(),btn=el.querySelector("button").getBoundingClientRect();
