@@ -1705,6 +1705,58 @@ body {
   .wiki-nav-rail:is(:hover,:focus-within,.is-expanded) { width: min(230px, calc(100vw - 16px)); }
   .wiki-nav-section-list { max-height: 45vh; }
 }
+
+/* #34: On narrow phones and split-screen browsers, the old 52%-height
+   floating list covered article text and could drift under the race HUD.
+   Keep only a touch-sized trigger until explicitly expanded; anchor the
+   outline above the bottom dock/safe-area rather than halfway up the text. */
+@media (max-width: 760px) {
+  .wr-race .wiki-nav-rail {
+    top: auto;
+    bottom: calc(var(--race-dock-h, 62px) + 16px + env(safe-area-inset-bottom, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+    transform: none;
+    width: 54px;
+    max-height: min(54dvh, 420px);
+    padding: 4px;
+    z-index: 38;
+  }
+  .wr-race .wiki-nav-rail::before { display: none; }
+  .wr-race .wiki-nav-rail:is(:hover, :focus-within):not(.is-expanded) {
+    width: 54px;
+    box-shadow: 0 8px 26px rgb(36 52 48 / 15%);
+  }
+  .wr-race .wiki-nav-rail:not(.is-expanded) .wiki-nav-section-list {
+    display: none;
+  }
+  .wr-race .wiki-nav-rail:not(.is-expanded) .wiki-nav-toggle-label {
+    display: none;
+  }
+  .wr-race .wiki-nav-rail .wiki-nav-toggle {
+    min-height: 44px;
+  }
+  .wr-race .wiki-nav-rail:not(.is-expanded) .wiki-nav-toggle {
+    justify-content: center;
+    padding: 0;
+  }
+  .wr-race .wiki-nav-rail.is-expanded {
+    width: min(270px, calc(100vw - 24px));
+    box-shadow: 0 12px 36px rgb(36 52 48 / 22%);
+  }
+  .wr-race .wiki-nav-rail.is-expanded .wiki-nav-section-list {
+    display: flex;
+    max-height: min(40dvh, 320px);
+    overflow-y: auto;
+  }
+  .wr-race .wiki-nav-rail.is-expanded .wiki-nav-item {
+    min-height: 44px;
+  }
+}
+@media (max-width: 760px) and (max-height: 540px) {
+  .wr-race .wiki-nav-rail { max-height: 44dvh; }
+  .wr-race .wiki-nav-rail.is-expanded .wiki-nav-section-list { max-height: 28dvh; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wiki-nav-rail, .wiki-nav-item { transition: none; }
 }
