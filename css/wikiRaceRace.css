@@ -163,6 +163,57 @@
 .wr-race .wiki-find-block-toast { top: calc(var(--race-top) + 12px); }
 .wr-race .game-search-panel { top: calc(var(--race-top) + 12px); background: var(--wr-paper); border: 1px solid var(--wr-frame); color: var(--wr-ink); border-radius: 10px; box-shadow: 0 10px 24px rgb(36 52 48 / 12%); }
 
+/* #10 — legacy dark-panel children used white ink on this parchment panel.
+   Override every form/status state within the field only, so item authority
+   (1 use / 15s) and the other wiki viewer presentations remain untouched. */
+.wr-race .game-search-panel__head strong { color: var(--wr-ink); }
+.wr-race .game-search-panel__body input {
+  min-height: 44px;
+  background: #fffdf7;
+  color: #293d31;
+  caret-color: #293d31;
+  -webkit-text-fill-color: #293d31;
+  border: 1.5px solid #88734d;
+  opacity: 1;
+}
+.wr-race .game-search-panel__body input::placeholder {
+  color: #596450;
+  opacity: 1;
+}
+.wr-race .game-search-panel__body input:focus-visible {
+  border-color: #3268a8;
+  outline: 3px solid #3268a8;
+  outline-offset: 2px;
+}
+.wr-race .game-search-panel__head button,
+.wr-race .game-search-panel__body button {
+  min-height: 44px;
+  background: #e5eede;
+  border: 1px solid #8aa07a;
+  color: #293d31;
+  opacity: 1;
+}
+.wr-race .game-search-panel__head button:hover:not(:disabled),
+.wr-race .game-search-panel__body button:hover:not(:disabled) {
+  background: #d2e1cd;
+}
+.wr-race .game-search-panel__head button:disabled,
+.wr-race .game-search-panel__body button:disabled {
+  background: #e2e6dc;
+  color: #52604c;
+  cursor: not-allowed;
+}
+.wr-race .game-search-panel__message {
+  color: #47563f;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 359px) {
+  .wr-race .game-search-panel__body { flex-wrap: wrap; }
+  .wr-race .game-search-panel__body input { flex-basis: 100%; }
+  .wr-race .game-search-panel__body button { width: 100%; }
+}
+
+
 /* ── Dock (items) ──────────────────────────────────── */
 .wr-race-dock { position: sticky; bottom: 0; z-index: 41; /* above the HUD: the dock is the stacking context of the Link Index sheet */ display: flex; align-items: stretch; min-height: var(--race-dock-h); background: var(--wr-paper-2); border-top: 1px solid var(--wr-frame); }
 .wr-race-dock-hint { flex: 1; display: flex; align-items: center; padding: 0 16px; font-size: 11px; color: var(--wr-ink-3); min-width: 0; }
