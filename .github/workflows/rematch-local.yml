@@ -9,6 +9,7 @@ on:
       - 'supabase/tests/multiplayer_rematch_v1.sql'
       - 'scripts/verify-rematch-local-ci.mjs'
       - 'scripts/verify-rematch-browser-ci.mjs'
+      - 'tests/browser-fixtures/rematch-result.html'
       - '.github/workflows/rematch-local.yml'
   workflow_dispatch:
 
