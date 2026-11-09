@@ -1,0 +1,38 @@
+name: Duel search item contrast real-browser QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'css/wikiRaceRace.css'
+      - 'tests/browser-fixtures/duel-search-contrast.html'
+      - 'tests/duelSearchContrast.test.js'
+      - 'scripts/verify-duel-search-contrast-ci.mjs'
+      - '.github/workflows/duel-search-contrast.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  responsive-search:
+    name: Chromium CSS and input QA (320,390,768,1440)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/verify-duel-search-contrast-ci.mjs
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-duel-search-contrast-ci.mjs
+      - name: Upload responsive screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: duel-search-contrast-screenshots
+          path: test-results/duel-search-contrast/*.png
+          if-no-files-found: ignore
+          retention-days: 7
