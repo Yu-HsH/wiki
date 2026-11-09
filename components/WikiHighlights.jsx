@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import HorizontalPager from './wiki-race/HorizontalPager.jsx';
 import { fetchWikiHighlights } from '../services/wikiHighlightsService.js';
 const source = 'https://ko.wikipedia.org/wiki/위키백과:대문';
@@ -10,18 +10,37 @@ export default function WikiHighlights() {
   const [data, setData] = useState(null);
   const [noteIndex, setNoteIndex] = useState(0);
   const noteNames = ["알찬 글", "알고 계십니까?", "오늘의 역사", "오늘의 그림"];
+  const [rotationPaused, setRotationPaused] = useState(false);
+  const manualPauseUntil = useRef(0);
+  const selectNote = index => {
+    manualPauseUntil.current = Date.now() + 30000;
+    setNoteIndex(index);
+  };
   useEffect(() => { let active = true; fetchWikiHighlights().then(value => { if (active) setData(value); }).catch(() => { if (active) setData({}); }); return () => { active = false; }; }, []);
+  useEffect(() => {
+    if (!data) return undefined;
+    const timer = window.setInterval(() => {
+      if (rotationPaused || document.hidden || Date.now() < manualPauseUntil.current ||
+          window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+      setNoteIndex(index => (index + 1) % noteNames.length);
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, [data, rotationPaused]);
   const missing = data ? '현재 콘텐츠를 가져오지 못했습니다. 출처에서 확인해 주세요.' : '불러오는 중…';
-  return <section className="wr-wiki-highlights" aria-labelledby="wr-discovery-title" aria-busy={!data}>
+  return <section className="wr-wiki-highlights" aria-labelledby="wr-discovery-title" aria-busy={!data}
+    onMouseEnter={() => setRotationPaused(true)}
+    onMouseLeave={() => setRotationPaused(false)}
+    onFocusCapture={() => setRotationPaused(true)}
+    onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setRotationPaused(false); }}>
     <header className="wr-discovery-heading">
       <div><h2 id="wr-discovery-title">위키백과 탐험 노트</h2><p>다음 탐험의 실마리를 찾아보세요.</p></div>
       <div className="wr-pager-controls" aria-label="탐험 노트 넘기기">
-        <button type="button" aria-label="이전 탐험 노트" disabled={noteIndex === 0} onClick={() => setNoteIndex(i => Math.max(0, i - 1))}>←</button>
+        <button type="button" aria-label="이전 탐험 노트" disabled={noteIndex === 0} onClick={() => selectNote(Math.max(0, noteIndex - 1))}>←</button>
         <span aria-live="polite">{noteIndex + 1} / {noteNames.length} · {noteNames[noteIndex]}</span>
-        <button type="button" aria-label="다음 탐험 노트" disabled={noteIndex >= noteNames.length - 1} onClick={() => setNoteIndex(i => Math.min(noteNames.length - 1, i + 1))}>→</button>
+        <button type="button" aria-label="다음 탐험 노트" disabled={noteIndex >= noteNames.length - 1} onClick={() => selectNote(Math.min(noteNames.length - 1, noteIndex + 1))}>→</button>
       </div>
     </header>
-    <HorizontalPager index={noteIndex} onChange={setNoteIndex} label="위키백과 탐험 노트 슬라이드" className="wr-notes-pager">
+    <HorizontalPager index={noteIndex} onChange={selectNote} label="위키백과 탐험 노트 슬라이드" className="wr-notes-pager">
     <section className="wr-note wr-note-featured"><h3>알찬 글</h3><Picture image={data?.featured?.image} /><h4>{data?.featured?.title?.replace(/^알찬 글:\s*/, '')}</h4><p>{data?.featured?.text || missing}</p><a className="wr-note-action" href={data?.featured?.url || source} target="_blank" rel="noopener noreferrer">원문 보기 ↗</a></section>
     <section className="wr-note wr-note-facts"><h3>알고 계십니까?</h3><div className="wr-memo-stack">{(data?.facts?.items?.length ? data.facts.items : [data?.facts?.text || missing]).map((text,i) => <p className="wr-memo" key={i}>{text}</p>)}</div><a className="wr-note-action" href={data?.facts?.url || source} target="_blank" rel="noopener noreferrer">흥미로운 사실 더 보기 ↗</a></section>
     <section className="wr-note wr-note-history"><h3>오늘의 역사</h3><ol className="wr-history-line">{(data?.history?.items?.length ? data.history.items : [data?.history?.text || missing]).map((text,i) => <li key={i}>{text}</li>)}</ol><a className="wr-note-action" href={data?.history?.url || source} target="_blank" rel="noopener noreferrer">오늘의 역사 더 보기 ↗</a></section>

@@ -32,6 +32,7 @@ import { ensureWikiSnapshot } from "../services/wikiSnapshotService";
 import { createWikiSnapshotOverlap } from "../services/wikiSnapshotOverlap.js";
 
 import ResultXp from "../components/ResultXp.jsx";
+import RematchResultAction from "../components/RematchResultAction.jsx";
 import {
     GroupStandings,
     ResultActions,
@@ -83,6 +84,7 @@ import {
     orderGroupParticipants,
 } from "../utils/groupRacePresentation.js";
 import ScrollToTopButton from "../components/ScrollToTopButton";
+import PageLoadingOverlay from "../components/PageLoadingOverlay";
 import GroupPickOverlay from "../components/GroupPickOverlay";
 import OnlineGameRecoveryPanel from "../components/OnlineGameRecoveryPanel";
 import {
@@ -1801,6 +1803,10 @@ export default function GroupGamePage() {
                             </ResultXpRow>
                         ) : null}
                         <ResultActions>
+                            {view === "standings" && (
+                                <RematchResultAction sourceRoomId={roomId} mode="group"
+                                    isHost={room?.host_user_id === user?.id} enabled={room?.status === "finished"} />
+                            )}
                             {view === "retired" && (
                                 <button type="button" className="wr-race-btn wr-race-btn--primary wr-race-btn--lg" onClick={() => setFinalStandingsOpen(true)}>
                                     최종 결과 보기 →
@@ -1831,6 +1837,7 @@ export default function GroupGamePage() {
     return (
         <>
             {exitDialog}
+            {isGroupPlaying && isLoading && <PageLoadingOverlay />}
             {phase === GROUP_GAME_PHASE.PICKING && (
                 <GroupPickOverlay
                     candidates={candidates}

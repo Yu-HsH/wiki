@@ -1,0 +1,50 @@
+name: Multiplayer loading overlay real-browser QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'pages/GroupGamePage.jsx'
+      - 'components/PageLoadingOverlay.jsx'
+      - 'scripts/verify-multiplayer-loading-browser-ci.mjs'
+      - '.github/workflows/multiplayer-loading-browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disposable-loading-qa:
+    name: Two-player duel and three-player group real navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check browser QA runner syntax
+        run: node --check scripts/verify-multiplayer-loading-browser-ci.mjs
+      - name: Start disposable Supabase with only local migrations
+        run: npx --no-install supabase start --yes --exclude vector
+      - name: Install Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Run 1:1 and 3-player group loading browser QA
+        run: node scripts/verify-multiplayer-loading-browser-ci.mjs
+      - name: Upload visual proof for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multiplayer-loading-browser-screenshots
+          path: test-results/loading-overlay/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Destroy disposable local Supabase volume
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true

@@ -1,0 +1,40 @@
+name: Integrated duel and group finish-to-rematch E2E
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/verify-integrated-finish-rematch-ci.mjs'
+      - '.github/workflows/integrated-finish-rematch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  full-e2e:
+    name: Real full result screen to private rematch with two and three users
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/verify-integrated-finish-rematch-ci.mjs
+      - run: npx --no-install supabase start --yes --exclude vector
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-integrated-finish-rematch-ci.mjs
+      - name: Upload actual result/rematch screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-real-result-rematch
+          path: test-results/integrated-finish-rematch/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Destroy isolated local Supabase
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true
