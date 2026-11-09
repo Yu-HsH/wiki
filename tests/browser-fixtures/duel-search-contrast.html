@@ -13,7 +13,7 @@
       const [available,setAvailable] = React.useState(false);
       // Actual item activation occurs AFTER the article has mounted.
       React.useEffect(() => { const timer = setTimeout(() => setAvailable(true), 120); return () => clearTimeout(timer); }, []);
-      const [expiry,setExpiry] = React.useState(Date.now()+120000);
+      const [expiry,setExpiry] = React.useState(() => Date.now() + (new URLSearchParams(location.search).get("expiryMs") === "15000" ? 15000 : 120000));
       const [count,setCount] = React.useState(0);
       const [busy,setBusy] = React.useState(false);
       const [lastQuery,setLastQuery] = React.useState('');
