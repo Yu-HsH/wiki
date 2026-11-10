@@ -35,6 +35,7 @@ import { createWikiSnapshotOverlap } from "../services/wikiSnapshotOverlap.js";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
+import RaceRoomEmotes from "../components/RaceRoomEmotes.jsx";
 import { buildDuelResultPresentation, getDuelResultElapsedSeconds } from "../utils/duelResultPresentation.js";
 import ResultXp from "../components/ResultXp.jsx";
 import RematchResultAction from "../components/RematchResultAction.jsx";
@@ -2034,6 +2035,8 @@ function DuelGameSession() {
             />
           </span>
         </div>
+
+        <RaceRoomEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} active={isPlaying} />
 
         {isPlaying && useItems && <DuelFeedbackLane>
           {!duelFeedback.notices.length && floatingMessage && <div className="floating-message wr-duel-feedback-fallback" role="status" aria-live="polite">{floatingMessage}</div>}
