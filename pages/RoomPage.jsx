@@ -23,6 +23,7 @@ import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
 import UserProfileModal from "../components/UserProfileModal";
 import ProfileCard from "../components/ProfileCard.jsx";
+import RoomLobbyEmotes from "../components/RoomLobbyEmotes.jsx";
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog.jsx";
 import "../css/jungle65Lobby.css";
 import useProfileCards from "../hooks/useProfileCards.js";
@@ -602,7 +603,9 @@ export default function RoomPage() {
       </LobbyHeader>
       <p className="wr-room-sync" role="status">{syncFailed ? "최신 방 정보 확인 실패 · 마지막 확인 상태를 표시하고 있습니다. 연결을 확인하세요. 3초마다 재확인합니다." : connectionStatus === "SUBSCRIBED" ? "실시간 알림 수신 중 · 대기 중 방 정보를 3초마다 다시 확인합니다." : "실시간 연결 확인 중 · 대기 중 서버 재조회로 상태를 확인합니다."}</p>
 
-      <div className="wr-duel-stage">
+      <RoomLobbyEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} />
+
+       <div className="wr-duel-stage">
         <h2 className="wr-visually-hidden">참가자</h2>
         <ul className="wr-duel-players" aria-label={`참가자 ${players.length} / 2`}>
           {renderPlayer(hostPlayer, "a")}
