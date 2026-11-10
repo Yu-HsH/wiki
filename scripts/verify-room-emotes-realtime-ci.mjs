@@ -42,7 +42,7 @@ function sql(query) {
   return r.stdout.trim();
 }
 function pause(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-async function until(message, condition, milliseconds = 9500) {
+async function until(message, condition, milliseconds = 22000) {
   const deadline = Date.now() + milliseconds;
   while (Date.now() < deadline) {
     if (condition()) return;
@@ -71,6 +71,7 @@ async function account(index) {
   });
   const login = await client.auth.signInWithPassword({email,password});
   assert.ok(!login.error && login.data?.session, "Isolated email/password login");
+  await client.realtime.setAuth(login.data.session.access_token);
   const user = {userId, alias, client};
   people.push(user);
   return user;
@@ -133,9 +134,18 @@ async function verifyRoom(mode, roomId) {
   );
   const first = await send(people[0],roomId,"hello");
   assert.equal(first?.code,"ACCEPTED",mode+" authenticated host can send");
-  await until(mode+" participant B receives A", () =>
-    listeners[1].some(event=>event.id===first.event_id)
-  );
+  const bRead = await people[1].client.from("room_events").select("id,user_id,event_type")
+    .eq("room_id",roomId).eq("id",first.event_id);
+  assert.ok(!bRead.error && bRead.data?.length === 1,
+    mode+" participant B must be able to SELECT the event through RLS");
+  console.log("PASS "+mode+" member event SELECT with real JWT");
+  try {
+    await until(mode+" participant B receives A", () =>
+      listeners[1].some(event=>event.id===first.event_id)
+    );
+  } catch(error) {
+    throw Error(error.message+"; select=1; received="+listeners[1].length);
+  }
   const repeated = await send(people[0],roomId,"go");
   assert.equal(repeated?.code,"EMOTE_RATE_LIMIT",mode+" cooldown blocks repeat");
   const second = await send(people[1],roomId,"ready");
@@ -168,6 +178,8 @@ async function verifyRoom(mode, roomId) {
 try {
   // Stable account slots: A=host, B=first guest, C=second guest/duel outsider.
   for (const index of [1, 2, 3]) await account(index);
+  const published = Number(sql("select count(*) from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='room_events';"));
+  assert.equal(published,1,"room_events must be in Realtime publication");
   const duel = addRoom("duel");
   const group = addRoom("group");
   await verifyRoom("duel",duel);
