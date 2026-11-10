@@ -29,3 +29,26 @@
 .wr-updates-item:focus-visible, .wr-page.wr-updates .wr-header :is(a,button):focus-visible { outline:3px solid #27618b; outline-offset:3px; }
 @media (max-width:760px) { .wr-updates-page { padding:16px; } .wr-updates-layout { grid-template-columns:minmax(0,1fr); } .wr-updates-item { min-height:0; } }
 @media (prefers-reduced-motion: reduce) { .wr-updates-item { transition:none; } .wr-updates-item:hover { transform:none; } }
+
+/* Operator editor reuses the public journal style without exposing admin controls to visitors. */
+.wr-news-admin-link, .wr-news-create, .wr-news-actions button {
+  display:inline-flex; justify-content:center; align-items:center;
+  border:2px solid #ad8753; border-radius:8px; padding:9px 13px;
+  color:#403321; background:#fff0cb; font-weight:650; cursor:pointer;
+}
+.wr-news-admin-link { margin-top:12px; }
+.wr-news-create { width:100%; min-height:48px; }
+.wr-news-editor { display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+.wr-news-editor label { font-weight:700; margin-top:6px; }
+.wr-news-editor input, .wr-news-editor select, .wr-news-editor textarea {
+  display:block; width:100%; border:1px solid #baa077; border-radius:7px;
+  background:#fffefd; color:#24382a; padding:10px; font:inherit; line-height:1.6;
+}
+.wr-news-editor input:focus-visible, .wr-news-editor select:focus-visible,
+.wr-news-editor textarea:focus-visible { outline:3px solid #27618b; outline-offset:2px; }
+.wr-news-editor-hint { font-size:12px; color:#725c3d; }
+.wr-news-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+.wr-news-actions button:disabled { opacity:.55; cursor:not-allowed; }
+.wr-news-actions button:nth-child(2) { background:#2d6451; color:#fffef0; border-color:#245441; }
+.wr-news-error { color:#9a342f; }
+.wr-news-success { color:#265f43; }
