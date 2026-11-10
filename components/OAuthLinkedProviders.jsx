@@ -55,7 +55,7 @@ export default function OAuthLinkedProviders(){
         {linked.includes(provider)
           ? <strong>연결됨</strong>
           : <button type="button" className="app-btn app-btn-ghost"
-              disabled={Boolean(pending)||Boolean(error)}
+              disabled={Boolean(pending)}
               onClick={()=>connect(provider)}>{pending===provider?"연결 중…":"계정 연결"}</button>}
       </div>)}
     {error&&<p className="auth-error" role="alert">{error}</p>}
