@@ -108,6 +108,10 @@ select is(public.send_room_emote_v1(
 set local role postgres;
 update public.game_rooms set game_deadline_at=now()-interval '1 second'
 where id='00000000-0000-0000-0055-000000000101';
+-- This player actively raced and is still marked playing at result transition.
+update public.room_players set player_status='playing'
+where room_id='00000000-0000-0000-0055-000000000102'
+  and user_id='00000000-0000-0000-0055-000000000002';
 update public.game_rooms set status='finished',finished_at=now()-interval '30 seconds'
 where id='00000000-0000-0000-0055-000000000102';
 update private.room_emote_rate_limits set last_sent_at=now()-interval '10 seconds'
