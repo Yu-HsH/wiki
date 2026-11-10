@@ -43,7 +43,11 @@
 .wr-race-emotes .wr-kion-picker__trigger {
   min-height: 40px; font-size: 12px; padding: 6px 10px;
 }
-.wr-race-emotes .wr-kion-picker__panel { right: 0; }
+.wr-race-emotes .wr-kion-picker__panel {
+  right: 0;
+  box-sizing: border-box; /* PR-1 picker defaults to content-box: +22px overflow on 320px */
+  width: min(352px, calc(100vw - 26px));
+}
 .wr-race-emotes__feedback {
   position: absolute; right: 12px; top: calc(100% + 2px);
   max-width: min(300px, 85vw); z-index: 1;
