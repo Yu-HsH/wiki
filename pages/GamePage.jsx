@@ -1067,7 +1067,7 @@ export default function GamePage({
         />
       )}
 
-      {phase === PHASE.PLAYING && <ScrollToTopButton />}
+      {phase === PHASE.PLAYING && <ScrollToTopButton race />}
 
       {exitDialog}
     </>
