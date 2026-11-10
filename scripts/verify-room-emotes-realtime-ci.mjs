@@ -53,6 +53,7 @@ async function until(message, condition, milliseconds = 22000) {
 
 const people = [];
 const channels = [];
+const diagnostics = new Map();
 async function account(index) {
   const alias = "kion_rt_" + id + "_" + index;
   const email = alias + "@local.test";
@@ -95,24 +96,36 @@ function addRoom(mode) {
   return roomId;
 }
 
-async function subscribe(user, roomId, label) {
+async function subscribe(user, roomId, label, unfiltered = false) {
   const received = [];
-  const channel = user.client
-    .channel("kion-emotes-e2e-" + label + "-" + id)
-    .on("postgres_changes", {
-      event:"INSERT", schema:"public", table:"room_events", filter:"room_id=eq." + roomId,
-    }, (change) => {
-      if(change.new?.room_id === roomId && change.new?.event_type === "room_emote") {
-        received.push(change.new);
-      }
-    });
+  const stats = { status:"CONNECTING", system:"pending", raw:0, matching:0, filtered:0 };
+  diagnostics.set(label, stats);
+  const channel = user.client.channel("kion-emotes-e2e-" + label + "-" + id);
+  channel.on("system", "*", (payload) => {
+    if (payload.extension === "postgres_changes") {
+      stats.system = payload.status || payload.message || "unknown";
+    }
+  });
+  channel.on("postgres_changes", {
+    event:"INSERT", schema:"public", table:"room_events",
+    ...(!unfiltered ? {filter:"room_id=eq." + roomId} : {}),
+  }, (change) => {
+    stats.raw += 1;
+    if (change.new?.event_type === "room_emote") stats.matching += 1;
+    if (change.new?.room_id === roomId && change.new?.event_type === "room_emote") {
+      received.push(change.new);
+      stats.filtered += 1;
+    }
+  });
   channels.push({client:user.client,channel});
   await new Promise((resolve,reject) => {
     const timer = setTimeout(() => reject(Error("Realtime SUBSCRIBED timeout " + label)), 15000);
-    channel.subscribe((connection) => {
+    channel.subscribe((connection, detail) => {
+      stats.status = connection;
       if(connection === "SUBSCRIBED") { clearTimeout(timer); resolve(); }
       else if (connection === "CHANNEL_ERROR" || connection === "TIMED_OUT") {
-        clearTimeout(timer); reject(Error("Realtime " + connection + " " + label));
+        clearTimeout(timer); reject(Error("Realtime " + connection + " " + label +
+          "; detail=" + (detail?.message || "unknown")));
       }
     });
   });
@@ -132,6 +145,11 @@ async function verifyRoom(mode, roomId) {
   const listeners = await Promise.all(
     people.slice(0,group?3:2).map((user,i) => subscribe(user,roomId,mode+"-"+i))
   );
+  // An admin subscription distinguishes WAL/replication failures from RLS.
+  const adminEvents = await subscribe({client:admin}, roomId, mode+"-admin", true);
+  // SUBSCRIBED proves the websocket joined, not that the database replication
+  // listener finished initializing; postpone the initial INSERT.
+  await pause(3500);
   const first = await send(people[0],roomId,"hello");
   assert.equal(first?.code,"ACCEPTED",mode+" authenticated host can send");
   const bRead = await people[1].client.from("room_events").select("id,user_id,event_type")
@@ -144,7 +162,9 @@ async function verifyRoom(mode, roomId) {
       listeners[1].some(event=>event.id===first.event_id)
     );
   } catch(error) {
-    throw Error(error.message+"; select=1; received="+listeners[1].length);
+    const subscriber = Object.fromEntries([...diagnostics].filter(([label])=>label.startsWith(mode+"-")));
+    throw Error(error.message+"; RLS_SELECT=1; memberEvents="+listeners[1].length+
+      "; adminEvents="+adminEvents.length+"; diagnostics="+JSON.stringify(subscriber));
   }
   const repeated = await send(people[0],roomId,"go");
   assert.equal(repeated?.code,"EMOTE_RATE_LIMIT",mode+" cooldown blocks repeat");
@@ -180,6 +200,9 @@ try {
   for (const index of [1, 2, 3]) await account(index);
   const published = Number(sql("select count(*) from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='room_events';"));
   assert.equal(published,1,"room_events must be in Realtime publication");
+  const walLevel = sql("show wal_level;");
+  assert.equal(walLevel,"logical","WAL must be logical for Realtime to stream DB inserts");
+  console.log("LOCAL_REALTIME_PUBLICATION_AND_LOGICAL_WAL_PASS");
   const duel = addRoom("duel");
   const group = addRoom("group");
   await verifyRoom("duel",duel);
