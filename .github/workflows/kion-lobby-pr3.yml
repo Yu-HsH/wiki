@@ -12,6 +12,9 @@ on:
       - 'tests/roomEmoteEvents.test.js'
       - 'services/roomEmoteService.js'
       - 'utils/roomEmoteEvents.js'
+      - 'tests/browser-fixtures/kion-lobby.html'
+      - 'tests/browser-fixtures/kion-lobby.jsx'
+      - 'scripts/verify-kion-lobby-ci.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,3 +36,26 @@ jobs:
         run: npm test
       - name: Ensure default-off production build succeeds
         run: npm run build
+  chromium-lobby:
+    name: Kion 1:1/group visual viewport QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-kion-lobby-ci.mjs
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kion-lobby-pr3-screenshots
+          path: test-results/kion-lobby/*.png
+          if-no-files-found: ignore
+          retention-days: 7
