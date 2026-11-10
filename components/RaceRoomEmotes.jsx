@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { fetchRecentRoomEmotes, sendRoomEmote } from "../services/roomEmoteService.js";
 import { normalizeRoomEmoteEvent, upsertLatestRoomEmote } from "../utils/roomEmoteEvents.js";
@@ -7,9 +7,9 @@ import { KION_EMOTE_PRESETS, getKionEmote } from "../utils/kionEmoteCatalog.js";
 import { KionEmoteBubble, KionEmotePicker } from "./KionEmotes.jsx";
 import "./RaceRoomEmotes.css";
 
-// Shares PR-3's opt-in rollout flag. Inert by default in every environment.
+// Separate opt-in. Lobby validation must not activate unreviewed race HUD UI.
 export const KION_RACE_EMOTES_ENABLED =
-  import.meta.env.VITE_ENABLE_KION_ROOM_EMOTES === "true";
+  import.meta.env.VITE_ENABLE_KION_RACE_EMOTES === "true";
 
 function deniedMessage(code) {
   if (code === "EMOTE_RATE_LIMIT") return "3초에 한 번만 보낼 수 있습니다.";
@@ -91,6 +91,7 @@ export default function RaceRoomEmotes({
   const [feedback, setFeedback] = useState("");
   const [hidden, setHidden] = useState(false);
   const [clock, setClock] = useState(() => Date.now());
+  const sendGuard = useRef(false);
 
   const me = players.find((player) => player.user_id === userId);
   const enabled = KION_RACE_EMOTES_ENABLED && Boolean(
@@ -113,11 +114,26 @@ export default function RaceRoomEmotes({
     setEvents([]);
     setFeedback("");
     setCooldownUntil(0);
+    sendGuard.current = false;
     if (!enabled) {
       setConnected(false);
       return undefined;
     }
     let disposed = false;
+    let subscribed = false;
+    let catchupTimer = null;
+    const backfill = () => {
+      if (disposed || !subscribed) return;
+      fetchRecentRoomEmotes(roomId, { limit: 30 })
+        .then((rows) => {
+          if (!disposed) setEvents((previous) => mergeRaceEmoteSnapshots(previous, rows));
+        })
+        .catch(() => {});
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") backfill();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     const channel = supabase
       .channel(`race-room-emotes:${roomId}`)
       .on("postgres_changes", {
@@ -133,25 +149,27 @@ export default function RaceRoomEmotes({
       })
       .subscribe((status) => {
         if (disposed) return;
-        setConnected(status === "SUBSCRIBED");
-        if (status === "SUBSCRIBED") {
-          // F5/reconnect: restore only the recent feed, not game progress.
-          fetchRecentRoomEmotes(roomId, { limit: 30 })
-            .then((rows) => {
-              if (!disposed) setEvents((previous) => mergeRaceEmoteSnapshots(previous, rows));
-            })
-            .catch(() => {}); // Live INSERT continues even if backfill fails.
+        subscribed = status === "SUBSCRIBED";
+        setConnected(subscribed);
+        if (catchupTimer !== null) window.clearTimeout(catchupTimer);
+        if (subscribed) {
+          backfill(); // F5/reconnect restore, with six-second event expiration.
+          catchupTimer = window.setTimeout(backfill, 4_000); // WAL listener warmup gap.
         }
       });
     return () => {
       disposed = true;
+      subscribed = false;
+      if (catchupTimer !== null) window.clearTimeout(catchupTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
       setConnected(false);
       supabase.removeChannel(channel);
     };
   }, [enabled, roomId]);
 
   async function handleSend(emoteId) {
-    if (!enabled || !connected || sending || Date.now() < cooldownUntil) return;
+    if (!enabled || !connected || sendGuard.current || sending || Date.now() < cooldownUntil) return;
+    sendGuard.current = true;
     setFeedback("");
     setSending(true);
     try {
@@ -159,6 +177,7 @@ export default function RaceRoomEmotes({
       if (response.accepted) {
         if (response.event) {
           setEvents((previous) => upsertLatestRoomEmote(previous, response.event));
+          setClock(Date.now());
         }
         setCooldownUntil(Date.now() + 3000);
       } else {
@@ -170,6 +189,7 @@ export default function RaceRoomEmotes({
     } catch {
       setFeedback("실시간 연결을 확인한 뒤 다시 시도해주세요.");
     } finally {
+      sendGuard.current = false;
       setSending(false);
     }
   }
@@ -177,7 +197,7 @@ export default function RaceRoomEmotes({
   if (!enabled) return null;
   return (
     <RaceRoomEmotesView
-      visible={getVisibleRaceEmotes(events, clock, hidden)}
+      visible={getVisibleRaceEmotes(events, clock, hidden, roomId)}
       namesByUserId={namesByUserId}
       connected={connected}
       sending={sending}

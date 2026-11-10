@@ -32,11 +32,11 @@ test("event backfill keeps newer sender reaction and deterministic display order
 });
 
 test("race views are feature-gated and refuse idle/disconnected players", () => {
-  assert.match(js, /VITE_ENABLE_KION_ROOM_EMOTES\s*===\s*"true"/);
+  assert.match(js, /VITE_ENABLE_KION_RACE_EMOTES\s*===\s*"true"/);
   assert.match(js, /me\?\.player_status === "playing"/);
   assert.match(js, /roomStatus === "playing" \|\| roomStatus === "grace_period"/);
   assert.match(js, /if \(!enabled\) return null/);
-  assert.match(js, /getVisibleRaceEmotes\(events, clock, hidden\)/);
+  assert.match(js, /getVisibleRaceEmotes\(events, clock, hidden, roomId\)/);
   assert.match(js, /setCooldownUntil\(Date\.now\(\) \+ 3000\)/);
 });
 
@@ -57,4 +57,21 @@ test("1:1 and group mount race strip without changing article or item handlers",
   assert.match(group, /onLinkClick=\{handleMove\}/);
   assert.match(duel, /onUseItem=\{handleUseItem\}/);
   assert.match(group, /<ReactionDock/); // finished spectator still owns legacy reactions
+});
+
+test("room switches cannot leak previous room reactions, even with same sender", () => {
+  const now = 100_000;
+  const events = [
+    {id:"old",roomId:"old-room",userId:"member",createdAt:now-5,emoteId:"hello"},
+    {id:"new",roomId:"new-room",userId:"member",createdAt:now-3,emoteId:"good"},
+  ];
+  assert.deepEqual(getVisibleRaceEmotes(events,now,false,"new-room").map(e=>e.id),["new"]);
+});
+
+test("race reactions are separately opt-in, channel warmup is backfilled, duplicate sends guarded", () => {
+  assert.doesNotMatch(js, /VITE_ENABLE_KION_ROOM_EMOTES/);
+  assert.match(js, /catchupTimer = window\\.setTimeout\\(backfill, 4_000\\)/);
+  assert.match(js, /document\\.removeEventListener\\("visibilitychange", onVisibility\\)/);
+  assert.match(js, /sendGuard\\.current = true/);
+  assert.match(duel, /if \\(event\\.event_type === "room_emote"\\) return/);
 });

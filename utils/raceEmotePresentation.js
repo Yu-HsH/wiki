@@ -1,10 +1,11 @@
 export const RACE_EMOTE_VISIBLE_MS = 6000;
 
 /** A short, non-intrusive reaction. Old F5 history must not replay as a new toast. */
-export function getVisibleRaceEmotes(events, now, muted = false) {
+export function getVisibleRaceEmotes(events, now, muted = false, roomId = null) {
   if (muted) return [];
   return (events || []).filter(
-    (event) => event && event.createdAt <= now + 500 &&
+    (event) => event && (roomId === null || event.roomId === roomId) &&
+      event.createdAt <= now + 500 &&
       now - event.createdAt >= -500 &&
       now - event.createdAt < RACE_EMOTE_VISIBLE_MS
   );

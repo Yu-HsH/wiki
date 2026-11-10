@@ -17,7 +17,7 @@
 - Result-screen emotes are NOT mounted in this PR; avoid cross-phase side effects and keep PR-4 limited to active gameplay.
 
 ## Default-off gate
-- `VITE_ENABLE_KION_ROOM_EMOTES` must equal literal `true` for runtime components to mount.
+- `VITE_ENABLE_KION_RACE_EMOTES` must equal literal `true` for runtime components to mount.
 - When the RPC is unavailable, the default public build has no selectable emote buttons or requests.
 - Active race only: `phase === PLAYING`, room `playing|grace_period`, and current member `player_status === playing`.
 - No edits to move authority, XP/leaderboard, match result, game/room lifecycle, or active items.
@@ -27,3 +27,10 @@
 - Browser fixture: duel + group at 320/390/768/1280px, ten-option picker, send mock, ESC, hide/restore, underlying wiki & item button clicks, no image/JS/viewport overflow.
 - Real-account two-client Realtime and simultaneous sends remain blocked pending an authorized test backend (PR #56).
 - PR remains Draft. No Vercel, no production DB migration or rollout.
+
+## Pre-integration fixes (2026-11-11)
+- **Separate flag** `VITE_ENABLE_KION_RACE_EMOTES=true`: turning on validated lobby speech cards must not accidentally activate the still-under-review race reaction bar. Both remain OFF unless explicitly opted in.
+- Backfill on SUBSCRIBED, after 4s WAL warmup, and on foreground return; a six-second TTL still filters stale reactions.
+- Incoming reaction display is strictly room-scoped; a pending event from a previous room cannot flash in the next race.
+- Client double-submit guard blocks duplicate rapid clicks before React rerender. The old duel game event receiver silently ignores `room_emote`, avoiding debug spam and keeping action processing unchanged.
+- This PR still diverges from the latest PR #57; perform a clean integration rebase before production.

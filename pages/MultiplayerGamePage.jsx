@@ -1705,6 +1705,9 @@ function DuelGameSession() {
         (payload) => {
           const event = payload.new;
 
+          // Kion has a separate presentation-only channel. The game action
+          // handler must not treat reactions as duel moves or log unknown actions.
+          if (event.event_type === "room_emote") return;
           if (event.user_id === user?.id) return;
 
           handleIncomingEvent(event);
