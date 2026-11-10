@@ -6,13 +6,18 @@
 - **After #55/#56 merge:** rebase PR-3 onto main and remove any duplicate shared service/test additions in the diff.
 
 ## Implemented
-- `RoomLobbyEmotes` mounted under the 1:1 / group waiting-room headers; same UI in both.
+- Shared `useRoomLobbyEmotes` transport hook mounted once per real 1:1/group waiting-room page. No global incoming reaction feed.
+- **Actual player-card speech bubbles**: duel host/right opponent/empty slot distinction; each occupied group roster row owns one reaction, empty seats never display one.
+- Picker moved to the end of each player region: below the duel VS cards or below the group participant roster.
+- Uses the existing `ProfileCard`, READY and name badges without moving game logic; image + short label in rounded parchment card, pointer inert.
 - Reuses the ten image presets and accessible picker from PR #55.
 - Subscribes only to `room_events` INSERT events filtered by room ID, accepts only `room_emote`, then normalizes server-owned IDs.
 - Fetches recent room reaction history after subscription; displays only reactions from the last 6 seconds and one latest reaction per participant.
 - Sender name is derived from current room participant snapshots; no arbitrary nickname or message is submitted.
 - Send uses PR #56's `sendRoomEmote`, with client-side 3-second UX cooldown layered on top of server-authoritative rate limit.
-- Realtime channel cleanup on room change/unmount; narrow viewport wrapping and prefers-reduced-motion support.
+- Realtime channel cleanup on room change/unmount; narrow viewport 320/390/768/1280 and prefers-reduced-motion support.
+- Latest server-accepted reaction is keyed to the emitting user, shown for six seconds, then removed. Stale history and nonmember events cannot become a bubble.
+- Bubble layout reserves a fixed display slot for each occupied player while the flag is on so reactions do not cause row reflow. No bubble on empty slots, no overlay over document-picker/READY controls.
 - Does not change room readiness, game start, XP, game results, legacy spectator reactions, chat or database schema.
 
 ## Release gate (fail closed)
@@ -24,4 +29,5 @@
 ## QA
 - Required: npm test, Vite build, 320px / 390px / 768px / 1280px visual QA, keyboard/ESC, overlapping buttons, reduced motion.
 - Required after PR #56's isolated DB is ready: two accounts in separate clients in both 1:1/group; reconnect and F5, 3s flood prevention; unknown/expired room rejection; cross-room RLS; stale event dismissal. 
-- Current status: static wiring tests and CI browser/build checks are prepared; **real 2-account Realtime roundtrip not yet tested**.
+- GitHub Actions: unit regression/build and browser viewport/card-geometry tests verify the **real existing duel/group card classes**, profile/READY hit targets, picker, 10 images, and screenshot artifacts. See PR checks.
+- **Real 2-account Realtime roundtrip is still BLOCKED**: latest PR #56 disposable CI sees authorized DB event reads but no `postgres_changes` delivery. Do not enable Production flag or merge/deploy this as complete until that separate issue is resolved.
