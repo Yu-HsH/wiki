@@ -1,0 +1,35 @@
+name: OAuth v2.0.3 safety checks
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/oauth-v203-ci.yml"
+      - "supabase/migrations/*oauth*"
+      - "authContext.jsx"
+      - "pages/LoginPage.jsx"
+      - "pages/ProfilePage.jsx"
+      - "pages/OAuthCompletePage.jsx"
+      - "components/OAuthLinkedProviders.jsx"
+      - "utils/oauthFlow.js"
+      - "tests/oauthFlow.test.js"
+      - "App.jsx"
+      - "supabaseClient.js"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Generate migration name with pinned Supabase CLI
+        run: |
+          npx supabase --version
+          npx supabase migration new oauth_profile_onboarding_v1
+      - run: npm test
+      - run: npm run build
