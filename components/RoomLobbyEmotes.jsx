@@ -128,7 +128,31 @@ export default function RoomLobbyEmotes({ roomId, userId, players = [], roomStat
   }
 
   if (!enabled) return null;
+  return (
+    <RoomLobbyEmotesView
+      visible={visible}
+      namesByUserId={namesByUserId}
+      connected={connected}
+      sending={sending}
+      clock={clock}
+      cooldownUntil={cooldownUntil}
+      onSend={handleSend}
+      feedback={feedback}
+    />
+  );
+}
 
+/** Presentation-only view for isolated responsive browser QA; no RPCs here. */
+export function RoomLobbyEmotesView({
+  visible = [],
+  namesByUserId = new Map(),
+  connected = false,
+  sending = false,
+  clock = 0,
+  cooldownUntil = 0,
+  onSend,
+  feedback = "",
+}) {
   return (
     <section className="wr-kion-room-dock" aria-label="대기방 감정표현">
       <div className="wr-kion-room-dock__info">
@@ -149,7 +173,7 @@ export default function RoomLobbyEmotes({ roomId, userId, players = [], roomStat
       </div>
       <KionEmotePicker
         presets={KION_EMOTE_PRESETS}
-        onSend={handleSend}
+        onSend={onSend}
         disabled={!connected || sending || clock < cooldownUntil}
         label="키온 보내기"
       />
