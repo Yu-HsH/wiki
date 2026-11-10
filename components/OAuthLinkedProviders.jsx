@@ -51,20 +51,36 @@ export default function OAuthLinkedProviders(){
       setPending("");
     }
   };
-  return <section className="wr-oauth-link-panel" aria-labelledby="wr-oauth-link-title">
-    <h3 id="wr-oauth-link-title">소셜 로그인 연결</h3>
-    <p>기존 계정에 구글·카카오 로그인을 연결하면 같은 XP·업적·기록으로 접속할 수 있습니다. 연결하기 전에 현재 Wiki Race 계정으로 로그인되어 있는지 확인하세요.</p>
-    {loading?<p role="status">연결 상태 확인 중…</p>:
-      providers.map(provider=><div className="wr-oauth-linked-row" key={provider}>
-        <span>{OAUTH_PROVIDER_NAMES[provider]}</span>
-        {linked.includes(provider)
-          ? <strong>연결됨</strong>
-          : <button type="button" className="app-btn app-btn-ghost"
-              disabled={Boolean(pending)}
-              onClick={()=>connect(provider)}>{pending===provider?"연결 중…":"계정 연결"}</button>}
-      </div>)}
-    {error&&<p className="auth-error" role="alert">{error}</p>}
-    {notice&&<p role="status">{notice}</p>}
-    <small>다른 Wiki Race 계정으로 기록을 합치거나 이동시키는 기능은 제공하지 않습니다.</small>
+  return <section className="wr-oauth-link-panel" aria-labelledby="wr-oauth-link-title" data-testid="profile-oauth-link">
+    <div className="wr-oauth-link-heading">
+      <div>
+        <p className="wr-oauth-link-eyebrow">ACCOUNT · 로그인 설정</p>
+        <h2 id="wr-oauth-link-title">소셜 계정 연결</h2>
+        <p>지금 로그인한 Wiki Race 계정에 연결해 두면 같은 XP·업적·기록으로 간편하게 로그인할 수 있어요.</p>
+      </div>
+      <span className="wr-oauth-link-icon" aria-hidden="true">↗</span>
+    </div>
+    {loading ? <p role="status">계정 연결 상태를 확인하고 있습니다…</p> :
+      <div className="wr-oauth-link-providers">
+        {providers.map(provider => (
+          <div className="wr-oauth-linked-row" key={provider}>
+            <div className="wr-oauth-linked-provider">
+              <strong>{OAUTH_PROVIDER_NAMES[provider]}</strong>
+              <span>{linked.includes(provider) ? "이 계정으로 로그인할 수 있습니다." : "현재 Wiki Race 계정에 연결되지 않았습니다."}</span>
+            </div>
+            {linked.includes(provider) ? (
+              <span className="wr-oauth-connected"><span aria-hidden="true">✓</span> 연결됨</span>
+            ) : (
+              <button type="button" className="app-btn wr-oauth-link-action"
+                disabled={Boolean(pending)} onClick={() => connect(provider)}>
+                {pending === provider ? "연결 중…" : `${OAUTH_PROVIDER_NAMES[provider]} 연결하기`}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>}
+    {error && <p className="auth-error" role="alert">{error}</p>}
+    {notice && <p role="status">{notice}</p>}
+    <p className="wr-oauth-link-footnote">기존 계정으로 로그인한 상태에서 연결해 주세요. 이미 다른 Wiki Race 계정에 가입한 소셜 계정은 이 계정에 바로 연결하거나 기록을 합칠 수 없습니다.</p>
   </section>;
 }
