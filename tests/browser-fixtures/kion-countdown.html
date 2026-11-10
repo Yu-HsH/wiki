@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Wiki Race · 키온 출발 카운트다운</title>
+<style>
+  body { margin:0; background:#E4EBDD; color:#243430; font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif; }
+  .preview { max-width:950px; margin:24px auto; padding:0 12px; }
+  .stages { display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:10px; }
+  .stage { border:1px solid #B0C2B3; border-radius:12px; background:#FFF; min-width:0; padding:12px 6px; text-align:center; }
+  .count { color:#27877D; font-size:48px; font-weight:900; line-height:1.2; }
+  h1 { font-size:22px; } h2 { font-size:16px; margin-top:24px; }
+  .under { border:1px solid #B0C2B3; background:#F0F5EF; padding:10px; margin:16px 0; }
+  .under button { min-height:40px; }
+  @media(max-width:580px){ .stages { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+</style></head><body><div id="root"></div><script type="module" src="./kion-countdown.jsx"></script></body></html>
