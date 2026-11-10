@@ -28,6 +28,7 @@ export function KionEmoteBubble({ preset, stale = false, className = "" }) {
 /** Accessible standalone picker for future lobby, race and result contexts. */
 export function KionEmotePicker({ presets, onSend, disabled = false, label = "감정표현" }) {
   const [open, setOpen] = useState(false);
+  const [direction, setDirection] = useState("above");
   const root = useRef(null);
   const trigger = useRef(null);
   const panelId = useId();
@@ -50,6 +51,14 @@ export function KionEmotePicker({ presets, onSend, disabled = false, label = "�
     };
   }, [open]);
 
+  const toggle = () => {
+    // The compact spectator dock opens above, while a lobby picker near the top
+    // of the viewport must open below rather than escape the screen.
+    const top = trigger.current?.getBoundingClientRect().top ?? 0;
+    setDirection(top < Math.min(window.innerHeight * 0.55, 420) ? "below" : "above");
+    setOpen((wasOpen) => !wasOpen);
+  };
+
   const selected = (preset) => {
     setOpen(false);
     onSend?.(preset.id);
@@ -60,11 +69,11 @@ export function KionEmotePicker({ presets, onSend, disabled = false, label = "�
     <div className="wr-kion-picker" ref={root}>
       <button type="button" ref={trigger} className="wr-kion-picker__trigger" disabled={disabled}
         aria-haspopup="true" aria-expanded={open} aria-controls={open ? panelId : undefined}
-        onClick={() => setOpen((wasOpen) => !wasOpen)}>
+        onClick={toggle}>
         🙂 {label} <span aria-hidden="true">{open ? "▾" : "▴"}</span>
       </button>
       {open && !disabled && (
-        <div id={panelId} role="group" aria-label="키온 감정표현 선택" className="wr-kion-picker__panel">
+        <div id={panelId} role="group" aria-label="키온 감정표현 선택" data-position={direction} className="wr-kion-picker__panel">
           <div className="wr-kion-picker__grid">
             {(presets || []).map((preset) => (
               <button type="button" key={preset.id} className="wr-kion-picker__option"

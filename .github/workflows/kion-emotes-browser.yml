@@ -1,0 +1,41 @@
+name: Kion emotes responsive browser QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'components/KionEmotes.jsx'
+      - 'components/KionEmotes.css'
+      - 'utils/kionEmoteCatalog.js'
+      - 'components/wiki-race/race/GroupRaceParts.jsx'
+      - 'public/assets/wiki-race/emotes/**'
+      - 'tests/browser-fixtures/kion-emotes.html'
+      - 'scripts/verify-kion-emotes-ci.mjs'
+      - '.github/workflows/kion-emotes-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  kion-qa:
+    name: Chromium Kion picker and 10 WebPs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check scripts/verify-kion-emotes-ci.mjs
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-kion-emotes-ci.mjs
+      - name: Collect screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kion-emotes-qa-screenshots
+          path: test-results/kion-emotes/*.png
+          if-no-files-found: ignore
+          retention-days: 7
