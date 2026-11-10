@@ -107,3 +107,5 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Test Google desktop and Kakao mobile OAuth flow initialization
         run: node scripts/oauth-v203-browser-smoke.mjs
+      - name: Regression - legacy signup, login, guest, and jungle screens (OAuth disabled)
+        run: node scripts/jungle-alive-browser-smoke.mjs
