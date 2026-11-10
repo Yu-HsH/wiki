@@ -8,6 +8,7 @@ import ProfileCard from "../components/ProfileCard";
 import XpProgress from "../components/XpProgress";
 import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import ProfileRewardEditor from "../components/ProfileRewardEditor";
+import OAuthLinkedProviders from "../components/OAuthLinkedProviders.jsx";
 import { fetchOwnRewardInventory, fetchProfileCard } from "../services/profileRewardService";
 import { fetchMyAchievements } from "../services/achievementService";
 import { serviceErrorMessage } from "../utils/serviceError.js";
@@ -256,6 +257,7 @@ export default function ProfilePage() {
           {saveSuccess && <p className="profile-save-success" role="status">{saveSuccess}</p>}
         </div>
 
+          <OAuthLinkedProviders />
         </details>}
         {/* ── 업적 요약 (16c, 본인만) ── */}
         {achievementSummary && (
