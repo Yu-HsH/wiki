@@ -6,10 +6,10 @@
 - Keep current group spectator RPC ID whitelist and cooldown behavior.
 - This PR is **not** new lobby/gameplay send functionality, and introduces **no database changes**.
 
-## Asset upload gate
-Ten optimized transparent 256px WebPs (~274KB total) were generated and packaged in the ChatGPT conversation (2026-11-10) as `wiki-race-kion-emotes-pr1.zip`.
+## Asset status: committed to PR branch
+All ten optimized, transparent 256×256 WebPs (~274KB total) were approved on 2026-11-10 and committed to `public/assets/wiki-race/emotes/` using Git blobs. No manual upload is required.
 
-**They have not yet been committed to GitHub**, since the connected GitHub text-file tool cannot transfer binary files directly from the artifact container. Copy the ten files into `public/assets/wiki-race/emotes/` on this feature branch before marking ready/merging. Local KionEmoteSticker currently falls back to an emoji if an image is missing; this protects preview UX but **is not** a release approval.
+Retain the fallback glyph for unavailable images. Before considering a production release, validate 10/10 asset HTTP 200 responses in Vercel Preview, mobile/desktop visibility, and no regression to group spectator behavior.
 
 ## Compatibility
 The production spectator function `send_group_spectator_emoji_v13` still accepts only five original IDs; their payloads and database rows are unchanged. Old event IDs render via alias mapping:
