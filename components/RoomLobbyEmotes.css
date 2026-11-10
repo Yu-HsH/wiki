@@ -1,0 +1,46 @@
+/* Kion waiting-room reactions. No overlays on controls or racing content. */
+.wr-kion-room-dock {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  position: relative; z-index: 20;
+  margin: 10px 0 18px; padding: 11px 14px;
+  border: 1px solid var(--wr-frame, #AEBBA5);
+  border-radius: 12px; background: var(--wr-paper, #FCFCF7);
+  color: var(--wr-ink, #243430);
+}
+.wr-kion-room-dock__info {
+  display: flex; flex-direction: column; min-width: 155px; gap: 2px;
+}
+.wr-kion-room-dock__info strong { font-size: 13px; }
+.wr-kion-room-dock__info span { font-size: 11px; color: #627267; }
+.wr-kion-room-dock__live {
+  flex: 1 1 190px; display: flex; align-items: center; gap: 8px;
+  min-width: 0; min-height: 42px; overflow-x: auto;
+  scrollbar-width: thin;
+}
+.wr-kion-room-dock__reaction {
+  flex: none; display: inline-flex; align-items: center; gap: 5px;
+  max-width: 180px; padding: 3px 7px; border: 1px solid #D6E2D2;
+  border-radius: 18px; background: #F2F7EE;
+}
+.wr-kion-room-dock__reaction .wr-kion-bubble { max-width: 106px; }
+.wr-kion-room-dock__name {
+  max-width: 75px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-size: 11px; font-weight: 700;
+}
+.wr-kion-room-dock__empty { color: #788A7C; font-size: 12px; }
+.wr-kion-room-dock .wr-kion-picker { margin-left: auto; flex: none; z-index: 30; }
+.wr-kion-room-dock__feedback {
+  flex-basis: 100%; margin: 0; font-size: 12px; color: #A8483B;
+}
+@media (max-width: 620px) {
+  .wr-kion-room-dock { gap: 8px; padding: 9px; }
+  .wr-kion-room-dock__info { min-width: 0; width: 100%; }
+  .wr-kion-room-dock__info span { font-size: 10px; }
+  .wr-kion-room-dock__live { flex-basis: calc(100% - 136px); min-height: 42px; }
+  .wr-kion-room-dock .wr-kion-picker { margin-left: 0; }
+  .wr-kion-room-dock .wr-kion-picker__trigger { padding: 7px 9px; font-size: 12px; }
+  .wr-kion-room-dock .wr-kion-picker__panel { right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-kion-room-dock * { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
