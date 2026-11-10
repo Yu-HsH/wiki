@@ -13,6 +13,9 @@ on:
       - "scripts/sql/site-news-admin-*.sql"
       - "tests/siteNewsAdmin.test.js"
       - "App.jsx"
+      - "tests/browser-fixtures/site-news-fallback.html"
+      - "tests/browser-fixtures/site-news-fallback.jsx"
+      - "scripts/site-news-browser-ci.mjs"
   workflow_dispatch:
 permissions:
   contents: read
@@ -60,3 +63,42 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/site-news-admin-fixture.sql
           psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110023343_site_news_admin_v1.sql
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/site-news-admin-security-assert.sql
+
+  browser-news-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Guest journal and admin-denial browser tests on desktop and mobile
+        run: node scripts/site-news-browser-ci.mjs
+
+  full-supabase-local-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Start isolated Supabase database only
+        run: npx supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Replay all migrations and seed
+        run: npx supabase db reset --local --yes
+      - name: Verify seeded notices and default-deny operator role
+        run: |
+          set -euo pipefail
+          DB=supabase_db_wiki-packet13-r2-clean158
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select count(*) from public.site_news_posts" | grep -qx 4
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select count(*) from public.site_news_posts where status='published'" | grep -qx 4
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select count(*) from private.site_news_admins" | grep -qx 0
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select relrowsecurity from pg_class where oid='public.site_news_posts'::regclass" | grep -qx t
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select has_table_privilege('anon','public.site_news_posts','INSERT')" | grep -qx f
+          echo "SITE_NEWS_SUPABASE_FRESH_RESET_PASS"
