@@ -183,6 +183,9 @@ export default function ProfilePage() {
         <p className="wr-kicker">MY EXPLORER · 탐험가 수첩</p>
         <header className="profile-notebook-heading"><div><h1>나만의 탐험 기록 카드</h1><p>발견한 보상을 장착하고, 다음 탐험에 내 이름을 남겨 보세요.</p></div><button className="app-btn app-btn-ghost" onClick={() => navigate("/ranking")}>명예 기록판 →</button></header>
 
+        {/* Account connection is a separate, visible card rather than hidden under nickname editing. */}
+        <OAuthLinkedProviders />
+
         {/* Avatar Section */}
         <div className="profile-showcase">
           <section id="profile-card-preview" className="profile-representative" ref={previewRef} aria-label="대표 탐험 카드"><p className="wr-kicker">EXPLORER CARD · 현재 장착</p>
@@ -257,7 +260,6 @@ export default function ProfilePage() {
           {saveSuccess && <p className="profile-save-success" role="status">{saveSuccess}</p>}
         </div>
 
-          <OAuthLinkedProviders />
         </details>}
         {/* ── 업적 요약 (16c, 본인만) ── */}
         {achievementSummary && (
