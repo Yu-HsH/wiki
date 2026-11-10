@@ -68,7 +68,7 @@ try {
    assert.match(await page.locator("#selected").innerText(),/ready/);
    assert.equal(await panel.isVisible(),false,"select closes picker");
    await top.click();
-   await page.locator("#gallery article").first().click();
+   await page.mouse.click(3,height-3); // click the page margin outside the floating picker
    assert.equal(await panel.isVisible(),false,"outside click closes picker");
    const bottom=page.locator("#bottom-picker").getByRole("button",{name:/하단 선택/});
    await bottom.scrollIntoViewIfNeeded();
