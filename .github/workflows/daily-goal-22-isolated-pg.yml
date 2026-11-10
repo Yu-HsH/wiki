@@ -9,7 +9,7 @@ on:
       - "scripts/sql/daily-goal-22-isolated-assert.sql"
       - "scripts/sql/daily-goal-v2-directed-fixture.sql"
       - "scripts/sql/daily-goal-v2-directed-assert.sql"
-      - "supabase/migrations/20261109102652_daily_word_pool_goal_first_v2.sql"
+      - "supabase/migrations/20261110011334_daily_word_pool_goal_first_v2.sql"
       - "scripts/daily-goal-v2-pair-fixture.mjs"
       - "scripts/sql/daily-goal-v2-829-pair-assert.sql"
       - "data/research/daily-goal-cached-reachable-pairs-20261109.json"
@@ -114,7 +114,7 @@ jobs:
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-isolated-fixture.sql
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-v2-directed-fixture.sql
-          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261109102652_daily_word_pool_goal_first_v2.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110011334_daily_word_pool_goal_first_v2.sql
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-v2-directed-assert.sql
       - name: Today remains immutable under concurrent client requests
         run: |

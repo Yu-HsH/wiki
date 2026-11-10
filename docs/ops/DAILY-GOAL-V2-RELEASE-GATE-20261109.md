@@ -14,7 +14,7 @@
 
 ## 코드 및 검증 위치
 
-- 실행 대상 마이그레이션: `supabase/migrations/20261109102652_daily_word_pool_goal_first_v2.sql`
+- 실행 대상 마이그레이션: `supabase/migrations/20261110011334_daily_word_pool_goal_first_v2.sql`
 - 22개 SQL 단독 실험: `scripts/sql/daily-goal-22-targets-staged-20261109.sql` (**단독 운영 실행 금지**)
 - 829개 연구 증거: `data/research/daily-goal-cached-reachable-pairs-20261109.json`
 - 실제 PostgreSQL 17 격리 CI: 39개 등록, 비대칭 유향 그래프, 30일 가상 출제, 두 동시 RPC 요청 하루 1코스, 기존 오늘 코스 불변, RLS PASS
@@ -24,7 +24,7 @@
 ## 운영 적용 전 순서
 
 1. 병렬 작업 종료와 운영 원격 `main` 최신 SHA 확인. 같은 파일 및 신규 Supabase migration 충돌 없는지 비교.
-2. `supabase_migrations.schema_migrations`에 20261109022138, 20261109031938 등 다른 세션의 최신 이력이 반영되었는지 확인. 이 PR의 20261109102652은 아직 없어야 함.
+2. `supabase_migrations.schema_migrations`에 20261109022138, 20261109031938 등 다른 세션의 최신 이력이 반영되었는지 확인. 이 PR의 20261110011334은 아직 없어야 함.
 3. 현재 함수 DDL 및 `daily_challenge_pool`, `daily_challenges`, `game_records`, `single_game_runs`의 관련 행 수와 오늘 확정 코스 백업, DB 복원 가능성/유지보수 게이트 확인.
 4. 운영과 버전이 맞는 격리 Supabase 환경에서 migration reset, fallback, 기존 서비스 RPC/프론트 회귀 검사 통과. **격리 스택의 실패를 운영에서 반복 시험하지 않음.**
 5. 사용자 운영 배포 승인 후 GitHub PR 병합. 다른 pending migration이 있으면 재평가하고, 단 하나의 담당자가 정식 CLI `supabase db push --remote` 또는 승인된 migrations 배포 경로로 적용. SQL Editor 수동 22개 입력 금지.
@@ -48,3 +48,10 @@
 - 프로덕션 첫 선정은 KST 00:00 이후이며, **배포 시점의 오늘 코스는 유지된다.**
 - 새 단어를 미래에 더 등록할 때는 `private.refresh_daily_course_pairs_v2()`를 관리자 권한으로 갱신해야 한다. 운영 회원에게 자동 호출 권한을 부여하지 않는다.
 - 마이그레이션 한 건의 RLS/함수 권한만 다루며 별도 싱글·듀얼·그룹 업데이트는 포함하지 않는다.
+
+## 2026-11-10 운영 적용 기록
+
+- 운영 Supabase apply_migration 실행 결과 `success=true`; 운영 이력에 실제 등록된 버전은 **20261110011334** (`daily_word_pool_goal_first_v2`).
+- Git 저장소의 원래 CLI 생성 버전 `20261109102652` 파일을 **SQL 내용은 변경하지 않고 실제 운영 버전으로 이름만 교체**해서 후속 CLI `db push`가 중복 재실행하지 않도록 맞춤.
+- 운영 39개 활성 단어 / 신규 22개 / 캐시 방향별 829조합 / 출발 23종 / 목표 37종, 오늘(11월 10일) `한강 → 김치` 유지 확인. 오늘 일일 게임 플레이 및 결과 기록 존재하여 당일 코스 강제 변경하지 않음.
+- 기존 발급 기록은 보존하고 11월 11일 첫 신규 코스 요청부터 적용 예정.
