@@ -1,0 +1,28 @@
+name: Site News admin migration filename and checks
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/site-news-admin-ci.yml"
+      - "supabase/migrations/*_site_news_admin_v1.sql"
+      - "services/siteNewsService.js"
+      - "pages/UpdatesPage.jsx"
+      - "pages/AdminUpdatesPage.jsx"
+      - "tests/siteNewsAdmin.test.js"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  generate-migration-filename:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Generate with pinned Supabase CLI
+        run: |
+          npx supabase --version
+          npx supabase migration new site_news_admin_v1
