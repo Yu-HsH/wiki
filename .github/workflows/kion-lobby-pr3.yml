@@ -12,6 +12,7 @@ on:
       - 'tests/roomEmoteEvents.test.js'
       - 'services/roomEmoteService.js'
       - 'utils/roomEmoteEvents.js'
+      - 'utils/lobbyEmotePresentation.js'
       - 'tests/browser-fixtures/kion-lobby.html'
       - 'tests/browser-fixtures/kion-lobby.jsx'
       - 'scripts/verify-kion-lobby-ci.mjs'
