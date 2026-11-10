@@ -74,7 +74,8 @@ begin
     return jsonb_build_object('accepted', false, 'code', 'ROOM_NOT_AVAILABLE');
   end if;
 
-  if v_player_status not in ('waiting', 'playing', 'finished') then
+  if v_player_status not in ('waiting', 'playing', 'finished')
+     and not (v_room.status = 'finished' and v_player_status = 'retired') then
     return jsonb_build_object('accepted', false, 'code', 'SENDER_NOT_ACTIVE');
   end if;
 
