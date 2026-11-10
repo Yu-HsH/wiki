@@ -38,10 +38,15 @@ export default function OAuthLinkedProviders(){
   const connect=async provider=>{
     setError("");setNotice("");setPending(provider);
     try {
-      const id=await beginOAuthLink(supabase.auth,provider,window.location.origin);
-      // UX diagnostic after redirect; cannot grant access or merge users.
-      sessionStorage.setItem("wiki-race-oauth-link-expected-id",id);
+      // Save the original Auth UID BEFORE linkIdentity causes a browser redirect.
+      const {data:{user:currentUser} = {},error:verifyError}=await supabase.auth.getUser();
+      if(verifyError || currentUser?.id!==user.id){
+        throw new Error("계정이 변경되었습니다. 다시 로그인해 주세요.");
+      }
+      sessionStorage.setItem("wiki-race-oauth-link-expected-id",user.id);
+      await beginOAuthLink(supabase.auth,provider,window.location.origin);
     }catch(e){
+      sessionStorage.removeItem("wiki-race-oauth-link-expected-id");
       setError(e?.message || "소셜 계정 연결을 시작하지 못했습니다.");
       setPending("");
     }
