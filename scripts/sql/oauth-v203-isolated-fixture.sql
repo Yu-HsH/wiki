@@ -21,6 +21,7 @@ create table public.profiles (
  synthetic_email text not null unique,
  total_xp bigint not null default 0
 );
+grant select on public.profiles to authenticated;
 insert into auth.users(id) values
  ('11111111-1111-4111-8111-111111111111'),
  ('22222222-2222-4222-8222-222222222222'),
