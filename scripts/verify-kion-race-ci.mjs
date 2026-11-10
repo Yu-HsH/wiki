@@ -40,7 +40,11 @@ try {
     await panel.waitFor({ state: "visible" });
     assert.equal(await panel.locator("button").count(), 10);
     const rect = await panel.boundingBox();
-    assert.ok(rect && rect.x >= -1 && rect.x + rect.width <= width + 1, "Picker fits horizontal viewport");
+    if (!rect || rect.x < -1 || rect.x + rect.width > width + 1) {
+      await page.screenshot({ path: path.join(dir, "picker-overflow-" + width + ".png"), fullPage: true });
+    }
+    assert.ok(rect && rect.x >= -1 && rect.x + rect.width <= width + 1,
+      "Picker fits horizontal viewport: width=" + width + " rect=" + JSON.stringify(rect));
     await panel.getByRole("button", { name: /감정표현 보내기: 레디!/ }).click();
     await duel.locator(".wr-race-emotes__reaction").filter({ hasText: "레디!" }).waitFor({ state: "visible" });
     assert.equal(await panel.isVisible(), false);
