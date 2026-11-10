@@ -1,0 +1,56 @@
+name: Kion active race PR-4 verification
+on:
+  pull_request:
+    branches: [main, feat/kion-lobby-emotes-pr3-20261110]
+    paths:
+      - '.github/workflows/kion-race-pr4.yml'
+      - 'components/RaceRoomEmotes.jsx'
+      - 'components/RaceRoomEmotes.css'
+      - 'utils/raceEmotePresentation.js'
+      - 'pages/MultiplayerGamePage.jsx'
+      - 'pages/GroupGamePage.jsx'
+      - 'tests/raceRoomEmotes.test.js'
+      - 'tests/browser-fixtures/kion-race.html'
+      - 'tests/browser-fixtures/kion-race.jsx'
+      - 'scripts/verify-kion-race-ci.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frontend:
+    name: Kion active race contract and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/raceRoomEmotes.test.js
+      - run: npm test
+      - run: npm run build
+  chromium:
+    name: Kion active race browser and interaction
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-kion-race-ci.mjs
+      - name: Upload mobile and desktop QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kion-race-pr4-screenshots
+          path: test-results/kion-race/*.png
+          if-no-files-found: ignore
+          retention-days: 7
