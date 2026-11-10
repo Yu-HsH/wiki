@@ -1,0 +1,34 @@
+name: Multiplayer public room responsive visual QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/browser-fixtures/public-lobby-layout.html'
+      - 'scripts/verify-public-lobby-layout-ci.mjs'
+      - '.github/workflows/public-lobby-layout.yml'
+      - 'css/jungle65Lobby.css'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-public-lobby-layout-ci.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-lobby-responsive-proof
+          path: test-results/public-lobby-responsive/*.png
+          if-no-files-found: ignore
+          retention-days: 7
