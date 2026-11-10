@@ -78,6 +78,19 @@
   from { opacity: .15; transform: translateY(5px) scale(.96); }
   to { opacity: 1; transform: none; }
 }
+/* Medium tablets still use two duel cards, but each is too narrow for
+ * a corner sticker beside the avatar. Reserve a separate top speech zone. */
+@media (min-width: 761px) and (max-width: 1023px) {
+  .wr-room--duel .wr-duel-player.wr-kion-slot {
+    min-height: 270px;
+    padding-top: 116px;
+  }
+  /* The group candidate sidebar leaves little space for a two-column roster. */
+  .wr-party:has(.wr-kion-slot) .wr-roster {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+  }
+}
 @media (max-width: 760px) {
   .wr-kion-card { width: 90px; min-height: 89px; padding: 4px 5px; }
   .wr-kion-card .wr-kion-sticker {
