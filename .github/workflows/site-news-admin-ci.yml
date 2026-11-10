@@ -1,4 +1,4 @@
-name: Site News admin migration filename and checks
+name: Site news admin RLS and UI QA
 on:
   pull_request:
     paths:
@@ -7,14 +7,38 @@ on:
       - "services/siteNewsService.js"
       - "pages/UpdatesPage.jsx"
       - "pages/AdminUpdatesPage.jsx"
+      - "components/wiki-race/WikiRaceShell.jsx"
+      - "data/updateNotices.js"
+      - "css/wikiRaceUpdates.css"
+      - "scripts/sql/site-news-admin-*.sql"
       - "tests/siteNewsAdmin.test.js"
+      - "App.jsx"
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  generate-migration-filename:
+  isolated-postgres-news-rls:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: ci_only
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PGDATABASE: postgres
+      PGPORT: "5432"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,7 +46,17 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
-      - name: Generate with pinned Supabase CLI
+      - name: Validate site news app code
         run: |
-          npx supabase --version
-          npx supabase migration new site_news_admin_v1
+          node --test tests/siteNewsAdmin.test.js
+          npm run build
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Verify admin RLS and no untrusted role escalation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/site-news-admin-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110023343_site_news_admin_v1.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/site-news-admin-security-assert.sql
