@@ -26,7 +26,7 @@ Domain denials (no event / cooldown consumed): EMOTE_INVALID, ROOM_NOT_AVAILABLE
 The connected environment cannot run a local Supabase CLI or start the repository's isolated DB. Consequently:
 1. SQL remains in docs/ops/sql/room_emotes_v1.review.sql and is **not** under supabase/migrations. This prevents automatic Production rollout before DB verification.
 2. On the local/Codex checkout run the pinned repo CLI: npx supabase migration new room_emotes_v1. The CLI provides the timestamped migration filename (do not guess/edit historical versions). Copy the review SQL into that new file.
-3. Start the isolated Supabase stack, run the full migration reset / diff and test supabase/tests/room_emotes_v1.sql with psql and ON_ERROR_STOP=1. The test contains 19 pgTAP assertions and rolls back its fixture. Also run the existing group_spectator_emoji_atomicity suite and room_events RLS regression.
+3. Start the isolated Supabase stack, run the full migration reset / diff and test supabase/tests/room_emotes_v1.sql with psql and ON_ERROR_STOP=1. The test contains 20 pgTAP assertions and rolls back its fixture. Also run the existing group_spectator_emoji_atomicity suite and room_events RLS regression.
 4. Test simultaneous sends from two tabs of the same user (one success and one cooldown) plus distinct users (both accepted). Test live Realtime delivery to group and duel room members, cross-room denial, and mobile background/foreground reconnect.
 5. Run npm test and npm run build. After PR #55 asset UI is approved, perform the two-account browser visual QA before wiring PR-3/4.
 6. Get explicit owner approval before applying this migration to Production. PR remains Draft until then.
