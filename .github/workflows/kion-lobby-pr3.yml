@@ -1,0 +1,35 @@
+name: Kion lobby PR-3 checks
+on:
+  pull_request:
+    branches: [main, feat/kion-emotes-ui-20261110]
+    paths:
+      - '.github/workflows/kion-lobby-pr3.yml'
+      - 'components/RoomLobbyEmotes.jsx'
+      - 'components/RoomLobbyEmotes.css'
+      - 'pages/RoomPage.jsx'
+      - 'pages/GroupRoomPage.jsx'
+      - 'tests/kionLobbyWiring.test.js'
+      - 'tests/roomEmoteEvents.test.js'
+      - 'services/roomEmoteService.js'
+      - 'utils/roomEmoteEvents.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lobby:
+    name: Kion room lobby unit tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Kion room lobby and common event tests
+        run: node --test tests/kionLobbyWiring.test.js tests/roomEmoteEvents.test.js
+      - name: Full frontend regression
+        run: npm test
+      - name: Ensure default-off production build succeeds
+        run: npm run build
