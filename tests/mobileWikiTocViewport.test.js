@@ -31,7 +31,7 @@ test("race scroll shortcut stays separate from TOC on short and split screens",(
  assert.match(css,/right: auto/);
  assert.match(css,/body:has\(\.wr-race \.wiki-nav-rail:is\(:hover, :focus-within, \.is-expanded\)\)/);
  assert.match(btn,/race = false/);
- for (const page of ["pages/MultiplayerGamePage.jsx","pages/GroupGamePage.jsx"])
+ for (const page of ["pages/GamePage.jsx","pages/MultiplayerGamePage.jsx","pages/GroupGamePage.jsx"])
    assert.match(source(page),/<ScrollToTopButton race \/>/);
  const fixture=source("tests/browser-fixtures/wiki-toc-responsive.html");
  assert.match(fixture,/React\.createElement\(ScrollToTopButton,\{race:true\}\)/);
