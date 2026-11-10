@@ -80,8 +80,8 @@ test("Backfill cannot replay old reaction over more recent one; one per particip
 });
 
 test("Realtime startup and foreground recovery have bounded post-join backfill", () => {
-  assert.match(lobby, /catchupTimer = window\\.setTimeout\\(backfill, 4_000\\)/);
-  assert.match(lobby, /document\\.addEventListener\\("visibilitychange", onVisibility\\)/);
-  assert.match(lobby, /document\\.removeEventListener\\("visibilitychange", onVisibility\\)/);
-  assert.match(lobby, /if \\(catchupTimer !== null\\) window\\.clearTimeout\\(catchupTimer\\)/);
+  assert.ok(lobby.includes("catchupTimer = window.setTimeout(backfill, 4_000)"));
+  assert.ok(lobby.includes('document.addEventListener("visibilitychange", onVisibility)'));
+  assert.ok(lobby.includes('document.removeEventListener("visibilitychange", onVisibility)'));
+  assert.ok(lobby.includes("window.clearTimeout(catchupTimer)"));
 });
