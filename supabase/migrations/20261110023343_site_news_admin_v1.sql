@@ -37,7 +37,8 @@ create index site_news_published_order_idx on public.site_news_posts(published_a
 create index site_news_admin_order_idx on public.site_news_posts(updated_at desc,id);
 alter table public.site_news_posts enable row level security;
 revoke all on public.site_news_posts from public,anon,authenticated;
-grant select on public.site_news_posts to anon,authenticated;
+grant select(id,type,title,summary,details,status,published_at,created_at,updated_at)
+  on public.site_news_posts to anon,authenticated;
 grant insert,update on public.site_news_posts to authenticated;
 grant all on public.site_news_posts to service_role;
 create policy "Read published site news" on public.site_news_posts
