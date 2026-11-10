@@ -20,6 +20,7 @@ import { createGroupEntryMarker } from "../utils/groupGameFlow";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog.jsx";
 import ProfileCard from "../components/ProfileCard";
+import RoomLobbyEmotes from "../components/RoomLobbyEmotes.jsx";
 import useProfileCards from "../hooks/useProfileCards.js";
 import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots, resolveDisplayName } from "../utils/profileCard.js";
 import { getGroupStartState } from "../utils/groupLobbyState.js";
@@ -480,6 +481,8 @@ export default function GroupRoomPage() {
                 <p>모두 같은 코스로 탐험합니다. 완주 후에는 개인 기록을 확인하고 다른 탐험가를 관전할 수 있습니다.</p>
                 <p className="wr-room-sync" role="status">{connectionStatus === "SUBSCRIBED" ? <>실시간 알림 수신 중<span className="wr65-camp-sync-detail"> · 참가자와 준비 상태는 서버 정보로 표시합니다.</span></> : "실시간 연결 확인 중 · 연결이 돌아오지 않으면 새로고침해 방에 재접속하세요."}</p>
             </div>
+
+            <RoomLobbyEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} />
 
             {hostNotice && (
                 <p className="wr-host-notice" role="status" key={`${hostNotice.from}-${hostNotice.to}`}>
