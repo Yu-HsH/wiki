@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/*_room_emotes_v1.sql'
       - 'tests/roomEmoteEvents.test.js'
       - 'utils/roomEmoteEvents.js'
+      - 'scripts/verify-room-emotes-concurrency-ci.mjs'
       - 'services/roomEmoteService.js'
   workflow_dispatch:
 
@@ -63,6 +64,8 @@ jobs:
           fi
           grep -Eq '1\.\.21' /tmp/room-emote-pgtap.log
           echo 'ROOM_EMOTES_LOCAL_PGTAP_PASS'
+      - name: Check real concurrent database clients in both modes
+        run: node scripts/verify-room-emotes-concurrency-ci.mjs
       - name: Stop isolated stack
         if: always()
         run: npx --no-install supabase stop --no-backup || true
