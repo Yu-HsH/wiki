@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import StartCourse from "./StartCourse.jsx";
+import KionCountdownCompanion from "./KionCountdownCompanion.jsx";
 import useSceneSequence from "../hooks/useSceneSequence.js";
 import { audioManager } from '../services/audioManager.js';
 
@@ -51,6 +52,7 @@ export default function CountdownOverlay({ onComplete, startTitle, targetTitle, 
       <div className="countdown-number" key={stepIndex}>
         {STEPS[stepIndex]}
       </div>
+      <KionCountdownCompanion mode={mode} stepIndex={stepIndex} motionEligible={motionEligible} />
       <span className="countdown-note">본문 링크를 따라 목표 문서로</span>
       </div>
     </div>
