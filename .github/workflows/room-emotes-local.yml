@@ -1,0 +1,68 @@
+name: Kion room emotes isolated SQL QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/room-emotes-local.yml'
+      - 'docs/ops/sql/room_emotes_v1.review.sql'
+      - 'supabase/tests/room_emotes_v1.sql'
+      - 'supabase/migrations/*_room_emotes_v1.sql'
+      - 'tests/roomEmoteEvents.test.js'
+      - 'utils/roomEmoteEvents.js'
+      - 'services/roomEmoteService.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-authority:
+    name: Disposable Supabase pgTAP + frontend contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked CLI
+        run: npm ci
+      - name: Validate Kion event contract
+        run: node --test tests/roomEmoteEvents.test.js
+      - name: Create review migration only in disposable CI checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing=(supabase/migrations/*_room_emotes_v1.sql)
+          test ${#existing[@]} -le 1
+          if [ ${#existing[@]} -eq 0 ]; then
+            npx --no-install supabase migration new room_emotes_v1
+            generated=(supabase/migrations/*_room_emotes_v1.sql)
+            test ${#generated[@]} -eq 1
+            cp docs/ops/sql/room_emotes_v1.review.sql "${generated[0]}"
+          fi
+      - name: Start disposable isolated Postgres only
+        run: npx --no-install supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Rebuild local DB with all repo migrations
+        run: npx --no-install supabase db reset --local --yes
+      - name: Assert 20 authenticated pgTAP security cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB=supabase_db_wiki-packet13-r2-clean158
+          docker inspect --format '{{.State.Health.Status}}' "$DB" | grep -qx healthy
+          docker exec -i "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -P pager=off < supabase/tests/room_emotes_v1.sql | tee /tmp/room-emote-pgtap.log
+          if grep -Eq '(^|[[:space:]])not ok[[:space:]]|^# Failed|^# Looks like you planned' /tmp/room-emote-pgtap.log; then
+            echo 'ROOM_EMOTES_PGTAP_FAILED'; exit 1
+          fi
+          grep -Eq '1\.\.20' /tmp/room-emote-pgtap.log
+          echo 'ROOM_EMOTES_LOCAL_PGTAP_PASS'
+      - name: Stop isolated stack
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true
