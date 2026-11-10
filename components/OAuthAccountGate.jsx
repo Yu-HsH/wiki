@@ -3,6 +3,7 @@ import {Navigate,useLocation} from "react-router-dom";
 import {useAuth} from "../authContext.jsx";
 import {supabase} from "../supabaseClient.js";
 import OAuthCompletePage from "../pages/OAuthCompletePage.jsx";
+import {enabledOAuthProviders} from "../utils/oauthFlow.js";
 
 /**
  * Blocks an OAuth-only user without a public.profiles row from ALL game routes.
@@ -13,9 +14,13 @@ export default function OAuthAccountGate({children}){
   const {user,loading,logout}=useAuth();
   const {pathname}=useLocation();
   const [status,setStatus]=useState({userId:null,kind:"checking"});
+  // Keep the pre-2.0.3 app unchanged until a provider is explicitly enabled.
+  // Existing OAuth sessions still require onboarding even after a feature rollback.
+  const shouldCheck=enabledOAuthProviders().length>0 ||
+    ["google","kakao"].includes(user?.authProvider);
 
   useEffect(()=>{
-    if(!user||user.mode!=="supabase"||user.isGuest){
+    if(!shouldCheck||!user||user.mode!=="supabase"||user.isGuest){
       setStatus({userId:null,kind:"ready"});
       return;
     }
@@ -38,8 +43,9 @@ export default function OAuthAccountGate({children}){
       if(live)setStatus({userId:user.id,kind:"error"});
     });
     return ()=>{live=false;};
-  },[user?.id,user?.mode,user?.isGuest]);
+  },[user?.id,user?.mode,user?.isGuest,user?.authProvider,shouldCheck]);
 
+  if(!shouldCheck && pathname!=="/oauth/complete") return children;
   if(loading || (user?.mode==="supabase" && status.userId!==user.id) ||
      (user?.mode==="supabase" && status.kind==="checking")){
     return <div className="app-center"><p className="app-muted">계정 확인 중…</p></div>;
