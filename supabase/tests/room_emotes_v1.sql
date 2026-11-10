@@ -55,6 +55,9 @@ select ok(not has_table_privilege('authenticated','private.room_emote_rate_limit
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0055-000000000004';
 select is(public.send_room_emote_v1(
+ '00000000-0000-0000-0055-000000009999','go')->>'code',
+ 'ROOM_NOT_AVAILABLE', 'nonexistent room is rejected with same safe code');
+select is(public.send_room_emote_v1(
  '00000000-0000-0000-0055-000000000101','go')->>'code',
  'ROOM_NOT_AVAILABLE', 'outsider cannot send');
 
