@@ -1,5 +1,6 @@
 import { fetchPageSummary, sanitizeWikiDocument } from "./wikiService.js";
 import { ensureWikiSnapshot } from "./wikiSnapshotService.js";
+import { getLegacySpectatorKionAsset } from "../utils/kionEmoteCatalog.js";
 
 export const GROUP_SPECTATOR_PRESETS = Object.freeze([
   { id: "cheer", label: "응원", emoji: "👏" },
@@ -7,7 +8,7 @@ export const GROUP_SPECTATOR_PRESETS = Object.freeze([
   { id: "hurry", label: "서둘러요", emoji: "🏃" },
   { id: "clap", label: "좋아요", emoji: "👍" },
   { id: "gg", label: "GG", emoji: "✨" },
-]);
+].map((preset) => Object.freeze({ ...preset, image: getLegacySpectatorKionAsset(preset.id) })));
 
 const PRESET_BY_ID = new Map(
   GROUP_SPECTATOR_PRESETS.map((preset) => [preset.id, preset])
