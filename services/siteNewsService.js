@@ -2,7 +2,7 @@ import { isSupabaseConfigured, supabase } from "../supabaseClient.js";
 import { UPDATE_NOTICES } from "../data/updateNotices.js";
 
 export const NEWS_TABLE = "site_news_posts";
-const NEWS_FIELDS = "id,type,title,summary,details,status,published_at,author_id,created_at,updated_at";
+const NEWS_FIELDS = "id,type,title,summary,details,status,published_at,created_at,updated_at";
 
 export function normalizeSiteNews(row) {
   return {
