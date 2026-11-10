@@ -64,3 +64,19 @@ test("SQL function requires auth user provider identity, avoids client user ID a
   assert.match(s,/grant execute on function public\.complete_oauth_profile/);
   assert.doesNotMatch(s,/delete from public\.profiles|update public\.profiles|update public\.game_records/i);
 });
+
+test("social connection card is visible in profile before long showcase and outside nickname details",()=>{
+  const profile=readFileSync(new URL("../pages/ProfilePage.jsx",import.meta.url),"utf8");
+  const panel=readFileSync(new URL("../components/OAuthLinkedProviders.jsx",import.meta.url),"utf8");
+  const pos=profile.indexOf("<OAuthLinkedProviders />");
+  const showcase=profile.indexOf('<div className="profile-showcase">');
+  const collapsed=profile.indexOf('<details className="profile-settings">');
+  assert.ok(pos>0 && pos<showcase && showcase<collapsed, "OAuth connection must be visible above showcase, not inside collapsed settings");
+  assert.equal(profile.split("<OAuthLinkedProviders />").length-1,1, "do not duplicate provider link actions");
+  assert.match(panel,/data-testid="profile-oauth-link"/);
+  assert.match(panel,/소셜 계정 연결/);
+  assert.match(panel,/연결됨/);
+  assert.match(panel,/연결하기/);
+  assert.match(panel,/이미 다른 Wiki Race 계정에 가입한 소셜 계정/);
+  assert.match(panel,/isGuest\|\|user\.mode!=="supabase"/);
+});
