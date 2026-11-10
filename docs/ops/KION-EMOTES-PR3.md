@@ -41,3 +41,7 @@
 - A detected 768px duel avatar overlap was fixed by reserving a top speech zone on mid-size screens and re-tested successfully.
 - Visual artifacts: `kion-lobby-pr3-screenshots` (320, 390, 768, 1280) on the action run. These are isolated representations with real page classes, **not screenshots of the deployed production app**.
 - Vercel build-rate limit persists; no Production DB, migrations, flags, or deployments changed.
+
+## Realtime startup protection (2026-11-11)
+- The subscription's `SUBSCRIBED` signal is not treated as proof that WAL delivery is already warmed up. Fetch once on join and once after 4 seconds, restoring only still-visible reactions (6-second TTL).
+- On foreground return, make one bounded catchup query. Clean up timers and document handlers on room change/unmount. No polling loop and no additional database writes.

@@ -78,3 +78,10 @@ test("Backfill cannot replay old reaction over more recent one; one per particip
   assert.deepEqual(mergeRoomLobbySnapshots(merged,older),merged);
   assert.deepEqual(mergeRoomLobbySnapshots(merged,[{id:"z",userId:"a",createdAt:2000}]).map(e=>e.id),["b","z"]);
 });
+
+test("Realtime startup and foreground recovery have bounded post-join backfill", () => {
+  assert.match(lobby, /catchupTimer = window\\.setTimeout\\(backfill, 4_000\\)/);
+  assert.match(lobby, /document\\.addEventListener\\("visibilitychange", onVisibility\\)/);
+  assert.match(lobby, /document\\.removeEventListener\\("visibilitychange", onVisibility\\)/);
+  assert.match(lobby, /if \\(catchupTimer !== null\\) window\\.clearTimeout\\(catchupTimer\\)/);
+});

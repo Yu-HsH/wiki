@@ -53,6 +53,22 @@ export function useRoomLobbyEmotes({ roomId, userId, players = [], roomStatus })
     if (!enabled) return undefined;
 
     let disposed = false;
+    let subscribed = false;
+    let catchupTimer = null;
+    const backfill = () => {
+      if (disposed || !subscribed) return;
+      fetchRecentRoomEmotes(roomId, { limit: 30 })
+        .then((rows) => {
+          if (!disposed) setEvents((previous) => mergeRoomLobbySnapshots(previous, rows));
+        })
+        .catch(() => {
+          // Keep realtime active; a later reconnect or foreground can catch up.
+        });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") backfill();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     const channel = supabase
       .channel(`room-emotes-lobby:${roomId}`)
       .on("postgres_changes", {
@@ -68,20 +84,22 @@ export function useRoomLobbyEmotes({ roomId, userId, players = [], roomStatus })
       })
       .subscribe((status) => {
         if (disposed) return;
-        setConnected(status === "SUBSCRIBED");
-        if (status === "SUBSCRIBED") {
-          fetchRecentRoomEmotes(roomId, { limit: 30 })
-            .then((rows) => {
-              if (!disposed) setEvents((previous) => mergeRoomLobbySnapshots(previous, rows));
-            })
-            .catch(() => {
-              // The live listener remains mounted even if backfill is unavailable.
-            });
+        subscribed = status === "SUBSCRIBED";
+        setConnected(subscribed);
+        if (catchupTimer !== null) window.clearTimeout(catchupTimer);
+        if (subscribed) {
+          backfill();
+          // SUBSCRIBED acknowledges the channel, not necessarily the database
+          // replication listener. A second snapshot covers this startup gap.
+          catchupTimer = window.setTimeout(backfill, 4_000);
         }
       });
 
     return () => {
       disposed = true;
+      subscribed = false;
+      if (catchupTimer !== null) window.clearTimeout(catchupTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
       supabase.removeChannel(channel);
     };
   }, [enabled, roomId]);
