@@ -1,0 +1,179 @@
+name: Daily goal 22 SQL isolated PostgreSQL QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/daily-goal-22-isolated-pg.yml"
+      - "scripts/sql/daily-goal-22-targets-staged-20261109.sql"
+      - "scripts/sql/daily-goal-22-isolated-fixture.sql"
+      - "scripts/sql/daily-goal-22-isolated-assert.sql"
+      - "scripts/sql/daily-goal-v2-directed-fixture.sql"
+      - "scripts/sql/daily-goal-v2-directed-assert.sql"
+      - "supabase/migrations/20261109102652_daily_word_pool_goal_first_v2.sql"
+      - "scripts/daily-goal-v2-pair-fixture.mjs"
+      - "scripts/sql/daily-goal-v2-829-pair-assert.sql"
+      - "data/research/daily-goal-cached-reachable-pairs-20261109.json"
+      - "docs/ops/sql/daily-goal-v2-emergency-rollback-20261109.sql"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-isolated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: local_ci_only
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Generate future migration filename with pinned Supabase CLI
+        run: |
+          npm ci
+          npx supabase migration new daily_word_pool_goal_first_v2
+          find supabase/migrations -maxdepth 1 -name '*_daily_word_pool_goal_first_v2.sql' -print
+      - name: Staged SQL idempotency and invariants
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-isolated-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-targets-staged-20261109.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-targets-staged-20261109.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-isolated-assert.sql
+      - name: Pre-existing sort-order collision must roll back atomically
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -c "truncate public.daily_challenge_pool; insert into public.daily_challenge_pool(sort_order,target_title,hint) values (200,'다른 목표','충돌');"
+          if psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-targets-staged-20261109.sql > /tmp/sort-collision.log 2>&1; then
+            echo "ERROR: collision SQL unexpectedly succeeded"; exit 1
+          fi
+          grep -q "DAILY_GOAL_POOL_SORT_OR_TITLE_COLLISION" /tmp/sort-collision.log
+          test "$(psql -X -Atc 'select count(*) from public.daily_challenge_pool')" = "1"
+          echo "SORT_ORDER_COLLISION_ROLLBACK_PASS"
+      - name: Pre-existing target-title collision must roll back atomically
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -c "truncate public.daily_challenge_pool; insert into public.daily_challenge_pool(sort_order,target_title,hint) values (999,'커피','다른 기존 목표');"
+          if psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-targets-staged-20261109.sql > /tmp/title-collision.log 2>&1; then
+            echo "ERROR: collision SQL unexpectedly succeeded"; exit 1
+          fi
+          grep -q "DAILY_GOAL_POOL_SORT_OR_TITLE_COLLISION" /tmp/title-collision.log
+          test "$(psql -X -Atc 'select count(*) from public.daily_challenge_pool')" = "1"
+          echo "TARGET_TITLE_COLLISION_ROLLBACK_PASS"
+
+  goal-first-migration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: local_ci_only
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Apply complete 39-word goal-first migration in isolated PostgreSQL
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-22-isolated-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-v2-directed-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261109102652_daily_word_pool_goal_first_v2.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-v2-directed-assert.sql
+      - name: Today remains immutable under concurrent client requests
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -c "delete from public.daily_challenges where challenge_date=(now() at time zone 'Asia/Seoul')::date;"
+          psql -X -v ON_ERROR_STOP=1 -c "select * from public.ensure_today_daily_challenge();" > /tmp/client-a.log &
+          one=$!
+          psql -X -v ON_ERROR_STOP=1 -c "select * from public.ensure_today_daily_challenge();" > /tmp/client-b.log &
+          two=$!
+          wait "$one"
+          wait "$two"
+          test "$(psql -X -Atc "select count(*) from public.daily_challenges where challenge_date=(now() at time zone 'Asia/Seoul')::date")" = "1"
+          test "$(psql -X -Atc "select count(*) from public.daily_challenges where challenge_date=(now() at time zone 'Asia/Seoul')::date and start_title<>target_title")" = "1"
+          echo "DAILY_GOAL_V2_KST_CONCURRENCY_PASS"
+      - name: Simulate 30 days using 829 observed directed pairs (no hop limits)
+        run: |
+          set -euo pipefail
+          node scripts/daily-goal-v2-pair-fixture.mjs
+          psql -X -v ON_ERROR_STOP=1 -f /tmp/daily-v2-real-pairs.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/daily-goal-v2-829-pair-assert.sql
+      - name: Pairs table is not exposed to anon or authenticated
+        run: |
+          set -euo pipefail
+          test "$(psql -X -Atc "select relrowsecurity from pg_class where oid='public.daily_course_pairs_v2'::regclass")" = "t"
+          test "$(psql -X -Atc "select has_table_privilege('anon','public.daily_course_pairs_v2','SELECT')")" = "f"
+          test "$(psql -X -Atc "select has_table_privilege('authenticated','public.daily_course_pairs_v2','SELECT')")" = "f"
+          echo "DAILY_GOAL_V2_RLS_PASS"
+
+      - name: Verify emergency rollback preserves issued course
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f docs/ops/sql/daily-goal-v2-emergency-rollback-20261109.sql
+          test "$(psql -X -Atc "select count(*) from public.daily_challenge_pool where sort_order between 200 and 221 and is_active")" = "0"
+          test "$(psql -X -Atc "select count(*) from public.daily_challenges where challenge_date=(now() at time zone 'Asia/Seoul')::date")" = "1"
+          psql -X -v ON_ERROR_STOP=1 -c "select * from public.ensure_today_daily_challenge();"
+          echo "DAILY_GOAL_V2_ROLLBACK_PASS"
+
+  full-supabase-local-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install pinned project dependencies
+        run: npm ci
+      - name: Start only pinned local Supabase database (no optional services)
+        run: npx supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Replay full migration history and development seed
+        run: npx supabase db reset --local --yes
+      - name: Check new goal pool, RPC authority, and clean-install fallback
+        run: |
+          set -euo pipefail
+          DB=supabase_db_wiki-packet13-r2-clean158
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select count(*) from public.daily_challenge_pool where sort_order between 200 and 221" | grep -qx '22'
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select count(*) from public.daily_challenge_pool where is_active" | grep -Eq '^(35|39)$'
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select relrowsecurity from pg_class where oid='public.daily_course_pairs_v2'::regclass" | grep -qx 't'
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -c "select * from public.ensure_today_daily_challenge();"
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select count(*) from public.daily_challenges where challenge_date=(now() at time zone 'Asia/Seoul')::date" | grep -qx '1'
+          echo "DAILY_GOAL_V2_FRESH_LOCAL_SUPABASE_PASS"

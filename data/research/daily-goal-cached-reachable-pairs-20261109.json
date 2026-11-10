@@ -1,0 +1,3328 @@
+{
+  "version": 1,
+  "dateKst": "2026-11-09",
+  "selectionUse": "Offline reachability proof only. Do not treat graph hops as difficulty or selection criterion",
+  "sampling": "Latest numeric revision per cached article, 45 day freshness, unbounded directed graph closure over cached links, target titles from 17 active+22 proposed",
+  "caveat": "Not a live Wikipedia exhaustive reachability guarantee; path may contain links suppressed by in-game sanitizer. No user records included.",
+  "pairCount": 829,
+  "sourceCount": 23,
+  "goalCount": 37,
+  "pairs": [
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "K-pop"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "SQL"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "경복궁"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "고래상어"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "광합성"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "김치"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "도파민"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "라면"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "발효"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "백신"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "비단길"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "산호초"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "생맥주"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "알레르기"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "웹툰"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "인공지능"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "카페인"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "커피"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "태권도"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "태풍"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "한강"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "화성"
+    },
+    {
+      "source": "GPT (언어 모델)",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "K-pop",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "K-pop",
+      "goal": "SQL"
+    },
+    {
+      "source": "K-pop",
+      "goal": "경복궁"
+    },
+    {
+      "source": "K-pop",
+      "goal": "고래상어"
+    },
+    {
+      "source": "K-pop",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "K-pop",
+      "goal": "광합성"
+    },
+    {
+      "source": "K-pop",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "K-pop",
+      "goal": "김치"
+    },
+    {
+      "source": "K-pop",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "K-pop",
+      "goal": "도파민"
+    },
+    {
+      "source": "K-pop",
+      "goal": "라면"
+    },
+    {
+      "source": "K-pop",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "K-pop",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "K-pop",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "K-pop",
+      "goal": "발효"
+    },
+    {
+      "source": "K-pop",
+      "goal": "백신"
+    },
+    {
+      "source": "K-pop",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "K-pop",
+      "goal": "비단길"
+    },
+    {
+      "source": "K-pop",
+      "goal": "산호초"
+    },
+    {
+      "source": "K-pop",
+      "goal": "생맥주"
+    },
+    {
+      "source": "K-pop",
+      "goal": "알레르기"
+    },
+    {
+      "source": "K-pop",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "K-pop",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "K-pop",
+      "goal": "웹툰"
+    },
+    {
+      "source": "K-pop",
+      "goal": "인공지능"
+    },
+    {
+      "source": "K-pop",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "K-pop",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "K-pop",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "K-pop",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "K-pop",
+      "goal": "카페인"
+    },
+    {
+      "source": "K-pop",
+      "goal": "커피"
+    },
+    {
+      "source": "K-pop",
+      "goal": "태권도"
+    },
+    {
+      "source": "K-pop",
+      "goal": "태풍"
+    },
+    {
+      "source": "K-pop",
+      "goal": "한강"
+    },
+    {
+      "source": "K-pop",
+      "goal": "화성"
+    },
+    {
+      "source": "K-pop",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "SQL",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "SQL",
+      "goal": "K-pop"
+    },
+    {
+      "source": "SQL",
+      "goal": "경복궁"
+    },
+    {
+      "source": "SQL",
+      "goal": "고래상어"
+    },
+    {
+      "source": "SQL",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "SQL",
+      "goal": "광합성"
+    },
+    {
+      "source": "SQL",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "SQL",
+      "goal": "김치"
+    },
+    {
+      "source": "SQL",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "SQL",
+      "goal": "도파민"
+    },
+    {
+      "source": "SQL",
+      "goal": "라면"
+    },
+    {
+      "source": "SQL",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "SQL",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "SQL",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "SQL",
+      "goal": "발효"
+    },
+    {
+      "source": "SQL",
+      "goal": "백신"
+    },
+    {
+      "source": "SQL",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "SQL",
+      "goal": "비단길"
+    },
+    {
+      "source": "SQL",
+      "goal": "산호초"
+    },
+    {
+      "source": "SQL",
+      "goal": "생맥주"
+    },
+    {
+      "source": "SQL",
+      "goal": "알레르기"
+    },
+    {
+      "source": "SQL",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "SQL",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "SQL",
+      "goal": "웹툰"
+    },
+    {
+      "source": "SQL",
+      "goal": "인공지능"
+    },
+    {
+      "source": "SQL",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "SQL",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "SQL",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "SQL",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "SQL",
+      "goal": "카페인"
+    },
+    {
+      "source": "SQL",
+      "goal": "커피"
+    },
+    {
+      "source": "SQL",
+      "goal": "태권도"
+    },
+    {
+      "source": "SQL",
+      "goal": "태풍"
+    },
+    {
+      "source": "SQL",
+      "goal": "한강"
+    },
+    {
+      "source": "SQL",
+      "goal": "화성"
+    },
+    {
+      "source": "SQL",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "경복궁",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "경복궁",
+      "goal": "K-pop"
+    },
+    {
+      "source": "경복궁",
+      "goal": "SQL"
+    },
+    {
+      "source": "경복궁",
+      "goal": "고래상어"
+    },
+    {
+      "source": "경복궁",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "경복궁",
+      "goal": "광합성"
+    },
+    {
+      "source": "경복궁",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "경복궁",
+      "goal": "김치"
+    },
+    {
+      "source": "경복궁",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "경복궁",
+      "goal": "도파민"
+    },
+    {
+      "source": "경복궁",
+      "goal": "라면"
+    },
+    {
+      "source": "경복궁",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "경복궁",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "경복궁",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "경복궁",
+      "goal": "발효"
+    },
+    {
+      "source": "경복궁",
+      "goal": "백신"
+    },
+    {
+      "source": "경복궁",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "경복궁",
+      "goal": "비단길"
+    },
+    {
+      "source": "경복궁",
+      "goal": "산호초"
+    },
+    {
+      "source": "경복궁",
+      "goal": "생맥주"
+    },
+    {
+      "source": "경복궁",
+      "goal": "알레르기"
+    },
+    {
+      "source": "경복궁",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "경복궁",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "경복궁",
+      "goal": "웹툰"
+    },
+    {
+      "source": "경복궁",
+      "goal": "인공지능"
+    },
+    {
+      "source": "경복궁",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "경복궁",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "경복궁",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "경복궁",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "경복궁",
+      "goal": "카페인"
+    },
+    {
+      "source": "경복궁",
+      "goal": "커피"
+    },
+    {
+      "source": "경복궁",
+      "goal": "태권도"
+    },
+    {
+      "source": "경복궁",
+      "goal": "태풍"
+    },
+    {
+      "source": "경복궁",
+      "goal": "한강"
+    },
+    {
+      "source": "경복궁",
+      "goal": "화성"
+    },
+    {
+      "source": "경복궁",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "고래상어",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "고래상어",
+      "goal": "K-pop"
+    },
+    {
+      "source": "고래상어",
+      "goal": "SQL"
+    },
+    {
+      "source": "고래상어",
+      "goal": "경복궁"
+    },
+    {
+      "source": "고래상어",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "고래상어",
+      "goal": "광합성"
+    },
+    {
+      "source": "고래상어",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "고래상어",
+      "goal": "김치"
+    },
+    {
+      "source": "고래상어",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "고래상어",
+      "goal": "도파민"
+    },
+    {
+      "source": "고래상어",
+      "goal": "라면"
+    },
+    {
+      "source": "고래상어",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "고래상어",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "고래상어",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "고래상어",
+      "goal": "발효"
+    },
+    {
+      "source": "고래상어",
+      "goal": "백신"
+    },
+    {
+      "source": "고래상어",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "고래상어",
+      "goal": "비단길"
+    },
+    {
+      "source": "고래상어",
+      "goal": "산호초"
+    },
+    {
+      "source": "고래상어",
+      "goal": "생맥주"
+    },
+    {
+      "source": "고래상어",
+      "goal": "알레르기"
+    },
+    {
+      "source": "고래상어",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "고래상어",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "고래상어",
+      "goal": "웹툰"
+    },
+    {
+      "source": "고래상어",
+      "goal": "인공지능"
+    },
+    {
+      "source": "고래상어",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "고래상어",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "고래상어",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "고래상어",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "고래상어",
+      "goal": "카페인"
+    },
+    {
+      "source": "고래상어",
+      "goal": "커피"
+    },
+    {
+      "source": "고래상어",
+      "goal": "태권도"
+    },
+    {
+      "source": "고래상어",
+      "goal": "태풍"
+    },
+    {
+      "source": "고래상어",
+      "goal": "한강"
+    },
+    {
+      "source": "고래상어",
+      "goal": "화성"
+    },
+    {
+      "source": "고래상어",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "김치",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "김치",
+      "goal": "K-pop"
+    },
+    {
+      "source": "김치",
+      "goal": "SQL"
+    },
+    {
+      "source": "김치",
+      "goal": "경복궁"
+    },
+    {
+      "source": "김치",
+      "goal": "고래상어"
+    },
+    {
+      "source": "김치",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "김치",
+      "goal": "광합성"
+    },
+    {
+      "source": "김치",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "김치",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "김치",
+      "goal": "도파민"
+    },
+    {
+      "source": "김치",
+      "goal": "라면"
+    },
+    {
+      "source": "김치",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "김치",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "김치",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "김치",
+      "goal": "발효"
+    },
+    {
+      "source": "김치",
+      "goal": "백신"
+    },
+    {
+      "source": "김치",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "김치",
+      "goal": "비단길"
+    },
+    {
+      "source": "김치",
+      "goal": "산호초"
+    },
+    {
+      "source": "김치",
+      "goal": "생맥주"
+    },
+    {
+      "source": "김치",
+      "goal": "알레르기"
+    },
+    {
+      "source": "김치",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "김치",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "김치",
+      "goal": "웹툰"
+    },
+    {
+      "source": "김치",
+      "goal": "인공지능"
+    },
+    {
+      "source": "김치",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "김치",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "김치",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "김치",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "김치",
+      "goal": "카페인"
+    },
+    {
+      "source": "김치",
+      "goal": "커피"
+    },
+    {
+      "source": "김치",
+      "goal": "태권도"
+    },
+    {
+      "source": "김치",
+      "goal": "태풍"
+    },
+    {
+      "source": "김치",
+      "goal": "한강"
+    },
+    {
+      "source": "김치",
+      "goal": "화성"
+    },
+    {
+      "source": "김치",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "K-pop"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "SQL"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "경복궁"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "고래상어"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "광합성"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "김치"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "도파민"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "라면"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "발효"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "백신"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "비단길"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "산호초"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "생맥주"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "알레르기"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "웹툰"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "인공지능"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "카페인"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "커피"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "태권도"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "태풍"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "한강"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "화성"
+    },
+    {
+      "source": "넷플릭스",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "K-pop"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "SQL"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "경복궁"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "고래상어"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "광합성"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "김치"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "도파민"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "라면"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "발효"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "백신"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "비단길"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "산호초"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "생맥주"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "알레르기"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "웹툰"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "인공지능"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "카페인"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "커피"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "태권도"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "태풍"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "한강"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "화성"
+    },
+    {
+      "source": "리그 오브 레전드",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "K-pop"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "SQL"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "경복궁"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "고래상어"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "광합성"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "김치"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "도파민"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "라면"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "발효"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "백신"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "비단길"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "산호초"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "생맥주"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "알레르기"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "웹툰"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "인공지능"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "카페인"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "커피"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "태권도"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "태풍"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "한강"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "화성"
+    },
+    {
+      "source": "메이플스토리",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "K-pop"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "SQL"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "경복궁"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "고래상어"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "광합성"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "김치"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "도파민"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "라면"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "발효"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "백신"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "비단길"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "산호초"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "생맥주"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "알레르기"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "웹툰"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "인공지능"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "카페인"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "커피"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "태권도"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "태풍"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "한강"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "화성"
+    },
+    {
+      "source": "백준 온라인 저지",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "산호초",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "산호초",
+      "goal": "K-pop"
+    },
+    {
+      "source": "산호초",
+      "goal": "SQL"
+    },
+    {
+      "source": "산호초",
+      "goal": "경복궁"
+    },
+    {
+      "source": "산호초",
+      "goal": "고래상어"
+    },
+    {
+      "source": "산호초",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "산호초",
+      "goal": "광합성"
+    },
+    {
+      "source": "산호초",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "산호초",
+      "goal": "김치"
+    },
+    {
+      "source": "산호초",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "산호초",
+      "goal": "도파민"
+    },
+    {
+      "source": "산호초",
+      "goal": "라면"
+    },
+    {
+      "source": "산호초",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "산호초",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "산호초",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "산호초",
+      "goal": "발효"
+    },
+    {
+      "source": "산호초",
+      "goal": "백신"
+    },
+    {
+      "source": "산호초",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "산호초",
+      "goal": "비단길"
+    },
+    {
+      "source": "산호초",
+      "goal": "생맥주"
+    },
+    {
+      "source": "산호초",
+      "goal": "알레르기"
+    },
+    {
+      "source": "산호초",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "산호초",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "산호초",
+      "goal": "웹툰"
+    },
+    {
+      "source": "산호초",
+      "goal": "인공지능"
+    },
+    {
+      "source": "산호초",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "산호초",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "산호초",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "산호초",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "산호초",
+      "goal": "카페인"
+    },
+    {
+      "source": "산호초",
+      "goal": "커피"
+    },
+    {
+      "source": "산호초",
+      "goal": "태권도"
+    },
+    {
+      "source": "산호초",
+      "goal": "태풍"
+    },
+    {
+      "source": "산호초",
+      "goal": "한강"
+    },
+    {
+      "source": "산호초",
+      "goal": "화성"
+    },
+    {
+      "source": "산호초",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "알레르기",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "알레르기",
+      "goal": "K-pop"
+    },
+    {
+      "source": "알레르기",
+      "goal": "SQL"
+    },
+    {
+      "source": "알레르기",
+      "goal": "경복궁"
+    },
+    {
+      "source": "알레르기",
+      "goal": "고래상어"
+    },
+    {
+      "source": "알레르기",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "알레르기",
+      "goal": "광합성"
+    },
+    {
+      "source": "알레르기",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "알레르기",
+      "goal": "김치"
+    },
+    {
+      "source": "알레르기",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "알레르기",
+      "goal": "도파민"
+    },
+    {
+      "source": "알레르기",
+      "goal": "라면"
+    },
+    {
+      "source": "알레르기",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "알레르기",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "알레르기",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "알레르기",
+      "goal": "발효"
+    },
+    {
+      "source": "알레르기",
+      "goal": "백신"
+    },
+    {
+      "source": "알레르기",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "알레르기",
+      "goal": "비단길"
+    },
+    {
+      "source": "알레르기",
+      "goal": "산호초"
+    },
+    {
+      "source": "알레르기",
+      "goal": "생맥주"
+    },
+    {
+      "source": "알레르기",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "알레르기",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "알레르기",
+      "goal": "웹툰"
+    },
+    {
+      "source": "알레르기",
+      "goal": "인공지능"
+    },
+    {
+      "source": "알레르기",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "알레르기",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "알레르기",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "알레르기",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "알레르기",
+      "goal": "카페인"
+    },
+    {
+      "source": "알레르기",
+      "goal": "커피"
+    },
+    {
+      "source": "알레르기",
+      "goal": "태권도"
+    },
+    {
+      "source": "알레르기",
+      "goal": "태풍"
+    },
+    {
+      "source": "알레르기",
+      "goal": "한강"
+    },
+    {
+      "source": "알레르기",
+      "goal": "화성"
+    },
+    {
+      "source": "알레르기",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "K-pop"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "SQL"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "경복궁"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "고래상어"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "광합성"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "김치"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "도파민"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "라면"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "발효"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "백신"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "비단길"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "산호초"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "생맥주"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "알레르기"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "웹툰"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "인공지능"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "카페인"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "커피"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "태권도"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "태풍"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "한강"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "화성"
+    },
+    {
+      "source": "엘니뇨",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "K-pop"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "SQL"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "경복궁"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "고래상어"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "광합성"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "김치"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "도파민"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "라면"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "발효"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "백신"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "비단길"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "산호초"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "생맥주"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "알레르기"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "웹툰"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "인공지능"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "카페인"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "커피"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "태권도"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "태풍"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "한강"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "화성"
+    },
+    {
+      "source": "월드 와이드 웹",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "인공지능",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "인공지능",
+      "goal": "K-pop"
+    },
+    {
+      "source": "인공지능",
+      "goal": "SQL"
+    },
+    {
+      "source": "인공지능",
+      "goal": "경복궁"
+    },
+    {
+      "source": "인공지능",
+      "goal": "고래상어"
+    },
+    {
+      "source": "인공지능",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "인공지능",
+      "goal": "광합성"
+    },
+    {
+      "source": "인공지능",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "인공지능",
+      "goal": "김치"
+    },
+    {
+      "source": "인공지능",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "인공지능",
+      "goal": "도파민"
+    },
+    {
+      "source": "인공지능",
+      "goal": "라면"
+    },
+    {
+      "source": "인공지능",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "인공지능",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "인공지능",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "인공지능",
+      "goal": "발효"
+    },
+    {
+      "source": "인공지능",
+      "goal": "백신"
+    },
+    {
+      "source": "인공지능",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "인공지능",
+      "goal": "비단길"
+    },
+    {
+      "source": "인공지능",
+      "goal": "산호초"
+    },
+    {
+      "source": "인공지능",
+      "goal": "생맥주"
+    },
+    {
+      "source": "인공지능",
+      "goal": "알레르기"
+    },
+    {
+      "source": "인공지능",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "인공지능",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "인공지능",
+      "goal": "웹툰"
+    },
+    {
+      "source": "인공지능",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "인공지능",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "인공지능",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "인공지능",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "인공지능",
+      "goal": "카페인"
+    },
+    {
+      "source": "인공지능",
+      "goal": "커피"
+    },
+    {
+      "source": "인공지능",
+      "goal": "태권도"
+    },
+    {
+      "source": "인공지능",
+      "goal": "태풍"
+    },
+    {
+      "source": "인공지능",
+      "goal": "한강"
+    },
+    {
+      "source": "인공지능",
+      "goal": "화성"
+    },
+    {
+      "source": "인공지능",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "K-pop"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "SQL"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "경복궁"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "고래상어"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "광합성"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "김치"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "도파민"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "라면"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "발효"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "백신"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "비단길"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "산호초"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "생맥주"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "알레르기"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "웹툰"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "인공지능"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "카페인"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "커피"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "태권도"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "태풍"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "한강"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "화성"
+    },
+    {
+      "source": "카카오톡",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "카페인",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "카페인",
+      "goal": "K-pop"
+    },
+    {
+      "source": "카페인",
+      "goal": "SQL"
+    },
+    {
+      "source": "카페인",
+      "goal": "경복궁"
+    },
+    {
+      "source": "카페인",
+      "goal": "고래상어"
+    },
+    {
+      "source": "카페인",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "카페인",
+      "goal": "광합성"
+    },
+    {
+      "source": "카페인",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "카페인",
+      "goal": "김치"
+    },
+    {
+      "source": "카페인",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "카페인",
+      "goal": "도파민"
+    },
+    {
+      "source": "카페인",
+      "goal": "라면"
+    },
+    {
+      "source": "카페인",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "카페인",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "카페인",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "카페인",
+      "goal": "발효"
+    },
+    {
+      "source": "카페인",
+      "goal": "백신"
+    },
+    {
+      "source": "카페인",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "카페인",
+      "goal": "비단길"
+    },
+    {
+      "source": "카페인",
+      "goal": "산호초"
+    },
+    {
+      "source": "카페인",
+      "goal": "생맥주"
+    },
+    {
+      "source": "카페인",
+      "goal": "알레르기"
+    },
+    {
+      "source": "카페인",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "카페인",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "카페인",
+      "goal": "웹툰"
+    },
+    {
+      "source": "카페인",
+      "goal": "인공지능"
+    },
+    {
+      "source": "카페인",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "카페인",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "카페인",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "카페인",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "카페인",
+      "goal": "커피"
+    },
+    {
+      "source": "카페인",
+      "goal": "태권도"
+    },
+    {
+      "source": "카페인",
+      "goal": "태풍"
+    },
+    {
+      "source": "카페인",
+      "goal": "한강"
+    },
+    {
+      "source": "카페인",
+      "goal": "화성"
+    },
+    {
+      "source": "카페인",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "커피",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "커피",
+      "goal": "K-pop"
+    },
+    {
+      "source": "커피",
+      "goal": "SQL"
+    },
+    {
+      "source": "커피",
+      "goal": "경복궁"
+    },
+    {
+      "source": "커피",
+      "goal": "고래상어"
+    },
+    {
+      "source": "커피",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "커피",
+      "goal": "광합성"
+    },
+    {
+      "source": "커피",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "커피",
+      "goal": "김치"
+    },
+    {
+      "source": "커피",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "커피",
+      "goal": "도파민"
+    },
+    {
+      "source": "커피",
+      "goal": "라면"
+    },
+    {
+      "source": "커피",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "커피",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "커피",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "커피",
+      "goal": "발효"
+    },
+    {
+      "source": "커피",
+      "goal": "백신"
+    },
+    {
+      "source": "커피",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "커피",
+      "goal": "비단길"
+    },
+    {
+      "source": "커피",
+      "goal": "산호초"
+    },
+    {
+      "source": "커피",
+      "goal": "생맥주"
+    },
+    {
+      "source": "커피",
+      "goal": "알레르기"
+    },
+    {
+      "source": "커피",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "커피",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "커피",
+      "goal": "웹툰"
+    },
+    {
+      "source": "커피",
+      "goal": "인공지능"
+    },
+    {
+      "source": "커피",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "커피",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "커피",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "커피",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "커피",
+      "goal": "카페인"
+    },
+    {
+      "source": "커피",
+      "goal": "태권도"
+    },
+    {
+      "source": "커피",
+      "goal": "태풍"
+    },
+    {
+      "source": "커피",
+      "goal": "한강"
+    },
+    {
+      "source": "커피",
+      "goal": "화성"
+    },
+    {
+      "source": "커피",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "태권도",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "태권도",
+      "goal": "K-pop"
+    },
+    {
+      "source": "태권도",
+      "goal": "SQL"
+    },
+    {
+      "source": "태권도",
+      "goal": "경복궁"
+    },
+    {
+      "source": "태권도",
+      "goal": "고래상어"
+    },
+    {
+      "source": "태권도",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "태권도",
+      "goal": "광합성"
+    },
+    {
+      "source": "태권도",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "태권도",
+      "goal": "김치"
+    },
+    {
+      "source": "태권도",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "태권도",
+      "goal": "도파민"
+    },
+    {
+      "source": "태권도",
+      "goal": "라면"
+    },
+    {
+      "source": "태권도",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "태권도",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "태권도",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "태권도",
+      "goal": "발효"
+    },
+    {
+      "source": "태권도",
+      "goal": "백신"
+    },
+    {
+      "source": "태권도",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "태권도",
+      "goal": "비단길"
+    },
+    {
+      "source": "태권도",
+      "goal": "산호초"
+    },
+    {
+      "source": "태권도",
+      "goal": "생맥주"
+    },
+    {
+      "source": "태권도",
+      "goal": "알레르기"
+    },
+    {
+      "source": "태권도",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "태권도",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "태권도",
+      "goal": "웹툰"
+    },
+    {
+      "source": "태권도",
+      "goal": "인공지능"
+    },
+    {
+      "source": "태권도",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "태권도",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "태권도",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "태권도",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "태권도",
+      "goal": "카페인"
+    },
+    {
+      "source": "태권도",
+      "goal": "커피"
+    },
+    {
+      "source": "태권도",
+      "goal": "태풍"
+    },
+    {
+      "source": "태권도",
+      "goal": "한강"
+    },
+    {
+      "source": "태권도",
+      "goal": "화성"
+    },
+    {
+      "source": "태권도",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "태풍",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "태풍",
+      "goal": "K-pop"
+    },
+    {
+      "source": "태풍",
+      "goal": "SQL"
+    },
+    {
+      "source": "태풍",
+      "goal": "경복궁"
+    },
+    {
+      "source": "태풍",
+      "goal": "고래상어"
+    },
+    {
+      "source": "태풍",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "태풍",
+      "goal": "광합성"
+    },
+    {
+      "source": "태풍",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "태풍",
+      "goal": "김치"
+    },
+    {
+      "source": "태풍",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "태풍",
+      "goal": "도파민"
+    },
+    {
+      "source": "태풍",
+      "goal": "라면"
+    },
+    {
+      "source": "태풍",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "태풍",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "태풍",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "태풍",
+      "goal": "발효"
+    },
+    {
+      "source": "태풍",
+      "goal": "백신"
+    },
+    {
+      "source": "태풍",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "태풍",
+      "goal": "비단길"
+    },
+    {
+      "source": "태풍",
+      "goal": "산호초"
+    },
+    {
+      "source": "태풍",
+      "goal": "생맥주"
+    },
+    {
+      "source": "태풍",
+      "goal": "알레르기"
+    },
+    {
+      "source": "태풍",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "태풍",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "태풍",
+      "goal": "웹툰"
+    },
+    {
+      "source": "태풍",
+      "goal": "인공지능"
+    },
+    {
+      "source": "태풍",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "태풍",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "태풍",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "태풍",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "태풍",
+      "goal": "카페인"
+    },
+    {
+      "source": "태풍",
+      "goal": "커피"
+    },
+    {
+      "source": "태풍",
+      "goal": "태권도"
+    },
+    {
+      "source": "태풍",
+      "goal": "한강"
+    },
+    {
+      "source": "태풍",
+      "goal": "화성"
+    },
+    {
+      "source": "태풍",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "한강",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "한강",
+      "goal": "K-pop"
+    },
+    {
+      "source": "한강",
+      "goal": "SQL"
+    },
+    {
+      "source": "한강",
+      "goal": "경복궁"
+    },
+    {
+      "source": "한강",
+      "goal": "고래상어"
+    },
+    {
+      "source": "한강",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "한강",
+      "goal": "광합성"
+    },
+    {
+      "source": "한강",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "한강",
+      "goal": "김치"
+    },
+    {
+      "source": "한강",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "한강",
+      "goal": "도파민"
+    },
+    {
+      "source": "한강",
+      "goal": "라면"
+    },
+    {
+      "source": "한강",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "한강",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "한강",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "한강",
+      "goal": "발효"
+    },
+    {
+      "source": "한강",
+      "goal": "백신"
+    },
+    {
+      "source": "한강",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "한강",
+      "goal": "비단길"
+    },
+    {
+      "source": "한강",
+      "goal": "산호초"
+    },
+    {
+      "source": "한강",
+      "goal": "생맥주"
+    },
+    {
+      "source": "한강",
+      "goal": "알레르기"
+    },
+    {
+      "source": "한강",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "한강",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "한강",
+      "goal": "웹툰"
+    },
+    {
+      "source": "한강",
+      "goal": "인공지능"
+    },
+    {
+      "source": "한강",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "한강",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "한강",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "한강",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "한강",
+      "goal": "카페인"
+    },
+    {
+      "source": "한강",
+      "goal": "커피"
+    },
+    {
+      "source": "한강",
+      "goal": "태권도"
+    },
+    {
+      "source": "한강",
+      "goal": "태풍"
+    },
+    {
+      "source": "한강",
+      "goal": "화성"
+    },
+    {
+      "source": "한강",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "화성",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "화성",
+      "goal": "K-pop"
+    },
+    {
+      "source": "화성",
+      "goal": "SQL"
+    },
+    {
+      "source": "화성",
+      "goal": "경복궁"
+    },
+    {
+      "source": "화성",
+      "goal": "고래상어"
+    },
+    {
+      "source": "화성",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "화성",
+      "goal": "광합성"
+    },
+    {
+      "source": "화성",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "화성",
+      "goal": "김치"
+    },
+    {
+      "source": "화성",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "화성",
+      "goal": "도파민"
+    },
+    {
+      "source": "화성",
+      "goal": "라면"
+    },
+    {
+      "source": "화성",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "화성",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "화성",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "화성",
+      "goal": "발효"
+    },
+    {
+      "source": "화성",
+      "goal": "백신"
+    },
+    {
+      "source": "화성",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "화성",
+      "goal": "비단길"
+    },
+    {
+      "source": "화성",
+      "goal": "산호초"
+    },
+    {
+      "source": "화성",
+      "goal": "생맥주"
+    },
+    {
+      "source": "화성",
+      "goal": "알레르기"
+    },
+    {
+      "source": "화성",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "화성",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "화성",
+      "goal": "웹툰"
+    },
+    {
+      "source": "화성",
+      "goal": "인공지능"
+    },
+    {
+      "source": "화성",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "화성",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "화성",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "화성",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "화성",
+      "goal": "카페인"
+    },
+    {
+      "source": "화성",
+      "goal": "커피"
+    },
+    {
+      "source": "화성",
+      "goal": "태권도"
+    },
+    {
+      "source": "화성",
+      "goal": "태풍"
+    },
+    {
+      "source": "화성",
+      "goal": "한강"
+    },
+    {
+      "source": "화성",
+      "goal": "훈민정음"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "GPT (언어 모델)"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "K-pop"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "SQL"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "경복궁"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "고래상어"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "공기청정기"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "광합성"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "교황 프란치스코"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "김치"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "넷플릭스"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "도파민"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "라면"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "리그 오브 레전드"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "메이플스토리"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "미세먼지"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "발효"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "백신"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "벤치 프레스"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "비단길"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "산호초"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "생맥주"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "알레르기"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "엘니뇨"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "월드 와이드 웹"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "웹툰"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "인공지능"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "인플레이션"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "전자레인지"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "챗GPT"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "카카오톡"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "카페인"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "커피"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "태권도"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "태풍"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "한강"
+    },
+    {
+      "source": "훈민정음",
+      "goal": "화성"
+    }
+  ]
+}
