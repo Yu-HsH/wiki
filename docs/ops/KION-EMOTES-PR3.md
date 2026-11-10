@@ -31,3 +31,13 @@
 - Required after PR #56's isolated DB is ready: two accounts in separate clients in both 1:1/group; reconnect and F5, 3s flood prevention; unknown/expired room rejection; cross-room RLS; stale event dismissal. 
 - GitHub Actions: unit regression/build and browser viewport/card-geometry tests verify the **real existing duel/group card classes**, profile/READY hit targets, picker, 10 images, and screenshot artifacts. See PR checks.
 - **Real 2-account Realtime roundtrip is still BLOCKED**: latest PR #56 disposable CI sees authorized DB event reads but no `postgres_changes` delivery. Do not enable Production flag or merge/deploy this as complete until that separate issue is resolved.
+
+## Final isolated card-layout QA (2026-11-10)
+- **PASS**: https://github.com/Yu-HsH/wiki/actions/runs/42836723021
+- Node unit + full JS regression + Vite build passed on the final head prior to this documentation-only addition.
+- Chromium tested 320/390/768/1280px using the existing real duel/group player classes and ProfileCard renderer. 
+- All speech cards stay inside their occupied player cards; none overlaps profile avatar, name, host/my tags or ready-status badge. Empty seats have none.
+- Real ProfileCard and READY/search controls remain clickable and editable. Picker offers 10 choices; selecting one updates only the corresponding participant; ESC closes it. Reduced motion is respected.
+- A detected 768px duel avatar overlap was fixed by reserving a top speech zone on mid-size screens and re-tested successfully.
+- Visual artifacts: `kion-lobby-pr3-screenshots` (320, 390, 768, 1280) on the action run. These are isolated representations with real page classes, **not screenshots of the deployed production app**.
+- Vercel build-rate limit persists; no Production DB, migrations, flags, or deployments changed.
