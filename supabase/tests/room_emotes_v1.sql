@@ -4,7 +4,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(19);
 
 insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values
@@ -109,6 +109,18 @@ select is(public.send_room_emote_v1(
 select is(public.send_room_emote_v1(
  '00000000-0000-0000-0055-000000000102','gg')->>'code',
  'ACCEPTED', 'duel results allow brief GG reactions');
+
+set local role postgres;
+update public.room_players
+set player_status='retired',has_finished=false,rank=null,
+    retired_at=now(),retire_reason='forfeited'
+where room_id='00000000-0000-0000-0055-000000000102'
+  and user_id='00000000-0000-0000-0055-000000000003';
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0055-000000000003';
+select is(public.send_room_emote_v1(
+ '00000000-0000-0000-0055-000000000102','gg')->>'code',
+ 'ACCEPTED', 'recently retired opponent can send sportsmanlike GG');
 
 set local role postgres;
 update public.game_rooms set finished_at=now()-interval '3 minutes'
