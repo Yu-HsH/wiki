@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { sendRoomEmote, fetchRecentRoomEmotes } from "../services/roomEmoteService.js";
 import { normalizeRoomEmoteEvent, upsertLatestRoomEmote } from "../utils/roomEmoteEvents.js";
+import { visibleRoomLobbyReactions, mergeRoomLobbySnapshots } from "../utils/lobbyEmotePresentation.js";
 import { KION_EMOTE_PRESETS, getKionEmote } from "../utils/kionEmoteCatalog.js";
 import { KionEmoteSticker, KionEmotePicker } from "./KionEmotes.jsx";
 import "./RoomLobbyEmotes.css";
@@ -9,33 +10,6 @@ import "./RoomLobbyEmotes.css";
 // Default OFF until PR-2's DB authority and two-client realtime are verified.
 export const KION_LOBBY_EMOTES_ENABLED =
   import.meta.env.VITE_ENABLE_KION_ROOM_EMOTES === "true";
-
-export const KION_LOBBY_VISIBLE_MS = 6_000;
-
-export function visibleRoomLobbyReactions(events, roomId, now, players) {
-  const joined = new Set((players || []).map((player) => player.user_id));
-  return (events || []).filter((event) =>
-    event && joined.has(event.userId) &&
-    event.roomId === roomId &&
-    event.createdAt <= now + 500 &&
-    now - event.createdAt >= -500 &&
-    now - event.createdAt < KION_LOBBY_VISIBLE_MS
-  );
-}
-
-export function mergeRoomLobbySnapshots(previous, incoming) {
-  const latest = new Map();
-  for (const event of [...(previous || []), ...(incoming || [])]) {
-    if (!event?.userId || !event?.id) continue;
-    const existing = latest.get(event.userId);
-    if (!existing || event.createdAt > existing.createdAt ||
-      (event.createdAt === existing.createdAt && event.id > existing.id)) {
-      latest.set(event.userId, event);
-    }
-  }
-  return [...latest.values()].sort((a, b) =>
-    a.createdAt - b.createdAt || a.id.localeCompare(b.id));
-}
 
 function errorMessage(code) {
   if (code === "EMOTE_RATE_LIMIT") return "감정표현은 3초에 한 번씩 보낼 수 있습니다.";
