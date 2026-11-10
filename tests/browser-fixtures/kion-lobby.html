@@ -1,20 +1,26 @@
 <!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Wiki Race · 키온 대기방 이모티콘 시연</title>
-  <style>
-    body { margin:0; background:#E4EBDD; color:#243430; font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif; }
-    .preview { max-width:1000px; margin:20px auto; padding:0 10px; }
-    .camp { border:1px solid #AEBBA5; border-radius:14px; padding:16px; margin:16px 0 30px; background:#FCFCF7; }
-    .camp h2 { margin:0; font-size:19px; }
-    .camp p { font-size:13px; color:#627267; }
-    .camp-marker { font-size:11px; font-weight:700; letter-spacing:.1em; color:#27877D; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="./kion-lobby.jsx"></script>
-</body>
-</html>
+<html lang="ko"><head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Wiki Race · 실제 카드 배치 기반 키온 로비 UI</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;background:#273b30;font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+  .wr-page { padding:24px 12px; }
+  .wr-shell { max-width:1200px; background:#f7efdc; }
+  .fixture-header { padding:16px 24px; background:#674931; color:#fff1d0; font-weight:900; letter-spacing:.08em }
+  .fixture-head { padding:16px 24px; background:#f3e8ca; border-bottom:1px solid #c8b785; }
+  .fixture-head h2 {font-size:23px;margin:2px 0}
+  .fixture-head small {color:#705b36}
+  .fixture-row {min-height:1px}
+  .fixture-duel {margin-bottom:32px}
+  .fixture-group .wr-party {background:#faf2df}
+  .fixture-group .wr-roster {gap:10px; border:0}
+  .fixture-group .wr-roster-row {border:1px solid #bba97b;border-radius:8px;background:#f5efdc}
+  .fixture-group .wr-roster-row.wr-is-me {border-color:#647e9f}
+  .fixture-foot {padding:14px 24px; border-top:1px solid #ddccaa; font-size:12px}
+  .fixture-foot button {min-height:40px}
+  @media(max-width:760px){.fixture-head h2{font-size:18px}}
+</style></head><body>
+<div id="root"></div><script type="module" src="./kion-lobby.jsx"></script>
+</body></html>
