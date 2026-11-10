@@ -46,7 +46,7 @@ try {
    await page.waitForFunction(()=>[...document.querySelectorAll("#gallery img,#legacy-test img")].every(img=>img.complete&&img.naturalWidth===256),null,{timeout:10000});
    assert.equal(await page.locator("#gallery article").count(),10);
    assert.equal(await page.locator("#legacy-test img").count(),5);
-   assert.equal(await page.locator("#stale-test").isVisible(),true);
+   assert.equal(await page.locator("#stale-test .wr-kion-bubble").count(),1,"stale reaction exists as a hidden element");
    assert.equal(await page.locator("#stale-test .wr-kion-bubble").isVisible(),false);
    await page.locator("#fallback-test .wr-kion-sticker__fallback").waitFor({state:"visible",timeout:8000});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),true,
