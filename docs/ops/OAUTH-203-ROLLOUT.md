@@ -68,3 +68,10 @@ Client Secret, Service Role key를 `VITE_` 이름으로 넣지 마세요. 클라
 서버 쪽 provider의 실제 Client ID / Secret 설정과 수동 identity linking 옵션은 코드로 대체할 수 없습니다. 관리자가 직접 Provider 콘솔 설정을 완료해야 실서비스 검증이 가능합니다.
 
 이 PR은 검증·준비용입니다. 구글 검증 후 활성화하고, 카카오 플래그는 계속 OFF로 둔 채 후속 활성화합니다. 기존 DB record owner를 옮기는 migration이나 자동 병합 API를 만들지 않습니다.
+
+## 운영 마이그레이션 1차 적용 — 2026-11-10
+
+- 사용자 승인으로 **DB 스키마와 온보딩 함수만** 운영 Supabase에 적용. 프론트 PR 머지/운영 로그인 활성화 없음.
+- Supabase가 등록한 실제 버전: `20261110080546_oauth_profile_onboarding_v1`. SQL 본문은 기존 검증 버전과 동일하며 Git 파일명만 실제 운영 이력에 맞춤.
+- 적용 직후 기존 프로필 200개 유지, NULL 합성 이메일 0개, Google/Kakao identity 0개, `synthetic_email` nullable YES, OAuth RPC 설치, anon EXECUTE 차단, authenticated 허용 확인.
+- 신규 소셜 계정은 아직 로그인하지 않았고 실제 OAuth 로그인 및 기존 계정 연결·XP 재로그인 QA는 별도 단계.

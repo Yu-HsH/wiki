@@ -53,7 +53,7 @@ test("OAuth profile rejects invalid identifiers without guessing existing accoun
   assert.throws(()=>validateOAuthProfile("valid","n"),/닉네임/);
 });
 test("SQL function requires auth user provider identity, avoids client user ID and record merge",()=>{
-  const s=readFileSync(new URL("../supabase/migrations/20261110061056_oauth_profile_onboarding_v1.sql",import.meta.url),"utf8");
+  const s=readFileSync(new URL("../supabase/migrations/20261110080546_oauth_profile_onboarding_v1.sql",import.meta.url),"utf8");
   assert.match(s,/synthetic_email drop not null/);
   assert.match(s,/auth\.uid\(\)/);
   assert.match(s,/from auth\.identities/);

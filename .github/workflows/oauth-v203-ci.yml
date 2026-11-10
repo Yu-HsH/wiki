@@ -68,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/oauth-v203-isolated-fixture.sql
-          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110061056_oauth_profile_onboarding_v1.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110080546_oauth_profile_onboarding_v1.sql
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/oauth-v203-isolated-assert.sql
 
   full-local-supabase:
