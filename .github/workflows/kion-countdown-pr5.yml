@@ -1,0 +1,55 @@
+name: Kion pre-race countdown PR-5 QA
+on:
+  pull_request:
+    branches: [main, feat/kion-race-emotes-pr4-20261110]
+    paths:
+      - '.github/workflows/kion-countdown-pr5.yml'
+      - 'components/KionCountdownCompanion.jsx'
+      - 'components/KionCountdownCompanion.css'
+      - 'utils/kionCountdownState.js'
+      - 'components/CountdownOverlay.jsx'
+      - 'tests/kionCountdown.test.js'
+      - 'tests/browser-fixtures/kion-countdown.html'
+      - 'tests/browser-fixtures/kion-countdown.jsx'
+      - 'scripts/verify-kion-countdown-ci.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frontend:
+    name: Kion countdown timer-contract and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/kionCountdown.test.js
+      - run: npm test
+      - run: npm run build
+  chromium:
+    name: Countdown visual accessibility and responsive QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-kion-countdown-ci.mjs
+      - name: Upload countdown visual screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kion-countdown-pr5-screenshots
+          path: test-results/kion-countdown/*.png
+          if-no-files-found: ignore
+          retention-days: 7
