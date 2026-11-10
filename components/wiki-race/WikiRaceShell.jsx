@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { LOBBY_PATH } from "../../utils/appRoutes";
 import ProfileAvatar from "../ProfileAvatar.jsx";
 import useOwnProfileCard from "../../hooks/useOwnProfileCard.js";
-import { hasUnreadUpdates } from "../../data/updateNotices.js";
+import { getLatestNoticeId, hasUnreadUpdates } from "../../data/updateNotices.js";
+import { getPublishedSiteNews } from "../../services/siteNewsService.js";
 
 export function ExplorerAvatar({ card }) {
   return <ProfileAvatar card={card} size="sm" className="wr-header-avatar" />;
@@ -13,6 +14,27 @@ export function ExplorerAvatar({ card }) {
 // instead of the router navigating directly. HOME/PLAY never pass it.
 export function WikiRaceHeader({ user, level, onLogout, onNavigate }) {
   const ownCard = useOwnProfileCard(user, level);
+  const [newsUnread, setNewsUnread] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    const sync = async () => {
+      let latestId = getLatestNoticeId();
+      try {
+        const news = await getPublishedSiteNews();
+        latestId = getLatestNoticeId(news);
+      } catch { /* preserve shipped notices while service is unavailable */ }
+      if (mounted) setNewsUnread(hasUnreadUpdates(undefined, latestId));
+    };
+    void sync();
+    window.addEventListener("wiki-race-news-read", sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      mounted = false;
+      window.removeEventListener("wiki-race-news-read", sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
+
   const { pathname } = useLocation();
   const guard = (to) => onNavigate ? { onClick: (event) => { event.preventDefault(); onNavigate(to); } } : {};
   return <header className="wr-header">
@@ -21,7 +43,7 @@ export function WikiRaceHeader({ user, level, onLogout, onNavigate }) {
       <NavLink to={LOBBY_PATH} {...guard(LOBBY_PATH)}>HOME</NavLink>
       <NavLink to="/play" {...guard("/play")}>PLAY</NavLink>
       {!user.isGuest && <><NavLink to="/ranking" {...guard("/ranking")}>랭킹</NavLink><NavLink to="/achievements" {...guard("/achievements")}>업적</NavLink></>}
-      <NavLink to="/updates" className="wr-updates-link" {...guard("/updates")}>소식{pathname !== "/updates" && hasUnreadUpdates() && <span className="wr-updates-dot" aria-label="읽지 않은 새 소식" />}</NavLink>
+      <NavLink to="/updates" className="wr-updates-link" {...guard("/updates")}>소식{pathname !== "/updates" && newsUnread && <span className="wr-updates-dot" aria-label="읽지 않은 새 소식" />}</NavLink>
     </nav>
     <div className="wr-header-user">
       {user.isGuest ? <span>게스트 탐험가</span> : <NavLink to="/profile" aria-label={`${user.displayName} 프로필`} {...guard("/profile")}><span>{level !== null && `Lv.${level} · `}{user.displayName}</span><ExplorerAvatar card={ownCard} /></NavLink>}

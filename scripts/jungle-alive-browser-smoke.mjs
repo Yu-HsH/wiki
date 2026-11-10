@@ -6,6 +6,7 @@ import path from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
 import { getKstCourseDate } from "../utils/dailyCourse.js";
+import { UPDATE_NOTICES } from "../data/updateNotices.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const baseline = process.argv.includes("--baseline");
@@ -73,6 +74,15 @@ async function pageFor({ width = 1440, height = 900, mobile = false, reduce = fa
           start_title: "역사", target_title: "과학", elapsed_seconds: 133, click_count: 11,
           path_titles: ["역사", "과학"], created_at: "2026-11-05T00:00:00Z" },
       ];
+    } else if (u.pathname === "/rest/v1/site_news_posts") {
+      // V2: the real journal loads published posts from Supabase, not a JS-only list.
+      json = UPDATE_NOTICES.map(item => ({
+        id:item.id, title:item.title, summary:item.summary, details:item.details,
+        type:item.type, status:"published",
+        published_at:item.date + "T00:00:00Z",
+        created_at:item.date + "T00:00:00Z",
+        updated_at:item.date + "T00:00:00Z",
+      }));
     } else if (u.pathname === "/rest/v1/rpc/ensure_today_daily_challenge") {
       json = [{ challenge_date: getKstCourseDate(), start_title: "대한민국", target_title: "서울특별시", hint: "로컬 검증용 코스" }];
     }

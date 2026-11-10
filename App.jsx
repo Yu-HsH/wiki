@@ -26,6 +26,7 @@ import GroupRoomPage from "./pages/GroupRoomPage";
 import GroupGamePage from "./pages/GroupGamePage";
 import PublicContentPage from "./pages/PublicContentPage";
 import UpdatesPage from "./pages/UpdatesPage";
+import AdminUpdatesPage from "./pages/AdminUpdatesPage.jsx";
 import {
   clearGuestSingleGameProgress,
   getSingleGameAccess,
@@ -210,6 +211,7 @@ function AppRoutes() {
       <Route path={LOGIN_PATH} element={<LoginRoute />} />
 
       <Route path="/updates" element={<LobbyUpdatesRoute />} />
+      <Route path="/admin/updates" element={<ProtectedRoute><AdminUpdatesPage /></ProtectedRoute>} />
       <Route path="/about" element={<PublicContentPage />} />
       <Route path="/guide" element={<PublicContentPage />} />
       <Route path="/privacy" element={<PublicContentPage />} />
