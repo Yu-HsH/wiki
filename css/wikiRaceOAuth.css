@@ -1,0 +1,33 @@
+/* Wiki Race 2.0.3: OAuth controls share the existing jungle notebook typography. */
+.wr-oauth-signin { display:grid; gap:9px; margin-top:20px; }
+.wr-oauth-divider { display:flex; align-items:center; gap:12px; color:#7b6a4c; font-size:12px; text-align:center; }
+.wr-oauth-divider:before,.wr-oauth-divider:after { content:""; flex:1; height:1px; background:#c9b691; }
+.wr-oauth-provider {
+  display:block; width:100%; padding:11px 16px;
+  border-radius:10px; border:1.5px solid #b6a382;
+  background:#fffdf7; color:#253326; cursor:pointer;
+  font:650 14px/1.45 inherit;
+}
+.wr-oauth-provider--google { background:#fff; color:#24342c; }
+.wr-oauth-provider--kakao { background:#fee500; color:#29221e; border-color:#d1b900; }
+.wr-oauth-provider:focus-visible,.wr-oauth-linked-row button:focus-visible {
+  outline:3px solid #3268a8; outline-offset:3px;
+}
+.wr-oauth-provider:disabled { opacity:.5;cursor:wait; }
+.wr-oauth-note {font-size:12px; color:#6b604d; line-height:1.7; margin:4px 0 0;}
+.wr-oauth-warning {
+  border-left:3px solid #c79a32;
+  background:#fff4db; color:#51412c;
+  padding:12px 14px; line-height:1.7; font-size:13px;
+}
+.wr-oauth-onboarding {min-height:100vh; display:flex; align-items:center;justify-content:center; padding:24px;}
+.wr-oauth-onboarding .auth-card {width:min(100%,490px);}
+.wr-oauth-link-panel {border-top:1px solid #ceb68d; padding:16px 0 0; margin:0 0 12px;}
+.wr-oauth-link-panel h3 {font-size:17px; margin:0 0 10px;}
+.wr-oauth-link-panel p,.wr-oauth-link-panel small {font-size:12px;line-height:1.7;color:#61533c;}
+.wr-oauth-linked-row {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 0; border-top:1px dashed #c6ac80;
+}
+.wr-oauth-linked-row strong {color:#27654f; font-size:13px;}
+@media(prefers-reduced-motion:reduce){.wr-oauth-provider{transition:none;}}
