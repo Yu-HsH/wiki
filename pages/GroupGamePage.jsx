@@ -8,6 +8,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
+import RaceRoomEmotes from "../components/RaceRoomEmotes.jsx";
 
 import {
     fetchGroupRoom,
@@ -1869,6 +1870,8 @@ export default function GroupGamePage() {
                     <HudTimer label={isGroupPlaying ? deadline.label : "남은 시간"} seconds={isGroupPlaying ? remainingSeconds : deadline.seconds} state={isGroupPlaying ? deadline.state : "normal"} />
                     <HudExit label="나가기" onClick={requestExit} disabled={leaving} />
                 </RaceHud>
+
+                <RaceRoomEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} active={isGroupPlaying} />
 
                 <div className="wr-race-body">
                     <aside className="wr-race-side">
