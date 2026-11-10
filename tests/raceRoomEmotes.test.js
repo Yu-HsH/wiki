@@ -69,9 +69,9 @@ test("room switches cannot leak previous room reactions, even with same sender",
 });
 
 test("race reactions are separately opt-in, channel warmup is backfilled, duplicate sends guarded", () => {
-  assert.doesNotMatch(js, /VITE_ENABLE_KION_ROOM_EMOTES/);
-  assert.match(js, /catchupTimer = window\\.setTimeout\\(backfill, 4_000\\)/);
-  assert.match(js, /document\\.removeEventListener\\("visibilitychange", onVisibility\\)/);
-  assert.match(js, /sendGuard\\.current = true/);
-  assert.match(duel, /if \\(event\\.event_type === "room_emote"\\) return/);
+  assert.ok(!js.includes("VITE_ENABLE_KION_ROOM_EMOTES"));
+  assert.ok(js.includes("catchupTimer = window.setTimeout(backfill, 4_000)"));
+  assert.ok(js.includes('document.removeEventListener("visibilitychange", onVisibility)'));
+  assert.ok(js.includes("sendGuard.current = true"));
+  assert.ok(duel.includes('if (event.event_type === "room_emote") return'));
 });
