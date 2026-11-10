@@ -2,6 +2,22 @@
 // this release branch is merged into Production; previews are not public release evidence.
 export const UPDATE_NOTICES = Object.freeze([
   {
+    id: "2026-11-10-wiki-race-2-0-2",
+    date: "2026-11-10",
+    type: "업데이트",
+    status: "released",
+    title: "Wiki Race 2.0.2 — 탐험 환경 개선",
+    summary: "오늘의 도전 단어 22개 추가와 온라인 재경기, 공개방·문서 탐험 편의성을 개선했습니다.",
+    details: [
+      "오늘의 도전에 생활·과학·역사·문화·IT 등 다양한 분야의 단어 22개를 추가해 총 39개를 활용할 수 있게 했습니다. 목표 반복도 줄였습니다.",
+      "활동이 끝난 공개 대기방이 목록에 오래 남는 현상을 개선했습니다.",
+      "1:1·그룹 경기 종료 후 방장이 같은 멤버로 새 비공개 재경기 준비방을 만들 수 있습니다. 참가자는 선택하여 입장합니다.",
+      "모바일과 작은 화면의 문서 목차 위치를 개선하고, 목차와 '맨 위로' 버튼이 겹치는 문제를 해결했습니다.",
+      "문서 이동과 게임 화면 전환 과정에서 발생하던 일부 불편한 동작을 개선했습니다.",
+      "기존 오늘의 도전 기록·XP·랭킹 데이터는 유지됩니다. 불편한 점이나 아이디어가 있으면 언제든 알려주세요.",
+    ],
+  },
+  {
     id: "2026-11-05-jungle-veil-home",
     date: "2026-11-05",
     type: "업데이트",
@@ -42,12 +58,12 @@ export const UPDATE_NOTICES = Object.freeze([
 ]);
 
 export const UPDATE_READ_KEY = "wiki-race-updates-last-seen-v1";
-export function getLatestNoticeId() { return UPDATE_NOTICES[0]?.id || ""; }
-export function hasUnreadUpdates(storage = (typeof window !== "undefined" ? window.localStorage : null)) {
-  try { return Boolean(getLatestNoticeId()) && storage?.getItem(UPDATE_READ_KEY) !== getLatestNoticeId(); }
+export function getLatestNoticeId(notices = UPDATE_NOTICES) { return notices[0]?.id || ""; }
+export function hasUnreadUpdates(storage = (typeof window !== "undefined" ? window.localStorage : null), latestId = getLatestNoticeId()) {
+  try { return Boolean(latestId) && storage?.getItem(UPDATE_READ_KEY) !== latestId; }
   catch { return false; }
 }
-export function markUpdatesRead(storage = (typeof window !== "undefined" ? window.localStorage : null)) {
-  try { storage?.setItem(UPDATE_READ_KEY, getLatestNoticeId()); return true; }
+export function markUpdatesRead(storage = (typeof window !== "undefined" ? window.localStorage : null), latestId = getLatestNoticeId()) {
+  try { storage?.setItem(UPDATE_READ_KEY, latestId); return true; }
   catch { return false; }
 }
