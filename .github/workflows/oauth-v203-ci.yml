@@ -17,6 +17,8 @@ on:
       - "appStyles.js"
       - "App.jsx"
       - "supabaseClient.js"
+      - "scripts/oauth-v203-browser-smoke.mjs"
+      - "docs/ops/OAUTH-203-ROLLOUT.md"
   workflow_dispatch:
 permissions:
   contents: read
@@ -91,3 +93,17 @@ jobs:
           docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select has_function_privilege('anon','public.complete_oauth_profile(text,text)','EXECUTE')" | grep -qx f
           docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select has_function_privilege('authenticated','public.complete_oauth_profile(text,text)','EXECUTE')" | grep -qx t
           echo OAUTH_FULL_LOCAL_SUPABASE_PASS
+
+  oauth-browser-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Test Google desktop and Kakao mobile OAuth flow initialization
+        run: node scripts/oauth-v203-browser-smoke.mjs
