@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { fetchRecentRoomEmotes, sendRoomEmote } from "../services/roomEmoteService.js";
 import { normalizeRoomEmoteEvent, upsertLatestRoomEmote } from "../utils/roomEmoteEvents.js";
+import { getVisibleRaceEmotes, mergeRaceEmoteSnapshots } from "../utils/raceEmotePresentation.js";
 import { KION_EMOTE_PRESETS, getKionEmote } from "../utils/kionEmoteCatalog.js";
 import { KionEmoteBubble, KionEmotePicker } from "./KionEmotes.jsx";
 import "./RaceRoomEmotes.css";
@@ -9,32 +10,6 @@ import "./RaceRoomEmotes.css";
 // Shares PR-3's opt-in rollout flag. Inert by default in every environment.
 export const KION_RACE_EMOTES_ENABLED =
   import.meta.env.VITE_ENABLE_KION_ROOM_EMOTES === "true";
-
-export const RACE_EMOTE_VISIBLE_MS = 6000;
-
-export function getVisibleRaceEmotes(events, now, muted = false) {
-  if (muted) return [];
-  return (events || []).filter(
-    (event) => event && event.createdAt <= now + 500 &&
-      now - event.createdAt >= -500 &&
-      now - event.createdAt < RACE_EMOTE_VISIBLE_MS
-  );
-}
-
-export function mergeRaceEmoteSnapshots(current, history) {
-  return (history || []).reduce((events, event) => {
-    if (!event?.id || !event?.userId) return events;
-    const older = events.find((row) => row.userId === event.userId);
-    if (
-      older &&
-      (older.createdAt > event.createdAt ||
-        (older.createdAt === event.createdAt && older.id >= event.id))
-    ) return events;
-    return [...events.filter((row) => row.userId !== event.userId), event];
-  }, current || []).sort((a, b) =>
-    a.createdAt - b.createdAt || a.id.localeCompare(b.id)
-  );
-}
 
 function deniedMessage(code) {
   if (code === "EMOTE_RATE_LIMIT") return "3초에 한 번만 보낼 수 있습니다.";
