@@ -1,5 +1,5 @@
-// Source-of-truth for public notices. Status "released" is presented only after
-// this release branch is merged into Production; previews are not public release evidence.
+// Read-only public fallback when Supabase is not configured or unavailable.
+// The source of truth after the news-admin migration is public.site_news_posts.
 export const UPDATE_NOTICES = Object.freeze([
   {
     id: "2026-11-10-wiki-race-2-0-2",
