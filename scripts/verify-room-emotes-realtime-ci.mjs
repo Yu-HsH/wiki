@@ -166,9 +166,8 @@ async function verifyRoom(mode, roomId) {
 }
 
 try {
-  await Promise.all([account(1),account(2),account(3)].map(async (work) => work));
-  // Creation results are kept by explicit array indices assigned below in
-  // account() call order. No private or production users are involved.
+  // Stable account slots: A=host, B=first guest, C=second guest/duel outsider.
+  for (const index of [1, 2, 3]) await account(index);
   const duel = addRoom("duel");
   const group = addRoom("group");
   await verifyRoom("duel",duel);
