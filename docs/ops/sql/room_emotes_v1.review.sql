@@ -67,7 +67,8 @@ begin
 
   select player_status into v_player_status
   from public.room_players
-  where room_id = p_room_id and user_id = v_user_id;
+  where room_id = p_room_id and user_id = v_user_id
+  for share;
 
   if not found then
     -- Do not reveal whether an inaccessible room exists.
