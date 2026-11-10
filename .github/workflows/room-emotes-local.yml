@@ -11,6 +11,7 @@ on:
       - 'tests/roomEmoteEvents.test.js'
       - 'utils/roomEmoteEvents.js'
       - 'scripts/verify-room-emotes-concurrency-ci.mjs'
+      - 'scripts/verify-room-emotes-realtime-ci.mjs'
       - 'services/roomEmoteService.js'
   workflow_dispatch:
 
@@ -67,5 +68,42 @@ jobs:
       - name: Check real concurrent database clients in both modes
         run: node scripts/verify-room-emotes-concurrency-ci.mjs
       - name: Stop isolated stack
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true
+
+  realtime-three-accounts:
+    name: Kion two/three real-account Realtime RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Generate disposable review migration from CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing=(supabase/migrations/*_room_emotes_v1.sql)
+          test ${#existing[@]} -le 1
+          if [ ${#existing[@]} -eq 0 ]; then
+            npx --no-install supabase migration new room_emotes_v1
+            generated=(supabase/migrations/*_room_emotes_v1.sql)
+            test ${#generated[@]} -eq 1
+            cp docs/ops/sql/room_emotes_v1.review.sql "${generated[0]}"
+          fi
+      - name: Start isolated Supabase Auth, API, Realtime and DB
+        run: npx --no-install supabase start --yes --exclude vector
+      - name: Replay isolated schema
+        run: npx --no-install supabase db reset --local --yes
+      - name: Test real account JWT and INSERT deliveries
+        run: node scripts/verify-room-emotes-realtime-ci.mjs
+      - name: Destroy isolated stack
         if: always()
         run: npx --no-install supabase stop --no-backup || true
