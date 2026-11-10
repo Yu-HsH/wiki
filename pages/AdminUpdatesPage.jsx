@@ -52,7 +52,8 @@ export default function AdminUpdatesPage() {
       const rows = await getManagedSiteNews();
       setPosts(rows); setForm(toForm(result));
       setMessage(kind === "publish" ? "소식을 게시했습니다." :
-        kind === "hide" ? "소식을 비공개로 전환했습니다." : "소식을 저장했습니다.");
+        kind === "hide" ? "소식을 비공개로 전환했습니다." :
+        form.status === "published" ? "게시된 소식의 수정 사항이 바로 반영됐습니다." : "초안을 저장했습니다.");
     } catch (cause) {
       setError(cause?.message || "소식을 저장하지 못했습니다.");
     } finally { setBusy(false); }
@@ -103,7 +104,7 @@ export default function AdminUpdatesPage() {
                 {error && <p role="alert" className="wr-news-error">{error}</p>}
                 {message && <p role="status" className="wr-news-success">{message}</p>}
                 <div className="wr-news-actions">
-                  <button type="button" disabled={busy} onClick={() => void save("save")}>임시 저장</button>
+                  <button type="button" disabled={busy} onClick={() => void save("save")}>{form.status === "published" ? "수정 사항 저장(즉시 반영)" : "초안 저장"}</button>
                   <button type="button" disabled={busy} onClick={() => void save("publish")}>게시하기</button>
                   {form.id && form.status === "published" &&
                     <button type="button" disabled={busy} onClick={() => void save("hide")}>비공개로 전환</button>}
