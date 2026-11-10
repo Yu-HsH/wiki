@@ -122,14 +122,15 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [debugError, setDebugError] = useState("");
+  const [oauthError, setOauthError] = useState("");
   const oauthProviders = enabledOAuthProviders();
   const onOAuthLogin = async provider => {
-    setSubmitError("");
+    setOauthError("");
     setPending(true);
     try {
       await beginOAuthSignIn(supabase.auth,provider,window.location.origin);
     } catch(error) {
-      setSubmitError(error?.message || "소셜 로그인을 시작하지 못했습니다.");
+      setOauthError(error?.message || "소셜 로그인을 시작하지 못했습니다.");
       setPending(false);
     }
   };
@@ -335,7 +336,7 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
                 </button>
               ))}
               <p className="wr-oauth-note">기존 게임 기록이 있다면 먼저 아이디·비밀번호로 로그인하고 프로필에서 계정을 연결해 주세요.</p>
-              {submitError && <p role="alert" className="auth-error">{submitError}</p>}
+              {oauthError && <p role="alert" className="auth-error">{oauthError}</p>}
             </div>
           )}
         </div>
