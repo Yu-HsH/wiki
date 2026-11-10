@@ -53,7 +53,7 @@ jobs:
         run: npx --no-install supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - name: Rebuild local DB with all repo migrations
         run: npx --no-install supabase db reset --local --yes
-      - name: Assert 21 authenticated pgTAP security cases
+      - name: Assert 22 authenticated pgTAP security cases
         shell: bash
         run: |
           set -euo pipefail
@@ -63,7 +63,7 @@ jobs:
           if grep -Eq '(^|[[:space:]])not ok[[:space:]]|^# Failed|^# Looks like you planned' /tmp/room-emote-pgtap.log; then
             echo 'ROOM_EMOTES_PGTAP_FAILED'; exit 1
           fi
-          grep -Eq '1\.\.21' /tmp/room-emote-pgtap.log
+          grep -Eq '1\.\.22' /tmp/room-emote-pgtap.log
           echo 'ROOM_EMOTES_LOCAL_PGTAP_PASS'
       - name: Check real concurrent database clients in both modes
         run: node scripts/verify-room-emotes-concurrency-ci.mjs

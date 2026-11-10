@@ -4,7 +4,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(22);
 
 insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values
@@ -42,6 +42,22 @@ values
  ('00000000-0000-0000-0055-000000000101','00000000-0000-0000-0055-000000000003','guest','Emote C','playing',false,null),
  ('00000000-0000-0000-0055-000000000102','00000000-0000-0000-0055-000000000002','host','Emote B','waiting',false,null),
  ('00000000-0000-0000-0055-000000000102','00000000-0000-0000-0055-000000000003','guest','Emote C','waiting',false,null);
+
+-- A public waiting room whose host last pulse is >2 hours old is logically
+-- expired even before its status is mutated by the cleanup job.
+insert into public.game_rooms(
+  id,room_code,host_user_id,status,mode,min_players,max_players,
+  finish_rank_limit,use_items,game_starts_at,game_deadline_at,is_public
+) values (
+  '00000000-0000-0000-0055-000000000103','E2D103',
+  '00000000-0000-0000-0055-000000000002','waiting','duel',2,2,3,true,null,null,true
+);
+insert into public.room_players(
+  room_id,user_id,role,nickname_snapshot,player_status,has_finished,last_seen_at
+) values (
+  '00000000-0000-0000-0055-000000000103',
+  '00000000-0000-0000-0055-000000000002','host','Emote B','waiting',false,now()-interval '3 hours'
+);
 
 select ok(has_function_privilege('authenticated',
   'public.send_room_emote_v1(uuid,text)','EXECUTE'), 'authenticated can execute RPC');
@@ -93,6 +109,9 @@ select is(public.send_room_emote_v1(
 select is(public.send_room_emote_v1(
  '00000000-0000-0000-0055-000000000102','ready')->>'code',
  'ACCEPTED', 'duel waiting room uses the same API');
+select is(public.send_room_emote_v1(
+ '00000000-0000-0000-0055-000000000103','hello')->>'code',
+ 'ROOM_EXPIRED', 'expired public waiting room rejects emotes before cleanup');
 
 set local role postgres;
 update public.room_players

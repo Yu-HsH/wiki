@@ -110,6 +110,13 @@ begin
     return jsonb_build_object('accepted', false, 'code', 'ROOM_EXPIRED');
   end if;
 
+  -- Public waiting rooms can be stale before the expiry housekeeping runs.
+  -- Never let the emote endpoint silently revive such a room.
+  if v_room.status = 'waiting' and v_room.is_public is true
+     and not private.public_waiting_room_live_v1(p_room_id) then
+    return jsonb_build_object('accepted', false, 'code', 'ROOM_EXPIRED');
+  end if;
+
   -- INSERT .. ON CONFLICT is atomic for two tabs racing with the same user.
   -- An unsuccessful conflict update returns no row and consumes no cooldown.
   insert into private.room_emote_rate_limits(room_id, user_id, last_sent_at)

@@ -35,3 +35,8 @@ The connected environment cannot run a local Supabase CLI or start the repositor
 - Read-only Production schema inspection on 2026-11-10: room_events has authenticated SELECT but no authenticated INSERT; RLS SELECT restricts to room members; room_events is in the supabase_realtime publication in repository baseline.
 - Source review: PR #55 10-id catalogue, legacy spectator v13 behavior & three-second cooldown, current room/player status CHECK definitions.
 - SQL execution and two-client Realtime QA: **NOT RUN**; do not mark PASS.
+
+## Additional pre-release security gate (2026-11-11)
+- Public waiting room expired by host inactivity cannot keep accepting emotes while asynchronous cleanup has not yet marked its status expired. The new RPC checks the existing private liveness function before spending a cooldown entry.
+- The 22nd pgTAP case creates a stale public duel room and confirms `ROOM_EXPIRED`; all other authority tests and real-client Realtime tests must remain green.
+- No public function grant changes, no migrations committed to production, no runtime secrets.
