@@ -4,7 +4,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(20);
 
 insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values
@@ -93,6 +93,17 @@ select is(public.send_room_emote_v1(
 select is(public.send_room_emote_v1(
  '00000000-0000-0000-0055-000000000102','ready')->>'code',
  'ACCEPTED', 'duel waiting room uses the same API');
+
+set local role postgres;
+update public.room_players
+set player_status='disconnected'
+where room_id='00000000-0000-0000-0055-000000000101'
+  and user_id='00000000-0000-0000-0055-000000000003';
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0055-000000000003';
+select is(public.send_room_emote_v1(
+ '00000000-0000-0000-0055-000000000101','sad')->>'code',
+ 'SENDER_NOT_ACTIVE', 'disconnected sender cannot broadcast during match');
 
 set local role postgres;
 update public.game_rooms set game_deadline_at=now()-interval '1 second'
