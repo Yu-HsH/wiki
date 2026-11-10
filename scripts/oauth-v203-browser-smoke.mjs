@@ -39,7 +39,8 @@ try{
     await page.getByRole("button",{name:label}).click();
     await expect.poll(()=>authorized?.searchParams.get("provider")).toBe(provider);
     assert.equal(authorized.searchParams.get("redirect_to"),origin+"/oauth/complete");
-    assert.equal(authorized.searchParams.get("flow_type"),"pkce");
+    assert.ok(authorized.searchParams.get("code_challenge"),"PKCE challenge must be present");
+    assert.equal(authorized.searchParams.get("code_challenge_method"),"s256");
     console.log("OAUTH_BROWSER_PROVIDER_PASS "+JSON.stringify({
       viewport:width,provider,redirect:authorized.searchParams.get("redirect_to")
     }));
