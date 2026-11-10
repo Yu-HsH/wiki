@@ -45,7 +45,7 @@ test("unread notice uses latest server post id, not only compiled static data", 
 });
 
 test("SQL authority remains server side and single operator", () => {
-  const migration=readFileSync(new URL("../supabase/migrations/20261110023343_site_news_admin_v1.sql",import.meta.url),"utf8");
+  const migration=readFileSync(new URL("../supabase/migrations/20261110033150_site_news_admin_v1.sql",import.meta.url),"utf8");
   assert.match(migration,/slot smallint primary key default 1 check\(slot=1\)/);
   assert.match(migration,/auth\.uid\(\)/);
   assert.match(migration,/security definer set search_path = ''/);

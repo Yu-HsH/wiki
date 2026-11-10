@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/site-news-admin-fixture.sql
-          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110023343_site_news_admin_v1.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110033150_site_news_admin_v1.sql
           psql -X -v ON_ERROR_STOP=1 -f scripts/sql/site-news-admin-security-assert.sql
 
   browser-news-smoke:
