@@ -39,10 +39,14 @@ try {
     await page.goto(fixture, { waitUntil: "domcontentloaded" });
     const duel = page.locator("#duel");
     const group = page.locator("#group");
+    const groupFull = page.locator("#group-full");
     await duel.locator(".wr-duel-player .wr-kion-card").first().waitFor({ state: "visible", timeout: 12000 });
     assert.equal(await duel.locator(".wr-duel-player .wr-kion-card").count(), 2, "Both joined duel players own bubbles");
     assert.equal(await group.locator(".wr-roster-row .wr-kion-card").count(), 3, "Only three joined group players own bubbles");
     assert.equal(await group.locator(".wr-roster-row--empty .wr-kion-card").count(), 0, "Empty seats never display a bubble");
+    assert.equal(await group.locator(".wr-roster-row--empty").count(), 3, "Half-filled roster has three empty seats");
+    assert.equal(await groupFull.locator(".wr-roster-row .wr-kion-card").count(), 6, "All six players own a speech card");
+    assert.equal(await groupFull.locator(".wr-roster-row--empty").count(), 0, "Six occupied seats leave no empty row");
     assert.equal(await page.locator(".wr-kion-room-dock").count(), 0, "Old shared feed removed");
 
     const trigger = duel.getByRole("button", { name: /키온 보내기/ });
@@ -76,10 +80,12 @@ try {
     await group.locator(".wr-roster-row.wr-is-me .pcard[role=button]").click();
     await group.getByRole("button", { name: /READY 0/ }).click();
     await group.getByRole("button", { name: /READY 1/ }).waitFor();
+    await groupFull.locator(".wr-roster-row").last().locator(".pcard[role=button]").click();
+    assert.match(await groupFull.locator(".fixture-foot").innerText(), /프로필 클릭 1회/);
     await group.getByLabel("목표 문서 검색").fill("훈민정음");
     assert.equal(await group.getByLabel("목표 문서 검색").inputValue(), "훈민정음");
 
-    for (const root of [duel, group]) {
+    for (const root of [duel, group, groupFull]) {
       const cards = root.locator(".wr-kion-slot:has(.wr-kion-card)");
       for (let i = 0; i < await cards.count(); i++) {
         const card = cards.nth(i);

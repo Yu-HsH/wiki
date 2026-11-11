@@ -14,6 +14,9 @@ const users = [
   { userId:"a", nickname:"황성현", host:true, me:true, ready:false },
   { userId:"b", nickname:"바다의탐험가", ready:true },
   { userId:"c", nickname:"긴닉네임의탐험가123", ready:false },
+  { userId:"d", nickname:"문서탐험가", ready:true },
+  { userId:"e", nickname:"위키레이스최고의탐험가입니다", ready:false },
+  { userId:"f", nickname:"키온응원단", ready:true },
 ];
 const seed = (id, userId, emoteId) => ({id,roomId:"demo",userId,emoteId,createdAt:Date.now()});
 
@@ -38,10 +41,12 @@ function DemoPlayer({player, event, variant, slot, onProfile}) {
   );
 }
 
-function Demo({variant}) {
+function Demo({variant,full=false}) {
+  const groupUsers = full ? users : users.slice(0,3);
+  const demoId = full ? "group-full" : variant;
   const [events,setEvents] = useState(() => variant === "duel"
     ? [seed("duel-a","a","hello"), seed("duel-b","b","ready")]
-    : [seed("group-a","a","hello"), seed("group-b","b","good"),seed("group-c","c","wow")]);
+    : groupUsers.map((person,i) => seed("group-"+person.userId,person.userId,["hello","good","wow","ready","hurry","gg"][i])));
   const [profileClicks,setProfileClicks]=useState(0);
   const [readyClicks,setReadyClicks]=useState(0);
   const [target,setTarget]=useState("");
@@ -50,7 +55,7 @@ function Demo({variant}) {
     feedback:"",onSend:(emoteId)=>setEvents(prev=>[...prev.filter(e=>e.userId!=="a"),seed(variant+"-new-"+emoteId,"a",emoteId)])
   };
   return (
-    <section id={variant} className={`wr-page wr-lobby fixture-${variant}`}>
+    <section id={demoId} className={`wr-page wr-lobby fixture-${variant}`}>
       <div className="wr-shell">
         <header className="fixture-header">WIKI RACE · JUNGLE EXPEDITION</header>
         <div className="fixture-head">
@@ -72,17 +77,17 @@ function Demo({variant}) {
           <div className="wr-group-layout">
             <div className="wr-group-main">
               <div className="wr-party">
-                <div className="wr-party-head"><strong className="wr-party-count">3 / 6</strong><span className="wr-party-title"><b>EXPEDITION PARTY · 탐험대</b><small>방장 · 황성현</small></span></div>
+                <div className="wr-party-head"><strong className="wr-party-count">{groupUsers.length} / 6</strong><span className="wr-party-title"><b>EXPEDITION PARTY · 탐험대</b><small>방장 · 황성현</small></span></div>
                 <ul className="wr-roster">
-                  {users.map(u=><DemoPlayer key={u.userId} player={u} event={latest.get(u.userId)} variant="group" onProfile={()=>setProfileClicks(n=>n+1)}/>)}
-                  {Array.from({length:3},(_,i)=><li key={i} className="wr-roster-row wr-roster-row--empty"><span className="wr-empty-dot"/>빈 자리</li>)}
+                  {groupUsers.map(u=><DemoPlayer key={u.userId} player={u} event={latest.get(u.userId)} variant="group" onProfile={()=>setProfileClicks(n=>n+1)}/>)}
+                  {Array.from({length:6-groupUsers.length},(_,i)=><li key={i} className="wr-roster-row wr-roster-row--empty"><span className="wr-empty-dot"/>빈 자리</li>)}
                 </ul>
                 <RoomLobbyEmoteControls state={state} mode="group"/>
               </div>
             </div>
             <aside className="wr-group-mine"><h3>내 탐험 후보</h3>
-              <label htmlFor="target-input">목표 문서 검색</label>
-              <input id="target-input" value={target} onChange={e=>setTarget(e.target.value)} placeholder="위키백과 문서 검색"/>
+              <label htmlFor={`target-input-${demoId}`}>목표 문서 검색</label>
+              <input id={`target-input-${demoId}`} value={target} onChange={e=>setTarget(e.target.value)} placeholder="위키백과 문서 검색"/>
               <button type="button" onClick={()=>setReadyClicks(n=>n+1)}>READY {readyClicks}</button>
             </aside>
           </div>
@@ -93,5 +98,5 @@ function Demo({variant}) {
     </section>
   );
 }
-function App(){return <main><Demo variant="duel"/><Demo variant="group"/></main>}
+function App(){return <main><Demo variant="duel"/><Demo variant="group"/><Demo variant="group" full/></main>}
 createRoot(document.getElementById("root")).render(<App/>);
