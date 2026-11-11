@@ -50,6 +50,10 @@ try {
     assert.equal(await groupFull.locator(".wr-roster-row--empty").count(), 0, "Six occupied seats leave no empty row");
     assert.equal(await groupSilent.locator(".wr-roster-row.wr-kion-slot").count(), 3);
     assert.equal(await groupSilent.locator(".wr-kion-card").count(), 0, "No bubble when reactions expire");
+    // The approved ready-pop animation can briefly scale the badge while
+    // its grid track is already correct. Measure settled geometry, not an
+    // intermediate animation frame.
+    await page.waitForTimeout(250);
     for (let i = 0; i < 3; i++) {
       const quietRow = groupSilent.locator(".wr-roster-row.wr-kion-slot").nth(i);
       const activeRow = group.locator(".wr-roster-row.wr-kion-slot").nth(i);

@@ -231,6 +231,9 @@ try{
  // Status fixtures are separate from successful backend-shaped responses.
  for(const [name,state]of[['empty','emptyRead'],['error','failRead'],['loading','slowRead']]){
   emptyRead=state==='emptyRead';failRead=state==='failRead';slowRead=state==='slowRead';const {ctx,page:p}=await open('/ranking',{width:390});
+  // The current default "all time" table uses a different fetch path.
+  // Trigger the XP endpoint to test its explicit empty/error/loading states.
+  if(mobileFull)await p.getByRole('button',{name:'탐험가 레벨',exact:true}).click();
   if(slowRead){await p.locator('.ranking-table-wrap [aria-busy]').waitFor();await capture(p,'ranking-loading-390')}
   else{await p.locator(failRead?'.app-error':'.ranking-table-wrap').waitFor();await capture(p,'ranking-'+name+'-390')}
   await ctx.close();emptyRead=failRead=slowRead=false;
