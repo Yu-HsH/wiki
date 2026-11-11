@@ -20,7 +20,7 @@ const base='http://127.0.0.1:'+port,api='http://127.0.0.1:54332';
 const output=pathModule.join(task,before?'before':'after');
 const server=await createServer({root,configFile:false,envFile:false,cacheDir:pathModule.join(root,task,'vite-cache-'+port),
  plugins:before?[{name:'full-review-preserved',enforce:'pre',load(id){const rel=pathModule.relative(root,id.split('?')[0]);const p=pathModule.join(preservedRoot,rel);if(!rel.startsWith('..')&&fsSync.existsSync(p)&&fsSync.statSync(p).isFile())return fsSync.readFileSync(p,'utf8')}}]:[],
- define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify(api),'import.meta.env.VITE_SUPABASE_ANON_KEY':JSON.stringify('full-review-fixture-only'),'import.meta.env.VITE_MAINTENANCE':JSON.stringify('')},server:{host:'127.0.0.1',port,strictPort:true,watch:{ignored:['**/.temp/**']}}});
+ define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify(api),'import.meta.env.VITE_SUPABASE_ANON_KEY':JSON.stringify('full-review-fixture-only'),'import.meta.env.VITE_MAINTENANCE':JSON.stringify(''),'import.meta.env.VITE_ENABLE_KION_ROOM_EMOTES':JSON.stringify(process.env.MOBILE_FULL_CI==="true"?"true":process.env.VITE_ENABLE_KION_ROOM_EMOTES??"false"),'import.meta.env.VITE_ENABLE_KION_RACE_EMOTES':JSON.stringify(process.env.MOBILE_FULL_CI==="true"?"true":process.env.VITE_ENABLE_KION_RACE_EMOTES??"false")},server:{host:'127.0.0.1',port,strictPort:true,watch:{ignored:['**/.temp/**']}}});
 let extension=async()=>false;
 const extendApi=fn=>{extension=fn};
 const fontCache=new Map(),fontNetwork=[];
@@ -283,7 +283,16 @@ async function handleApi(route, userKey) {
 }
 
 let browser;
-async function launch(){await server.listen();browser=await chromium.launch({headless:true,executablePath:process.env.JUNGLE65_BROWSER_PATH||"C:/Users/SSAFY/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe"});}
+async function launch(){
+  await server.listen();
+  browser=await chromium.launch({
+    headless:true,
+    ...(process.env.JUNGLE65_BROWSER_PATH
+      ? {executablePath:process.env.JUNGLE65_BROWSER_PATH}
+      : process.env.CI==="true" ? {}
+      : {executablePath:"C:/Users/SSAFY/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe"})
+  });
+}
 async function close(){await browser?.close();await server.close();}
 async function context(userKey, { width = 1440, height = 1000, local = {}, guest = false, anonymous = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width, height },reducedMotion:"reduce",serviceWorkers:"block",hasTouch:width<=390 });

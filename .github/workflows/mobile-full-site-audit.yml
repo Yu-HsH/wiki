@@ -1,0 +1,41 @@
+name: Wiki Race full mobile real-page audit
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mobile-full-site-audit.yml'
+      - 'scripts/jungle65-full-smoke.mjs'
+      - 'scripts/jungle65-full-fixtures.mjs'
+      - 'components/RoomLobbyEmotes.css'
+      - 'css/jungle65Expedition.css'
+      - 'css/wikiRaceLobby.css'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-real-pages:
+    name: Full React page/mobile regression (no hosted backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CI: 'true'
+      MOBILE_FULL_CI: 'true'
+      JUNGLE65_FULL_TASK: '.temp/mobile-full-audit'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - name: Full React mobile screen matrix with synthetic in-memory backend
+        run: node scripts/jungle65-full-smoke.mjs
+      - name: Upload mobile screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wiki-race-mobile-full-audit
+          path: .temp/mobile-full-audit/after/**
+          if-no-files-found: ignore
+          retention-days: 7
