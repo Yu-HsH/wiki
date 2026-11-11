@@ -27,6 +27,7 @@ import GroupGamePage from "./pages/GroupGamePage";
 import PublicContentPage from "./pages/PublicContentPage";
 import UpdatesPage from "./pages/UpdatesPage";
 import AdminUpdatesPage from "./pages/AdminUpdatesPage.jsx";
+import OAuthAccountGate from "./components/OAuthAccountGate.jsx";
 import {
   clearGuestSingleGameProgress,
   getSingleGameAccess,
@@ -202,7 +203,7 @@ function SingleGameRoute() {
  */
 function AppRoutes() {
   return (
-    <><AudioControls />
+    <OAuthAccountGate><><AudioControls />
     <Routes>
       {/* 시작 화면 */}
       <Route path="/" element={<IntroPage />} />
@@ -292,7 +293,7 @@ function AppRoutes() {
           </OnlineRoute>
         }
       />
-    </Routes></>
+    </Routes></></OAuthAccountGate>
   );
 }
 

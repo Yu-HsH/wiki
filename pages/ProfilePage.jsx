@@ -8,6 +8,7 @@ import ProfileCard from "../components/ProfileCard";
 import XpProgress from "../components/XpProgress";
 import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import ProfileRewardEditor from "../components/ProfileRewardEditor";
+import OAuthLinkedProviders from "../components/OAuthLinkedProviders.jsx";
 import { fetchOwnRewardInventory, fetchProfileCard } from "../services/profileRewardService";
 import { fetchMyAchievements } from "../services/achievementService";
 import { serviceErrorMessage } from "../utils/serviceError.js";
@@ -181,6 +182,9 @@ export default function ProfilePage() {
       <div className="wr-profile-content">
         <p className="wr-kicker">MY EXPLORER · 탐험가 수첩</p>
         <header className="profile-notebook-heading"><div><h1>나만의 탐험 기록 카드</h1><p>발견한 보상을 장착하고, 다음 탐험에 내 이름을 남겨 보세요.</p></div><button className="app-btn app-btn-ghost" onClick={() => navigate("/ranking")}>명예 기록판 →</button></header>
+
+        {/* Account connection is a separate, visible card rather than hidden under nickname editing. */}
+        <OAuthLinkedProviders />
 
         {/* Avatar Section */}
         <div className="profile-showcase">
