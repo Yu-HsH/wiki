@@ -1,0 +1,77 @@
+/* Race reactions are in document flow, never fixed on top of wiki links/items. */
+.wr-race-emotes {
+  display: flex; align-items: center; gap: 9px;
+  position: relative; z-index: 35;
+  min-height: 54px; padding: 5px 14px;
+  border-bottom: 1px solid var(--wr-divider, #D9E2D3);
+  background: var(--wr-paper, #FAFBF7);
+  color: var(--wr-ink, #243430);
+}
+.wr-race-emotes__title {
+  font-size: 12px; font-weight: 800; letter-spacing: .025em;
+  color: #397969; flex: none;
+}
+.wr-race-emotes__reactions {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0; flex: 1 1 auto; overflow-x: auto; overflow-y: hidden;
+  min-height: 42px; scrollbar-width: thin;
+}
+.wr-race-emotes__reaction {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  max-width: 180px; padding: 3px 7px; border-radius: 14px;
+  border: 1px solid #D4E1D3; background: #EFF6EC;
+}
+.wr-race-emotes__reaction .wr-kion-bubble { max-width: 105px; }
+.wr-race-emotes__sender {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 80px; font-size: 11px; font-weight: 700;
+}
+.wr-race-emotes__empty {
+  font-size: 11px; color: #68776E; white-space: nowrap;
+}
+.wr-race-emotes__actions { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.wr-race-emotes__mute {
+  display: inline-block; background: transparent; color: #55695D;
+  border: 1px solid transparent; border-radius: 8px;
+  min-height: 40px; padding: 4px 7px; font-size: 11px;
+  cursor: pointer;
+}
+.wr-race-emotes__mute:hover,
+.wr-race-emotes__mute:focus-visible { border-color: #9EAFA2; }
+.wr-race-emotes__mute[aria-pressed="true"] { color: #8B5647; }
+.wr-race-emotes .wr-kion-picker { z-index: 36; }
+.wr-race-emotes .wr-kion-picker__trigger {
+  min-height: 40px; font-size: 12px; padding: 6px 10px;
+}
+.wr-race-emotes .wr-kion-picker__panel {
+  right: 0;
+  box-sizing: border-box; /* PR-1 picker defaults to content-box: +22px overflow on 320px */
+  width: min(352px, calc(100vw - 26px));
+}
+.wr-race-emotes__feedback {
+  position: absolute; right: 12px; top: calc(100% + 2px);
+  max-width: min(300px, 85vw); z-index: 1;
+  padding: 6px 10px; border-radius: 7px;
+  background: #FFF0EC; color: #934534; box-shadow: 0 2px 10px #0001;
+  font-size: 12px;
+}
+@media(max-width: 760px) {
+  .wr-race-emotes { gap: 6px; min-height: 50px; padding: 4px 9px; }
+  .wr-race-emotes__title { font-size: 11px; }
+  .wr-race-emotes__empty { display: none; }
+  .wr-race-emotes__reactions { flex-basis: 80px; min-height: 38px; }
+  .wr-race-emotes__reaction { padding: 2px 5px; }
+  .wr-race-emotes__reaction .wr-kion-bubble__label { display: none; }
+  .wr-race-emotes__sender { max-width: 56px; }
+  .wr-race-emotes .wr-kion-picker__trigger { padding: 6px 7px; font-size: 11px; }
+  .wr-race-emotes__mute { padding: 3px 4px; }
+}
+@media(max-width: 359px) {
+  .wr-race-emotes__title { display: none; }
+  .wr-race-emotes__sender { max-width: 38px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .wr-race-emotes *, .wr-race-emotes *::before, .wr-race-emotes *::after {
+    animation: none !important; transition: none !important;
+  }
+}

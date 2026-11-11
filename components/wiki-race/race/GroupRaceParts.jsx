@@ -5,6 +5,7 @@ import { formatDuration } from "../../../services/wikiService";
 import { PARTICIPANT_STATE, isReactionFresh } from "../../../utils/groupRacePresentation.js";
 import { ConnectionDot, HudTimer, Pill, RaceIcon, RouteChain } from "./RaceParts";
 import useSceneSequence from "../../../hooks/useSceneSequence.js";
+import { KionEmoteSticker, KionEmoteBubble, KionEmotePicker } from "../../KionEmotes.jsx";
 
 // Phase 3 그룹 RACE/관전 표시 부품. 데이터·핸들러는 GroupGamePage가 넘긴다.
 // 경기 중 화면은 프로필 카드 조회를 하지 않는다 — 방 스냅샷의 닉네임/이미지만 쓴다.
@@ -77,7 +78,7 @@ export function ParticipantRoster({
             {isMe && <span className="wr-prow-me">나</span>}
           </span>
           {reaction && !muted
-            ? <span key={reaction.id} className={`wr-reaction-stamp group-spectator-reaction ${isReactionFresh(reaction, nowMs) ? "" : "is-stale"}`}>{reaction.preset.label}</span>
+            ? <KionEmoteBubble key={reaction.id} className="wr-reaction-stamp group-spectator-reaction" preset={reaction.preset} stale={!isReactionFresh(reaction, nowMs)} />
             : stateCell(state, { watchedLive })}
           <span className="wr-prow-sub">{sub}{watched && !watchedLive ? " · 보는 중" : ""}{muted ? " · 반응 숨김" : ""}</span>
         </>;
@@ -141,11 +142,11 @@ export function ReactionDock({ presets, onSend, cooldownSeconds = 0, ended = fal
     disabled={disabled}
     onClick={() => onSend(preset.id)}
     aria-label={`반응 보내기: ${preset.label}`}
-  >{preset.label}</button>);
+  ><KionEmoteSticker preset={preset} size={34} /><span className="wr-kion-action-label">{preset.label}</span></button>);
   if (compact) {
     return <div className="wr-sheet-reactions" role="group" aria-label="반응">
       <small>{ended ? "종료" : cooldownSeconds > 0 ? `${cooldownSeconds}초` : "반응"}</small>
-      {buttons}
+      <KionEmotePicker presets={presets} disabled={disabled} onSend={onSend} label="반응 선택" />
     </div>;
   }
   return <div className="wr-reaction-dock group-spectator-emoji-bar" role="group" aria-label="반응">

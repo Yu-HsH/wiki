@@ -1,0 +1,33 @@
+/* Kion emote UI — inert visual layer. No race links or HUD hit areas are intercepted. */
+.wr-kion-sticker {
+  width: var(--wr-kion-size, 36px); height: var(--wr-kion-size, 36px);
+  display: inline-grid; place-items: center; flex: none; vertical-align: middle;
+}
+.wr-kion-sticker img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.wr-kion-sticker__fallback { display: grid; place-items: center; width: 100%; height: 100%; font-size: calc(var(--wr-kion-size, 36px) * .64); }
+.wr-kion-bubble { display: inline-flex; align-items: center; gap: 3px; max-width: 128px; overflow: hidden; white-space: nowrap; vertical-align: middle; }
+.wr-kion-bubble.is-stale { display: none !important; }
+.wr-kion-bubble__label { font-size: 11px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.wr-race .group-spectator-emoji { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 59px; min-height: 54px; padding: 3px 6px; }
+.wr-race .group-spectator-emoji .wr-kion-action-label { font-size: 11px; line-height: 1.15; white-space: nowrap; }
+.wr-race .wr-reaction-stamp.group-spectator-reaction { padding: 2px 5px; gap: 2px; max-width: 128px; }
+.wr-race .wr-reaction-stamp.group-spectator-reaction .wr-kion-sticker { pointer-events: none; }
+.wr-kion-picker { display: inline-block; position: relative; z-index: 45; }
+.wr-kion-picker__trigger { min-height: 42px; padding: 7px 14px; border: 1px solid var(--wr-frame, #AEBBA5); border-radius: 12px; background: var(--wr-paper, #FFF); color: var(--wr-ink, #243430); cursor: pointer; font-weight: 700; }
+.wr-kion-picker__trigger:disabled { opacity: .5; cursor: not-allowed; }
+.wr-kion-picker__panel { position: absolute; bottom: calc(100% + 8px); right: 0; width: min(352px, calc(100vw - 26px)); max-height: min(440px, 70vh); overflow-y: auto; padding: 10px; border: 1px solid var(--wr-frame, #AEBBA5); border-radius: 14px; background: var(--wr-paper, #FFF); box-shadow: 0 12px 36px rgba(36,52,48,.18); }
+.wr-kion-picker__panel[data-position="below"] { top: calc(100% + 8px); bottom: auto; }
+.wr-kion-picker__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.wr-kion-picker__option { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 82px; gap: 3px; padding: 4px; border: 1px solid transparent; border-radius: 10px; background: #F4F5ED; color: #243430; cursor: pointer; font-size: 12px; font-weight: 700; }
+.wr-kion-picker__option:is(:hover, :focus-visible) { border-color: #27877D; background: #E7F4EA; }
+.wr-race .wr-sheet-reactions { display: flex; align-items: center; gap: 8px; }
+.wr-race .wr-sheet-reactions .wr-kion-picker { margin-left: auto; }
+@media (max-width: 480px) {
+  .wr-kion-picker__panel { max-height: min(375px, 60vh); }
+  .wr-kion-picker__option { min-height: 72px; }
+  .wr-kion-picker__option .wr-kion-sticker { --wr-kion-size: 42px !important; }
+  .wr-race .wr-reaction-stamp.group-spectator-reaction .wr-kion-sticker { --wr-kion-size: 26px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-kion-bubble, .wr-kion-picker__panel, .wr-kion-sticker { animation: none !important; transition: none !important; }
+}

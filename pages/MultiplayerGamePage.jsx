@@ -35,6 +35,7 @@ import { createWikiSnapshotOverlap } from "../services/wikiSnapshotOverlap.js";
 
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../authContext";
+import RaceRoomEmotes from "../components/RaceRoomEmotes.jsx";
 import { buildDuelResultPresentation, getDuelResultElapsedSeconds } from "../utils/duelResultPresentation.js";
 import ResultXp from "../components/ResultXp.jsx";
 import RematchResultAction from "../components/RematchResultAction.jsx";
@@ -1704,6 +1705,9 @@ function DuelGameSession() {
         (payload) => {
           const event = payload.new;
 
+          // Kion has a separate presentation-only channel. The game action
+          // handler must not treat reactions as duel moves or log unknown actions.
+          if (event.event_type === "room_emote") return;
           if (event.user_id === user?.id) return;
 
           handleIncomingEvent(event);
@@ -2034,6 +2038,8 @@ function DuelGameSession() {
             />
           </span>
         </div>
+
+        <RaceRoomEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} active={isPlaying} />
 
         {isPlaying && useItems && <DuelFeedbackLane>
           {!duelFeedback.notices.length && floatingMessage && <div className="floating-message wr-duel-feedback-fallback" role="status" aria-live="polite">{floatingMessage}</div>}

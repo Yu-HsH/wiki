@@ -1,0 +1,71 @@
+name: Kion integrated release gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kion-integrated-release.yml'
+      - 'components/KionEmotes.*'
+      - 'components/RoomLobbyEmotes.*'
+      - 'components/RaceRoomEmotes.*'
+      - 'pages/RoomPage.jsx'
+      - 'pages/GroupRoomPage.jsx'
+      - 'pages/MultiplayerGamePage.jsx'
+      - 'pages/GroupGamePage.jsx'
+      - 'services/roomEmoteService.js'
+      - 'utils/*Emote*.js'
+      - 'tests/kionLobbyWiring.test.js'
+      - 'tests/raceRoomEmotes.test.js'
+      - 'scripts/verify-kion-*-ci.mjs'
+      - 'tests/browser-fixtures/kion-*'
+      - 'supabase/migrations/*_room_emotes_v1.sql'
+      - 'scripts/verify-room-emotes-realtime-ci.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integration-contract:
+    name: Unified Kion regressions and OFF/ON builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/roomEmoteEvents.test.js tests/kionLobbyWiring.test.js tests/raceRoomEmotes.test.js
+      - run: npm test
+      - name: Production default-OFF build
+        run: npm run build
+      - name: Locally enabled lobby and race build
+        env:
+          VITE_ENABLE_KION_ROOM_EMOTES: 'true'
+          VITE_ENABLE_KION_RACE_EMOTES: 'true'
+        run: npm run build
+  integration-browser:
+    name: Real-card 3/6 and 6/6 viewport QA and game click protection
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium
+      - run: node scripts/verify-kion-lobby-ci.mjs
+      - run: node scripts/verify-kion-race-ci.mjs
+      - name: Upload Kion integrated screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kion-integrated-screenshots
+          path: |
+            test-results/kion-lobby/*.png
+            test-results/kion-race/*.png
+          if-no-files-found: ignore
+          retention-days: 7

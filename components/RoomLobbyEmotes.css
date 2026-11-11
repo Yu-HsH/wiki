@@ -1,0 +1,135 @@
+/* Kion waiting-room bubbles are attached to occupied player cards.
+ * No shared reaction feed. All reaction art is pointer-inert and never
+ * catches avatar, READY, search, or navigation clicks. */
+.wr-kion-card {
+  position: absolute; z-index: 2; top: 10px; right: 10px;
+  box-sizing: border-box; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0;
+  width: 112px; min-height: 102px; padding: 6px 7px;
+  border: 1px solid #b8a679; border-radius: 15px;
+  background: #fff9e9; color: #334734;
+  box-shadow: 0 3px 0 #d9cbac, 0 7px 14px #423b2018;
+  pointer-events: none; user-select: none;
+  animation: wr-kion-card-in 200ms cubic-bezier(.2,.7,.3,1) both;
+}
+.wr-kion-card .wr-kion-sticker {
+  width: 64px; height: 64px; --wr-kion-size: 64px !important;
+  pointer-events: none;
+}
+.wr-kion-card__label {
+  display: block; max-width: 100%; overflow: hidden;
+  font-size: 12px; font-weight: 800; line-height: 1.4;
+  text-align: center; text-overflow: ellipsis; white-space: nowrap;
+}
+.wr-kion-card--duel-left { right: 12px; left: auto; }
+.wr-kion-card--duel-right { left: 12px; right: auto; }
+.wr-kion-card--group { right: 10px; left: auto; }
+
+/* Existing host / me badges and profile buttons stay above/below the
+ * speaker art in their established slots, never under the reaction. */
+.wr-room--duel .wr-duel-player.wr-kion-slot {
+  position: relative; min-width: 0;
+  min-height: 242px; padding-top: 42px;
+}
+.wr-room--duel .wr-duel-player.wr-kion-slot .wr-duel-player-tags {
+  position: relative; z-index: 1;
+}
+
+/* Group: reserve the same bubble space for ALL occupied rows while
+ * the feature is enabled. A new reaction must not shift card geometry. */
+.wr-roster-row.wr-kion-slot {
+  display: block; position: relative; box-sizing: border-box;
+  min-width: 0; min-height: 132px;
+  padding: 13px 126px 37px 14px;
+}
+.wr-roster-row.wr-kion-slot > .pcard { width: 100%; min-width: 0; }
+.wr-roster-row.wr-kion-slot > .wr-status {
+  position: absolute; bottom: 12px; left: 14px;
+}
+.wr-roster-row.wr-kion-slot .wr-kion-card { top: 10px; }
+
+/* Controls are a compact bottom action, never a global incoming feed. */
+.wr-kion-room-controls {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 10px; flex-wrap: wrap; position: relative; z-index: 30;
+  min-width: 0; padding: 12px 0 2px;
+}
+.wr-kion-room-controls--duel {
+  justify-content: center;
+}
+.wr-kion-room-controls__hint {
+  font-size: 12px; color: #6c704f; white-space: normal;
+}
+.wr-kion-room-controls .wr-kion-picker {
+  flex: none; position: relative; z-index: 31;
+}
+.wr-kion-room-controls .wr-kion-picker__trigger {
+  min-height: 42px; border-color: #a68e60; background: #fffaf0;
+}
+.wr-kion-room-controls .wr-kion-picker__panel {
+  box-sizing: border-box; right: 0;
+  width: min(352px, calc(100vw - 26px));
+}
+.wr-kion-room-controls__feedback {
+  flex-basis: 100%; text-align: right;
+  color: #a54334; font-size: 12px;
+}
+@keyframes wr-kion-card-in {
+  from { opacity: .15; transform: translateY(5px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+/* Medium tablets still use two duel cards, but each is too narrow for
+ * a corner sticker beside the avatar. Reserve a separate top speech zone. */
+@media (min-width: 761px) and (max-width: 1023px) {
+  .wr-room--duel .wr-duel-player.wr-kion-slot {
+    min-height: 270px;
+    padding-top: 116px;
+  }
+  /* The group candidate sidebar leaves little space for a two-column roster. */
+  .wr-party:has(.wr-kion-slot) .wr-roster {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+  }
+}
+@media (max-width: 760px) {
+  .wr-kion-card { width: 90px; min-height: 89px; padding: 4px 5px; }
+  .wr-kion-card .wr-kion-sticker {
+    width: 54px; height: 54px; --wr-kion-size: 54px !important;
+  }
+  .wr-kion-card__label { font-size: 11px; }
+  .wr-room--duel .wr-duel-player.wr-kion-slot {
+    min-height: 224px; padding-top: 105px;
+  }
+  .wr-room--duel .wr-kion-card--duel-left { top: 8px; right: 7px; }
+  .wr-room--duel .wr-kion-card--duel-right { top: 8px; left: 7px; }
+  .wr-roster-row.wr-kion-slot {
+    min-height: 116px; padding: 10px 104px 34px 10px;
+  }
+  .wr-roster-row.wr-kion-slot > .wr-status { bottom: 10px; left: 10px; }
+  .wr-roster-row.wr-kion-slot .wr-kion-card { top: 8px; right: 8px; }
+  .wr-kion-room-controls { justify-content: space-between; }
+  .wr-kion-room-controls__hint { font-size: 11px; max-width: 58%; }
+}
+@media (max-width: 359px) {
+  .wr-room--duel .wr-duel-player.wr-kion-slot {
+    min-height: 110px; padding-top: 9px; padding-right: 95px;
+  }
+  .wr-room--duel .wr-duel-player.wr-kion-slot .wr65-duel-profile {
+    min-width: 0; flex: 1 1 auto;
+  }
+  .wr-room--duel .wr-kion-card--duel-left,
+  .wr-room--duel .wr-kion-card--duel-right {
+    top: 8px; right: 7px; left: auto;
+  }
+  .wr-roster-row.wr-kion-slot { padding-right: 95px; }
+  .wr-kion-card { width: 81px; min-height: 82px; }
+  .wr-kion-card .wr-kion-sticker {
+    width: 48px; height: 48px; --wr-kion-size: 48px !important;
+  }
+  .wr-kion-room-controls__hint { display: none; }
+  .wr-kion-room-controls { justify-content: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-kion-card, .wr-kion-card *,
+  .wr-kion-room-controls * { animation: none !important; transition: none !important; }
+}
