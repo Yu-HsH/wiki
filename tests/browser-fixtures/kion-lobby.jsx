@@ -4,6 +4,8 @@ import "../../css/wikiRaceTokens.css";
 import "../../css/wikiRaceBase.css";
 import "../../css/wikiRaceLobby.css";
 import "../../css/jungle65Lobby.css";
+// Real group camp responsive rules; omission previously hid mobile collisions.
+import "../../css/jungle65Expedition.css";
 import "../../css/profileCard.css";
 import ProfileCard from "../../components/ProfileCard.jsx";
 import { HostTag, MeTag, StatusMark } from "../../components/wiki-race/LobbyParts.jsx";
