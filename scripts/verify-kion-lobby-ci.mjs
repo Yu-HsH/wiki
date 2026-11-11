@@ -40,6 +40,7 @@ try {
     const duel = page.locator("#duel");
     const group = page.locator("#group");
     const groupFull = page.locator("#group-full");
+    const groupSilent = page.locator("#group-silent");
     await duel.locator(".wr-duel-player .wr-kion-card").first().waitFor({ state: "visible", timeout: 12000 });
     assert.equal(await duel.locator(".wr-duel-player .wr-kion-card").count(), 2, "Both joined duel players own bubbles");
     assert.equal(await group.locator(".wr-roster-row .wr-kion-card").count(), 3, "Only three joined group players own bubbles");
@@ -47,6 +48,20 @@ try {
     assert.equal(await group.locator(".wr-roster-row--empty").count(), 3, "Half-filled roster has three empty seats");
     assert.equal(await groupFull.locator(".wr-roster-row .wr-kion-card").count(), 6, "All six players own a speech card");
     assert.equal(await groupFull.locator(".wr-roster-row--empty").count(), 0, "Six occupied seats leave no empty row");
+    assert.equal(await groupSilent.locator(".wr-roster-row.wr-kion-slot").count(), 3);
+    assert.equal(await groupSilent.locator(".wr-kion-card").count(), 0, "No bubble when reactions expire");
+    for (let i = 0; i < 3; i++) {
+      const quietRow = groupSilent.locator(".wr-roster-row.wr-kion-slot").nth(i);
+      const activeRow = group.locator(".wr-roster-row.wr-kion-slot").nth(i);
+      const [quietBox,activeBox] = await Promise.all([quietRow.boundingBox(),activeRow.boundingBox()]);
+      assert.ok(quietBox && activeBox && Math.abs(quietBox.height-activeBox.height)<1,
+        "A reacting player's row must not change height when emote expires at "+width);
+      const quietDisplay = await quietRow.evaluate(el=>getComputedStyle(el).display);
+      assert.equal(quietDisplay,"grid","No-emote READY rows preserve grid layout");
+      const quietProfile = await quietRow.locator(":scope > .pcard").boundingBox();
+      const quietStatus = await quietRow.locator(":scope > .wr-status").boundingBox();
+      assert.ok(!intersects(quietProfile,quietStatus),"No-emote READY doesn't overlap nickname at "+width);
+    }
     assert.equal(await page.locator(".wr-kion-room-dock").count(), 0, "Old shared feed removed");
 
     const trigger = duel.getByRole("button", { name: /키온 보내기/ });
