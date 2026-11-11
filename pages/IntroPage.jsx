@@ -78,7 +78,7 @@ export default function IntroPage() {
             <img
               className="wr65-landing-picture"
               src={JUNGLE_LANDING}
-              width="1672" height="941" loading="eager" decoding="async" fetchPriority="high"
+              width="1672" height="941" loading="eager" decoding="async" fetchpriority="high"
               alt=""
               onError={() => setJungleAssetReady(false)}
             />
