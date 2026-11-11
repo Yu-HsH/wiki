@@ -60,7 +60,17 @@ try {
       assert.equal(quietDisplay,"grid","No-emote READY rows preserve grid layout");
       const quietProfile = await quietRow.locator(":scope > .pcard").boundingBox();
       const quietStatus = await quietRow.locator(":scope > .wr-status").boundingBox();
-      assert.ok(!intersects(quietProfile,quietStatus),"No-emote READY doesn't overlap nickname at "+width);
+      const quietComputed=await quietRow.evaluate(el=>({
+        grid:getComputedStyle(el).gridTemplateRows,
+        profile:{gridRow:getComputedStyle(el.querySelector(":scope > .pcard")).gridRow,height:getComputedStyle(el.querySelector(":scope > .pcard")).height},
+        ready:{gridRow:getComputedStyle(el.querySelector(":scope > .wr-status")).gridRow,position:getComputedStyle(el.querySelector(":scope > .wr-status")).position}
+      }));
+      if (intersects(quietProfile,quietStatus)) {
+        await page.screenshot({path:path.join(screenshots,"no-emote-overlap-"+width+"-"+i+".png"),fullPage:true});
+      }
+      assert.ok(!intersects(quietProfile,quietStatus),
+        "No-emote READY doesn't overlap nickname at "+width+" row "+i+" "+
+        JSON.stringify({quietProfile,quietStatus,quietComputed}));
     }
     assert.equal(await page.locator(".wr-kion-room-dock").count(), 0, "Old shared feed removed");
 
