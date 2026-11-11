@@ -1,4 +1,4 @@
--- Supabase CLI generated filename in isolated CI 2026-11-10 23:56:50 UTC.
+-- Applied using Supabase migration API on 2026-11-11; canonical Production version 20261111010620.
 -- Production deployment requires separately authorized approval.
 
 begin;
