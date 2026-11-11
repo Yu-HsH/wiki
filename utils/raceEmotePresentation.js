@@ -8,7 +8,8 @@ export function getVisibleRaceEmotes(events, now, muted = false, roomId = null) 
       event.createdAt <= now + 500 &&
       now - event.createdAt >= -500 &&
       now - event.createdAt < RACE_EMOTE_VISIBLE_MS
-  );
+  ).sort((a,b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id));
+
 }
 
 /** Keep only the newest event from each sender, even after reconnect backfill. */

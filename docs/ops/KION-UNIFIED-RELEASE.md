@@ -42,3 +42,8 @@
 - Isolated Chromium fixtures reuse real player-card components and CSS but are not screenshots of a signed-in live game.
 - Disposable Supabase 6-person group E2E proves server fanout/RLS; real user account Playwright login through Production/Preview remains a separate release gate.
 - No Production SQL/DDL, Vercel env mutation, flag activation, or Production deployment was made during this review.
+
+## Additional integration inspection
+- Production migration history had **58** versions, while current main contained **57**. The only missing version `20261110080546` belongs to OAuth PR #54 and is already applied remotely.
+- This unified release tree includes the exact unchanged blob `supabase/migrations/20261110080546_oauth_profile_onboarding_v1.sql` from PR #54 (SHA e265b8d6fcdca259bdd8db231422002828500eb9). This reconciles existing history, does NOT enable OAuth in this PR, and introduces no remote changes by itself. Coordinate future PR #54 merge to avoid redundant review.
+- In six-person races the horizontal reaction strip now displays newest first, so a recent reaction is not initially hidden at the far right on mobile.

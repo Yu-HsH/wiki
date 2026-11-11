@@ -34,6 +34,8 @@ try {
     const group = page.locator("#group");
     await duel.locator(".wr-race-emotes").waitFor({ state: "visible", timeout: 10000 });
     assert.equal(await group.locator(".wr-race-emotes").count(), 1);
+    assert.equal(await group.locator(".wr-race-emotes__reaction").count(), 6,
+      "A six-person group may have six distinct visible reactions at once");
     const trigger = duel.getByRole("button", { name: /키온 보내기/ });
     await trigger.click();
     const panel = duel.locator(".wr-kion-picker__panel");

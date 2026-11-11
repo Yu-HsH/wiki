@@ -15,7 +15,7 @@ test("recent reactions stop at six seconds and remain hidden when muted", () => 
     { id: "c", userId: "three", createdAt: now + 501 },
     { id: "d", userId: "four", createdAt: now - 1 },
   ];
-  assert.deepEqual(getVisibleRaceEmotes(rows, now).map((row) => row.id), ["a", "d"]);
+  assert.deepEqual(getVisibleRaceEmotes(rows, now).map((row) => row.id), ["d", "a"]);
   assert.deepEqual(getVisibleRaceEmotes(rows, now, true), []);
 });
 
@@ -74,4 +74,17 @@ test("race reactions are separately opt-in, channel warmup is backfilled, duplic
   assert.ok(js.includes('document.removeEventListener("visibilitychange", onVisibility)'));
   assert.ok(js.includes("sendGuard.current = true"));
   assert.ok(duel.includes('if (event.event_type === "room_emote") return'));
+});
+
+// Group players can send at nearly the same time. Newest reactions must be
+// visible at the left edge of the horizontal strip, including on mobile.
+test("six group reactions are ordered newest-first and remain room-scoped", () => {
+  const now = 100_000;
+  const six = Array.from({length:6}, (_,i) => ({
+    id:"e"+i, roomId:"group-room", userId:"user"+i,
+    createdAt:now-(6-i)*100, emoteId:"hello",
+  }));
+  assert.deepEqual(getVisibleRaceEmotes(six,now,false,"group-room").map(e=>e.id),
+    ["e5","e4","e3","e2","e1","e0"]);
+  assert.equal(getVisibleRaceEmotes(six,now,false,"other").length,0);
 });
