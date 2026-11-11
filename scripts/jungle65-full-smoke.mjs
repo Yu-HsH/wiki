@@ -7,7 +7,8 @@ import * as f from './jungle65-full-fixtures.mjs';
 const {before,base,api,output,check,USERS,START,MIDDLE,TARGET,OTHER,rooms,players,
   singleRuns,ledger,ledgerRow,htmlOf,linksOf,pageId,iso,now}=f;
 const report={head:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),date:'2026-11-02 KST',uncommitted:true,before,fixtureOnly:true,realBackend:false,screens:[],metrics:[],calls:[],checks:f.checks};
-const widths=[1440,1024,768,390,320],members=[USERS.me,USERS.opp,USERS.p3];
+const mobileFull=process.env.MOBILE_FULL_CI==="true";
+const widths=mobileFull?[320,360,390,430,768]:[1440,1024,768,390,320],members=[USERS.me,USERS.opp,USERS.p3];
 const camp='a0000000-0000-4000-8000-000000000065';
 let allReady=false,groupStarted=false,failRead=false,emptyRead=false,slowRead=false;
 let singleSchedule=false,apiSeq=0;
@@ -69,12 +70,36 @@ f.extendApi(async(route,key)=>{
 });
 
 async function ready(p){await p.evaluate(()=>document.fonts.ready);await p.waitForTimeout(260)}
+async function auditMobilePage(p,name){
+ if(!mobileFull)return;
+ const result=await p.evaluate(()=>{
+   const rect=el=>{if(!el)return null;const r=el.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};
+   const coll=(a,b)=>a&&b&&Math.max(0,Math.min(a.right,b.right)-Math.max(a.x,b.x))>3&&Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.y,b.y))>3;
+   const rows=[...document.querySelectorAll(".wr-room--group .wr-roster-row.wr-kion-slot")];
+   const violations=[];
+   for(const [i,row] of rows.entries()){
+     const profile=rect(row.querySelector(":scope > .pcard")),ready=rect(row.querySelector(":scope > .wr-status")),
+       bubble=rect(row.querySelector(":scope > .wr-kion-card")),own=rect(row);
+     if(coll(profile,ready))violations.push("READY_OVER_PROFILE:"+i);
+     if(coll(profile,bubble))violations.push("KION_OVER_PROFILE:"+i);
+     if(coll(ready,bubble))violations.push("KION_OVER_READY:"+i);
+     if(bubble&&own&&(bubble.y<own.y-1||bubble.bottom>own.bottom+1||bubble.x<own.x-1||bubble.right>own.right+1))violations.push("KION_OUTSIDE_ROW:"+i);
+   }
+   const controls=rect(document.querySelector(".wr-room--group .wr-kion-room-controls"));
+   for(const row of rows){const bubble=rect(row.querySelector(":scope > .wr-kion-card"));if(coll(bubble,controls))violations.push("KION_OVER_SEND_BUTTON");}
+   return{violations,groupRows:rows.length,visibleBubbles:rows.filter(row=>row.querySelector(".wr-kion-card")).length,
+     scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};
+ });
+ check(name+" mobile no Kion/READY/profile collisions",result.violations.length===0);
+ check(name+" mobile no horizontal page overflow",result.scrollWidth<=result.viewport+1);
+}
 async function capture(p,name,{full=true,area=null}={}){
  await ready(p);await p.mouse.move(0,0);
  await p.evaluate(()=>{window.scrollTo(0,0);document.querySelectorAll('.wr-result-layer--overlay').forEach(e=>e.scrollTop=0)});
  if(await p.locator('.wr-result-layer--overlay').count())full=false;
  const m=await p.evaluate(()=>({width:innerWidth,height:innerHeight,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight,articleWidth:document.querySelector('.current-page-card')?.getBoundingClientRect().width||null,hudHeight:document.querySelector('.wr-race-hud')?.getBoundingClientRect().height||null,reportTop:document.querySelector('.wr-result-layer--overlay .wr-result-frame')?.getBoundingClientRect().top??null,audioBottom:document.querySelector('.wr-audio')?.getBoundingClientRect().bottom??0}));
  check(name+' no page overflow',m.scrollWidth<=m.width);
+ if(m.width<=768)await auditMobilePage(p,name);
  if(!before&&m.reportTop!==null)check(name+' report clear of sound controls',m.reportTop>=m.audioBottom);
  if(!before&&/^(single|duel|group)-play-1440$/.test(name))check(name+' article retains reading width',m.articleWidth>800);
  const file=name+'.png';await p.screenshot({path:output+'/'+file,fullPage:full,animations:'disabled'});report.screens.push({name,file,...m});
@@ -93,10 +118,17 @@ try{
  await fs.mkdir(output,{recursive:true});await f.launch();
  // A. Camp + actual search, READY, cancellation, start guard, F5, keyboard dialog.
  f.groupRoom(camp,members,{status:'waiting',room_code:'CAMP65',max_players:6});
+ if(mobileFull){
+   const current=iso(now());
+   f.events.set(camp,[{id:"emote-mobile-host",room_id:camp,user_id:USERS.me.id,event_type:"room_emote",payload:{emoteId:"hello"},created_at:current},
+     {id:"emote-mobile-rival",room_id:camp,user_id:USERS.opp.id,event_type:"room_emote",payload:{emoteId:"good"},created_at:current}]);
+ }
  players.set(camp,members.map((u,i)=>({id:'camp-'+i,room_id:camp,user_id:u.id,nickname_snapshot:profiles[i].nickname,profile_image_snapshot:profiles[i].profile_image_url,is_ready:i>0,submitted_target_title:i>0?[MIDDLE,TARGET][i-1]:null,submitted_target_page_id:i>0?pageId([MIDDLE,TARGET][i-1]):null,player_status:'waiting'})));
  {
   const {ctx,page:p}=await open('/multiplayer/group/room/'+camp);
-  await p.locator('.wr-group-layout').waitFor();await matrix(p,'group-camp','.wr-group-mine');
+  await p.locator('.wr-group-layout').waitFor();
+  if(mobileFull)await expect(p.locator(".wr-room--group .wr-roster-row.wr-kion-slot")).toHaveCount(3);
+  await matrix(p,'group-camp','.wr-group-mine');
   check('A start disabled before own READY',await p.getByRole('button',{name:'게임 시작',exact:true}).isDisabled());
   await p.getByRole('textbox',{name:'문서 후보 검색어'}).fill('후보');await p.getByRole('button',{name:'검색',exact:true}).click();await p.locator('.search-item').first().click();
   check('A local candidate never submits automatically',!players.get(camp)[0].is_ready);
@@ -110,6 +142,22 @@ try{
   await p.locator('.wr-roster-row .pcard').first().press('Enter');await p.locator('.user-profile-modal-card').waitFor();await capture(p,'camp-profile-320');
   if(!before){await p.keyboard.press('Escape');await expect(p.locator('.user-profile-modal-card')).toHaveCount(0);check('A camp profile Escape returns focus',await p.locator('.wr-roster-row .pcard').first().evaluate(e=>e===document.activeElement));}
   await ctx.close();
+ }
+ if(mobileFull){
+   // Genuine GroupRoomPage with six joined players, not a reduced visual fixture.
+   const fullId="full-mobile-group-6";
+   const fullMembers=[USERS.me,USERS.opp,USERS.p3,USERS.p4,USERS.p5,USERS.p6];
+   f.groupRoom(fullId,fullMembers,{status:"waiting",room_code:"MOB6QA",min_players:3,max_players:6});
+   const current=iso(now()),emoji=["hello","ready","go","good","wait","wow"];
+   players.set(fullId,players.get(fullId).map((row,i)=>({...row,id:"mobile-member-"+i,
+     is_ready:i%2===1,player_status:"waiting",nickname_snapshot:profiles[i]?.nickname||fullMembers[i].nickname,
+     submitted_target_title:i%2===1?MIDDLE:null,submitted_target_page_id:i%2===1?pageId(MIDDLE):null})));
+   f.events.set(fullId,fullMembers.map((u,i)=>({id:"mobile6-"+i,room_id:fullId,user_id:u.id,
+     event_type:"room_emote",payload:{emoteId:emoji[i]},created_at:current})));
+   const {ctx,page:p}=await open("/multiplayer/group/room/"+fullId,{width:390});
+   await expect(p.locator(".wr-room--group .wr-roster-row.wr-kion-slot")).toHaveCount(6);
+   await matrix(p,"group-camp-full6",".wr-party");
+   await ctx.close();
  }
  // B. Same real article links and right TOC across three modes.
  {
@@ -174,8 +222,8 @@ try{
   await ctx.close();
  }
  // E. Approved screens sampled without redesign; public guides remain real routes.
- for(const [name,url,wait]of[['landing','/','.wr65-landing-picture'],['home','/lobby','.wr-hero'],['play','/play','.wr-mode'],['public-duel','/multiplayer?mode=duel','.mp-public-board'],['public-group','/multiplayer?mode=group','.mp-public-board'],['guide','/guide','.public-article']]){
-  const {ctx,page:p}=await open(url,{anonymous:name==='landing'});await p.locator(wait).first().waitFor();await matrix(p,name);
+ for(const [name,url,wait]of[['landing','/','.wr65-landing-picture'],['home','/lobby','.wr65-jungle-hero'],['play','/play','.wr-mode'],['public-duel','/multiplayer?mode=duel','.mp-public-board'],['public-group','/multiplayer?mode=group','.mp-public-board'],['updates','/updates','.wr-updates-page'],['guide','/guide','.public-article'],['privacy','/privacy','.public-article'],['terms','/terms','.public-article'],['about','/about','.public-article'],['login','/login','.auth-card']]){
+  const {ctx,page:p}=await open(url,{anonymous:name==='landing'||name==='login'});await p.locator(wait).first().waitFor();await matrix(p,name);
   if(name==='public-duel'){await p.getByRole('button',{name:'게임 설명',exact:true}).click();await p.locator('.help-modal').waitFor();await capture(p,'item-guide-320');await p.keyboard.press('Escape');check('E item guide Escape closes',await p.locator('.help-modal').count()===0);}
   if(name==='home'){await p.getByRole('button',{name:'사운드 설정',exact:true}).click();await p.locator('.wr-audio-panel').waitFor();await capture(p,'sound-settings-320');await p.keyboard.press('Escape');check('E sound settings Escape closes',await p.locator('.wr-audio-panel').count()===0);}
   await ctx.close();
@@ -183,6 +231,9 @@ try{
  // Status fixtures are separate from successful backend-shaped responses.
  for(const [name,state]of[['empty','emptyRead'],['error','failRead'],['loading','slowRead']]){
   emptyRead=state==='emptyRead';failRead=state==='failRead';slowRead=state==='slowRead';const {ctx,page:p}=await open('/ranking',{width:390});
+  // The current default "all time" table uses a different fetch path.
+  // Trigger the XP endpoint to test its explicit empty/error/loading states.
+  if(mobileFull)await p.getByRole('button',{name:'탐험가 레벨',exact:true}).click();
   if(slowRead){await p.locator('.ranking-table-wrap [aria-busy]').waitFor();await capture(p,'ranking-loading-390')}
   else{await p.locator(failRead?'.app-error':'.ranking-table-wrap').waitFor();await capture(p,'ranking-'+name+'-390')}
   await ctx.close();emptyRead=failRead=slowRead=false;

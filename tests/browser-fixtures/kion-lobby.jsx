@@ -4,6 +4,8 @@ import "../../css/wikiRaceTokens.css";
 import "../../css/wikiRaceBase.css";
 import "../../css/wikiRaceLobby.css";
 import "../../css/jungle65Lobby.css";
+// Real group camp responsive rules; omission previously hid mobile collisions.
+import "../../css/jungle65Expedition.css";
 import "../../css/profileCard.css";
 import ProfileCard from "../../components/ProfileCard.jsx";
 import { HostTag, MeTag, StatusMark } from "../../components/wiki-race/LobbyParts.jsx";
@@ -41,10 +43,10 @@ function DemoPlayer({player, event, variant, slot, onProfile}) {
   );
 }
 
-function Demo({variant,full=false}) {
+function Demo({variant,full=false,silent=false}) {
   const groupUsers = full ? users : users.slice(0,3);
-  const demoId = full ? "group-full" : variant;
-  const [events,setEvents] = useState(() => variant === "duel"
+  const demoId = silent ? "group-silent" : full ? "group-full" : variant;
+  const [events,setEvents] = useState(() => silent ? [] : variant === "duel"
     ? [seed("duel-a","a","hello"), seed("duel-b","b","ready")]
     : groupUsers.map((person,i) => seed("group-"+person.userId,person.userId,["hello","good","wow","ready","hurry","gg"][i])));
   const [profileClicks,setProfileClicks]=useState(0);
@@ -98,5 +100,5 @@ function Demo({variant,full=false}) {
     </section>
   );
 }
-function App(){return <main><Demo variant="duel"/><Demo variant="group"/><Demo variant="group" full/></main>}
+function App(){return <main><Demo variant="duel"/><Demo variant="group"/><Demo variant="group" full/><Demo variant="group" silent/></main>}
 createRoot(document.getElementById("root")).render(<App/>);

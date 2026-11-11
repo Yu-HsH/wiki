@@ -31,7 +31,7 @@ try {
   if (!started) throw Error("Kion lobby Vite fixture failed to start");
   browser = await chromium.launch({ headless: true });
 
-  for (const [width, height] of [[320, 720], [390, 844], [768, 800], [1280, 900]]) {
+  for (const [width, height] of [[320, 720], [360, 800], [390, 844], [430, 932], [768, 800], [1280, 900]]) {
     const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });
     const page = await context.newPage();
     const jsErrors = [];
@@ -40,6 +40,7 @@ try {
     const duel = page.locator("#duel");
     const group = page.locator("#group");
     const groupFull = page.locator("#group-full");
+    const groupSilent = page.locator("#group-silent");
     await duel.locator(".wr-duel-player .wr-kion-card").first().waitFor({ state: "visible", timeout: 12000 });
     assert.equal(await duel.locator(".wr-duel-player .wr-kion-card").count(), 2, "Both joined duel players own bubbles");
     assert.equal(await group.locator(".wr-roster-row .wr-kion-card").count(), 3, "Only three joined group players own bubbles");
@@ -47,6 +48,34 @@ try {
     assert.equal(await group.locator(".wr-roster-row--empty").count(), 3, "Half-filled roster has three empty seats");
     assert.equal(await groupFull.locator(".wr-roster-row .wr-kion-card").count(), 6, "All six players own a speech card");
     assert.equal(await groupFull.locator(".wr-roster-row--empty").count(), 0, "Six occupied seats leave no empty row");
+    assert.equal(await groupSilent.locator(".wr-roster-row.wr-kion-slot").count(), 3);
+    assert.equal(await groupSilent.locator(".wr-kion-card").count(), 0, "No bubble when reactions expire");
+    // The approved ready-pop animation can briefly scale the badge while
+    // its grid track is already correct. Measure settled geometry, not an
+    // intermediate animation frame.
+    await page.waitForTimeout(250);
+    for (let i = 0; i < 3; i++) {
+      const quietRow = groupSilent.locator(".wr-roster-row.wr-kion-slot").nth(i);
+      const activeRow = group.locator(".wr-roster-row.wr-kion-slot").nth(i);
+      const [quietBox,activeBox] = await Promise.all([quietRow.boundingBox(),activeRow.boundingBox()]);
+      assert.ok(quietBox && activeBox && Math.abs(quietBox.height-activeBox.height)<1,
+        "A reacting player's row must not change height when emote expires at "+width);
+      const quietDisplay = await quietRow.evaluate(el=>getComputedStyle(el).display);
+      assert.equal(quietDisplay,"grid","No-emote READY rows preserve grid layout");
+      const quietProfile = await quietRow.locator(":scope > .pcard").boundingBox();
+      const quietStatus = await quietRow.locator(":scope > .wr-status").boundingBox();
+      const quietComputed=await quietRow.evaluate(el=>({
+        grid:getComputedStyle(el).gridTemplateRows,
+        profile:{gridRow:getComputedStyle(el.querySelector(":scope > .pcard")).gridRow,height:getComputedStyle(el.querySelector(":scope > .pcard")).height},
+        ready:{gridRow:getComputedStyle(el.querySelector(":scope > .wr-status")).gridRow,position:getComputedStyle(el.querySelector(":scope > .wr-status")).position}
+      }));
+      if (intersects(quietProfile,quietStatus)) {
+        await page.screenshot({path:path.join(screenshots,"no-emote-overlap-"+width+"-"+i+".png"),fullPage:true});
+      }
+      assert.ok(!intersects(quietProfile,quietStatus),
+        "No-emote READY doesn't overlap nickname at "+width+" row "+i+" "+
+        JSON.stringify({quietProfile,quietStatus,quietComputed}));
+    }
     assert.equal(await page.locator(".wr-kion-room-dock").count(), 0, "Old shared feed removed");
 
     const trigger = duel.getByRole("button", { name: /키온 보내기/ });
@@ -84,6 +113,46 @@ try {
     assert.match(await groupFull.locator(".fixture-foot").innerText(), /프로필 클릭 1회/);
     await group.getByLabel("목표 문서 검색").fill("훈민정음");
     assert.equal(await group.getByLabel("목표 문서 검색").inputValue(), "훈민정음");
+
+    // Regression: the real group camp CSS used to place READY and Kion on the
+    // same top-right coordinates, allowing bubbles to bleed into the next row
+    // and into the picker. Every real occupied row must now have independent
+    // grid cells, including an empty-sticker slot with stable dimensions.
+    for (const root of [group, groupFull]) {
+      const rows = root.locator(".wr-room--group .wr-roster-row.wr-kion-slot");
+      for (let i = 0; i < await rows.count(); i++) {
+        const row = rows.nth(i);
+        const computed = await row.evaluate((el) => ({
+          display: getComputedStyle(el).display,
+          readyPosition: getComputedStyle(el.querySelector(":scope > .wr-status")).position,
+          stickerPosition: getComputedStyle(el.querySelector(":scope > .wr-kion-card")).position,
+          namePadding: getComputedStyle(el.querySelector(".pcard-name-row")).paddingRight,
+        }));
+        assert.equal(computed.display, "grid", "Occupied group row must use collision-free grid at "+width);
+        assert.equal(computed.readyPosition, "static", "READY must not be absolutely positioned at "+width);
+        assert.equal(computed.stickerPosition, "static", "Kion card must be inside grid at "+width);
+        assert.equal(computed.namePadding, "0px", "No 64px padding from pre-Kion group title layout at "+width);
+
+        const profile = await row.locator(":scope > .pcard").boundingBox();
+        const ready = await row.locator(":scope > .wr-status").boundingBox();
+        const bubble = await row.locator(":scope > .wr-kion-card").boundingBox();
+        const rowBox = await row.boundingBox();
+        assert.ok(!intersects(profile, ready), "Group READY must not cover participant at "+width+" row "+i);
+        assert.ok(!intersects(profile, bubble), "Group Kion must not cover participant at "+width+" row "+i);
+        assert.ok(!intersects(ready, bubble), "Group Kion must not cover READY at "+width+" row "+i);
+        assert.ok(bubble && rowBox && bubble.y>=rowBox.y-1 && bubble.y+bubble.height<=rowBox.y+rowBox.height+1,
+          "Kion must stay in own row at "+width+" row "+i);
+        if (i + 1 < await rows.count()) {
+          const next = await rows.nth(i + 1).boundingBox();
+          if (width <= 760) {
+            assert.ok(!intersects(bubble, next), "Kion must not cover NEXT participant at "+width+" row "+i);
+          }
+        }
+      }
+      const controls = await root.locator(".wr-kion-room-controls").boundingBox();
+      const lastSticker = await rows.last().locator(":scope > .wr-kion-card").boundingBox();
+      assert.ok(!intersects(controls, lastSticker), "Kion must not cover send control at "+width);
+    }
 
     for (const root of [duel, group, groupFull]) {
       const cards = root.locator(".wr-kion-slot:has(.wr-kion-card)");
