@@ -20,7 +20,7 @@ import { createGroupEntryMarker } from "../utils/groupGameFlow";
 import UserProfileModal from "../components/UserProfileModal"; // 1. 모달 import
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog.jsx";
 import ProfileCard from "../components/ProfileCard";
-import RoomLobbyEmotes from "../components/RoomLobbyEmotes.jsx";
+import { useRoomLobbyEmotes, RoomLobbyEmoteBubble, RoomLobbyEmoteControls } from "../components/RoomLobbyEmotes.jsx";
 import useProfileCards from "../hooks/useProfileCards.js";
 import { DENSITY, NAME_FALLBACK, buildProfileCard, mergeRewardSlots, resolveDisplayName } from "../utils/profileCard.js";
 import { getGroupStartState } from "../utils/groupLobbyState.js";
@@ -48,6 +48,7 @@ export default function GroupRoomPage() {
 
     const [room, setRoom] = useState(null);
     const [players, setPlayers] = useState([]);
+    const lobbyEmotes = useRoomLobbyEmotes({ roomId, userId: user?.id, players, roomStatus: room?.status });
     const [pending, setPending] = useState(true);
     const [submitError, setSubmitError] = useState("");
     usePublicWaitingRoomHeartbeat(room, user?.id, setSubmitError);
@@ -482,8 +483,6 @@ export default function GroupRoomPage() {
                 <p className="wr-room-sync" role="status">{connectionStatus === "SUBSCRIBED" ? <>실시간 알림 수신 중<span className="wr65-camp-sync-detail"> · 참가자와 준비 상태는 서버 정보로 표시합니다.</span></> : "실시간 연결 확인 중 · 연결이 돌아오지 않으면 새로고침해 방에 재접속하세요."}</p>
             </div>
 
-            <RoomLobbyEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} />
-
             {hostNotice && (
                 <p className="wr-host-notice" role="status" key={`${hostNotice.from}-${hostNotice.to}`}>
                     <LobbyIcon name="leave" />
@@ -605,7 +604,7 @@ export default function GroupRoomPage() {
                                         rewardCards[player.user_id]
                                     );
                                 return (
-                                    <li key={player.id} className={`wr-roster-row ${isMe ? "wr-is-me" : ""} ${player.is_ready ? "is-ready" : ""}`}>
+                                    <li key={player.id} className={`wr-roster-row ${isMe ? "wr-is-me" : ""} ${player.is_ready ? "is-ready" : ""} ${lobbyEmotes.enabled ? "wr-kion-slot" : ""}`}>
                                         <ProfileCard
                                             card={card}
                                             size="sm"
@@ -618,6 +617,7 @@ export default function GroupRoomPage() {
                                         {player.is_ready
                                             ? <StatusMark tone="teal">READY</StatusMark>
                                             : <StatusMark tone="pending">준비 중</StatusMark>}
+                                        <RoomLobbyEmoteBubble event={lobbyEmotes.reactionsByUserId.get(player.user_id)} position="group" />
                                     </li>
                                 );
                             })}
@@ -627,6 +627,7 @@ export default function GroupRoomPage() {
                                 </li>
                             ))}
                         </ul>
+                        <RoomLobbyEmoteControls state={lobbyEmotes} mode="group" />
                         <p id="wr-roster-summary" className="wr-roster-summary">
                             참가 {players.length} / {maxPlayers} · READY {readyCount} / {players.length}
                             {emptySlots > 0 && <span className="wr-roster-empty-sm"> · 빈 자리 {emptySlots}</span>}

@@ -1,31 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { sendRoomEmote, fetchRecentRoomEmotes } from "../services/roomEmoteService.js";
 import { normalizeRoomEmoteEvent, upsertLatestRoomEmote } from "../utils/roomEmoteEvents.js";
+import { visibleRoomLobbyReactions, mergeRoomLobbySnapshots } from "../utils/lobbyEmotePresentation.js";
 import { KION_EMOTE_PRESETS, getKionEmote } from "../utils/kionEmoteCatalog.js";
-import { KionEmoteBubble, KionEmotePicker } from "./KionEmotes.jsx";
+import { KionEmoteSticker, KionEmotePicker } from "./KionEmotes.jsx";
 import "./RoomLobbyEmotes.css";
 
-// Default OFF until PR-2's database migration and two-account production gate
-// have been explicitly approved. Never expose a dead send button.
+// Default OFF until PR-2's DB authority and two-client realtime are verified.
 export const KION_LOBBY_EMOTES_ENABLED =
   import.meta.env.VITE_ENABLE_KION_ROOM_EMOTES === "true";
-
-const VISIBLE_MS = 6_000;
-
-function mergeSnapshots(previous, incoming) {
-  const byUser = new Map();
-  for (const event of [...previous, ...incoming]) {
-    const existing = byUser.get(event.userId);
-    if (
-      !existing ||
-      event.createdAt > existing.createdAt ||
-      (event.createdAt === existing.createdAt && event.id > existing.id)
-    ) byUser.set(event.userId, event);
-  }
-  return Array.from(byUser.values())
-    .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
-}
 
 function errorMessage(code) {
   if (code === "EMOTE_RATE_LIMIT") return "감정표현은 3초에 한 번씩 보낼 수 있습니다.";
@@ -36,39 +20,55 @@ function errorMessage(code) {
 }
 
 /**
- * Reusable 1:1 / group waiting-room emote dock.
- * Not chat: only ten server-validated preset IDs, no free text or direct inserts.
+ * The lobby pages call one shared hook, then render speech bubbles next to
+ * their ACTUAL player cards. No duplicate channels, no generic top-level dock.
+ * Local cooldown is UI-only; the database RPC remains authoritative.
  */
-export default function RoomLobbyEmotes({ roomId, userId, players = [], roomStatus }) {
+export function useRoomLobbyEmotes({ roomId, userId, players = [], roomStatus }) {
   const [events, setEvents] = useState([]);
   const [connected, setConnected] = useState(false);
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [clock, setClock] = useState(() => Date.now());
+  const sendGuard = useRef(false);
 
   const isJoined = players.some((player) => player.user_id === userId);
-  const enabled = KION_LOBBY_EMOTES_ENABLED && Boolean(supabase && roomId && userId)
-    && roomStatus === "waiting" && isJoined;
-
-  const namesByUserId = useMemo(
-    () => new Map(players.map((player) => [player.user_id, player.nickname_snapshot || "탐험가"])),
-    [players]
-  );
+  const enabled = KION_LOBBY_EMOTES_ENABLED &&
+    Boolean(supabase && roomId && userId) &&
+    roomStatus === "waiting" && isJoined;
 
   useEffect(() => {
     if (!enabled) return undefined;
-    const timer = window.setInterval(() => setClock(Date.now()), 900);
+    const timer = window.setInterval(() => setClock(Date.now()), 700);
     return () => window.clearInterval(timer);
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled) {
-      setConnected(false);
-      return undefined;
-    }
+    setEvents([]);
+    setFeedback("");
+    setCooldownUntil(0);
+    setConnected(false);
+    sendGuard.current = false;
+    if (!enabled) return undefined;
 
     let disposed = false;
+    let subscribed = false;
+    let catchupTimer = null;
+    const backfill = () => {
+      if (disposed || !subscribed) return;
+      fetchRecentRoomEmotes(roomId, { limit: 30 })
+        .then((rows) => {
+          if (!disposed) setEvents((previous) => mergeRoomLobbySnapshots(previous, rows));
+        })
+        .catch(() => {
+          // Keep realtime active; a later reconnect or foreground can catch up.
+        });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") backfill();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     const channel = supabase
       .channel(`room-emotes-lobby:${roomId}`)
       .on("postgres_changes", {
@@ -84,100 +84,94 @@ export default function RoomLobbyEmotes({ roomId, userId, players = [], roomStat
       })
       .subscribe((status) => {
         if (disposed) return;
-        setConnected(status === "SUBSCRIBED");
-        if (status === "SUBSCRIBED") {
-          fetchRecentRoomEmotes(roomId, { limit: 30 })
-            .then((rows) => {
-              if (!disposed) setEvents((previous) => mergeSnapshots(previous, rows));
-            })
-            .catch(() => {
-              // Realtime INSERT will still display live reactions.
-            });
+        subscribed = status === "SUBSCRIBED";
+        setConnected(subscribed);
+        if (catchupTimer !== null) window.clearTimeout(catchupTimer);
+        if (subscribed) {
+          backfill();
+          // SUBSCRIBED acknowledges the channel, not necessarily the database
+          // replication listener. A second snapshot covers this startup gap.
+          catchupTimer = window.setTimeout(backfill, 4_000);
         }
       });
+
     return () => {
       disposed = true;
-      setConnected(false);
+      subscribed = false;
+      if (catchupTimer !== null) window.clearTimeout(catchupTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
       supabase.removeChannel(channel);
     };
   }, [enabled, roomId]);
 
-  const visible = events.filter((event) =>
-    event.roomId === roomId && event.createdAt <= clock + 500 &&
-    clock - event.createdAt < VISIBLE_MS
-  );
+  const reactionsByUserId = useMemo(() => new Map(
+    visibleRoomLobbyReactions(events, roomId, clock, players)
+      .map((event) => [event.userId, event])
+  ), [events, roomId, clock, players]);
 
-  async function handleSend(emoteId) {
-    if (!enabled || !connected || sending || Date.now() < cooldownUntil) return;
+  async function onSend(emoteId) {
+    if (!enabled || !connected || sendGuard.current || Date.now() < cooldownUntil) return;
+    sendGuard.current = true;
     setSending(true);
     setFeedback("");
     try {
       const response = await sendRoomEmote(roomId, emoteId);
       if (response.accepted) {
-        if (response.event) setEvents((previous) => upsertLatestRoomEmote(previous, response.event));
+        // DB-accepted only: do not show an unconfirmed reaction.
+        if (response.event) {
+          setEvents((previous) => upsertLatestRoomEmote(previous, response.event));
+        }
         setCooldownUntil(Date.now() + 3_000);
       } else {
         setFeedback(errorMessage(response.code));
-        if (response.code === "EMOTE_RATE_LIMIT") setCooldownUntil(Date.now() + 3_000);
+        if (response.code === "EMOTE_RATE_LIMIT") {
+          setCooldownUntil(Date.now() + 3_000);
+        }
       }
     } catch {
       setFeedback("실시간 감정표현 연결을 확인해주세요.");
     } finally {
+      sendGuard.current = false;
       setSending(false);
     }
   }
 
-  if (!enabled) return null;
+  return {
+    enabled, reactionsByUserId, connected, sending, clock, cooldownUntil,
+    feedback, onSend,
+  };
+}
+
+/** One reaction belongs to one occupied player's card; never render for empty seats. */
+export function RoomLobbyEmoteBubble({ event, position = "group" }) {
+  const preset = getKionEmote(event?.emoteId);
+  if (!preset) return null;
   return (
-    <RoomLobbyEmotesView
-      visible={visible}
-      namesByUserId={namesByUserId}
-      connected={connected}
-      sending={sending}
-      clock={clock}
-      cooldownUntil={cooldownUntil}
-      onSend={handleSend}
-      feedback={feedback}
-    />
+    <span
+      key={event.id}
+      className={`wr-kion-card wr-kion-card--${position}`}
+      aria-label={`키온 감정표현: ${preset.label}`}
+      title={preset.label}
+    >
+      <KionEmoteSticker preset={preset} size={64} />
+      <span className="wr-kion-card__label">{preset.label}</span>
+    </span>
   );
 }
 
-/** Presentation-only view for isolated responsive browser QA; no RPCs here. */
-export function RoomLobbyEmotesView({
-  visible = [],
-  namesByUserId = new Map(),
-  connected = false,
-  sending = false,
-  clock = 0,
-  cooldownUntil = 0,
-  onSend,
-  feedback = "",
-}) {
+/** Picker and any failure feedback stay below the roster, not above the HUD. */
+export function RoomLobbyEmoteControls({ state, mode = "group" }) {
+  if (!state?.enabled) return null;
   return (
-    <section className="wr-kion-room-dock" aria-label="대기방 감정표현">
-      <div className="wr-kion-room-dock__info">
-        <strong>키온 감정표현</strong>
-        <span>대기하는 동안 서로 인사하거나 응원해보세요.</span>
-      </div>
-      <div className="wr-kion-room-dock__live" aria-label="최근 감정표현">
-        {visible.length > 0 ? visible.map((event) => {
-          const preset = getKionEmote(event.emoteId);
-          if (!preset) return null;
-          return (
-            <span className="wr-kion-room-dock__reaction" key={event.id}>
-              <span className="wr-kion-room-dock__name">{namesByUserId.get(event.userId) || "탐험가"}</span>
-              <KionEmoteBubble preset={preset} />
-            </span>
-          );
-        }) : <span className="wr-kion-room-dock__empty">아직 감정표현이 없습니다.</span>}
-      </div>
+    <div className={`wr-kion-room-controls wr-kion-room-controls--${mode}`} role="group" aria-label="대기방 키온 감정표현">
+      <span className="wr-kion-room-controls__hint">키온으로 인사하거나 응원해보세요.</span>
       <KionEmotePicker
         presets={KION_EMOTE_PRESETS}
-        onSend={onSend}
-        disabled={!connected || sending || clock < cooldownUntil}
+        onSend={state.onSend}
+        disabled={!state.connected || state.sending || state.clock < state.cooldownUntil}
         label="키온 보내기"
       />
-      {feedback && <p className="wr-kion-room-dock__feedback" role="status">{feedback}</p>}
-    </section>
+      {state.feedback && <span className="wr-kion-room-controls__feedback" role="status">{state.feedback}</span>}
+    </div>
   );
 }

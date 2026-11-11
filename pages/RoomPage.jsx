@@ -23,7 +23,7 @@ import { useAuth } from "../authContext";
 import { supabase } from "../supabaseClient";
 import UserProfileModal from "../components/UserProfileModal";
 import ProfileCard from "../components/ProfileCard.jsx";
-import RoomLobbyEmotes from "../components/RoomLobbyEmotes.jsx";
+import { useRoomLobbyEmotes, RoomLobbyEmoteBubble, RoomLobbyEmoteControls } from "../components/RoomLobbyEmotes.jsx";
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog.jsx";
 import "../css/jungle65Lobby.css";
 import useProfileCards from "../hooks/useProfileCards.js";
@@ -58,6 +58,7 @@ export default function RoomPage() {
   // ----------------------------
   const [room, setRoom] = useState(null);
   const [players, setPlayers] = useState([]);
+  const lobbyEmotes = useRoomLobbyEmotes({ roomId, userId: user?.id, players, roomStatus: room?.status });
   const [pending, setPending] = useState(true);
   const [submitError, setSubmitError] = useState("");
   usePublicWaitingRoomHeartbeat(room, user?.id, setSubmitError);
@@ -574,7 +575,7 @@ export default function RoomPage() {
     );
     const name = resolveDisplayName(card, NAME_FALLBACK.PARTICIPANT);
     return (
-      <li className={`wr-duel-player ${isMe ? "wr-is-me" : ""}`} key={player.user_id}>
+      <li className={`wr-duel-player ${isMe ? "wr-is-me" : ""} ${lobbyEmotes.enabled ? "wr-kion-slot" : ""}`} key={player.user_id}>
         <span className="wr-duel-player-tags">
           {playerIsHost && <HostTag />}
           {isMe && <MeTag />}
@@ -591,6 +592,7 @@ export default function RoomPage() {
           <span className="wr-visually-hidden">{name} 프로필 보기</span>
         </ProfileCard>
         <StatusMark tone="teal">입장 완료</StatusMark>
+        <RoomLobbyEmoteBubble event={lobbyEmotes.reactionsByUserId.get(player.user_id)} position={slot === "a" ? "duel-left" : "duel-right"} />
       </li>
     );
   };
@@ -603,15 +605,14 @@ export default function RoomPage() {
       </LobbyHeader>
       <p className="wr-room-sync" role="status">{syncFailed ? "최신 방 정보 확인 실패 · 마지막 확인 상태를 표시하고 있습니다. 연결을 확인하세요. 3초마다 재확인합니다." : connectionStatus === "SUBSCRIBED" ? "실시간 알림 수신 중 · 대기 중 방 정보를 3초마다 다시 확인합니다." : "실시간 연결 확인 중 · 대기 중 서버 재조회로 상태를 확인합니다."}</p>
 
-      <RoomLobbyEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} />
-
-       <div className="wr-duel-stage">
+      <div className="wr-duel-stage">
         <h2 className="wr-visually-hidden">참가자</h2>
         <ul className="wr-duel-players" aria-label={`참가자 ${players.length} / 2`}>
           {renderPlayer(hostPlayer, "a")}
           <li className="wr-duel-center" aria-hidden="true"><span className="wr65-duel-vs">VS</span><span className="wr-duel-center-label">같은 목표</span></li>
           {renderPlayer(nonHostPlayer, "b")}
         </ul>
+        <RoomLobbyEmoteControls state={lobbyEmotes} mode="duel" />
       </div>
 
       <section className="wr-duel-target room-target-section" aria-labelledby="wr-duel-target-heading" aria-busy={targetBusy}>

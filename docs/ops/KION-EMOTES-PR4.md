@@ -33,4 +33,4 @@
 - Backfill on SUBSCRIBED, after 4s WAL warmup, and on foreground return; a six-second TTL still filters stale reactions.
 - Incoming reaction display is strictly room-scoped; a pending event from a previous room cannot flash in the next race.
 - Client double-submit guard blocks duplicate rapid clicks before React rerender. The old duel game event receiver silently ignores `room_emote`, avoiding debug spam and keeping action processing unchanged.
-- This PR still diverges from the latest PR #57; perform a clean integration rebase before production.
+- This merge commit now includes the latest PR #57 speech-card lobby code. Final Release integration must still incorporate the separate PR #56 backend migration after approval.
