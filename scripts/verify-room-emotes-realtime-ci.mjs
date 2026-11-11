@@ -86,11 +86,11 @@ function addRoom(mode) {
       "id,room_code,host_user_id,status,mode,min_players,max_players,finish_rank_limit,use_items,game_starts_at,game_deadline_at" +
       ") values (" +
       [q(roomId),q(roomCode),q(people[0].userId),q(group?"playing":"waiting"),q(mode),
-       group?3:2,group?3:2,3,group?"false":"true",
+       group?3:2,group?6:2,3,group?"false":"true",
        group?"now()-interval '20 seconds'":"null",
        group?"now()+interval '10 minutes'":"null"].join(",") + ");");
   sql("insert into public.room_players(room_id,user_id,role,nickname_snapshot,player_status,has_finished) values " +
-    people.slice(0,group?3:2).map((person,i) => "(" +
+    people.slice(0,group?6:2).map((person,i) => "(" +
       [roomId,person.userId,i===0?"host":"guest","Kion E2E "+(i+1),group?"playing":"waiting"].map(q).join(",") +
       ",false)").join(",") + ";");
   return roomId;
@@ -143,7 +143,7 @@ async function send(user,roomId,emoteId) {
 async function verifyRoom(mode, roomId) {
   const group = mode === "group";
   const listeners = await Promise.all(
-    people.slice(0,group?3:2).map((user,i) => subscribe(user,roomId,mode+"-"+i))
+    people.slice(0,group?6:2).map((user,i) => subscribe(user,roomId,mode+"-"+i))
   );
   // An admin subscription distinguishes WAL/replication failures from RLS.
   const adminEvents = await subscribe({client:admin}, roomId, mode+"-admin", true);
@@ -180,7 +180,23 @@ async function verifyRoom(mode, roomId) {
     await until(mode+" participants A and B receive C", () =>
       listeners[0].some(e=>e.id===third.event_id) &&
       listeners[1].some(e=>e.id===third.event_id));
-    expected = 3;
+    const memberEventIds = [first.event_id,second.event_id,third.event_id];
+    for (const [index,emoteId] of [[3,"good"],[4,"hurry"],[5,"lol"]]) {
+      const next = await send(people[index],roomId,emoteId);
+      assert.equal(next?.code,"ACCEPTED","Every joined group member can send");
+      memberEventIds.push(next.event_id);
+    }
+    await until("all six players receive every other player's emotes", () =>
+      listeners.every((entries,receiverIndex) =>
+        memberEventIds.every((eventId,senderIndex) =>
+          receiverIndex === senderIndex || entries.some((event) => event.id === eventId))));
+    const outsideSend = await send(people[6],roomId,"hello");
+    assert.equal(outsideSend?.code,"ROOM_NOT_AVAILABLE","Group outsider cannot send");
+    const outsideRead = await people[6].client.from("room_events").select("id")
+      .eq("room_id",roomId).eq("event_type","room_emote");
+    assert.ok(!outsideRead.error);
+    assert.deepEqual(outsideRead.data,[],"Group outsider cannot read");
+    expected = 6;
   } else {
     const outsider = await send(people[2],roomId,"gg");
     assert.equal(outsider?.code,"ROOM_NOT_AVAILABLE");
@@ -192,12 +208,12 @@ async function verifyRoom(mode, roomId) {
   const count = Number(sql("select count(*) from public.room_events where room_id=" +
     q(roomId) + " and event_type='room_emote';"));
   assert.equal(count,expected,mode+" exactly one row per accepted send");
-  console.log("PASS " + mode + " 2/3 real account RPC and Realtime deliveries");
+  console.log("PASS " + mode + " 2/6 real-account RPC and Realtime deliveries, outsider denied");
 }
 
 try {
   // Stable account slots: A=host, B=first guest, C=second guest/duel outsider.
-  for (const index of [1, 2, 3]) await account(index);
+  for (const index of [1, 2, 3, 4, 5, 6, 7]) await account(index);
   const published = Number(sql("select count(*) from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='room_events';"));
   assert.equal(published,1,"room_events must be in Realtime publication");
   const walLevel = sql("show wal_level;");
