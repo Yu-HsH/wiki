@@ -125,14 +125,73 @@ async function installRoutes(ctx){
     await route.fulfill({status:200,json:data,headers:{"access-control-allow-origin":"*"}});
   });
 }
-async function actor(user){
+async function actor(user,{interruptible=false}={}){
   const context=await browser.newContext({viewport:{width:1280,height:850},serviceWorkers:"block",reducedMotion:"reduce"});
   contexts.push(context);
-  await context.addInitScript(session=>localStorage.setItem("sb-127-auth-token",JSON.stringify(session)),user.session);
+  await context.addInitScript(({origin,session,interruptible})=>{
+    if(location.origin!==origin || window!==window.top)return;
+    localStorage.setItem("sb-127-auth-token",JSON.stringify(session));
+    const phases=[];
+    window.duelQaPhases=phases;
+    const recordPhase=()=>{
+      const phase=document.querySelector(".online-recovery-page")
+        ? document.querySelector(".online-recovery-page h1")?.textContent
+        : document.querySelector(".countdown-overlay")?"countdown"
+          : document.querySelector(".vs-overlay")?"vs-intro"
+            : document.querySelector(".mp-game-status")?.textContent?.trim();
+      if(phase && phases.at(-1)?.phase!==phase)phases.push({at:Date.now(),phase});
+    };
+    new MutationObserver(recordPhase).observe(document,{subtree:true,childList:true,characterData:true});
+    if(!interruptible)return;
+    const NativeWebSocket=window.WebSocket;
+    const sockets=new Set();
+    window.WebSocket=class extends NativeWebSocket {
+      constructor(...args){
+        super(...args);
+        if(new URL(this.url).pathname!=="/realtime/v1/websocket")return;
+        sockets.add(this);
+        this.addEventListener("close",()=>sockets.delete(this),{once:true});
+      }
+    };
+    window.closeDuelQaSocket=()=>{
+      const open=[...sockets].filter(socket=>socket.readyState===WebSocket.OPEN);
+      for(const socket of open)socket.close(4000,"isolated duel reconnect test");
+      return open.length;
+    };
+  },{origin:browserUrl,session:user.session,interruptible});
   await installRoutes(context);
   const page=await context.newPage(),errors=[];
+  const realtime=[], requests=[], consoleDiagnostics=[];
   page.on("pageerror",e=>errors.push(e.message));
-  return {user,context,page,errors};
+  page.on("console",message=>{
+    if(["warn","warning","error"].includes(message.type()) && /duel .*?(?:failed|disconnected)/i.test(message.text())){
+      consoleDiagnostics.push(message.text().split("\n",1)[0]);
+    }
+  });
+  page.on("response",response=>{
+    const url=new URL(response.url());
+    if(url.origin===api && url.pathname.startsWith("/rest/v1/")){
+      requests.push({at:Date.now(),path:url.pathname,status:response.status()});
+    }
+  });
+  page.on("websocket",socket=>{
+    if(new URL(socket.url()).pathname!=="/realtime/v1/websocket")return;
+    const record=(direction,{payload})=>{
+      let frame;
+      try{frame=JSON.parse(String(payload));}catch{return;}
+      const [joinRef,ref,topic,event,body]=Array.isArray(frame)
+        ? frame : [frame.join_ref,frame.ref,frame.topic,frame.event,frame.payload];
+      if(!/^realtime:(?:game:|room-events-|room:)/.test(topic))return;
+      const data=body?.data;
+      realtime.push({at:Date.now(),direction,topic,event,ref,joinRef,status:body?.status,
+        table:data?.table,roomStatus:data?.table==="game_rooms"?data.record?.status:undefined,
+        version:data?.record?.state_version});
+    };
+    socket.on("framesent",frame=>record("send",frame));
+    socket.on("framereceived",frame=>record("receive",frame));
+    socket.on("close",()=>realtime.push({at:Date.now(),event:"socket-close"}));
+  });
+  return {user,context,page,errors,realtime,requests,consoleDiagnostics};
 }
 async function browserOpen(actor,route){
   await actor.page.goto(browserUrl+route,{waitUntil:"domcontentloaded",timeout:60000});
@@ -157,6 +216,37 @@ async function writeGroupReady(roomId,users){
 }
 async function roomRow(roomId){
   return JSON.parse(sql("select row_to_json(r) from (select id,status,group_start_title,group_target_title from public.game_rooms where id="+sqlQuote(roomId)+") r;"));
+}
+
+function readDuelState(roomId){
+  return JSON.parse(sql(`select json_build_object(
+    'room',(select row_to_json(r) from (select status,state_version,started_at,finished_reason from public.game_rooms where id=${sqlQuote(roomId)}) r),
+    'players',(select json_agg(row_to_json(p)) from (
+      select user_id,start_page_id,current_page_id,move_count,progress_version from public.room_players where room_id=${sqlQuote(roomId)}
+    ) p));`));
+}
+
+async function captureDuelFailure(actors,roomId,label){
+  let server;
+  try{server=readDuelState(roomId);}catch(error){server={captureError:error.message};}
+  await Promise.all(actors.map(async ({user,page,errors,realtime,requests,consoleDiagnostics},index)=>{
+    const name=path.join(folder,"duel-"+label+"-failure-"+index);
+    const client=await page.evaluate(()=>{
+      const status=document.querySelector(".mp-game-status")?.textContent?.trim();
+      const panel=document.querySelector(".online-recovery-page");
+      const countdown=document.querySelector(".countdown-overlay");
+      const vs=document.querySelector(".vs-overlay");
+      const hud=document.querySelector(".wr-race-hud");
+      const phase=panel?"recovery":countdown?"countdown":vs?"vs-intro":status||"unmounted";
+      return {urlPath:location.pathname,phase,visibility:document.visibilityState,
+        scrollY,phases:window.duelQaPhases,dom:[panel,countdown,vs,hud].filter(Boolean).map(el=>el.outerHTML)};
+    }).catch(error=>({captureError:error.message}));
+    fs.writeFileSync(name+".json",JSON.stringify({
+      client,server,actorId:user.id,errors,realtime,requests,consoleDiagnostics,
+    },null,2));
+    await page.screenshot({path:name+".png",animations:"disabled",timeout:5000}).catch(error=>
+      console.error("Duel diagnostic screenshot failed:",error.message));
+  }));
 }
 async function delayedMoveAndAssert(actor,rpcName,linkTitle,mode){
   const page=actor.page;
@@ -198,7 +288,8 @@ async function group(actors){
   log("group three distinct real accounts; real move_count=1");
   for(const a of actors)assert.equal(a.errors.length,0,"group browser errors: "+a.errors.join(";"));
 }
-async function duel(actors){
+async function duel(actors,{interruptGuest=false}={}){
+  const label=interruptGuest?"reconnect":"normal";
   const r=await matchRoom("duel",actors[0].user);
   await rpc(actors[1].user,"join_duel_room_v2",{p_room_code:r.room_code});
   await rpc(actors[0].user,"set_duel_target_v2",{
@@ -224,39 +315,74 @@ async function duel(actors){
     p_room_id:r.id,p_start_title:first.title,p_start_page_id:first.pageId,
     p_start_revision_id:first.revisionId,
   });
-  for(const a of actors){
-    await a.page.waitForURL(url=>url.pathname==="/multiplayer/game/"+r.id,{timeout:45000});
-    await a.page.waitForFunction(()=>{
-      return document.querySelector(".mp-game-status")?.textContent?.includes("레이스 진행 중");
-    },null,{timeout:90000});
-    const y=await a.page.evaluate(()=>window.scrollY);
-    assert.ok(y<=2,"first playing article must be top-aligned, got "+y);
-    await a.page.screenshot({path:path.join(folder,"duel-initial-"+a.user.alias+".png"),animations:"disabled"});
+  try {
+    await Promise.all(actors.map(({page})=>
+      page.waitForURL(url=>url.pathname==="/multiplayer/game/"+r.id,{timeout:45000})));
+    const guestActor=actors[1];
+    let beforeDisconnect;
+    if(interruptGuest){
+      const guest=guestActor.page;
+      await guest.locator(".vs-overlay").waitFor({state:"visible",timeout:20000});
+      beforeDisconnect=guestActor.realtime.length;
+      assert.ok(await guest.evaluate(()=>window.closeDuelQaSocket())>0,"guest had an open Realtime socket during VS intro");
+      await guest.getByText("실시간 연결이 끊겼습니다.",{exact:false}).waitFor({state:"visible",timeout:10000});
+    }
+    const waitForPlaying=page=>page.waitForFunction(()=>
+      document.querySelector(".mp-game-status")?.textContent?.includes("레이스 진행 중"),
+    null,{timeout:90000});
+    for(const {user,page} of actors){
+      await waitForPlaying(page);
+      const y=await page.evaluate(()=>window.scrollY);
+      assert.equal(y,0,"first playing article must be top-aligned");
+      assert.equal(await page.locator(".wr-hud-doc--current .wr-hud-doc-value").innerText(),first.title);
+      await page.screenshot({path:path.join(folder,"duel-"+label+"-"+user.alias+".png"),animations:"disabled"});
+    }
+    if(interruptGuest){
+      const rejoin=guestActor.realtime.slice(beforeDisconnect);
+      const topics=[`realtime:game:${r.id}:${guestActor.user.id}`,`realtime:room-events-${r.id}:${guestActor.user.id}`];
+      const acknowledgements=topics.map(topic=>{
+        const join=rejoin.find(frame=>frame.direction==="send" && frame.event==="phx_join" && frame.topic===topic);
+        return join && rejoin.find(frame=>frame.direction==="receive" && frame.event==="phx_reply" &&
+          frame.topic===topic && frame.ref===join.ref && frame.status==="ok");
+      });
+      assert.ok(acknowledgements.every(Boolean),"both guest channels rejoined after the socket closed");
+      const rejoinedAt=Math.max(...acknowledgements.map(frame=>frame.at));
+      for(const path of ["/rest/v1/game_rooms","/rest/v1/rpc/get_duel_room_players_v1"]){
+        assert.ok(guestActor.requests.some(request=>request.at>=rejoinedAt && request.path===path && request.status===200),
+          "guest re-read authoritative state after rejoining: "+path);
+      }
+    }
+    const initial=readDuelState(r.id);
+    assert.equal(initial.room.status,"playing");
+    assert.deepEqual(initial.players.map(player=>player.move_count),[0,0],"initial alignment must not count as a move");
+    await Promise.all(actors.map(async ({page})=>{
+      await page.reload({waitUntil:"domcontentloaded"});
+      await waitForPlaying(page);
+      assert.equal(await page.locator(".wr-hud-doc--current .wr-hud-doc-value").innerText(),first.title);
+    }));
+    const restored=readDuelState(r.id);
+    assert.deepEqual(restored.players.map(player=>player.move_count),[0,0],"F5 must not count as a move for either player");
+    for(const a of actors)assert.equal(a.errors.length,0,"duel browser errors: "+a.errors.join(";"));
+    log(label+": two authenticated clients reached the same article at scrollY 0 and restored with zero moves");
+  } catch(error) {
+    await captureDuelFailure(actors,r.id,label).catch(diagnosticError=>
+      console.error("Duel diagnostic capture failed:",diagnosticError.message));
+    throw error;
   }
-  log("two authenticated clients started the same article at scrollY 0");
-  // F5 restore must still show the authoritative ongoing article and not
-  // re-run the new-race countdown alignment (source guard is separate).
-  await actors[1].page.reload({waitUntil:"domcontentloaded"});
-  await actors[1].page.waitForFunction(()=>{
-    return document.querySelector(".mp-game-status")?.textContent?.includes("레이스 진행 중");
-  },null,{timeout:90000});
-  const moves=sql("select move_count from public.room_players where room_id="+sqlQuote(r.id)+
-    " and user_id="+sqlQuote(actors[0].user.id)+";");
-  assert.equal(moves,"0","initial document synchronization must not count as a move");
-  for(const a of actors)assert.equal(a.errors.length,0,"duel browser errors: "+a.errors.join(";"));
-  console.log("PASS #35 duel two-user initial scroll sync and F5 without a fake move");
 }
 try{
   makeFixture();
-  for(let i=0;i<2;i++)await addUser(i+1);
+  for(let i=0;i<4;i++)await addUser(i+1);
   const env={...process.env,VITE_SUPABASE_URL:api,VITE_SUPABASE_ANON_KEY:publicKey,VITE_MAINTENANCE:""};
   server=spawn("npm",["run","dev","--","--host","127.0.0.1","--port","5182","--strictPort"],
     {cwd:repoRoot,env,stdio:"ignore"});
   await waitForServer();
   browser=await chromium.launch({headless:true});
-  const duelActors=[];
-  for(const user of people)duelActors.push(await actor(user));
-  await duel(duelActors);
+  const normal=[await actor(people[0]),await actor(people[1])];
+  await duel(normal);
+  for(const {context} of normal)await context.close();
+  const reconnect=[await actor(people[2]),await actor(people[3],{interruptible:true})];
+  await duel(reconnect,{interruptGuest:true});
   console.log("PASS #35 real duel initial scroll equivalence");
 }finally{
   if(browser)await browser.close().catch(()=>{});
