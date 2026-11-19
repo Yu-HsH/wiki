@@ -1,3 +1,14 @@
+# 현재 상태 — Wiki Race 통합 검토 후보
+
+갱신 **2026-11-20 KST**. 브랜치 `integrate/tutorial-items-group-20261119`의 제품 기준은 **506061abc66e9d2c0c093c7e6e5c6c4fa22b1a2a**이다. 최신 GitHub `main` 기준은 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`이다.
+
+- 기존 튜토리얼·가이드·업적·보상과 1:1·그룹·공개방 기능을 통합했다. 그룹 경기 채널 수명, 8인 대기실, 모바일 1:1 HUD·링크 시트, 1:1 결과 마스코트를 보정했다.
+- 2026-11-20 KST 기준 npm 테스트 890/890, Vite 빌드, UI Phase 2·3·4 각각 88/87/86, 격리 PostgreSQL 17.6 migration 59개와 pgTAP 1,486/1,486을 통과했다.
+- 공식 Packet 13은 최신 migration을 적용한 로컬 스택에서 두 번 모두 12/12, 이벤트 수신 90/90이었다. 실제 로컬 1:1·그룹 경기 종료 및 재경기, 공개방 검색·입장도 통과했다. Wikipedia 문서는 재현 가능한 픽스처를 사용했다.
+- S5 C는 `C_DEFERRED_BY_USER`, 실제 경기 `NOT_RUN`이다. 운영 DB·Edge·환경변수 변경과 Production 배포는 없었다.
+
+## 이전 기록
+
 # 현재 상태 — Jungle65 최종 운영 배포 후보
 
 갱신: **2026-11-03 KST**. 기준 커밋 **0b93be93bf8fa19ae9f74bcfd9174a7b3613a04d** (20b50fb 후 제한 복구·QA 구현). 이 CURRENT를 기록하는 문서 커밋의 부모가 제품 기준이다. 브랜치 **codex/jungle65-release-candidate-20261102**, Draft [PR #8](https://github.com/Yu-HsH/wiki/pull/8). 디자인 PR #7·27e5056, 보안 fdd7190, 이전 후보20b50fb를 보존한다.
