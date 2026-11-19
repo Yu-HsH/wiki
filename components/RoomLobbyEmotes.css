@@ -108,6 +108,9 @@
   .wr-roster-row.wr-kion-slot > .wr-status { bottom: 10px; left: 10px; }
   .wr-roster-row.wr-kion-slot .wr-kion-card { top: 8px; right: 8px; }
   .wr-kion-room-controls { justify-content: space-between; }
+  .wr-kion-room-controls .wr-kion-picker { position: static; margin-inline-start: auto; }
+  .wr-kion-room-controls .wr-kion-picker__panel { width: min(352px, 100%); }
+  .wr-kion-room-controls .wr-kion-picker__trigger { min-height: 44px; }
   .wr-kion-room-controls__hint { font-size: 11px; max-width: 58%; }
 }
 @media (max-width: 359px) {
@@ -213,4 +216,50 @@
     width: 80px;
     min-height: 82px;
   }
+}
+
+/* Eight seats use a compact list without placing reactions or READY over names. */
+.wr-room--group .wr-roster[data-eight-seat] > .wr-roster-row:not(.wr-roster-row--empty) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 4px;
+  min-height: 56px;
+  padding: 4px 6px;
+}
+.wr-room--group .wr-roster[data-eight-seat] > .wr-roster-row.wr-kion-slot {
+  grid-template-columns: minmax(0, 1fr) max-content 48px;
+  grid-template-rows: auto;
+}
+.wr-room--group .wr-roster[data-eight-seat] > .wr-roster-row > .pcard {
+  grid-area: 1 / 1;
+  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+.wr-room--group .wr-roster[data-eight-seat] .pcard-name-row { padding: 0; gap: 2px 4px; }
+.wr-room--group .wr-roster[data-eight-seat] :is(.pcard-name, .pcard-title) { line-height: 1.2; }
+.wr-room--group .wr-roster[data-eight-seat] > .wr-roster-row > .wr-status {
+  grid-area: 1 / 2;
+  position: static;
+  justify-self: end;
+  white-space: nowrap;
+}
+.wr-room--group .wr-roster[data-eight-seat] > .wr-roster-row > .wr-kion-card {
+  grid-area: 1 / 3;
+  position: static;
+  width: 100%;
+  min-height: 0;
+  padding: 2px;
+}
+.wr-room--group .wr-roster[data-eight-seat] .wr-kion-card .wr-kion-sticker {
+  --wr-kion-size: 26px !important;
+  width: 26px;
+  height: 26px;
+}
+.wr-room--group .wr-roster[data-eight-seat] .wr-kion-card__label {
+  font-size: 10px;
+  white-space: normal;
+  line-height: 1.15;
 }

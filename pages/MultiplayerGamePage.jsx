@@ -1984,9 +1984,11 @@ function DuelGameSession() {
       <RaceFrame motion={moveMotion} mode="duel" strip label="1:1 대전" inert={isResult}>
         <RaceHud>
           <HudBrand mode="1:1" sub={useItems ? "아이템" : "일반"} />
-          <HudDoc kind="current" label="현재 문서" title={currentTitle} />
-          <HudArrow />
-          <HudDoc kind="goal" label="목표 문서" title={myTargetTitle} valueClassName="mp-game-goal-value" />
+          <div className="wr-duel-hud-course">
+            <HudDoc kind="current" label="현재 문서" title={currentTitle} />
+            <HudArrow />
+            <HudDoc kind="goal" label="목표 문서" title={myTargetTitle} valueClassName="mp-game-goal-value" />
+          </div>
           <HudStatus>
             <span className="mp-game-status wr-sr-only">
               {phase === PHASE.PLAYING && "레이스 진행 중"}
@@ -2153,7 +2155,7 @@ function DuelGameSession() {
           scene={duelEndScene} ready={endPlayersReady} eligible={reachedPlayingRef.current && !resultRecoveredRef.current}
           myPlayer={myPlayer} opponentPlayer={opponentPlayer}>
         <ResultScreen mode="duel" tone={duelOutcome.tone} layer="overlay" titleId="wr-duel-result-title" resultKey={roomId} motionEligible={false} confirmed={room?.status === "finished"} testId="duel-result">
-          <ResultScene reached={duelOutcome.reached} celebration={duelOutcome.celebration} destination={commonTargetTitle || null} recordedAt={room?.finished_at} />
+          <ResultScene reached={duelOutcome.reached} celebration={duelOutcome.celebration} mascot={duelOutcome.mascot} destination={commonTargetTitle || null} recordedAt={room?.finished_at} />
           <ResultCard>
             <ResultOutcome
               kicker={duelOutcome.kicker}

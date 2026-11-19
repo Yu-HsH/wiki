@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../supabaseClient.js";
 import useProfileCards from "./useProfileCards.js";
 import { buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
@@ -7,8 +7,11 @@ import { buildProfileCard, mergeRewardSlots } from "../utils/profileCard.js";
  * Shared profile-card source for header and HOME explorer panel.
  * Equipped icon -> old image -> initial -> neutral default.
  */
+export const ProfileCardReadContext = createContext(true);
+
 export default function useOwnProfileCard(user, level = null) {
-  const userId = !user?.isGuest && user?.id ? user.id : null;
+  const readsEnabled = useContext(ProfileCardReadContext);
+  const userId = readsEnabled && !user?.isGuest && user?.id ? user.id : null;
   const equipped = useProfileCards(userId ? [userId] : []);
   const [legacy, setLegacy] = useState({ userId: null, url: null });
 

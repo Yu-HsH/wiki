@@ -12,10 +12,11 @@ export function ExplorerAvatar({ card }) {
 
 // onNavigate (optional): a page that must clean up first (waiting rooms) receives the target path
 // instead of the router navigating directly. HOME/PLAY never pass it.
-export function WikiRaceHeader({ user, level, onLogout, onNavigate }) {
+export function WikiRaceHeader({ user, level, onLogout, onNavigate, practice = false }) {
   const ownCard = useOwnProfileCard(user, level);
   const [newsUnread, setNewsUnread] = useState(false);
   useEffect(() => {
+    if (practice) return undefined;
     let mounted = true;
     const sync = async () => {
       let latestId = getLatestNoticeId();
@@ -33,7 +34,7 @@ export function WikiRaceHeader({ user, level, onLogout, onNavigate }) {
       window.removeEventListener("wiki-race-news-read", sync);
       window.removeEventListener("focus", sync);
     };
-  }, []);
+  }, [practice]);
 
   const { pathname } = useLocation();
   const guard = (to) => onNavigate ? { onClick: (event) => { event.preventDefault(); onNavigate(to); } } : {};
@@ -47,7 +48,7 @@ export function WikiRaceHeader({ user, level, onLogout, onNavigate }) {
     </nav>
     <div className="wr-header-user">
       {user.isGuest ? <span>게스트 탐험가</span> : <NavLink to="/profile" aria-label={`${user.displayName} 프로필`} {...guard("/profile")}><span>{level !== null && `Lv.${level} · `}{user.displayName}</span><ExplorerAvatar card={ownCard} /></NavLink>}
-      <button type="button" onClick={onLogout}>로그아웃</button>
+      <button type="button" onClick={onLogout}>{practice ? "연습 종료" : "로그아웃"}</button>
     </div>
   </header>;
 }
@@ -62,7 +63,7 @@ export function ExpeditionTrail() {
 
 const SHARED_HUB_VIEWS = new Set(["home", "play", "ranking", "achievements", "updates"]);
 
-export default function WikiRaceShell({ user, level, onLogout, onNavigate, view = "home", children }) {
+export default function WikiRaceShell({ user, level, onLogout, onNavigate, practice, view = "home", children }) {
   const sideArt = useRef(null);
   useEffect(() => {
     const art = sideArt.current;
@@ -89,7 +90,7 @@ export default function WikiRaceShell({ user, level, onLogout, onNavigate, view 
     </div>
     <div className="wr-shell">
     <a className="wr-skip-link" href="#wr-content">본문 바로가기</a>
-    <WikiRaceHeader user={user} level={level} onLogout={onLogout} onNavigate={onNavigate} />
+    <WikiRaceHeader user={user} level={level} onLogout={onLogout} onNavigate={onNavigate} practice={practice} />
     <main id="wr-content">{children}</main>
   </div></div>;
 }

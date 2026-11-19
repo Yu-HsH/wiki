@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 test("single click counter only commits after a successful page/move", async () => {
-  const source = await readFile(new URL("../pages/GamePage.jsx", import.meta.url), "utf8");
+  const source = (await readFile(new URL("../pages/GamePage.jsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
   const start = source.indexOf("const handleMove = useCallback(");
   const end = source.indexOf("\n    },\n    [", start);
   assert.ok(end > start);

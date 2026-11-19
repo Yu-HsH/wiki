@@ -595,6 +595,10 @@ function wirePage(page, record) {
   });
   page.on("console", (message) => {
     if (message.type() === "error") record.consoleErrors.push(sanitizedDiagnostic(message.text()));
+    if (message.type() === "debug" && message.text().startsWith("[group-result] ")) {
+      const trace = JSON.parse(message.text().slice("[group-result] ".length));
+      (record.clientTrace ??= []).push({ ...trace, browserObservedAt: new Date().toISOString() });
+    }
   });
   page.on("request", (request) => {
     const url = request.url();
@@ -649,13 +653,18 @@ function recordRealtime(record, socket, direction, data) {
     socket.joinRef = frame.joinRef || frame.ref || "";
     socket.joinTopic = frame.topic;
     socket.joinSentAt = now;
+    socket.activeJoin = false;
   }
-  if (direction === "received" && frame.event === "phx_reply" && frame.status === "ok") {
-    const isJoinReply = !socket.joinRef || !frame.ref || frame.ref === socket.joinRef || frame.joinRef === socket.joinRef;
-    if (isJoinReply && !socket.joinAckStatus) {
-      socket.joinAckStatus = "ok";
-      socket.joinedAt = now;
+  if (socket.joinTopic === frame.topic && socket.joinRef) {
+    if (direction === "received" && frame.event === "phx_reply" && frame.ref === socket.joinRef) {
+      socket.activeJoin = frame.status === "ok";
+      if (socket.activeJoin) {
+        socket.joinAckStatus = "ok";
+        socket.joinedAt = now;
+      }
     }
+    const closing = direction === "sent" ? frame.event === "phx_leave" : ["phx_close", "phx_error"].includes(frame.event);
+    if (closing && (!frame.joinRef || frame.joinRef === socket.joinRef)) socket.activeJoin = false;
   }
   state.realtimeEvents.push({
     contextId: record.contextId,
@@ -667,7 +676,9 @@ function recordRealtime(record, socket, direction, data) {
     topic: frame.topic,
     event: frame.event,
     status: frame.status,
-    joinRef: socket.joinRef || frame.joinRef || "",
+    joinRef: frame.joinRef || "",
+    ref: frame.ref || "",
+    activeJoin: socket.activeJoin === true,
     joinAckStatus: socket.joinAckStatus || "",
     joinedAt: socket.joinedAt || null,
     postgresEventId: frame.postgresEventId || "",
@@ -786,6 +797,11 @@ async function installWikiSnapshotIntercept(context, record) {
 
   await context.route(wikipediaApiPattern, fulfillWikipediaFixture);
   await context.route(wikipediaSummaryPattern, fulfillWikipediaFixture);
+  // Login reaches the lobby, whose highlights request one dated Korean featured feed.
+  await context.route(/^https:\/\/ko\.wikipedia\.org\/api\/rest_v1\/feed\/featured\/\d{4}\/\d{2}\/\d{2}$/, async route => {
+    if (route.request().method() !== "GET") return route.fallback();
+    await route.fulfill({ status: 200, json: {} });
+  });
 }
 
 async function createActor(user, scenarioName) {
@@ -815,6 +831,9 @@ async function createActor(user, scenarioName) {
   state.contexts.push(record);
   state.cleanup.contextsCreated += 1;
   await installWikiSnapshotIntercept(context, record);
+  await context.addInitScript((origin) => {
+    if (location.origin === origin) localStorage.setItem("wiki-race-group-debug", "1");
+  }, new URL(baseUrl).origin);
   const page = await context.newPage();
   wirePage(page, record);
   try {
@@ -913,7 +932,7 @@ async function joinRoomUi(actor, code) {
   await actor.page.goto(`${baseUrl}/multiplayer`, { waitUntil: "domcontentloaded" });
   await clickGroupMode(actor.page);
   const panel = actor.page.locator(".mp-mode-panel");
-  await panel.locator('input[placeholder="ROOM CODE"]').fill(code);
+  await panel.getByRole("textbox", { name: "단체 방 코드" }).fill(code);
   await panel.getByRole("button", { name: "참가", exact: true }).click();
   await actor.page.waitForURL((url) => /\/multiplayer\/group\/room\//.test(url.pathname), { timeout: 20_000 });
 }
@@ -1023,11 +1042,23 @@ async function startAndActivate(roomId, actors, { viaUi = true } = {}) {
   }
   const active = await roomRow(roomId);
   assertCondition(["playing", "grace_period"].includes(active?.status), `room did not activate: ${active?.status}`);
-  for (const actor of actors) {
+  const navigation = await Promise.all(actors.map(async actor => {
+    const socketCount = actor.record.sockets.length;
     await actor.page.goto(`${baseUrl}/multiplayer/group/game/${roomId}`, { waitUntil: "domcontentloaded" });
+    return { actor, socketCount };
+  }));
+  // Verify the new race channel after navigation before issuing a race action.
+  const raceReadyDeadline = Date.now() + 20_000;
+  while (Date.now() < raceReadyDeadline) {
+    const ready = navigation.every(({ actor, socketCount }) => {
+      const topic = `realtime:group-game:${roomId}:${actor.user.id}`;
+      return actor.record.sockets.slice(socketCount).some(socket =>
+        !socket.closedAt && socket.joinTopic === topic && socket.activeJoin);
+    });
+    if (ready) return active;
+    await wait(250);
   }
-  await wait(1_500);
-  return active;
+  throw new Error("Active race channel was not acknowledged for every actor before the first action");
 }
 
 async function moveToRoomTarget(roomId, actor) {
@@ -1307,6 +1338,8 @@ async function runScenario(config, callback, options = {}) {
     assertScenarioStartCardinality(config, result, actors);
     await callback({ actors, result, config });
     finalizeScenarioRealtimeMetrics(config, result);
+    const pageErrors = actors.flatMap(({ record }) => record.pageErrors);
+    assertCondition(pageErrors.length === 0, `uncaught browser errors: ${pageErrors.join("; ")}`);
     result.passed = true;
     console.log(`SCENARIO PASS ${config.name}`);
   } catch (error) {
@@ -1337,8 +1370,7 @@ async function setupRoom(config, actors, result, { viaUi = true } = {}) {
   const code = await roomCode(roomId);
   for (const actor of actors.slice(1)) await joinRoomUi(actor, code);
   await waitForRoomPlayers(roomId, actors.length);
-  // Phase 2 (2026-10-07): 대기실 제목이 "그룹 대기실"로 바뀌었다.
-  await waitBody(actors[0].page, (body) => body.includes("그룹 대기실"));
+  await actors[0].page.getByRole("heading", { name: "탐험가 집결 캠프", exact: true }).waitFor();
   recordScenarioRoomCardinality(config, result, roomId);
   markRealtimeRequired(actors);
   return roomId;
@@ -1384,8 +1416,7 @@ async function runAllScenarios() {
     const before = await roomRow(roomId);
     actors[0].record.rpcCalls.length = 0;
     await actors[0].page.reload({ waitUntil: "domcontentloaded" });
-    // Phase 2 (2026-10-07): 대기실 제목이 "그룹 대기실"로 바뀌었다.
-    await waitBody(actors[0].page, (body) => body.includes("그룹 대기실"));
+    await actors[0].page.getByRole("heading", { name: "탐험가 집결 캠프", exact: true }).waitFor();
     const after = await roomRow(roomId);
     assertCondition(before.host_user_id === after.host_user_id, "waiting host changed after F5");
     assertCondition(!actors[0].record.rpcCalls.some((call) => call.rpc === "leave_group_waiting_room"), "waiting host F5 called leave RPC");
@@ -1554,7 +1585,7 @@ async function runAllScenarios() {
       await ninth.page.goto(`${baseUrl}/multiplayer`, { waitUntil: "domcontentloaded" });
       await clickGroupMode(ninth.page);
       const panel = ninth.page.locator(".mp-mode-panel");
-      await panel.locator('input[placeholder="ROOM CODE"]').fill(await roomCode(roomId));
+      await panel.getByRole("textbox", { name: "단체 방 코드" }).fill(await roomCode(roomId));
       await panel.getByRole("button", { name: "참가", exact: true }).click();
       await waitBody(ninth.page, (body) => body.includes("단체 방 참가 실패"));
       recordScenarioRoomCardinality(config, result, roomId, ninth.user.id);
@@ -1653,6 +1684,7 @@ async function writeArtifacts(exitCode) {
     userAlias: record.userAlias,
     pageErrors: record.pageErrors,
     consoleErrors: record.consoleErrors,
+    clientTrace: record.clientTrace ?? [],
     criticalResponses: record.criticalResponses,
     rpcCalls: record.rpcCalls,
     sockets: record.sockets,

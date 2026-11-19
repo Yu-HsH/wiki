@@ -1,0 +1,28 @@
+.wr-tutorial-app-controls{max-width:1200px;margin:12px auto;padding:12px 18px;border:1px solid #c7a55f;border-radius:12px;background:#fff8e5;color:#244338}
+.wr-tutorial-app-controls p{margin:0 0 8px}
+.wr-tutorial-app-controls .wr-tutorial-launcher{margin:8px 0}
+.wr-tutorial-app-buttons,.wr-tutorial-entry{display:flex;gap:8px;flex-wrap:wrap}
+.wr-tutorial-entry{margin:0 0 16px}
+.wr-tutorial-app-controls button,.wr-tutorial-entry button{min-height:44px}
+.wr-tutorial-app-controls button:focus-visible,.wr-tutorial-entry button:focus-visible{outline:3px solid #168a83;outline-offset:3px}
+@media(max-width:600px){.wr-tutorial-app-controls{margin:8px 12px;padding:12px}.wr-tutorial-app-buttons button{flex:1 1 auto}}
+
+.wr-veil[data-tutorial-practice] .wr-veil-cue .wr-veil-start-visual{visibility:hidden}
+.wr-veil[data-tutorial-practice] .wr-veil-trigger{inset:auto auto 24px 6.1%;width:auto;height:auto;max-width:calc(100% - 44px)}
+
+.wr-page.wr-tutorial-app-practice{min-height:0;padding:24px 16px 40px}
+.wr-tutorial-app-practice>.wr-tutorial-practice{max-width:1088px;margin:0 auto}
+
+.wr-tutorial-growth-slot>.wr-result{padding:16px;border:1px solid var(--wr-frame);border-radius:12px;background:var(--wr-paper);color:var(--wr-ink)}
+
+/* The shared audio controls use layer 20000; practice guidance must cover them. */
+.wr-tutorial-layer{z-index:30000}
+
+/* Active guidance already provides pause/exit; recover page space until it is paused. */
+.wr-tutorial-app-controls[data-status="active"]{display:none}
+.wr-tutorial-app-controls[data-status="active"] ~ .wr-audio{display:none}
+
+/* Leave breathing room for the bottom welcome bubble while showing HOME and its CTA. */
+@media(max-width:720px){.wr-veil[data-tutorial-practice]{--veil-mobile-height:400px}}
+/* Nested practice anchor wrappers already size each document; keep its title readable. */
+@media(max-width:760px){.wr-tutorial-app-practice :is(.wr-hud-doc--current,.wr-hud-doc--goal){max-width:none}}

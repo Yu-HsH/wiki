@@ -63,7 +63,7 @@
   .wr-race-emotes__reaction { padding: 2px 5px; }
   .wr-race-emotes__reaction .wr-kion-bubble__label { display: none; }
   .wr-race-emotes__sender { max-width: 56px; }
-  .wr-race-emotes .wr-kion-picker__trigger { padding: 6px 7px; font-size: 11px; }
+  .wr-race-emotes .wr-kion-picker__trigger { min-height: 44px; padding: 6px 7px; font-size: 11px; }
   .wr-race-emotes__mute { padding: 3px 4px; }
 }
 @media(max-width: 359px) {

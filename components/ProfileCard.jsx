@@ -7,6 +7,8 @@ import {
   resolveDisplayName,
 } from "../utils/profileCard.js";
 import { frameTier } from "../utils/rewardTokens.js";
+import useRewardArt from "../hooks/useRewardArt.js";
+import RewardArtImage from "./RewardArtImage.jsx";
 
 /**
  * 프로필 카드 — C5 §2의 형태를 받아 §3 규칙대로 그린다.
@@ -43,6 +45,8 @@ export default function ProfileCard({
   const background = densityShows(density, "background") ? card?.background ?? null : null;
   // null = 토큰 없음(옛 DB 포함) → 기본 링. tier-1~3 · special은 DESIGN-SYSTEM §2.
   const tier = frame ? frameTier(frame) : null;
+  const frameArt = useRewardArt("frame", frame);
+  const backgroundArt = useRewardArt("background", background);
 
   const rootClassName = [
     "pcard",
@@ -51,6 +55,8 @@ export default function ProfileCard({
     frame ? "pcard--framed" : "",
     tier ? `pcard--frame-${tier}` : "",
     background ? "pcard--backed" : "",
+    frameArt.ready ? "pcard--art-frame-ready" : "",
+    backgroundArt.imageProps ? "pcard--art-background" : "",
     interactive ? "pcard--interactive" : "",
     className,
   ]
@@ -71,16 +77,19 @@ export default function ProfileCard({
       }
     : {};
 
-  return (
-    <div className={rootClassName} {...interactiveProps}>
-      {/* special 프레임의 회전 링은 아바타(overflow: hidden) 바깥에 그려야 해서 감싼다 */}
-      {tier === "special" ? (
+  // Keep the special ring outside the clipped avatar during loading/error fallback.
+  const avatar = tier === "special" ? (
         <span className="pcard-avatar-ring">
           <ProfileAvatar card={card} size={size} nameFallback={nameFallback} />
         </span>
       ) : (
         <ProfileAvatar card={card} size={size} nameFallback={nameFallback} />
-      )}
+      );
+
+  return (
+    <div className={rootClassName} {...interactiveProps}>
+      <RewardArtImage presentation={backgroundArt} className="pcard-background-art" />
+      {frameArt.imageProps ? <span className="pcard-art-frame-shell">{avatar}<RewardArtImage presentation={frameArt} className="pcard-frame-art" /></span> : avatar}
 
       <div className="pcard-body">
         <div className="pcard-name-row">

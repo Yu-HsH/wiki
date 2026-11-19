@@ -62,10 +62,18 @@ export function DuelFeedbackLane({ children }) {
     const node = lane.current, frame = node?.closest('.wr-race');
     if (!frame) return;
     let raf = 0;
-    const measure = () => frame.style.setProperty('--duel-feedback-bottom', `${Math.max(0, node.getBoundingClientRect().bottom)}px`);
+    const dock = frame.querySelector('.wr-race-dock');
+    const measure = () => {
+      frame.style.setProperty('--duel-feedback-bottom', `${Math.max(0, node.getBoundingClientRect().bottom)}px`);
+      if (dock) {
+        const inset = Math.max(0, window.innerHeight - dock.getBoundingClientRect().top);
+        frame.style.setProperty('--duel-dock-inset', `${inset}px`);
+      }
+    };
     const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(measure); };
     const observer = new ResizeObserver(schedule);
     observer.observe(node);
+    if (dock) observer.observe(dock);
     for (const sibling of frame.children) if (sibling !== node) observer.observe(sibling);
     window.addEventListener('resize', schedule);
     document.addEventListener('scroll', schedule, true);
@@ -75,6 +83,7 @@ export function DuelFeedbackLane({ children }) {
       window.removeEventListener('resize', schedule);
       document.removeEventListener('scroll', schedule, true);
       frame.style.removeProperty('--duel-feedback-bottom');
+      frame.style.removeProperty('--duel-dock-inset');
     };
   }, []);
   return <div ref={lane} className="wr-duel-feedback-lane" aria-label="아이템 결과">{children}</div>;

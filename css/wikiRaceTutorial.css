@@ -1,0 +1,59 @@
+/* Register in appStyles.js only after manager integration. Fixture HTML links this explicitly. */
+.wr-tutorial-layer { position:fixed; inset:0; z-index:10000; pointer-events:none; color:#203d2f; font:15px/1.45 system-ui,sans-serif; }
+.wr-tutorial-dim { position:absolute; inset:0; pointer-events:none; }
+.wr-tutorial-target { position:fixed; box-sizing:border-box; border:3px solid #edc76c; border-radius:12px; pointer-events:none; animation:wr-tutorial-pulse 900ms ease-out 1; }
+.wr-tutorial-arrow { position:fixed; color:#ffe5a0; font-size:25px; line-height:28px; pointer-events:none; animation:wr-tutorial-nudge 850ms ease-in-out 2; }
+.wr-tutorial-bubble { position:fixed; pointer-events:auto; box-sizing:border-box; padding:14px; border:1px solid #ceb982; border-radius:18px; background:#fff9e9; box-shadow:0 14px 48px #071b1455; overflow:auto; overscroll-behavior:contain; }
+.wr-tutorial-bubble h2 { margin:2px 0; font-size:18px; line-height:1.25; color:#203d2f; }
+.wr-tutorial-bubble p { margin:10px 0; font-size:15px; }
+.wr-tutorial-heading { display:flex; align-items:center; gap:10px; }
+.wr-tutorial-heading small { font-size:11px; letter-spacing:.03em; }
+.wr-tutorial-kion { display:block; flex:0 0 100px; height:94px; margin-top:-14px; }
+.wr-tutorial-kion svg,.wr-tutorial-kion img { display:block; width:100%; height:100%; object-fit:contain; }
+.wr-tutorial-close { margin-left:auto; align-self:flex-start; min-width:32px; font-size:24px !important; }
+.wr-tutorial-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.wr-tutorial-secondary { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px; margin-top:6px; }
+.wr-tutorial-bubble button,.wr-tutorial-launcher button,.wr-tutorial-practice>button { border:1px solid #bca66c; background:#f5e8bd; border-radius:9px; color:#203d2f; padding:7px 9px; min-height:36px; font:inherit; font-size:13px; cursor:pointer; }
+.wr-tutorial-bubble button:disabled { opacity:.45; cursor:default; }
+.wr-tutorial-bubble button:focus-visible,.wr-tutorial-launcher button:focus-visible,.wr-tutorial-practice :focus-visible,[data-tutorial-anchor]:focus-visible { outline:3px solid #ad6e00; outline-offset:4px; }
+.wr-tutorial-secondary button { padding:3px 6px; min-height:30px; border-color:transparent; background:transparent; font-size:12px; }
+.wr-tutorial-progress { margin-top:10px; height:4px; overflow:hidden; background:#e2ddcb; border-radius:3px; }
+.wr-tutorial-progress span { display:block; height:100%; background:#6c8d49; }
+.wr-tutorial-launcher { padding:16px; border:1px solid #d1c299; border-radius:14px; background:#fff9e9; color:#203d2f; }
+.wr-tutorial-launcher button { margin:4px; }
+.wr-tutorial-notice { padding:10px; border:1px solid #d3c38c; background:#fff5ce; color:#37482d; border-radius:8px; }
+.wr-tutorial-practice { width:100%; min-width:0; }
+.wr-tutorial-practice .wr-race-hud { position:static; display:flex; flex-wrap:wrap; gap:8px; padding:12px; background:#fff9e9; border:1px solid #d7ccb3; }
+.wr-tutorial-practice .wr-race-hud>span { display:flex; align-items:center; }
+.wr-tutorial-practice .wiki-shell { margin-top:16px; }
+.wr-tutorial-practice .wiki-content { min-height:120px; }
+.wr-tutorial-result { background:#fff9e9; padding:20px; border:1px solid #d1c299; border-radius:14px; }
+@keyframes wr-tutorial-pulse { 0% { box-shadow:0 0 0 8px #edc76c77; } 100% { box-shadow:0 0 0 0 #edc76c00; } }
+@keyframes wr-tutorial-nudge { 50% { transform:translateX(8px); } }
+@media(max-width:600px) { .wr-tutorial-kion { flex-basis:68px; height:66px; margin-top:-7px; } .wr-tutorial-bubble { padding:12px; } .wr-tutorial-heading { gap:7px; } .wr-tutorial-bubble h2 { font-size:16px; } }
+@media(prefers-reduced-motion:reduce) { .wr-tutorial-layer *, .wr-tutorial-layer *::before, .wr-tutorial-layer *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+
+.wr-tutorial-growth-menu { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0; }
+.wr-tutorial-growth-menu button,.wr-tutorial-growth-controls button { font:inherit; color:#203d2f; background:#f6edcf; border:1px solid #bda870; border-radius:9px; min-height:44px; padding:9px 12px; }
+.wr-tutorial-growth button:disabled { opacity:.5; cursor:default; }
+.wr-tutorial-growth-card { max-width:420px; padding:14px; background:#fff9e9; border:1px solid #d1c299; border-radius:12px; margin:18px 0; }
+.wr-tutorial-growth-controls,.wr-tutorial-growth-slot article { padding:16px; background:#fff9e9; border:1px solid #d1c299; border-radius:12px; margin:18px 0; }
+.wr-tutorial-growth-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.wr-tutorial-growth-controls p { flex:0 0 100%; margin:0 0 6px; }
+
+
+/* Keep the page legible: dim is a plain SVG fill, never backdrop blur. */
+.wr-tutorial-context { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 12px; color:#5d6d54; font-size:11px; line-height:1.35; }
+.wr-tutorial-context ol { display:flex; align-items:center; flex-wrap:wrap; gap:5px; list-style:none; padding:0; margin:0; }
+.wr-tutorial-context li+li::before { content:'›'; margin-right:5px; color:#a18e5b; }
+.wr-tutorial-context li[aria-current='step'] { color:#214f37; font-weight:750; }
+.wr-tutorial-context>span { flex-shrink:0; white-space:nowrap; }
+.wr-tutorial-bubble.is-overview .wr-tutorial-kion { flex-basis:48px; height:46px; margin-top:-3px; }
+.wr-tutorial-bubble.is-overview h2 { font-size:16px; }
+@media(max-width:600px) { .wr-tutorial-context { gap:5px; font-size:10px; margin-bottom:10px; } .wr-tutorial-context ol { gap:4px; } .wr-tutorial-context li+li::before { margin-right:4px; } }
+
+.wr-tutorial-bubble.is-overview .wr-tutorial-context { margin-bottom:6px; }
+.wr-tutorial-bubble.is-overview p { margin:8px 0; }
+.wr-tutorial-bubble.is-overview .wr-tutorial-progress { margin-top:8px; }
+.wr-tutorial-bubble.is-overview .wr-tutorial-actions { margin-top:8px; }
+.wr-tutorial-bubble.is-overview .wr-tutorial-secondary { margin-top:4px; }

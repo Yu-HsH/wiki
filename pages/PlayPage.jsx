@@ -18,7 +18,7 @@ export default function PlayPage({ isGuest, onSingle, onMultiplayer }) {
       </svg>
       {modes.map(mode => <article key={mode.id} className="wr-mode" aria-labelledby={`wr-mode-${mode.id}`}>
         <img className="wr-vignette wr65-mode-art" src={`/assets/wiki-race/jungle65/${mode.id === "duel" ? "duel" : mode.id === "group" ? "group" : "solo"}-expedition.webp`} width="480" height="148" alt="" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = `/assets/wiki-race/route-${mode.id}.svg`; }} />
-        <div className="wr-mode-heading"><div><span className="wr-kicker">{mode.kicker}</span><h2 className="wr-mode-title" id={`wr-mode-${mode.id}`}>{mode.title}</h2></div><span className="wr-mode-ordinal" aria-hidden="true">{mode.ordinal}</span></div>
+        <div className="wr-mode-heading" data-tutorial-protect={mode.id === "solo" ? "" : undefined} data-tutorial-anchor={mode.id === "duel" ? "play.modes" : undefined}><div><span className="wr-kicker">{mode.kicker}</span><h2 className="wr-mode-title" id={`wr-mode-${mode.id}`}>{mode.title}</h2></div><span className="wr-mode-ordinal" aria-hidden="true">{mode.ordinal}</span></div>
         <p className="wr-mode-tagline">{mode.tagline}</p>
         <p className="wr-mode-desc">{mode.description}</p>
         <ul className="wr-mode-tags" aria-label={`${mode.title} 특징`}>{mode.tags.map(tag => <li key={tag}>{tag}</li>)}</ul>
@@ -28,7 +28,7 @@ export default function PlayPage({ isGuest, onSingle, onMultiplayer }) {
           <p className="wr-mode-brief"><strong>준비 순서</strong>{mode.next}</p>
           <p className="wr-mode-brief"><strong>아이템 안내</strong>{mode.id === "solo" ? "아이템 없음 · 문서 링크만으로 탐험합니다." : mode.id === "duel" ? "방 생성 시 아이템전 선택. 실제 역할별 아이템은 로비의 규칙 · 아이템 안내에서 확인하세요." : "아이템 없이 문서 속 링크로 경쟁합니다."}</p>
         </details>
-        <button type="button" className="wr-mode-action" aria-label={`${mode.title} · ${isGuest && mode.id !== "solo" ? "로그인 필요" : mode.action}`} aria-disabled={isGuest && mode.id !== "solo"} onClick={() => {
+        <button type="button" data-tutorial-anchor={"play." + mode.id} className="wr-mode-action" aria-label={`${mode.title} · ${isGuest && mode.id !== "solo" ? "로그인 필요" : mode.action}`} aria-disabled={isGuest && mode.id !== "solo"} onClick={() => {
           if (mode.id === "solo") onSingle();
           else if (!isGuest) onMultiplayer(mode.id);
         }}>{isGuest && mode.id !== "solo" ? "로그인 후 이용 가능" : <>{mode.action}<span aria-hidden="true">→</span></>}</button>
