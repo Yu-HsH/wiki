@@ -1,3 +1,13 @@
+# 현재 상태 — PR #62 1:1 재연결 후속 검증
+
+갱신 **2026-11-20 KST**. 제품 기준 **0b111211650e305fb2dcf84e9c9224b3f9eb3f1c**, 브랜치 `integrate/tutorial-items-group-20261119`, 최신 `main` 기준 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`, [Draft PR #62](https://github.com/Yu-HsH/wiki/pull/62).
+
+- VS 연출 중 게스트 Realtime이 끊겼다가 복구될 때, 연결이 끊겼던 채널이 모두 재가입하면 서버 방·참가자 상태를 다시 읽는다. 복구 중 카운트다운은 시작하지 않는다.
+- 2026-11-20 KST 격리 Auth·Postgres·Realtime에서 일반 및 재연결 경로를 두 차례 검증했다. 양쪽 첫 문서 `scrollY=0`, F5 후 양쪽 서버 이동 횟수 0. npm 890/890, 빌드, UI Phase 2·3·4 88/87/86, Packet 13 12/12·90/90, 1:1·그룹 종료·재경기와 공개방 검사 통과.
+- S5 C `C_DEFERRED_BY_USER` / `NOT_RUN`. 운영 DB·Edge·환경변수·Production 변경 0.
+
+## 기존 통합 검증 기록
+
 # 현재 상태 — Wiki Race 통합 검토 후보
 
 갱신 **2026-11-20 KST**. 브랜치 `integrate/tutorial-items-group-20261119`의 제품 기준은 **506061abc66e9d2c0c093c7e6e5c6c4fa22b1a2a**이다. 최신 GitHub `main` 기준은 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`이다.
