@@ -122,6 +122,7 @@ function mapSupabaseUser(user) {
     username: meta.username || "", // 실제 사용자 아이디
     nickname: meta.nickname || "", // 표시될 닉네임
     displayName: meta.nickname || meta.username || meta.display_name || fallbackName,
+    authProvider: user.app_metadata?.provider || "", // Auth 공급자 힌트; 권한 판정에 사용 금지
     mode: "supabase", // 로그인 모드 구분
   };
 }

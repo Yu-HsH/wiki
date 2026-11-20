@@ -4,6 +4,8 @@ import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
 import { LOBBY_PATH } from "../utils/appRoutes";
+import { supabase } from "../supabaseClient.js";
+import { beginOAuthSignIn, enabledOAuthProviders, OAUTH_PROVIDER_NAMES } from "../utils/oauthFlow.js";
 
 /* ── Zod 유효성 검사 스키마 ── */
 // 로그인 시: 아이디(2자+), 비밀번호(6자+) 필수
@@ -120,6 +122,18 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [debugError, setDebugError] = useState("");
+  const [oauthError, setOauthError] = useState("");
+  const oauthProviders = enabledOAuthProviders();
+  const onOAuthLogin = async provider => {
+    setOauthError("");
+    setPending(true);
+    try {
+      await beginOAuthSignIn(supabase.auth,provider,window.location.origin);
+    } catch(error) {
+      setOauthError(error?.message || "소셜 로그인을 시작하지 못했습니다.");
+      setPending(false);
+    }
+  };
 
   const {
     register,
@@ -311,6 +325,20 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
               <Link to="/terms">이용약관</Link>
             </div>
           </form>
+          {isSupabaseConfigured && oauthProviders.length > 0 && (
+            <div className="wr-oauth-signin">
+              <p className="wr-oauth-divider"><span>또는 소셜 계정으로 시작하기</span></p>
+              {oauthProviders.map(provider => (
+                <button type="button" key={provider} disabled={pending}
+                  className={`wr-oauth-provider wr-oauth-provider--${provider}`}
+                  onClick={() => void onOAuthLogin(provider)}>
+                  {OAUTH_PROVIDER_NAMES[provider]}로 계속하기
+                </button>
+              ))}
+              <p className="wr-oauth-note">기존 게임 기록이 있다면 먼저 아이디·비밀번호로 로그인하고 프로필에서 계정을 연결해 주세요.</p>
+              {oauthError && <p role="alert" className="auth-error">{oauthError}</p>}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,0 +1,111 @@
+name: OAuth v2.0.3 safety checks
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/oauth-v203-ci.yml"
+      - "supabase/migrations/*oauth*"
+      - "authContext.jsx"
+      - "pages/LoginPage.jsx"
+      - "pages/ProfilePage.jsx"
+      - "pages/OAuthCompletePage.jsx"
+      - "components/OAuthAccountGate.jsx"
+      - "components/OAuthLinkedProviders.jsx"
+      - "utils/oauthFlow.js"
+      - "tests/oauthFlow.test.js"
+      - "scripts/sql/oauth-v203-*.sql"
+      - "css/wikiRaceOAuth.css"
+      - "appStyles.js"
+      - "App.jsx"
+      - "supabaseClient.js"
+      - "scripts/oauth-v203-browser-smoke.mjs"
+      - "docs/ops/OAUTH-203-ROLLOUT.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  isolated-postgres-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: ci_only
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Confirm legacy and social identity isolation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/oauth-v203-isolated-fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261110080546_oauth_profile_onboarding_v1.sql
+          psql -X -v ON_ERROR_STOP=1 -f scripts/sql/oauth-v203-isolated-assert.sql
+
+  full-local-supabase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Start isolated Supabase database
+        run: npx supabase start --yes --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Replay all migrations and development seed
+        run: npx supabase db reset --local --yes
+      - name: Verify legacy schema and social RPC
+        run: |
+          set -euo pipefail
+          DB=supabase_db_wiki-packet13-r2-clean158
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select is_nullable from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='synthetic_email'" | grep -qx 'YES'
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select has_function_privilege('anon','public.complete_oauth_profile(text,text)','EXECUTE')" | grep -qx f
+          docker exec "$DB" psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 -Atc "select has_function_privilege('authenticated','public.complete_oauth_profile(text,text)','EXECUTE')" | grep -qx t
+          echo OAUTH_FULL_LOCAL_SUPABASE_PASS
+
+  oauth-browser-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Test Google desktop and Kakao mobile OAuth flow initialization
+        run: node scripts/oauth-v203-browser-smoke.mjs
+      - name: Regression - legacy signup, login, guest, and jungle screens (OAuth disabled)
+        run: node scripts/jungle-alive-browser-smoke.mjs

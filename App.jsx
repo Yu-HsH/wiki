@@ -32,6 +32,7 @@ import GroupGamePage from "./pages/GroupGamePage";
 import PublicContentPage from "./pages/PublicContentPage";
 import UpdatesPage from "./pages/UpdatesPage";
 import AdminUpdatesPage from "./pages/AdminUpdatesPage.jsx";
+import OAuthAccountGate from "./components/OAuthAccountGate.jsx";
 import {
   clearGuestSingleGameProgress,
   getSingleGameAccess,
@@ -215,7 +216,7 @@ function AppRoutes() {
   const { pathname } = useLocation();
   if (tutorial?.practice && !PRACTICE_ROUTES.includes(pathname)) return <TutorialBlockedRoute />;
   return (
-    <><AudioControls />
+    <OAuthAccountGate><><AudioControls />
     <Routes>
       {/* 시작 화면 */}
       <Route path="/" element={<IntroPage />} />
@@ -307,7 +308,7 @@ function AppRoutes() {
           </OnlineRoute>
         }
       />
-    </Routes></>
+    </Routes></></OAuthAccountGate>
   );
 }
 
