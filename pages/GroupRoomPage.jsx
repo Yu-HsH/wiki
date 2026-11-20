@@ -577,6 +577,7 @@ export default function GroupRoomPage() {
                         <ul
                             id="wr-roster"
                             className={`wr-roster ${rosterOpen ? "" : "is-collapsed"}`}
+                            data-eight-seat={maxPlayers === 8 || undefined}
                             aria-labelledby="wr-party-title"
                             aria-describedby="wr-roster-summary"
                         >

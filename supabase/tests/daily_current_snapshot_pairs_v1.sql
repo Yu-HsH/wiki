@@ -1,4 +1,5 @@
 -- Run on the local database. All fixture changes are rolled back.
+-- The current selector reads the materialized reachability populated by a privileged refresh.
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(11);
@@ -35,6 +36,7 @@ from public.wiki_page_snapshots s where s.page_id = 'daily-qa-middle' and s.revi
 
 insert into public.daily_challenges (challenge_date, start_title, target_title, hint)
 select day - 8, 'Daily QA source', 'Daily QA goal', 'previous' from daily_pair_test_day;
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
   'Daily QA goal', 'latest numeric revisions supply a two-link course; eight days ago does not penalize it');
 select is((select start_title from public.ensure_today_daily_challenge()),
@@ -48,6 +50,7 @@ delete from public.daily_challenges where challenge_date = (select day from dail
 savepoint newer_source;
 insert into public.wiki_page_snapshots (page_id, revision_id, canonical_title_snapshot)
 values ('daily-qa-source', '101', 'Daily QA source');
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
   'Daily QA fallback goal', 'an older start revision cannot supply a removed link');
 rollback to newer_source;
@@ -55,6 +58,7 @@ rollback to newer_source;
 savepoint newer_middle;
 insert into public.wiki_page_snapshots (page_id, revision_id, canonical_title_snapshot)
 values ('daily-qa-middle', '101', 'Daily QA middle');
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
   'Daily QA fallback goal', 'an older intermediate revision cannot supply a removed link');
 rollback to newer_middle;
@@ -62,30 +66,40 @@ rollback to newer_middle;
 savepoint pinned_middle;
 update public.wiki_snapshot_links set target_revision_id = '99'
 where target_page_id = 'daily-qa-middle';
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA fallback goal', 'a move pinned to a different intermediate revision cannot prove the path');
+  'Daily QA goal', 'a stale target revision hint does not override the latest intermediate snapshot');
 rollback to pinned_middle;
 
 savepoint inactive_goal;
 update public.daily_challenge_pool set is_active = false where sort_order = -20002;
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
   'Daily QA fallback goal', 'a disabled pool word is ineligible');
 rollback to inactive_goal;
 
 savepoint expired_start;
-update public.wiki_page_snapshots set fetched_at = now() - interval '31 days'
+update public.wiki_page_snapshots set fetched_at = now() - interval '46 days'
 where page_id = 'daily-qa-source' and revision_id = '100';
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
   'Daily QA fallback goal', 'expired source proof falls back to an audited course');
 rollback to expired_start;
 
 update public.daily_challenges set challenge_date = (select day - 7 from daily_pair_test_day)
 where hint = 'previous' and target_title = 'Daily QA goal';
+insert into public.daily_challenge_pool (sort_order, target_title, hint, is_active)
+values (-20004, 'Daily QA alternate goal', 'word', true);
+insert into public.wiki_snapshot_links (snapshot_id, target_page_id, target_title_snapshot, ordinal)
+select id, 'daily-qa-alt-goal', 'Daily QA alternate goal', 1
+from public.wiki_page_snapshots where page_id = 'daily-qa-middle' and revision_id = '100';
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA fallback goal', 'a pair used seven days ago loses to an unused alternative');
+  'Daily QA alternate goal', 'a goal used seven days ago loses to an unused reachable goal');
 
 delete from public.daily_challenges where challenge_date = (select day from daily_pair_test_day);
-update public.daily_challenge_pool set is_active = false where sort_order = -20003;
+update public.daily_challenge_pool set is_active = false where sort_order in (-20003, -20004);
+select private.refresh_daily_course_pairs_v2();
 select is((select target_title from public.ensure_today_daily_challenge()),
   'Daily QA goal', 'a repeat is allowed when no unused course is available');
 

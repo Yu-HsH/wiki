@@ -80,10 +80,9 @@ test("① 결과가 뜬 뒤의 복구·연결 신호는 결과 화면을 덮지 
   const recover = sliceBetween(pageSource, "const recoverGame = useCallback(async () => {", "const generation =");
   assert.match(recover, /if \(resultShownRef\.current\) return;/);
 
-  const subscribeGuards = pageSource.match(
-    /channel\.subscribe\(\(status, error\) => \{\n\s+if \((?:game|event)ChannelRef\.current !== channel\) return;\n\s+if \(resultShownRef\.current\) return;/g
-  ) || [];
-  assert.equal(subscribeGuards.length, 2, "두 채널의 상태 콜백 모두");
+  assert.match(pageSource, /const handleSubscriptionStatus = useCallback\(\(channelName, status, error\) => \{\s*if \(resultShownRef\.current\) return;/);
+  assert.match(pageSource, /channel\.subscribe\(\(status, error\) => \{\s*if \(gameChannelRef\.current === channel\) handleSubscriptionStatus\("room", status, error\);/);
+  assert.match(pageSource, /channel\.subscribe\(\(status, error\) => \{\s*if \(eventChannelRef\.current === channel\) handleSubscriptionStatus\("events", status, error\);/);
 });
 
 test("① 경기 중에 끝난 방은 복구에서도 결과로 간다 — 새로고침에서도 서버 결과로 간다", () => {

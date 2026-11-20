@@ -1,3 +1,4 @@
+import { createSingleStartFixture } from "./single-start-browser-fixture.mjs";
 // Phase 4 RESULT presentation regression (Single SuccessOverlay · Duel result · Group Result A → B,
 // RETIRE hold → C → B). Harness copied from ui-phase3-browser.mjs. Every Supabase / Edge / Wikipedia /
 // Realtime call is answered by an in-memory fixture inside this script; no backend is reached and no
@@ -18,6 +19,7 @@ const server = spawn(process.execPath, ["node_modules/vite/bin/vite.js", "--host
 const checks = [];
 const check = (name, value) => { assert.ok(value, name); checks.push(name); };
 const consoleErrors = [];
+const fixtureErrors = [];
 const rpcCalls = [];
 const iso = (ms) => new Date(ms).toISOString();
 const now = () => Date.now();
@@ -71,6 +73,7 @@ const players = new Map();
 const itemStates = new Map();
 const events = new Map();
 const singleRuns = new Map();
+const singleStart = createSingleStartFixture({ runs: singleRuns, allocationStart: START, allocationTarget: TARGET, pageId, htmlOf, linksOf });
 // ── Phase 4 result fixtures (finalized-server shaped rows; read-only for the pages) ──
 const ledger = new Map();          // source_id → xp_ledger rows
 const matchHistory = new Map();    // room_id → { id }
@@ -158,6 +161,11 @@ async function handleApi(route, userKey) {
     return json(route, { snapshotId: `s-${title}`, pageId: String(body.pageId ?? pageId(title)), revisionId: String(body.revisionId ?? "5000"), canonicalTitle: title, ...(body.includeDocument ? { documentHtml: htmlOf(title), links: linksOf(title).map((t) => ({ ns: 0, title: t })) } : {}) });
   }
   if (path.endsWith("/functions/v1/single-run")) {
+    const reserved = singleStart(body);
+    if (reserved) {
+      rpcCalls.push(`${userKey}:single-run:${body.action}`);
+      return json(route, reserved);
+    }
     if (body.action === "create") { const run = { id: body.run.runId, status: "active", state_version: 0, move_count: 0, path_title_snapshots: [body.run.start.title], current_title_snapshot: body.run.start.title }; singleRuns.set(run.id, run); return json(route, { ok: true, run }); }
     if (body.action === "move") return json(route, singleRun(singleRuns.get(body.runId), body.nextPage.title));
     if (body.action === "leave") { const run = singleRuns.get(body.runId); run.status = "abandoned"; return json(route, { ok: true, run }); }
@@ -304,7 +312,15 @@ async function context(userKey, { width = 1440, height = 1000, local = {}, guest
   }, { token: guest ? null : `tok-${userKey}`, user: guest ? null : { id: USERS[userKey].id, email: "x@example.invalid", user_metadata: { nickname: USERS[userKey].nickname } }, local, guest });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => consoleErrors.push(`${userKey}: ${e.message}`));
-  page.on("console", (msg) => { if (msg.type() === "error") consoleErrors.push(`${userKey}: ${msg.text()}`); });
+  page.on("console", (msg) => {
+    if (msg.type() !== "error") return;
+    const message = msg.text();
+    if (fixture.singleRecordFail && /^(랭킹을|서버 확정 결과를) 불러오지 못했습니다\. \{message: fixture failure\}$/.test(message)) {
+      fixtureErrors.push(message);
+    } else {
+      consoleErrors.push(`${userKey}: ${message}`);
+    }
+  });
   return { ctx, page };
 }
 const noOverflow = (page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
@@ -393,10 +409,11 @@ try {
   // ══ SINGLE ═════════════════════════════════════════════════════
   async function playSingleToFinish(page) {
     await page.goto(`${base}/play`);
-    await page.locator(".wr-mode").first().click();
+    await page.locator(".wr-mode").first().locator(".wr-mode-action").click();
     await page.getByPlaceholder("예: 아인슈타인, 조선왕조...").fill("랜덤");
     await page.getByRole("button", { name: "랜덤 목표로 시작" }).click();
     await expect(page.locator(".wr-hud-doc--current")).toContainText(START, { timeout: 15000 });
+    await page.locator(".wr-single-prefetch").waitFor({ state: "detached", timeout: 15000 });
     await page.locator(".countdown-overlay").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     await page.locator(".article-content a", { hasText: MIDDLE }).first().click();
     await expect(page.locator(".wr-hud-doc--current")).toContainText(MIDDLE);
@@ -413,8 +430,11 @@ try {
     const { ctx, page } = await context("me");
     const { runId } = await playSingleToFinish(page);
     const dialog = page.getByRole("dialog", { name: "완주" });
+    await expect(dialog).toBeVisible();
     check("S1 single result is a labelled modal dialog (heading 완주)", await dialog.count() === 1 && await dialog.getAttribute("aria-modal") === "true");
-    check("S1b focus moves to the outcome heading", (await focusedId(page)) === "wr-single-result-title");
+    await expect(dialog).toHaveAttribute("data-cinematic-phase", "records");
+    await expect.poll(() => focusedId(page)).toBe("wr-single-result-title");
+    check("S1b focus moves to the outcome heading", true);
     check("S1c race underneath is inert", await page.locator(".wr-race:not(.wr-result)[inert]").count() === 1);
     await expect(page.getByTestId("result-xp")).toContainText("+20 XP", { timeout: 15000 });
     check("S2 XP from the ledger row: +20 XP · 랜덤 탐험 완주", (await xpText(page)).includes("랜덤 탐험 완주"));
@@ -435,7 +455,9 @@ try {
     await page.setViewportSize({ width: 390, height: 844 });
     await shot(page, "single-result-390");
     await page.emulateMedia({ reducedMotion: "reduce" });
-    check("S8 reduced motion: mascot/card animations off", await page.locator(".wr-rscene-mascot").evaluate((n) => getComputedStyle(n).animationName === "none"));
+    await expect(dialog).toHaveAttribute("data-cinematic-phase", "records");
+    check("S8 reduced motion: the confirmed result is still static",
+      await dialog.locator(".wr-result-card").evaluate(card => getComputedStyle(card).animationName === "none"));
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.getByRole("button", { name: "새 게임 선택" }).click();
     await page.waitForURL(/\/play$/);
@@ -451,7 +473,13 @@ try {
     check("S10 no result record → stable no-grant copy (no fake XP)", !(await resultRoot(page).innerText()).includes("확인하는 중"));
     fixture.singleNoRecord = false;
     fixture.singleRecordFail = true;
-    await playSingleToFinish(page);
+    await Promise.all([
+      page.waitForResponse(response => {
+        const url = new URL(response.url());
+        return response.status() === 500 && url.origin === api && url.pathname === "/rest/v1/game_records" && url.searchParams.has("run_id");
+      }),
+      playSingleToFinish(page),
+    ]);
     await expect(page.getByTestId("result-xp")).toHaveText("XP 지급 정보를 불러오지 못했습니다.", { timeout: 10000 });
     check("S11 record read failure → stable failure copy", true);
     fixture.singleRecordFail = false;
@@ -463,10 +491,11 @@ try {
   {
     const g = await context("guestSingle", { guest: true });
     await g.page.goto(`${base}/play`);
-    await g.page.locator(".wr-mode").first().click();
+    await g.page.locator(".wr-mode").first().locator(".wr-mode-action").click();
     await g.page.getByPlaceholder("예: 아인슈타인, 조선왕조...").fill("랜덤");
     await g.page.getByRole("button", { name: "랜덤 목표로 시작" }).click();
     await expect(g.page.locator(".wr-hud-doc--current")).toContainText(START, { timeout: 15000 });
+    await g.page.locator(".wr-single-prefetch").waitFor({ state: "detached", timeout: 15000 });
     await g.page.locator(".countdown-overlay").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     await g.page.locator(".article-content a", { hasText: MIDDLE }).first().click();
     await expect(g.page.locator(".wr-hud-doc--current")).toContainText(MIDDLE);
@@ -492,7 +521,12 @@ try {
     await expect(page.locator(".wr-hud-doc--current")).toContainText(MIDDLE);
     await page.locator(".article-content a", { hasText: TARGET }).first().click();
     await page.getByTestId("duel-result").waitFor({ timeout: 15000 });
-    check("D1 win: dialog heading 승리, Gold tone, win mascot", await page.getByRole("dialog", { name: "승리" }).count() === 1 && await page.locator(".wr-result--win .wr-rscene-mascot--win").count() === 1);
+    const winResult = page.getByRole("dialog", { name: "승리" });
+    await expect(winResult).toBeVisible();
+    await expect(winResult.getByRole("heading", { name: "승리", exact: true })).toBeVisible();
+    await shot(page, "duel-win-mascot");
+    await expect(winResult.locator(".wr-rscene-mascot--win")).toBeVisible();
+    check("D1 win: dialog heading 승리, Gold tone, win mascot", await winResult.evaluate(node => node.classList.contains("wr-result--win")));
     check("D1b win pill + reason from the room (normal_finish)", (await resultRoot(page).innerText()).includes("목표 도달 · 상대보다 먼저") && (await page.locator(".wr-rhead-detail").innerText()) === "목표 문서에 먼저 도착했습니다.");
     check("D1c focus on outcome heading; race inert", (await focusedId(page)) === "wr-duel-result-title" && await page.locator(".wr-race:not(.wr-result)[inert]").count() === 1);
     await expect(page.getByTestId("result-xp")).toContainText("+50 XP", { timeout: 15000 });
@@ -532,7 +566,7 @@ try {
     await page.getByTestId("duel-result").waitFor({ timeout: 20000 });
     check("D11 loss (direct open of a finished room): 패배, neutral, lose mascot, no celebration", await page.getByRole("dialog", { name: "패배" }).count() === 1 && await page.locator(".wr-result--lose .wr-rscene-mascot--lose").count() === 1 && await page.locator(".wr-rscene--none").count() === 1 && await page.getByTestId("finish-effect").count() === 0);
     check("D11b loss copy from the room + item-mode label", (await resultRoot(page).innerText()).includes("상대 먼저 도달") && (await resultRoot(page).innerText()).includes("1:1 아이템전"));
-    check("D11c loss heading is not Gold", await page.locator("#wr-duel-result-title").evaluate((n) => getComputedStyle(n).color === "rgb(120, 135, 127)"));
+    check("D11c loss heading uses the expedition theme's neutral ink", await page.locator("#wr-duel-result-title").evaluate((n) => getComputedStyle(n).color === "rgb(104, 114, 94)"));
     await expect(page.getByTestId("result-xp")).toContainText("+25 XP", { timeout: 15000 });
     check("D12 loss XP from ledger: +25 · 1:1 정상 패배; route marks 목표 미도달", (await xpText(page)).includes("1:1 정상 패배") && (await page.locator(".wr-rroute-tail").innerText()) === "목표 미도달");
     check("D12b long route stays inside the card at 390", await overflowFree(page));
@@ -607,8 +641,15 @@ try {
     ledger.set(myRowId, [ledgerRow(myRowId, "group_rank_2", 55)]);
     unlocks.set("group:group-ab-0201", [achievement("fixture_group_a", "그룹 탐험 예시", "u-group-ab", { hidden: true })]);
     notify("group-ab-0201");
-    await page.getByTestId("group-final-result").waitFor({ timeout: 20000 });
-    check("G3 spectator → finalization → Result B: 2위 완주 · 결과 확정", (await page.locator("#wr-group-result-title").innerText()) === "2위 완주" && (await resultRoot(page).innerText()).includes("결과 확정"));
+    const finalResult = page.getByTestId("group-final-result");
+    await finalResult.waitFor({ timeout: 20000 });
+    const podium = finalResult.locator('[data-scene="group-end"]');
+    await expect(podium.locator('[data-rank="2"][data-revealed="true"]')).toBeVisible();
+    await expect(podium.locator('[data-rank="1"][data-revealed="true"]')).toBeVisible();
+    check("G3a newly finished match reveals ranks 2 and 1 on the live podium", true);
+    await expect(finalResult.getByRole("heading", { name: "2위 완주", exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(finalResult.getByText("결과 확정", { exact: true })).toBeVisible({ timeout: 10000 });
+    check("G3 spectator → finalization → Result B: 2위 완주 · 결과 확정", true);
     await expect(page.getByTestId("result-xp")).toContainText("+55 XP", { timeout: 15000 });
     check("G4 B XP from the finalized ledger: +55 · 그룹 2위 완주 (+ achievement XP line)", (await xpText(page)).includes("그룹 2위 완주") && (await xpText(page)).includes("업적 달성"));
     await expect(page.getByTestId("result-achievements").locator(".ach-reveal-card")).toHaveCount(1, { timeout: 5000 });
@@ -641,7 +682,7 @@ try {
     const ranks = await page.locator(".wr-standings-list .wr-srow-rank").allInnerTexts();
     check("G9 direct B: 8 rows in server order 1–5 then retired –", ranks.length === 8 && ranks.slice(0, 5).map((r) => r.replace(/\D/g, "")).join(",") === "1,2,3,4,5" && ranks.slice(5).every((r) => r.startsWith("–")));
     check("G9b counts 완주 5 · 리타이어 3; retired reasons 제한 시간 초과 / 기권 / 몰수 · 재접속 유예 종료", (await page.locator(".wr-standings-head").innerText()).includes("완주 5 · 리타이어 3") && (await page.locator(".wr-standings-list").innerText()).includes("몰수 · 재접속 유예 종료"));
-    check("G9c celebration for rank 2 = dots (not full), Gold heading", await page.locator(".wr-rscene--dots").count() === 1);
+    check("G9c restored rank 2 keeps its Gold result without replaying the podium", await page.locator(".wr-result--win #wr-group-result-title").innerText() === "2위 완주" && await page.locator('[data-scene="group-end"], .wr-rscene--full, .wr-rscene--dots').count() === 0);
     await page.mouse.move(0, 0);
     await shot(page, "group-b-desktop", true);
     for (const w of [390, 320]) {
@@ -670,7 +711,7 @@ try {
     await page.goto(`${base}/multiplayer/group/game/group-r4-0203`);
     await page.getByTestId("group-final-result").waitFor({ timeout: 20000 });
     await expect(page.getByTestId("result-xp")).toContainText("+35 XP", { timeout: 15000 });
-    check("G11 rank 4: 4위 완주, +35 XP 그룹 완주 from ledger, no celebration", (await page.locator("#wr-group-result-title").innerText()) === "4위 완주" && (await xpText(page)).includes("그룹 완주") && await page.locator(".wr-rscene--none").count() === 1);
+    check("G11 rank 4: 4위 완주, +35 XP 그룹 완주 from ledger, no celebration", (await page.locator("#wr-group-result-title").innerText()) === "4위 완주" && (await xpText(page)).includes("그룹 완주") && await page.locator('[data-scene="group-end"], .wr-rscene--full, .wr-rscene--dots').count() === 0);
     await ctx.close();
     groupRoom("group-r1-0204", [USERS.me, USERS.opp, USERS.p3]);
     const rows1 = finalizeGroup("group-r1-0204", [USERS.me, USERS.opp, USERS.p3], { [USERS.me.id]: { rank: 1 }, [USERS.opp.id]: { rank: 2 }, [USERS.p3.id]: { rank: 3 } });
@@ -679,7 +720,7 @@ try {
     await c1.page.goto(`${base}/multiplayer/group/game/group-r1-0204`);
     await c1.page.getByTestId("group-final-result").waitFor({ timeout: 20000 });
     await expect(c1.page.getByTestId("result-xp")).toContainText("+70 XP", { timeout: 15000 });
-    check("G12 rank 1: 1위 완주, full celebration, +70 from ledger", (await c1.page.locator("#wr-group-result-title").innerText()) === "1위 완주" && await c1.page.locator(".wr-rscene--full").count() === 1);
+    check("G12 restored rank 1: Gold 1위 완주, +70 from ledger, no celebration replay", (await c1.page.locator(".wr-result--win #wr-group-result-title").innerText()) === "1위 완주" && await c1.page.locator('[data-scene="group-end"], .wr-rscene--full, .wr-rscene--dots').count() === 0);
     await c1.page.mouse.move(0, 0);
     await shot(c1.page, "group-b-rank1-desktop");
     await c1.ctx.close();
@@ -703,7 +744,7 @@ try {
     await expect(page.getByTestId("result-xp")).toContainText("+0 XP", { timeout: 15000 });
     check("R3 C XP: +0 from the finalized ledger (그룹 미완주)", (await xpText(page)).includes("그룹 미완주"));
     check("R3b C: no 관전하기, primary 최종 결과 보기", await page.getByRole("button", { name: "관전하기 →" }).count() === 0 && await page.getByRole("button", { name: "최종 결과 보기 →" }).isVisible());
-    check("R3c retired XP gain is not Gold", await page.locator(".rxp-gain").first().evaluate((n) => getComputedStyle(n).color === "rgb(120, 135, 127)"));
+    check("R3c retired XP uses the expedition theme's neutral ink", await page.locator(".rxp-gain").first().evaluate((n) => getComputedStyle(n).color === "rgb(104, 114, 94)"));
     await page.mouse.move(0, 0);
     await shot(page, "group-c-desktop");
     await page.setViewportSize({ width: 390, height: 844 });
@@ -726,8 +767,8 @@ try {
   }
 
   if (consoleErrors.length) console.log(JSON.stringify(consoleErrors.slice(0, 20), null, 2));
-  const unexpected = consoleErrors.filter((e) => !/recovery failed|realtime disconnected|Failed to load resource|서버 확정 결과를 불러오지 못했습니다/.test(e));
+  const unexpected = consoleErrors.filter((e) => !/recovery failed|realtime disconnected|Failed to load resource/.test(e));
   check("GEN no unexpected console/page errors", unexpected.length === 0);
-  await fs.writeFile(`${output}/report.json`, JSON.stringify({ basis: "b6b6a2c + uncommitted Phase 4 working tree", date: "2026-10-07", fixtureOnly: true, checks, consoleErrors, markCalls }, null, 2));
+  await fs.writeFile(`${output}/report.json`, JSON.stringify({ basis: "b7d59371 + uncommitted integration worktree", date: "2026-11-20", fixtureOnly: true, checks, consoleErrors, fixtureErrors, markCalls }, null, 2));
   console.log(`PASS ${checks.length} browser checks (isolated API/realtime fixtures; real backend not exercised)`);
 } finally { await browser?.close(); server.kill(); }

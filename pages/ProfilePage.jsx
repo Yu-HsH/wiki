@@ -50,6 +50,22 @@ export default function ProfilePage() {
 
   // 장착 상태 (C1 §3). 서버 응답으로만 바뀐다 — 처음엔 카드 RPC, 이후 equip/unequip 응답.
   const previewRef = useRef(null);
+  const [previewCardWidth, setPreviewCardWidth] = useState(null);
+  // The try-on uses this rendered card width, including responsive layout and browser zoom.
+  useEffect(() => {
+    if (loading) return undefined;
+    const cardElement = previewRef.current?.querySelector(".pcard");
+    if (!cardElement) return undefined;
+    const measure = () => {
+      const width = cardElement.getBoundingClientRect().width;
+      if (width > 0) setPreviewCardWidth(width);
+    };
+    measure();
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
+    observer?.observe(cardElement);
+    window.addEventListener("resize", measure);
+    return () => { observer?.disconnect(); window.removeEventListener("resize", measure); };
+  }, [loading]);
   const [rewardGoals, setRewardGoals] = useState([]);
   const [rewardSlots, setRewardSlots] = useState(null);
   const [ownedRewards, setOwnedRewards] = useState([]);
@@ -208,6 +224,7 @@ export default function ProfilePage() {
               loading={rewardsLoading}
               onEquipment={handleEquipment}
               goals={rewardGoals}
+              previewCardWidth={previewCardWidth}
             />
           )}
         </div>

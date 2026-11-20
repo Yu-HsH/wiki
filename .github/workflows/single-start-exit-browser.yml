@@ -1,0 +1,39 @@
+name: Single start exit guard browser regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "pages/GamePage.jsx"
+      - "components/ExitGuard.jsx"
+      - "components/cinematic/SingleStartCinematic.jsx"
+      - "css/wikiRaceSingleStart.css"
+      - "scripts/ui-phase3-browser.mjs"
+      - ".github/workflows/single-start-exit-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  single-start-exit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Focused P0 single cancel/continue browser fixture
+        run: node scripts/ui-phase3-browser.mjs --single-exit-only
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: single-start-exit-browser
+          path: test-results/packet13-b1/ui-phase3/
+          if-no-files-found: ignore
+          retention-days: 7

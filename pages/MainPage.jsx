@@ -72,7 +72,10 @@ function getDailyChallenge() {
   return DAILY_POOL[seed % DAILY_POOL.length];
 }
 
-export default function MainPage({ view = "home" }) {
+export default function MainPage({ view = "home", tutorialSession = null, onStartTutorial, onStartGrowth }) {
+  const practice = tutorialSession?.mode === "practice";
+  const homeToken = tutorialSession?.token("home.play");
+  const soloToken = tutorialSession?.token("play.solo");
   const navigate = useNavigate();
   const { user, logout, isSupabaseConfigured } = useAuth();
   const [stats, setStats] = useState({ gamesPlayed: 0, bestTime: null, recentRecords: [] });
@@ -84,7 +87,7 @@ export default function MainPage({ view = "home" }) {
     challenge: [],
   });
 
-  const rewardCards = useProfileCards(view === "home" ? [...Object.values(rankingTabs).flat().map(row => row.userId), ...(!user.isGuest ? [user.id] : [])] : []);
+  const rewardCards = useProfileCards(!practice && view === "home" ? [...Object.values(rankingTabs).flat().map(row => row.userId), ...(!user.isGuest ? [user.id] : [])] : []);
   const [rankingView, setRankingView] = useState("today");
   const [recentIndex, setRecentIndex] = useState(0);
   const [rankingPaused, setRankingPaused] = useState(false);
@@ -104,14 +107,14 @@ export default function MainPage({ view = "home" }) {
   });
 
   useEffect(() => {
-    if (view !== "home") return undefined;
+    if (practice || view !== "home") return undefined;
     const timer = setInterval(() => {
       if (rankingPaused || document.hidden || Date.now() < manualRotationPause.current
         || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
       setRankingView(previous => nextHomeRankingTab(previous));
     }, 10000);
     return () => clearInterval(timer);
-  }, [view, rankingPaused]);
+  }, [view, rankingPaused, practice]);
 
   const selectHomeRanking = (tab) => {
     manualRotationPause.current = Date.now() + 30000;
@@ -121,7 +124,7 @@ export default function MainPage({ view = "home" }) {
   const recentRecords = stats.recentRecords.slice(0, 3);
   const activeRecentIndex = Math.min(recentIndex, Math.max(0, recentRecords.length - 1));
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!practice);
   const [error, setError] = useState("");
   const [rankingErrors, setRankingErrors] = useState({});
   const [reloadKey, setReloadKey] = useState(0);
@@ -140,6 +143,7 @@ export default function MainPage({ view = "home" }) {
 
   // ⬇️ 검색 실행 핸들러 수정
   const handleSearchKeyword = async () => {
+    if (practice) return;
     const trimmed = keyword.trim();
     if (!trimmed) return;
 
@@ -163,6 +167,7 @@ export default function MainPage({ view = "home" }) {
   };
 
   useEffect(() => {
+    if (practice) { setLoading(false); return undefined; }
     let cancelled = false;
     const load = async () => {
       try {
@@ -210,9 +215,10 @@ export default function MainPage({ view = "home" }) {
     };
     load();
     return () => { cancelled = true; };
-  }, [user.id, user.isGuest, reloadKey]);
+  }, [user.id, user.isGuest, reloadKey, practice]);
 
   useEffect(() => {
+    if (practice) { setHeaderLevel(null); setXpSummary(null); return undefined; }
     if (user.isGuest) {
       setHeaderLevel(null);
       setXpSummary(null);
@@ -224,9 +230,10 @@ export default function MainPage({ view = "home" }) {
       .then((summary) => { if (!cancelled) { setHeaderLevel(summary.level); setXpSummary(summary); } })
       .catch(() => { if (!cancelled) setHeaderLevel(null); });
     return () => { cancelled = true; };
-  }, [user.id, user.isGuest]);
+  }, [user.id, user.isGuest, practice]);
 
   useEffect(() => {
+    if (practice) { setUnseenAchievements(0); return undefined; }
     if (user.isGuest) {
       setUnseenAchievements(0);
       return;
@@ -237,9 +244,10 @@ export default function MainPage({ view = "home" }) {
       .then((response) => { if (!cancelled) setUnseenAchievements(Number(response.unseenCount) || 0); })
       .catch(() => { if (!cancelled) setUnseenAchievements(0); });
     return () => { cancelled = true; };
-  }, [user.id, user.isGuest]);
+  }, [user.id, user.isGuest, practice]);
 
   const dismissAchievementNotice = () => {
+    if (practice) return;
     const value = String(unseenAchievements);
     setAchievementNoticeDismissed(value);
     try {
@@ -250,6 +258,7 @@ export default function MainPage({ view = "home" }) {
   };
 
   useEffect(() => {
+    if (practice) return;
     try {
       const today = new Intl.DateTimeFormat("en-CA", {
         year: "numeric",
@@ -272,9 +281,10 @@ export default function MainPage({ view = "home" }) {
     } catch (error) {
       console.warn("Daily visit analytics failed:", error);
     }
-  }, [user]);
+  }, [user, practice]);
 
   useEffect(() => {
+    if (practice) return undefined;
     const syncCourseDate = () => setDailyCourseDate(getKstCourseDate());
     // 오늘 KST 날짜의 15:00 UTC는 다음 KST 날짜의 자정이다.
     const midnight = Date.parse(`${dailyCourseDate}T15:00:00Z`);
@@ -284,9 +294,10 @@ export default function MainPage({ view = "home" }) {
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", syncCourseDate);
     };
-  }, [dailyCourseDate]);
+  }, [dailyCourseDate, practice]);
 
   useEffect(() => {
+    if (practice) return undefined;
     let cancelled = false;
 
     const loadDailyChallenge = async () => {
@@ -305,7 +316,7 @@ export default function MainPage({ view = "home" }) {
 
     loadDailyChallenge();
     return () => { cancelled = true; };
-  }, [dailyCourseDate]);
+  }, [dailyCourseDate, practice]);
 
   const handleLogout = async () => {
     await logout();
@@ -314,7 +325,13 @@ export default function MainPage({ view = "home" }) {
 
 
   return (
-    <WikiRaceShell user={user} level={headerLevel} onLogout={handleLogout} view={view}>
+    <WikiRaceShell user={user} level={headerLevel} onLogout={practice ? tutorialSession.exit : handleLogout} view={view} practice={practice}
+      onNavigate={practice ? tutorialSession.navigate : undefined}>
+        {!practice && onStartTutorial && <div className="wr-tutorial-entry" aria-label="키온 연습 시작">
+          <button type="button" className="app-btn app-btn-ghost" onClick={() => onStartTutorial("intro-core")}>처음이라면 게임 방법 연습</button>
+          {onStartGrowth && <button type="button" className="app-btn app-btn-ghost" onClick={onStartGrowth}>보상·프로필 연습</button>}
+        </div>}
+        {practice && <p className="wr-tutorial-notice" role="note">연습 화면 · 실제 통계·오늘 코스·온라인 방은 사용하지 않아요.</p>}
         {/* ── 새 업적 알림 (16c). 닫기 = 이번 세션 동안 숨김 ── */}
         {!user.isGuest && shouldShowAchievementNotice(unseenAchievements, achievementNoticeDismissed) && (
           <div className="ach-notice" role="status">
@@ -335,10 +352,10 @@ export default function MainPage({ view = "home" }) {
         {view === "play" ? (
           <PlayPage
             isGuest={user.isGuest}
-            onSingle={() => { setKeyword(""); setShowKeywordModal(true); }}
-            onMultiplayer={(mode) => navigate(`/multiplayer?mode=${mode}`)}
+            onSingle={() => { if (practice) { tutorialSession.act(soloToken); return; } setKeyword(""); setShowKeywordModal(true); }}
+            onMultiplayer={(mode) => { if (practice) return; navigate(`/multiplayer?mode=${mode}`); }}
           />
-        ) : <ExpeditionHero onPlay={() => navigate("/play")} />}
+        ) : <ExpeditionHero practice={practice} onPlay={() => { if (practice) { tutorialSession.act(homeToken); return; } navigate("/play"); }} />}
 
         {/* ── 키워드 입력 및 검색 모달 ── */}
         {showKeywordModal && (
@@ -412,6 +429,7 @@ export default function MainPage({ view = "home" }) {
                   className="app-btn app-btn-primary"
                   disabled={!selectedTarget && keyword.trim() !== "랜덤"}
                   onClick={() => {
+                    if (practice) return;
                     setShowKeywordModal(false);
                     // "랜덤" 키워드인 경우 바로 랜덤 모드로 시작
                     if (keyword.trim() === "랜덤") {
@@ -442,7 +460,7 @@ export default function MainPage({ view = "home" }) {
         )}
 
         {/* ── 오늘의 도전 ── */}
-        <section className="dashboard-card daily-card" aria-busy={!dailyChallenge} aria-label="오늘의 도전">
+        {!practice && <section className="dashboard-card daily-card" aria-busy={!dailyChallenge} aria-label="오늘의 도전">
           <div className="daily-head">
             <h2 className="daily-badge">오늘의 도전</h2>
             <span className="daily-date">{new Date(`${dailyCourseDate}T00:00:00+09:00`).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" })}</span>
@@ -476,9 +494,9 @@ export default function MainPage({ view = "home" }) {
           >
             오늘의 탐험 출발 →
           </button>
-        </section>
+        </section>}
 
-        {view === "home" && <>
+        {!practice && view === "home" && <>
         <div className="wr-explorer-featured">
           <section className="wr-my-explorer" aria-labelledby="wr-explorer-heading"><h2 id="wr-explorer-heading">나의 탐험가 수첩</h2><div className="wr-explorer-identity"><ProfileCard size="lg" density="full" card={ownCard} /></div>
           {user.isGuest ? <p>로그인하면 탐험 기록과 XP가 저장됩니다.</p> : xpSummary && <div className="wr-xp"><span>누적 {xpSummary.totalXp} XP</span><progress aria-label="현재 레벨 XP" value={xpSummary.currentLevelXp} max={xpSummary.nextLevelXp || 1} /><small>{xpSummary.currentLevelXp} / {xpSummary.nextLevelXp} XP</small></div>}
@@ -656,9 +674,9 @@ export default function MainPage({ view = "home" }) {
                 <ul>
                   <li>목표 문서를 직접 검색해서 선택할 수 있습니다.</li>
                   <li>시작 문서에서 링크만 따라 목표 문서까지 이동합니다.</li>
-                  <li>아이템을 사용할 수 있습니다.</li>
+                  <li>싱글은 문서 링크만으로 탐험하며 아이템을 사용하지 않습니다.</li>
                   <li>새로고침하면 진행 중인 게임은 유지됩니다.</li>
-                  <li>“포기하고 로비로”를 누르면 기록과 아이템 상태가 초기화됩니다.</li>
+                  <li>“포기하고 로비로”를 누르면 진행 중인 탐험이 종료됩니다.</li>
                 </ul>
 
                 <h3>3. 온라인 플레이</h3>
@@ -680,7 +698,7 @@ export default function MainPage({ view = "home" }) {
         )}
         {/* ⬇️ 메인 메뉴 하단 가장 아래쪽에 자연스럽게 광고 배치 */}
         <div style={{ marginTop: "2rem", marginBottom: "1rem" }}>
-          <AdBanner adSlot="3144203546" />
+          {!practice && <AdBanner adSlot="3144203546" />}
         </div>
 
         <footer className="dashboard-footer-links">

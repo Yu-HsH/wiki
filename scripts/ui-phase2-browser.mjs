@@ -109,8 +109,12 @@ async function handleApi(route, userKey) {
       case "get_duel_room_players_v1": return json(route, players.get(p.p_room_id) ?? []);
       case "get_profile_cards_v1": return json(route, { ok: true, cards: {} });
       case "get_profile_card_v1": return json(route, { ok: true, card: null });
-      case "create_duel_room_v2": { const r = createRoom({ mode: "duel", host: me, code: "TR4B9K", useItems: p.p_use_items }); return json(route, r); }
-      case "create_group_room": { const r = createRoom({ mode: "group", host: me, code: "KQ7F2M", maxPlayers: p.p_max_players }); return json(route, r); }
+      case "create_discoverable_duel_room_v1": { const r = createRoom({ mode: "duel", host: me, code: "TR4B9K", useItems: p.p_use_items }); return json(route, r); }
+      case "create_discoverable_group_room_v1": { const r = createRoom({ mode: "group", host: me, code: "KQ7F2M", maxPlayers: p.p_max_players }); return json(route, r); }
+      case "find_room_by_code_v1": {
+        const room = [...rooms.values()].find(row => row.room_code === p.p_room_code && row.mode === p.p_mode);
+        return room ? json(route, room.id) : rpcError(route, "ROOM_NOT_FOUND");
+      }
       case "join_duel_room_v2": {
         const room = [...rooms.values()].find((r) => r.room_code === p.p_room_code);
         if (!room) return rpcError(route, "ROOM_NOT_FOUND");
@@ -224,10 +228,10 @@ try {
 
   // ══ DUEL ═══════════════════════════════════════════════════════
   const H = await context("host");
-  await H.page.goto(`${base}/play`);
-  await H.page.locator(".wr-mode").nth(1).click();
+  await H.page.goto(`${base}/play`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await H.page.locator(".wr-mode").nth(1).locator(".wr-mode-action").click();
   await H.page.locator(".mp-mode-panel").waitFor();
-  check("30 PLAY → duel entry keeps existing create/join", new URL(H.page.url()).searchParams.get("mode") === "duel" && await H.page.getByRole("button", { name: "1 vs 1" }).getAttribute("aria-pressed") === "true");
+  check("30 PLAY → duel entry keeps existing create/join", new URL(H.page.url()).searchParams.get("mode") === "duel" && await H.page.getByRole("group", { name: "온라인 모드 선택" }).count() === 0 && await H.page.getByRole("textbox", { name: "1:1 방 코드" }).isVisible());
   check("entry: no overflow 1440", await noOverflow(H.page));
   await shot(H.page, "entry-duel-desktop");
   await H.page.getByRole("button", { name: "게임 설명" }).click();
@@ -243,12 +247,12 @@ try {
   check("1 host alone: empty opponent slot", (await H.page.locator(".wr-duel-player--empty").innerText()).includes("빈 자리"));
   check("7 host START disabled before requirements", await hostStart.isDisabled());
   check("6 no READY anywhere (host)", !/READY|준비 완료/.test(await bodyText(H.page)));
-  check("duel rule label from room.use_items", (await H.page.locator(".wr-duel-setup").innerText()).includes("아이템전"));
+  check("duel rule label from room.use_items", (await H.page.locator(".wr-rule-strip").innerText()).includes("아이템전"));
   await shot(H.page, "duel-desktop-host-alone");
 
   const G = await context("guest");
   await G.page.goto(`${base}/multiplayer?mode=duel`);
-  await G.page.locator(".mp-mode-panel input[placeholder='ROOM CODE']").fill("tr4b9k");
+  await G.page.locator(".mp-mode-panel input.mp-code-input").fill("tr4b9k");
   await G.page.locator(".mp-mode-panel").getByRole("button", { name: "참가", exact: true }).click();
   await G.page.waitForURL(/\/multiplayer\/room\//);
   await G.page.locator(".wr-duel-stage").waitFor();
@@ -271,9 +275,9 @@ try {
   check("3 host target search (Enter submits)", await result.count() === 1);
   await result.focus();
   await H.page.keyboard.press("Enter");
-  await H.page.locator(".wr-target-chosen .wr-gold-pill").waitFor();
+  await H.page.locator(".wr65-saved-target .wr-gold-pill").waitFor();
   check("4 host target selection → gold target", (await H.page.locator(".room-target-section").first().innerText()).includes("르네상스"));
-  await expect(G.page.getByText("방장이 고른 목표: 르네상스").first()).toBeVisible();
+  await expect(G.page.locator(".wr65-saved-target .wr-gold-pill")).toHaveText("르네상스");
   check("5 guest sees selected target immediately", true);
   await expect(hostStart).toBeEnabled();
   check("8 host START enabled after opponent + target", await hostStart.isEnabled());
@@ -281,15 +285,15 @@ try {
   await H.page.locator(".room-target-input").fill("세종");
   await H.page.locator(".room-target-input").press("Enter");
   await H.page.locator(".search-item").filter({ hasText: "세종대왕" }).click();
-  await expect(G.page.getByText("방장이 고른 목표: 세종대왕").first()).toBeVisible();
+  await expect(G.page.locator(".wr65-saved-target .wr-gold-pill")).toHaveText("세종대왕");
   check("target change before START allowed (existing behavior) and mirrored", true);
   await H.page.mouse.move(0, 0);
   await shot(H.page, "duel-desktop-target-selected");
   await shot(G.page, "duel-desktop-guest");
 
   // 10 copy
-  await H.page.locator(".wr-duel-setup").getByRole("button", { name: "방 코드 TR4B9K 복사" }).click();
-  await expect(H.page.locator(".wr-duel-setup .wr-copy-feedback")).toHaveText("복사됨");
+  await H.page.getByRole("button", { name: "방 코드 TR4B9K 복사" }).click();
+  await expect(H.page.locator(".wr-copy-feedback")).toHaveText("복사됨");
   check("10 duel copy writes real room code", await H.page.evaluate(() => navigator.clipboard.readText()) === "TR4B9K");
 
   // responsive duel
@@ -302,7 +306,7 @@ try {
   await H.page.setViewportSize({ width: 1440, height: 1000 });
   // 32 refresh
   await G.page.reload();
-  await G.page.getByText("방장이 고른 목표: 세종대왕").first().waitFor();
+  await expect(G.page.locator(".wr65-saved-target .wr-gold-pill")).toHaveText("세종대왕");
   check("32 duel refresh restores lobby (target + no duplicate join)", players.get(duelId).length === 2);
   // reduced motion
   await G.page.emulateMedia({ reducedMotion: "reduce" });
@@ -343,8 +347,8 @@ try {
   }
 
   // ══ GROUP ══════════════════════════════════════════════════════
-  await H.page.goto(`${base}/play`);
-  await H.page.locator(".wr-mode").nth(2).click();
+  await H.page.goto(`${base}/play`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  await H.page.locator(".wr-mode").nth(2).locator(".wr-mode-action").click();
   await H.page.locator(".mp-mode-panel").waitFor();
   check("31 PLAY → group entry", new URL(H.page.url()).searchParams.get("mode") === "group");
   await H.page.locator(".mp-mode-panel").getByRole("button", { name: "방 생성", exact: true }).click();
@@ -355,7 +359,7 @@ try {
   check("rule strip 3–8명 · 20분 · 무아이템 · 동일 코스", (await H.page.locator(".wr-lobby-head").innerText()).includes("3–8명 · 20분 · 무아이템 · 동일 코스"));
   // guest joins second (so succession goes to guest later)
   await G.page.goto(`${base}/multiplayer?mode=group`);
-  await G.page.locator(".mp-mode-panel input[placeholder='ROOM CODE']").fill("KQ7F2M");
+  await G.page.locator(".mp-mode-panel input.mp-code-input").fill("KQ7F2M");
   await G.page.locator(".mp-mode-panel").getByRole("button", { name: "참가", exact: true }).click();
   await G.page.waitForURL(/\/multiplayer\/group\/room\//);
   await G.page.locator(".wr-roster").waitFor();
@@ -447,7 +451,14 @@ try {
   await H.page.locator(".wr-roster").waitFor();
   await expect(H.page.getByRole("button", { name: "게임 시작" })).toBeEnabled();
   check("24 eight players: 8 compact rows, no empty slots, START enabled", await H.page.locator(".wr-roster-row:not(.wr-roster-row--empty)").count() === 8 && await H.page.locator(".wr-roster-row--empty").count() === 0);
-  check("24b 8-player roster rows are compact (≤64px)", (await H.page.locator(".wr-roster-row").evaluateAll((n) => n.map((x) => x.getBoundingClientRect().height))).every((h) => h <= 64));
+  for (const width of [1440, 1024, 768, 430, 390, 360, 320]) {
+    await H.page.setViewportSize({ width, height: 900 });
+    const heights = await H.page.locator(".wr-roster-row").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
+    console.log(`24b ${width}px max roster row=${Math.max(...heights)}`);
+    await shot(H.page, `group-8-ready-${width}`);
+    check(`24b ${width}px 8-player roster rows are compact (≤64px)`, heights.length === 8 && heights.every(height => height <= 64));
+  }
+  await H.page.setViewportSize({ width: 1440, height: 1000 });
   await H.page.mouse.move(0, 0);
   await shot(H.page, "group-desktop-8-ready");
   await H.page.setViewportSize({ width: 390, height: 844 });
@@ -489,7 +500,7 @@ try {
     if (online.length) console.log(path, online);
     check(`G local guest ${path.replace(/[^/]+$/, ":roomId")} → /play before any online request`, new URL(localGuest.page.url()).pathname === "/play" && online.length === 0);
   }
-  check("L PLAY still shows online modes as login-only for the guest", (await localGuest.page.locator(".wr-mode").nth(1).getAttribute("aria-disabled")) === "true");
+  check("L PLAY still shows online modes as login-only for the guest", (await localGuest.page.locator(".wr-mode").nth(1).locator(".wr-mode-action").getAttribute("aria-disabled")) === "true");
   await localGuest.ctx.close();
 
   // 34 auth restriction

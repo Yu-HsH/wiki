@@ -4,7 +4,7 @@ import "../../css/jungleVeil.css";
 
 const ENTRY_DURATION_MS = 560;
 
-export default function ExpeditionHero({ onPlay }) {
+export default function ExpeditionHero({ onPlay, practice = false }) {
   const titleId = useId();
   const copyId = useId();
   const cueId = useId();
@@ -26,7 +26,7 @@ export default function ExpeditionHero({ onPlay }) {
 
   return (
     <section className="wr65-jungle-hero wr-veil" aria-labelledby={titleId}
-      data-state={launching ? "launch" : "idle"} data-hovered={hovered}
+      data-state={launching ? "launch" : "idle"} data-hovered={hovered} data-tutorial-practice={practice || undefined}
       style={{ "--veil-entry-duration": `${ENTRY_DURATION_MS}ms` }}>
       <JungleVeilArt />
       <div className="wr-veil-shade" aria-hidden="true" />
@@ -44,12 +44,14 @@ export default function ExpeditionHero({ onPlay }) {
           </>}
         </p>
       </div>
-      <button type="button" className="wr-veil-trigger"
+      <button type="button" className="wr-veil-trigger" data-tutorial-anchor="home.start"
         aria-labelledby={`${titleId} ${cueId}`} aria-describedby={copyId}
         aria-disabled={launching || undefined}
         onPointerEnter={event => setHovered(event.pointerType === "mouse")}
         onPointerLeave={() => setHovered(false)}
-        onClick={startExpedition} />
+        onClick={startExpedition}>
+        {practice && <span className="wr-veil-start-visual" aria-hidden="true">게임 시작 <span className="wr-veil-arrow">→</span></span>}
+      </button>
     </section>
   );
 }

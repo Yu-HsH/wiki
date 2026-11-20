@@ -1,3 +1,4 @@
+import { createSingleStartFixture } from "./single-start-browser-fixture.mjs";
 // Phase 3 RACE + Group Spectator presentation regression. Every Supabase / Edge / Wikipedia /
 // Realtime call is answered by an in-memory fixture inside this script; no backend is reached
 // and no fixture enters production code. Fixture data (titles, timers, censored set) is example
@@ -18,6 +19,7 @@ const checks = [];
 const check = (name, value) => { assert.ok(value, name); checks.push(name); };
 const consoleErrors = [];
 const rpcCalls = [];
+const p0SingleExitOnly = process.argv.includes('--single-exit-only');
 const iso = (ms) => new Date(ms).toISOString();
 const now = () => Date.now();
 
@@ -70,6 +72,7 @@ const players = new Map();
 const itemStates = new Map();
 const events = new Map();
 const singleRuns = new Map();
+const singleStart = createSingleStartFixture({ runs: singleRuns, allocationStart: START, allocationTarget: TARGET, pageId, htmlOf, linksOf });
 let seq = 0;
 const created = () => iso(Date.UTC(2026, 9, 7, 0, 0, seq++));
 const row = (roomId, user, extra = {}) => ({
@@ -142,10 +145,25 @@ async function handleApi(route, userKey) {
     return json(route, { snapshotId: `s-${title}`, pageId: String(body.pageId ?? pageId(title)), revisionId: String(body.revisionId ?? "5000"), canonicalTitle: title, ...(body.includeDocument ? { documentHtml: htmlOf(title), links: linksOf(title).map((t) => ({ ns: 0, title: t })) } : {}) });
   }
   if (path.endsWith("/functions/v1/single-run")) {
+    const reserved = singleStart(body);
+    if (reserved) {
+      rpcCalls.push(`${userKey}:single-run:${body.action}`);
+      return json(route, reserved);
+    }
     if (body.action === "create") { const run = { id: body.run.runId, status: "active", state_version: 0, move_count: 0, path_title_snapshots: [body.run.start.title], current_title_snapshot: body.run.start.title }; singleRuns.set(run.id, run); return json(route, { ok: true, run }); }
     if (body.action === "move") return json(route, singleRun(singleRuns.get(body.runId), body.nextPage.title));
     if (body.action === "leave") { const run = singleRuns.get(body.runId); run.status = "abandoned"; return json(route, { ok: true, run }); }
     return json(route, { ok: true, run: singleRuns.get(body.runId) });
+  }
+  if (path === "/rest/v1/game_records") {
+    const runId = (url.searchParams.get("run_id") || "").slice(3);
+    const run = singleRuns.get(runId);
+    return json(route, run?.status === "completed" ? [{
+      id: run.id, run_id: run.id, user_id: user.id, player_name: user.nickname,
+      start_title: run.start_title_snapshot, target_title: run.target_title_snapshot,
+      elapsed_seconds: 1, click_count: run.move_count, path_titles: run.path_title_snapshots,
+      result_status: "completed", timing_contract: run.timing_contract, created_at: iso(now()),
+    }] : []);
   }
   if (path.startsWith("/rest/v1/rpc/")) {
     const name = path.split("/").pop();
@@ -197,6 +215,14 @@ async function handleApi(route, userKey) {
       case "get_xp_summary_v1": return json(route, { ok: true, total_xp: 100, level: 2, current_level_xp: 0, next_level_xp: 100 });
       case "ensure_today_daily_challenge": return json(route, [{ target_title: TARGET, start_title: START, hint: "", challenge_date: "2026-10-07" }]);
       case "get_my_achievements_v1": return json(route, { ok: true, unseenCount: 0, achievements: [], hidden: { discovered: 0, achievements: [] } });
+      case "get_result_achievements_v1": {
+        const knownResult = p.p_scope === "single"
+          ? singleRuns.get(p.p_result_id)?.status === "completed"
+          : p.p_scope === "group" && rooms.get(p.p_result_id)?.status === "finished";
+        return json(route, knownResult
+          ? { ok: true, scope: p.p_scope, resultId: p.p_result_id, achievements: [], xpTotal: 0 }
+          : { ok: false, code: "RESULT_NOT_FOUND" });
+      }
       default: return json(route, []);
     }
   }
@@ -278,6 +304,7 @@ async function toastClear(page) {
 }
 const articleWidth = (page) => page.locator(".article-content").evaluate((n) => n.getBoundingClientRect().width);
 
+qaSuite: {
 try {
   await fs.mkdir(output, { recursive: true });
   for (let i = 0; i < 80; i++) { try { if ((await fetch(base)).ok) break; } catch {} await new Promise((r) => setTimeout(r, 200)); }
@@ -287,13 +314,28 @@ try {
   {
     const { ctx, page } = await context("me");
     await page.goto(`${base}/play`);
-    await page.locator(".wr-mode").first().click();
+    await page.locator(".wr-mode").first().locator(".wr-mode-action").click();
     await page.getByPlaceholder("예: 아인슈타인, 조선왕조...").fill("랜덤");
     await page.getByRole("button", { name: "랜덤 목표로 시작" }).click();
+    await page.getByRole("dialog", { name: "싱글 탐험 출발 준비" }).waitFor({ timeout: 15000 });
+    await page.getByRole("button", { name: "준비 취소", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "게임을 나갈까요?" })).toBeVisible();
+    check("S0 countdown cancel asks before abandoning the run", !rpcCalls.includes("me:single-run:leave_v1") && [...singleRuns.values()].every(run => run.status !== "abandoned"));
+    await page.getByRole("dialog", { name: "게임을 나갈까요?" }).getByRole("button", { name: "계속하기" }).click();
+    await expect(page.getByRole("dialog", { name: "게임을 나갈까요?" })).toHaveCount(0);
+    check("S0b continue after cancel keeps the reserved run", !rpcCalls.includes("me:single-run:leave_v1"));
+    if (p0SingleExitOnly) {
+      check("S0c no browser errors during single exit guard", consoleErrors.length === 0);
+      await ctx.close();
+      console.log(`PASS ${checks.length} single countdown exit checks (isolated browser fixture)`);
+      break qaSuite;
+    }
     await page.locator(".wr-race-hud").waitFor();
     await page.locator(".countdown-overlay").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     await expect(page.locator(".wr-hud-doc--current")).toContainText(START, { timeout: 15000 });
-    check("S1 single normal load · HUD current/goal", (await page.locator(".wr-hud-doc--goal").innerText()).includes(TARGET));
+    await page.locator(".wr-single-prefetch").waitFor({ state: "detached", timeout: 15000 });
+    await expect(page.locator(".wr-hud-doc--goal"), "S1 single normal load · HUD current/goal").toContainText(TARGET);
+    check("S1 single normal load · HUD current/goal", true);
     check("S1b no global HOME/PLAY/로비/랭킹 navigation during race", await page.getByRole("navigation", { name: "주요 메뉴" }).count() === 0 && await page.locator(".game-nav").count() === 0 && await page.getByRole("button", { name: "랭킹" }).count() === 0);
     check("S1c article link is Blue #3268A8", await page.locator(".article-content a[data-wiki-title]").first().evaluate((a) => getComputedStyle(a).color === "rgb(50, 104, 168)"));
     check("S1d target link not highlighted in body (no gold)", await page.locator(`.article-content a[data-wiki-title]`).evaluateAll((as) => as.every((a) => getComputedStyle(a).color === "rgb(50, 104, 168)")));
@@ -310,19 +352,21 @@ try {
     await page.getByRole("button", { name: "나가기" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "이탈하기" }).click();
     await page.waitForURL(/\/lobby$/);
-    check("S5 give-up via exit guard calls existing leave RPC", rpcCalls.includes("me:leave_single_game_run"));
+    check("S5 give-up via exit guard leaves the reserved run", rpcCalls.includes("me:single-run:leave_v1"));
     // finish
     await page.goto(`${base}/play`);
-    await page.locator(".wr-mode").first().click();
+    await page.locator(".wr-mode").first().locator(".wr-mode-action").click();
     await page.getByPlaceholder("예: 아인슈타인, 조선왕조...").fill("랜덤");
     await page.getByRole("button", { name: "랜덤 목표로 시작" }).click();
     await expect(page.locator(".wr-hud-doc--current")).toContainText(START, { timeout: 15000 });
+    await page.locator(".wr-single-prefetch").waitFor({ state: "detached", timeout: 15000 });
     await page.locator(".countdown-overlay").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     await page.locator(".article-content a", { hasText: MIDDLE }).first().click();
     await expect(page.locator(".wr-hud-doc--current")).toContainText(MIDDLE);
     await page.locator(".article-content a", { hasText: TARGET }).first().click();
     await page.getByTestId("single-result").waitFor({ timeout: 15000 }); // Phase 4 result (was "Mission Accomplished!")
-    check("S6 finish → existing SuccessOverlay result flow", await page.getByRole("dialog", { name: "완주" }).count() === 1);
+    await expect(page.getByRole("dialog", { name: "완주" })).toBeVisible();
+    check("S6 finish → existing SuccessOverlay result flow", true);
     for (const w of [390, 320]) {
       await page.setViewportSize({ width: w, height: 844 });
       check(`S7 single no overflow at ${w}`, await noOverflow(page));
@@ -330,10 +374,11 @@ try {
     await ctx.close();
     const g = await context("guestSingle", { guest: true });
     await g.page.goto(`${base}/play`);
-    await g.page.locator(".wr-mode").first().click();
+    await g.page.locator(".wr-mode").first().locator(".wr-mode-action").click();
     await g.page.getByPlaceholder("예: 아인슈타인, 조선왕조...").fill("랜덤");
     await g.page.getByRole("button", { name: "랜덤 목표로 시작" }).click();
     await expect(g.page.locator(".wr-hud-doc--current")).toContainText(START, { timeout: 15000 });
+    await g.page.locator(".wr-single-prefetch").waitFor({ state: "detached", timeout: 15000 });
     await g.page.locator(".countdown-overlay").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     await g.page.locator(".article-content a", { hasText: MIDDLE }).first().click();
     await expect(g.page.locator(".wr-hud-doc--current")).toContainText(MIDDLE);
@@ -381,7 +426,7 @@ try {
     const censored = page.locator(".article-content a.duel-item-censored");
     await expect(censored.first()).toBeVisible();
     const cs = await censored.first().evaluate((a) => ({ color: getComputedStyle(a).color, deco: getComputedStyle(a).textDecorationLine, pe: getComputedStyle(a).pointerEvents, tab: a.getAttribute("tabindex"), dis: a.getAttribute("aria-disabled") }));
-    check("D7 censored article link gray #78877F, no underline, no strikethrough, inert", cs.color === "rgb(120, 135, 127)" && cs.deco === "none" && cs.pe === "none" && cs.tab === "-1" && cs.dis === "true");
+    check("D7 censored article link muted in the jungle palette, without decoration and inert", cs.color === "rgb(104, 114, 94)" && cs.deco === "none" && cs.pe === "none" && cs.tab === "-1" && cs.dis === "true");
     check("D7b censorship legend not color-only", (await page.locator(".wr-article-head").innerText()).includes("검열 중"));
     await page.getByRole("button", { name: /링크만 보기 · 사용 가능/ }).click();
     const overlay = page.getByRole("dialog", { name: "링크만 보기" });
@@ -395,7 +440,7 @@ try {
     check("D8c internal scroll (list scrolls, page does not)", await overlay.locator(".duel-item-index__words").evaluate((n) => n.scrollHeight > n.clientHeight + 100 && getComputedStyle(n).overflowY === "auto"));
     check("D8d filter field focused on open", await overlay.locator(".duel-item-index__filter").evaluate((n) => n === document.activeElement));
     const ce = await overlay.locator(".duel-item-index__word--censored").first().evaluate((b) => ({ deco: getComputedStyle(b).textDecorationLine, color: getComputedStyle(b).color, border: getComputedStyle(b).borderTopStyle, tag: b.textContent.includes("검열"), dis: b.getAttribute("aria-disabled") }));
-    check("D9 index censored entry: gray, dashed, 검열 label, no strikethrough", ce.deco === "none" && ce.color === "rgb(120, 135, 127)" && ce.border === "dashed" && ce.tag && ce.dis === "true");
+    check("D9 index censored entry: gray, dashed, 검열 label, no strikethrough", ce.deco === "none" && ce.color === "rgb(104, 114, 94)" && ce.border === "dashed" && ce.tag && ce.dis === "true");
     const indexCensored = await overlay.locator(".duel-item-index__word--censored").allInnerTexts();
     const articleCensored = await censored.evaluateAll((as) => as.map((a) => a.getAttribute("data-wiki-title")));
     check("D10 same server censored set in article and index", CENSORED.every((t) => indexCensored.some((x) => x.startsWith(t)) && articleCensored.includes(t)));
@@ -431,7 +476,15 @@ try {
       check(`D15 duel no overflow at ${w}`, await noOverflow(page));
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    check("D15b mobile HUD + opponent strip stay compact (article not pushed down)", (await page.locator(".wr-race-strip").boundingBox()).height <= 48 && (await page.locator(".wr-race-hud").boundingBox()).height <= 90);
+    for (const width of [320, 360, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      const hudHeight = (await page.locator(".wr-race-hud").boundingBox()).height;
+      const stripHeight = (await page.locator(".wr-race-strip").boundingBox()).height;
+      console.log(`D15b ${width}px HUD=${hudHeight} strip=${stripHeight}`);
+      await shot(page, `duel-hud-${width}`);
+      check(`D15b ${width}px compact HUD and opponent strip`, hudHeight <= 90 && stripHeight <= 48 && await noOverflow(page));
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(2600);
     await page.getByRole("button", { name: /먹물 공격 · 사용 가능/ }).click();
     const toastMobile = await toastClear(page);
@@ -604,3 +657,4 @@ try {
   await fs.writeFile(`${output}/report.json`, JSON.stringify({ basis: "321ea27 + uncommitted Phase 3 working tree", date: "2026-10-07", fixtureOnly: true, checks, consoleErrors }, null, 2));
   console.log(`PASS ${checks.length} browser checks (isolated API/realtime fixtures; real backend not exercised)`);
 } finally { await browser?.close(); server.kill(); }
+}

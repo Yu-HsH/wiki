@@ -29,12 +29,14 @@ jobs:
       - run: npx --no-install supabase start --yes --exclude vector
       - run: npx --no-install playwright install --with-deps chromium
       - run: node scripts/verify-duel-start-scroll-ci.mjs
-      - name: Upload two-client scroll screenshots
+      - name: Upload two-client scroll diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: duel-first-page-scroll-qa
-          path: test-results/duel-start-scroll/*.png
+          path: |
+            test-results/duel-start-scroll/*.png
+            test-results/duel-start-scroll/*.json
           if-no-files-found: ignore
           retention-days: 7
       - name: Destroy disposable local Supabase volume

@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import AudioControls from "./components/AudioControls.jsx";
+import TutorialAppHost, { TutorialBlockedRoute, useTutorialApp } from "./components/TutorialAppHost.jsx";
+import TutorialPracticePage from "./pages/TutorialPracticePage.jsx";
+import { PRACTICE_ROUTES } from "./utils/tutorialIntegration.js";
 import {
   createBrowserRouter,
   Navigate,
   Route,
   RouterProvider,
+  ScrollRestoration,
   Routes,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./authContext";
@@ -59,7 +64,7 @@ function ProtectedRoute({ children }) {
     return <Navigate to={LOGIN_PATH} replace />;
   }
 
-  return children;
+  return <React.Fragment key={user.id}>{children}</React.Fragment>;
 }
 
 /**
@@ -90,6 +95,7 @@ function LoginRoute() {
 }
 
 function LobbyRoute({ view = "home" }) {
+  const tutorial = useTutorialApp();
   const { user, loading } = useAuth();
   const access = getLobbyAccess({ loading, user });
 
@@ -105,7 +111,11 @@ function LobbyRoute({ view = "home" }) {
     return <Navigate to={LOGIN_PATH} replace />;
   }
 
-  return <MainPage view={view} />;
+  return (
+    <MainPage key={user.id + (tutorial?.practice ? ":practice" : ":live")} view={view}
+      tutorialSession={tutorial?.capability} onStartTutorial={tutorial?.start}
+      onStartGrowth={tutorial?.startGrowth} />
+  );
 }
 
 function LobbyUpdatesRoute() {
@@ -201,6 +211,9 @@ function SingleGameRoute() {
  * - /profile: 내 프로필 (인증 필수)
  */
 function AppRoutes() {
+  const tutorial = useTutorialApp();
+  const { pathname } = useLocation();
+  if (tutorial?.practice && !PRACTICE_ROUTES.includes(pathname)) return <TutorialBlockedRoute />;
   return (
     <><AudioControls />
     <Routes>
@@ -223,6 +236,8 @@ function AppRoutes() {
       />
 
       <Route path="/play" element={<LobbyRoute view="play" />} />
+      <Route path="/tutorial/practice/solo" element={<TutorialPracticeRoute />} />
+      <Route path="/tutorial/practice/growth" element={<TutorialPracticeRoute />} />
 
       <Route
         path="/game"
@@ -296,6 +311,20 @@ function AppRoutes() {
   );
 }
 
+function TutorialPracticeRoute() {
+  const { user, loading } = useAuth();
+  const tutorial = useTutorialApp();
+  const access = getLobbyAccess({ loading, user });
+  if (access === "loading") return <p role="status">세션 확인 중...</p>;
+  if (access === "login") return <Navigate to={LOGIN_PATH} replace />;
+  if (!tutorial?.practice) return <Navigate to="/lobby?practice=intro-core" replace />;
+  return (
+    <div className="wr-page wr65-field wr-tutorial-app-practice">
+      <TutorialPracticePage renderGrowth={tutorial.renderGrowth} />
+    </div>
+  );
+}
+
 export default function App() {
   return <RouterProvider router={appRouter} />;
 }
@@ -307,7 +336,8 @@ const appRouter = createBrowserRouter([
     path: "*",
     element: (
       <AuthProvider>
-        <AppRoutes />
+        <ScrollRestoration />
+        <TutorialAppHost><AppRoutes /></TutorialAppHost>
       </AuthProvider>
     ),
   },

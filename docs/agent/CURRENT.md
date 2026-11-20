@@ -1,3 +1,37 @@
+# 현재 상태 — PR #62 Preview P0 싱글 이탈 확인 보정
+
+갱신 **2026-11-20 KST**. 제품 기준 **91034ec** (P0 수정) 및 **8059496** (P0 전용 CI 분리), 브랜치 `integrate/tutorial-items-group-20261119`, [Draft PR #62](https://github.com/Yu-HsH/wiki/pull/62), 운영 `main` 기준 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`. API로 재구성한 원격 커밋 SHA는 해당 파일 트리의 로컬 커밋 SHA와 다를 수 있다.
+
+- 로그인한 사용자의 Vercel Preview에서 싱글 랜덤 목표 할당·출발 연출에 진입한 뒤 뜻하지 않은 이탈 및 `종료된 탐험입니다` 오류를 확인했다. 원인 조사에서 출발 연출의 `준비 취소`가 확인 없이 서버 이탈 요청을 보내고, 다음 라우트 이탈 확인이 뒤늦게 나타나는 경로를 찾았다. 숨겨진 `연출 건너뛰기`를 자동 선택했던 최초 재현의 정확한 포인터 대상은 미확정이므로 건너뛰기 자체가 이탈을 유발했다고 단정하지 않는다.
+- 출발 연출의 취소를 공통 이탈 확인 경로로 연결하고, 출발 연출(레이어 1500) 위에 확인창(레이어 1600)이 나타나게 했다. `계속하기`는 서버 기록을 포기하지 않고, `이탈하기`로 승인한 경우에만 기존 이탈 RPC를 사용한다. 싱글 레거시·서버 예약 양쪽 연출에 적용했다.
+- 새 정적 회귀 테스트 포함 `npm test` **891/891 PASS**, `npm run build` 및 `git diff --check` PASS. `scripts/ui-phase3-browser.mjs`에 취소·계속하기·서버 기록 보존 검사 두 개를 추가하고, PR 대상 GitHub Actions 브라우저 회귀 워크플로를 추가했다. 현 로컬 실행 환경에서는 Chromium 소켓 권한 제한으로 신규 브라우저 검사 직접 실행은 불가하며, 원격 CI와 Preview 관찰 결과는 아래와 같다.
+- 최종 SHA `056782ef` Preview에서 게스트 실제 랜덤 싱글의 `준비 취소` → 확인창 → `계속하기` → 서버 진행 지속 및 게임 HUD 타이머를 관찰하고, 별도 나가기 확인 후 로비 복귀도 확인했다. 단, 랜덤 시작이 `철천지한`이라는 위키낱말사전 안내용 문서로 배정되어 비정상적인 출발 UX를 보였다. 위키 문서 링크 `위키낱말사전` 1개가 실제 존재하므로 서버 이동 불가능 P0로 아직 확정하지 않는다. 해당 이동 성공과 실제 아이폰/안드로이드 시험은 미확인이다.
+- 첫 PR 브라우저 CI `44648818423`은 S0/S0b 이후 기존 전체 Phase 3의 `D15 duel no overflow at 320`에서 FAIL했다. 이는 취소 확인과 무관한 모바일 가로 넘침 실패이므로 **기존 기준을 완화하지 않고**, `--single-exit-only` 인자를 새 전용 워크플로에서만 사용하여 S0/S0b/S0c 통과 여부를 분리했다. 기존 Phase 3 무인자 실행 범위·단언은 그대로 둔다. 나머지 첫 CI 10개 워크플로는 PASS다.
+- 배포 정책은 P0 우선 수정, P1/P2 UX(튜토리얼 우하단 도움말 버튼 등) 후속 보류. 실기기 Safari·Android, 신규 Preview UI, 새 CI와 Production은 아직 검증·배포 전. 운영 도메인 3개는 `main` b7d5937 Vercel 배포를 가리킴을 읽기 전용 확인했다. 운영 DB·Edge·migration·환경변수 변경 0. S5 C `C_DEFERRED_BY_USER` / `NOT_RUN`.
+
+## 직전 PR 상태
+
+# 현재 상태 — PR #62 1:1 재연결 후속 검증
+
+갱신 **2026-11-20 KST**. 제품 기준 **0b111211650e305fb2dcf84e9c9224b3f9eb3f1c**, 브랜치 `integrate/tutorial-items-group-20261119`, 최신 `main` 기준 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`, [Draft PR #62](https://github.com/Yu-HsH/wiki/pull/62).
+
+- VS 연출 중 게스트 Realtime이 끊겼다가 복구될 때, 연결이 끊겼던 채널이 모두 재가입하면 서버 방·참가자 상태를 다시 읽는다. 복구 중 카운트다운은 시작하지 않는다.
+- 2026-11-20 KST 격리 Auth·Postgres·Realtime에서 일반 및 재연결 경로를 두 차례 검증했다. 양쪽 첫 문서 `scrollY=0`, F5 후 양쪽 서버 이동 횟수 0. npm 890/890, 빌드, UI Phase 2·3·4 88/87/86, Packet 13 12/12·90/90, 1:1·그룹 종료·재경기와 공개방 검사 통과.
+- S5 C `C_DEFERRED_BY_USER` / `NOT_RUN`. 운영 DB·Edge·환경변수·Production 변경 0.
+
+## 기존 통합 검증 기록
+
+# 현재 상태 — Wiki Race 통합 검토 후보
+
+갱신 **2026-11-20 KST**. 브랜치 `integrate/tutorial-items-group-20261119`의 제품 기준은 **506061abc66e9d2c0c093c7e6e5c6c4fa22b1a2a**이다. 최신 GitHub `main` 기준은 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`이다.
+
+- 기존 튜토리얼·가이드·업적·보상과 1:1·그룹·공개방 기능을 통합했다. 그룹 경기 채널 수명, 8인 대기실, 모바일 1:1 HUD·링크 시트, 1:1 결과 마스코트를 보정했다.
+- 2026-11-20 KST 기준 npm 테스트 890/890, Vite 빌드, UI Phase 2·3·4 각각 88/87/86, 격리 PostgreSQL 17.6 migration 59개와 pgTAP 1,486/1,486을 통과했다.
+- 공식 Packet 13은 최신 migration을 적용한 로컬 스택에서 두 번 모두 12/12, 이벤트 수신 90/90이었다. 실제 로컬 1:1·그룹 경기 종료 및 재경기, 공개방 검색·입장도 통과했다. Wikipedia 문서는 재현 가능한 픽스처를 사용했다.
+- S5 C는 `C_DEFERRED_BY_USER`, 실제 경기 `NOT_RUN`이다. 운영 DB·Edge·환경변수 변경과 Production 배포는 없었다.
+
+## 이전 기록
+
 # 현재 상태 — Jungle65 최종 운영 배포 후보
 
 갱신: **2026-11-03 KST**. 기준 커밋 **0b93be93bf8fa19ae9f74bcfd9174a7b3613a04d** (20b50fb 후 제한 복구·QA 구현). 이 CURRENT를 기록하는 문서 커밋의 부모가 제품 기준이다. 브랜치 **codex/jungle65-release-candidate-20261102**, Draft [PR #8](https://github.com/Yu-HsH/wiki/pull/8). 디자인 PR #7·27e5056, 보안 fdd7190, 이전 후보20b50fb를 보존한다.

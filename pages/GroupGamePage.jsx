@@ -189,6 +189,7 @@ export default function GroupGamePage() {
         connection: phase === GROUP_GAME_PHASE.PLAYING && !recovery ? 'ok' : recovery?.mode === 'retryable' ? 'lost' : null,
         ended: room?.status === 'finished' || leaving || [GROUP_GAME_PHASE.FINISHED, GROUP_GAME_PHASE.SPECTATING, GROUP_GAME_PHASE.ENDED].includes(phase) });
     const [connectionVersion, setConnectionVersion] = useState(0);
+    const channelClosedRef = useRef(false);
     const [selectedSpectatorId, setSelectedSpectatorId] = useState(null);
     const [spectatorPage, setSpectatorPage] = useState(null);
     const [spectatorPageLoading, setSpectatorPageLoading] = useState(false);
@@ -612,7 +613,7 @@ export default function GroupGamePage() {
                 });
                 setRecovery(null);
                 setPhase(restoredPhase);
-                setConnectionVersion((prev) => prev + 1);
+                if (channelClosedRef.current) setConnectionVersion((prev) => prev + 1);
                 return;
             }
 
@@ -642,7 +643,7 @@ export default function GroupGamePage() {
 
             setRecovery(null);
             setPhase(restoredPhase);
-            setConnectionVersion((prev) => prev + 1);
+            if (channelClosedRef.current) setConnectionVersion((prev) => prev + 1);
         } catch (error) {
             if (recoveryGenerationRef.current !== generation || !snapshotGuardRef.current.isCurrent(read)) return;
             const normalized = normalizeOnlineGameError(
@@ -843,102 +844,126 @@ export default function GroupGamePage() {
     useEffect(() => {
         if (!roomId || !user?.id || !supabase) return;
 
-        if (realtimeChannelRef.current) {
-            const previousChannel = realtimeChannelRef.current;
-            realtimeChannelRef.current = null;
-            supabase.removeChannel(previousChannel);
-        }
+        let disposed = false;
+        let channel;
+        let interrupted = false;
+        const isCurrentChannel = () => !disposed && realtimeChannelRef.current === channel;
 
-        const channel = supabase
-            .channel(`group-game:${roomId}:${user.id}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "*",
-                    schema: "public",
-                    table: "game_rooms",
-                    filter: `id=eq.${roomId}`,
-                },
-                async (payload) => {
-                    trace("realtime-event", { table: "game_rooms", status: payload?.new?.status, version: payload?.new?.state_version });
-                    const incoming = payload?.new?.state_version;
-                    const relation = incoming == null
-                        ? "next"
-                        : classifyRealtimeVersion(roomRef.current?.state_version, incoming);
-                    if (relation === "stale") return;
-                    try {
-                        await refreshRoomState();
-                    } catch (error) {
-                        console.error("group game room refresh failed:", error);
-                        recoverGame();
+        // StrictMode runs setup and cleanup together. Open only the surviving setup.
+        queueMicrotask(() => {
+            if (disposed) return;
+            channelClosedRef.current = false;
+            channel = supabase
+                .channel(`group-game:${roomId}:${user.id}`)
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: "game_rooms",
+                        filter: `id=eq.${roomId}`,
+                    },
+                    async (payload) => {
+                        if (!isCurrentChannel()) return;
+                        const incoming = payload?.new?.state_version;
+                        trace("realtime-event", {
+                            table: "game_rooms", status: payload?.new?.status, version: incoming,
+                            eventKey: incoming == null ? null : `game_rooms:${payload.new.id}:${incoming}`,
+                        });
+                        const relation = incoming == null
+                            ? "next"
+                            : classifyRealtimeVersion(roomRef.current?.state_version, incoming);
+                        if (relation === "stale") return;
+                        try {
+                            await refreshRoomState();
+                        } catch (error) {
+                            console.error("group game room refresh failed:", error);
+                            recoverGame();
+                        }
+                    }
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: "room_players",
+                        filter: `room_id=eq.${roomId}`,
+                    },
+                    async (payload) => {
+                        if (!isCurrentChannel()) return;
+                        const incoming = payload?.new?.progress_version;
+                        trace("realtime-event", {
+                            table: "room_players", status: payload?.new?.player_status, version: incoming,
+                            eventKey: incoming == null ? null : `room_players:${payload.new.id}:${incoming}`,
+                        });
+                        const playerId = payload?.new?.user_id;
+                        const currentPlayer = playersRef.current.find((player) => player.user_id === playerId);
+                        const relation = incoming == null
+                            ? "next"
+                            : classifyRealtimeVersion(currentPlayer?.progress_version, incoming);
+                        if (relation === "stale") return;
+                        try {
+                            await refreshRoomState();
+                        } catch (error) {
+                            console.error("group game players refresh failed:", error);
+                            recoverGame();
+                        }
+                    }
+                )
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "INSERT",
+                        schema: "public",
+                        table: "room_events",
+                        filter: `room_id=eq.${roomId}`,
+                    },
+                    (payload) => {
+                        if (!isCurrentChannel() || payload?.new?.event_type !== "group_spectator_emoji") return;
+                        const reaction = normalizeGroupSpectatorEmojiEvent(payload.new);
+                        if (!reaction) return;
+                        trace("realtime-emoji", { eventId: reaction.id });
+                        setSpectatorEmojis((current) =>
+                            upsertLatestGroupSpectatorEmoji(current, payload.new)
+                        );
+                    }
+                );
+
+            realtimeChannelRef.current = channel;
+            channel.subscribe((status, error) => {
+                trace("subscription", { status });
+                if (!isCurrentChannel()) return;
+                if (status === "CLOSED") channelClosedRef.current = true;
+                if (status === "SUBSCRIBED") {
+                    channelClosedRef.current = false;
+                    if (interrupted && !leavingRef.current) {
+                        interrupted = false;
+                        if (!recoveringRef.current) void recoverGame();
+                    } else if (initialValidationCompletedRef.current && !recoveringRef.current && roomRef.current?.status !== "finished") {
+                        void refreshRoomState().catch(() => { resultReadErrorRef.current = true; setResultReadError(true); });
                     }
                 }
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event: "*",
-                    schema: "public",
-                    table: "room_players",
-                    filter: `room_id=eq.${roomId}`,
-                },
-                async (payload) => {
-                    trace("realtime-event", { table: "room_players", status: payload?.new?.player_status, version: payload?.new?.progress_version });
-                    const incoming = payload?.new?.progress_version;
-                    const playerId = payload?.new?.user_id;
-                    const current = playersRef.current.find((player) => player.user_id === playerId);
-                    const relation = incoming == null
-                        ? "next"
-                        : classifyRealtimeVersion(current?.progress_version, incoming);
-                    if (relation === "stale") return;
-                    try {
-                        await refreshRoomState();
-                    } catch (error) {
-                        console.error("group game players refresh failed:", error);
-                        recoverGame();
-                    }
+                if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+                    if (roomRef.current?.status === "finished" || leavingRef.current) return;
+                    interrupted = true;
+                    console.error("group game realtime disconnected:", status, error);
+                    setPhase(GROUP_GAME_PHASE.RECOVERING);
+                    setRecovery({
+                        mode: "retryable",
+                        message: "실시간 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
+                    });
                 }
-            )
-            .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "room_events",
-                    filter: `room_id=eq.${roomId}`,
-                },
-                (payload) => {
-                    if (payload?.new?.event_type !== "group_spectator_emoji") return;
-                    if (!normalizeGroupSpectatorEmojiEvent(payload.new)) return;
-                    setSpectatorEmojis((current) =>
-                        upsertLatestGroupSpectatorEmoji(current, payload.new)
-                    );
-                }
-            );
-
-        realtimeChannelRef.current = channel;
-        channel.subscribe((status, error) => {
-            trace("subscription", { status });
-            if (realtimeChannelRef.current !== channel) return;
-            if (status === "SUBSCRIBED" && initialValidationCompletedRef.current && roomRef.current?.status !== "finished") {
-                void refreshRoomState().catch(() => { resultReadErrorRef.current = true; setResultReadError(true); });
-            }
-            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-                if (roomRef.current?.status === "finished" || leavingRef.current) return;
-                console.error("group game realtime disconnected:", status, error);
-                setPhase(GROUP_GAME_PHASE.RECOVERING);
-                setRecovery({
-                    mode: "retryable",
-                    message: "실시간 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
-                });
-            }
+            });
         });
 
         return () => {
+            disposed = true;
+            if (!channel) return;
             if (realtimeChannelRef.current === channel) {
                 realtimeChannelRef.current = null;
             }
-            supabase.removeChannel(channel);
+            void supabase.removeChannel(channel);
         };
     }, [roomId, user?.id, refreshRoomState, recoverGame, connectionVersion]);
 
@@ -958,11 +983,11 @@ export default function GroupGamePage() {
         };
     }, [recoverGame]);
 
-    // Evidence: missed final changes leave Result A waiting forever. Only reconcile
-    // personal result/watch states; one scheduled request at a time, paused hidden/
+    // Reconcile live progress and pending results using the same authoritative reads.
+    // One scheduled request at a time, paused hidden/
     // offline, stopped on final result, leave or unmount. Failures back off to 30s.
     useEffect(() => {
-        if (![GROUP_GAME_PHASE.FINISHED, GROUP_GAME_PHASE.SPECTATING].includes(phase) || leaving) return;
+        if (![GROUP_GAME_PHASE.PLAYING, GROUP_GAME_PHASE.FINISHED, GROUP_GAME_PHASE.SPECTATING].includes(phase) || leaving) return;
         let stopped = false, busy = false, timer, failures = 0;
         const check = async (source) => {
             clearTimeout(timer);
@@ -971,7 +996,7 @@ export default function GroupGamePage() {
             busy = true;
             trace("reconcile-start", { source });
             try {
-                await refreshRoomState();
+                if (!moveInFlightRef.current) await refreshRoomState();
                 failures = 0;
                 resultReadErrorRef.current = false;
                 if (!stopped) setResultReadError(false);
@@ -1121,12 +1146,7 @@ export default function GroupGamePage() {
         fetchGroupSpectatorEmojis(roomId)
             .then((events) => {
                 if (cancelled) return;
-                setSpectatorEmojis(
-                    events.reduce(
-                        (current, event) => upsertLatestGroupSpectatorEmoji(current, event),
-                        []
-                    )
-                );
+                setSpectatorEmojis((current) => events.reduce(upsertLatestGroupSpectatorEmoji, current));
             })
             .catch((error) => {
                 if (!cancelled) console.warn("group spectator emoji restore failed:", error);
@@ -1770,7 +1790,7 @@ export default function GroupGamePage() {
             <>
                 {exitDialog}
                 <ResultScreen mode="group" cinematic="group" tone={outcome.tone} layer="page" titleId="wr-group-result-title" focusKey={view} resultKey={roomId} motionEligible={!finalResultRecoveredRef.current && view !== "retired"} confirmed={room?.status === "finished" && results.length > 0} testId="group-final-result">
-                    <ResultScene variant="group-final" podiumRows={standingRows.filter(row => results.some(result => result.user_id === row.userId && result.result_status === "finished"))} reached={!ownRetired && Boolean(ownResult)} celebration={outcome.celebration} destination={goalTitle || null} recordedAt={room?.finished_at} />
+                    <ResultScene variant="group-final" podiumRows={standingRows.filter(row => results.some(result => result.user_id === row.userId && result.result_status === "finished"))} reached={!ownRetired && Boolean(ownResult)} celebration={outcome.celebration} mascot={view === "retired" ? outcome.mascot : null} destination={goalTitle || null} recordedAt={room?.finished_at} />
                     <ResultCard>
                         <ResultOutcome
                             kicker={outcome.kicker}

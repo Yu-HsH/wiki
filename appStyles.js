@@ -16,6 +16,7 @@ import "./css/profileCard.css";
 import "./css/resultXp.css";
 import "./css/achievements.css";
 import "./css/matchExpression.css";
+import "./css/rewardArt.css";
 
 import "./css/matchResult.css";
 
@@ -45,3 +46,5 @@ import "./css/jungle65Fonts.css";
 
 /* Five navigation pages share one HOME-sized notebook and the same scenery. */
 import "./css/wikiRaceSharedHub.css";
+import "./css/wikiRaceTutorial.css";
+import "./css/wikiRaceTutorialIntegration.css";

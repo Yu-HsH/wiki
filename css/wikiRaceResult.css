@@ -27,6 +27,7 @@
 .wr-rscene.is-reached .wr-rscene-summit { fill: var(--wr-gold); }
 .wr-rscene-mascot { position: absolute; left: 50%; bottom: 40px; height: 118px; width: auto; margin-left: -59px; animation: wr-result-rise var(--wr-motion-page) var(--wr-ease-emphasized) 120ms both; }
 .wr-rscene-mascot--lose { height: 96px; margin-left: -48px; animation-name: wr-appear; }
+.wr-result .wr-rscene-mascot { position: static; flex: none; margin: 0; max-width: 110px; object-fit: contain; }
 .wr-rscene--full::before, .wr-rscene--dots::before { content: ""; position: absolute; top: 34px; left: calc(50% - 90px); width: 180px; height: 70px; pointer-events: none; animation: wr-appear var(--wr-motion-page) var(--wr-ease-out) 260ms both; }
 .wr-rscene--dots::before { background: radial-gradient(circle 4px at 12% 50%, var(--wr-gold) 98%, transparent), radial-gradient(circle 3px at 50% 12%, var(--wr-gold) 98%, transparent), radial-gradient(circle 4px at 88% 46%, var(--wr-gold) 98%, transparent); }
 .wr-rscene--full::before { background: radial-gradient(circle 4px at 8% 52%, var(--wr-gold) 98%, transparent), radial-gradient(circle 3px at 24% 14%, var(--wr-teal) 98%, transparent), radial-gradient(circle 4px at 50% 4%, var(--wr-gold) 98%, transparent), radial-gradient(circle 3px at 70% 22%, var(--wr-purple) 98%, transparent), radial-gradient(circle 4px at 92% 48%, var(--wr-gold) 98%, transparent), linear-gradient(35deg, transparent 46%, var(--wr-teal) 46% 54%, transparent 54%) 34% 70% / 8px 8px no-repeat, linear-gradient(-30deg, transparent 46%, var(--wr-purple) 46% 54%, transparent 54%) 80% 78% / 8px 8px no-repeat; }
@@ -142,6 +143,7 @@
   .wr-rscene-flag { bottom: 92px; }
   .wr-rscene-mascot { height: 84px; margin-left: -42px; bottom: 32px; }
   .wr-rscene-mascot--lose { height: 70px; margin-left: -35px; }
+  .wr-result .wr-rscene-mascot { max-width: clamp(48px, 16vw, 84px); }
   .wr-result .wr-rcard { margin-top: -28px; }
   .wr-result .wr-result-row, .wr-result .wr-result-head { padding-left: 16px; padding-right: 16px; }
   .wr-result .wr-result-headline h1 { font-size: 40px; }

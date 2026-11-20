@@ -1,5 +1,6 @@
 /* Scoped Round 7 reuse: right binding, left page returned right; no shared scene changes. */
 .wr-page.wr-single-start{position:fixed;inset:0;z-index:1500;display:grid;place-content:center;background:radial-gradient(ellipse at 50% 43%,#faf9ef 0%,#e4ebdd 70%);color:#243430;overflow:hidden;height:100dvh;min-height:100dvh;padding:28px 16px 100px;--paper:#fcfcf7;--blue:#3268a8}
+.wr-single-start-exit-guard > .app-modal-backdrop { z-index: 1600; }
 .wr-single-start .book{position:relative;width:min(1120px,92vw);height:520px;transform-style:preserve-3d;filter:drop-shadow(0 26px 24px #24343025)}
 .wr-single-start .book-leaves{position:absolute;inset:8px 6px -8px;background:repeating-linear-gradient(0deg,#ede8d6 0,#ede8d6 2px,#c4bba7 3px,#f7f5e9 4px);border:1px solid #b6ac96;border-radius:9px}
 .wr-single-start .book-pages,.wr-single-start .rest-page,.wr-single-start .rewind-stack{position:absolute;inset:13px 76px 20px 15px}

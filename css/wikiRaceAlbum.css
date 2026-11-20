@@ -72,3 +72,16 @@
   .wr-achievements .album-card-details:not(.is-expanded) {display:none}
 }
 @media(prefers-reduced-motion:reduce){.wr-achievements *, .ach-reveal-card .album-reveal-stamp{animation:none!important;transition:none!important}}
+
+/* B rewards: same specimen in the album, results and practice; existing appStyles registration. */
+.album-reward {min-width:0;padding:12px;border:1px solid var(--wr-frame,#d6c9ac);border-radius:4px;background:var(--wr-paper-2,#f2eddf);display:grid;gap:8px;color:var(--wr-ink,#26382c);overflow-wrap:anywhere}
+.album-reward-label {display:grid;gap:4px}
+.album-reward small {font-size:12px;line-height:1.65}
+.album-reward .pcard {max-width:100%;min-width:0}
+.album-reward :is(.pcard-name,.pcard-title) {white-space:normal;overflow-wrap:anywhere}
+.album-reward[data-support="unsupported"] {border-style:dashed}
+.album-reward .album-support {padding-top:6px;border-top:1px dashed var(--wr-frame,#d6c9ac);color:var(--wr-ink-2,#5c6455)}
+.wr-earned-rewards > .album-reward {margin-top:10px}
+.album-reward-specimen * {animation:none!important;transition:none!important}
+
+[data-reward-preview] .ach-reveal * {animation:none!important;transition:none!important}

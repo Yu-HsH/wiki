@@ -76,7 +76,7 @@ export function ResultScreen({ mode, tone, layer = "page", titleId, focusKey = n
  * Decorative journal cover. Date comes only from a supplied server timestamp.
  * `reached` labels goal arrival; outcome semantics stay in ResultOutcome.
  */
-export function ResultScene({ reached = false, celebration = "none", destination = null, recordedAt = null, variant = "record", podiumRows = [] }) {
+export function ResultScene({ reached = false, celebration = "none", destination = null, recordedAt = null, variant = "record", podiumRows = [], mascot = null }) {
   const { active } = useContext(CinematicContext);
   const date = formatRecordDate(recordedAt);
   if (variant === "group-final" && active && groupPodiumGroups(podiumRows).length) return <GroupEndCinematic rows={podiumRows} />;
@@ -84,6 +84,8 @@ export function ResultScene({ reached = false, celebration = "none", destination
   return <div className={`wr-rscene ${reached ? "is-reached" : ""} wr-rscene--${celebration}`} aria-hidden="true">
     <span className="wr-journal-heading"><small>EXPLORER'S FIELD JOURNAL</small><strong>{variant === "group-final" ? "원정대 전체 기록" : "탐험 기록지"}</strong>{date && <span>{date} · 서버 기록</span>}</span>
     {destination && <span className="wr-rscene-dest"><span className="wr-hud-label">목표 문서</span><b>{destination}</b></span>}
+    {(mascot === "win" || mascot === "lose") && <img className={`wr-rscene-mascot wr-rscene-mascot--${mascot}`}
+      src={`/assets/wiki-race/explorer-${mascot}.png`} alt="" />}
     <span className={`wr-journal-seal ${reached ? "is-complete" : ""}`}>{variant === "group-final" ? "전체 순위 기록" : reached ? "목표 도달" : "결과 기록"}</span>
   </div>;
 }

@@ -483,9 +483,9 @@ select is(
     '00000000-0000-0000-000c-000000000012',
     '00000000-0000-0000-000d-000000000012',
     1, null, null, null, 'undo', 'UNDO'
-  )->'event'->>'move_delta'),
-  '1',
-  'normal UNDO counts as a real +1 move'
+  )->>'code'),
+  'ITEM_RPC_REQUIRED',
+  'public UNDO requires the item RPC and creates no movement'
 );
 select is(
   (public.apply_duel_move_v2(
@@ -494,8 +494,8 @@ select is(
     '00000000-0000-0000-000d-000000000013',
     2, null, null, null, 'undo again', 'UNDO'
   )->>'code'),
-  'UNDO_UNAVAILABLE',
-  'consecutive UNDO cannot undo the previous UNDO event'
+  'ITEM_RPC_REQUIRED',
+  'a repeated new public UNDO is rejected before any item movement'
 );
 
 set local role postgres;
@@ -508,14 +508,14 @@ delete from public.game_move_events where game_id = '00000000-0000-0000-000a-000
 delete from public.game_mutation_requests where game_id = '00000000-0000-0000-000a-000000000001';
 set local role authenticated;
 select is(
-  (public.apply_duel_move_v2('00000000-0000-0000-000a-000000000001', '00000000-0000-0000-000c-000000000014', '00000000-0000-0000-000d-000000000014', 0, null, null, null, null, 'FORCED_LINK')->'event'->>'move_count_after'),
-  '1',
-  'forced movement increments the server move count'
+  (public.apply_duel_move_v2('00000000-0000-0000-000a-000000000001', '00000000-0000-0000-000c-000000000014', '00000000-0000-0000-000d-000000000014', 0, null, null, null, null, 'FORCED_LINK')->>'code'),
+  'ITEM_RPC_REQUIRED',
+  'public FORCED_LINK requires the item RPC'
 );
 select is(
-  (public.apply_duel_move_v2('00000000-0000-0000-000a-000000000001', '00000000-0000-0000-000c-000000000015', '00000000-0000-0000-000d-000000000015', 1, null, null, null, null, 'UNDO')->'event'->>'move_delta'),
-  '-1',
-  'UNDO immediately after forced movement cancels its move count'
+  (public.apply_duel_move_v2('00000000-0000-0000-000a-000000000001', '00000000-0000-0000-000c-000000000015', '00000000-0000-0000-000d-000000000015', 1, null, null, null, null, 'UNDO')->>'code'),
+  'ITEM_RPC_REQUIRED',
+  'public UNDO cannot manufacture an item rollback'
 );
 
 set local role postgres;

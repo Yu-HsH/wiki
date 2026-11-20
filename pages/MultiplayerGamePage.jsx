@@ -197,6 +197,7 @@ function DuelGameSession() {
   const recoverGameRef = useRef(null);
   const gameChannelRef = useRef(null);
   const eventChannelRef = useRef(null);
+  const interruptedChannelsRef = useRef(new Set());
   const moveInFlightRef = useRef(false);
   /**
    * 결과 화면이 이미 떴는가. **한 번 켜지면 이 경기 안에서 다시 꺼지지 않는다** —
@@ -479,6 +480,31 @@ function DuelGameSession() {
     return () => clearTimeout(timer);
   }, [activeEffects, phase]);
 
+  const handleSubscriptionStatus = useCallback((channelName, status, error) => {
+    if (resultShownRef.current) return;
+    const interrupted = interruptedChannelsRef.current;
+    if (status === "SUBSCRIBED") {
+      if (interrupted.delete(channelName) && interrupted.size === 0) {
+        // Joining only restores the transport. Re-read the authoritative game before resuming.
+        void recoverGameRef.current?.();
+      }
+      return;
+    }
+    if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      const firstInterruption = interrupted.size === 0;
+      interrupted.add(channelName);
+      if (!firstInterruption) return;
+      console.warn("duel realtime disconnected:", channelName, status, error);
+      recoveryGenerationRef.current += 1;
+      setPending(false);
+      setPhase(PHASE.LOADING);
+      setRecovery({
+        mode: "retryable",
+        message: "실시간 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
+      });
+    }
+  }, [PHASE.LOADING]);
+
   useEffect(() => {
     if (!roomId || !user?.id || !supabase) return;
 
@@ -559,24 +585,14 @@ function DuelGameSession() {
 
     gameChannelRef.current = channel;
     channel.subscribe((status, error) => {
-      if (gameChannelRef.current !== channel) return;
-      if (resultShownRef.current) return;
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        console.error("duel realtime disconnected:", status, error);
-        setPending(false);
-        setPhase(PHASE.LOADING);
-        setRecovery({
-          mode: "retryable",
-          message: "실시간 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
-        });
-      }
+      if (gameChannelRef.current === channel) handleSubscriptionStatus("room", status, error);
     });
 
     return () => {
       if (gameChannelRef.current === channel) gameChannelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomId, user?.id]);
+  }, [roomId, user?.id, handleSubscriptionStatus]);
 
   const recoverGame = useCallback(async () => {
     if (!roomId || !user?.id) return;
@@ -866,7 +882,7 @@ function DuelGameSession() {
     myPlayer?.start_title, myPlayer?.current_title, opponentPlayer?.start_title, opponentPlayer?.current_title]);
 
   useEffect(() => {
-    if (!room || !myPlayer || !opponentPlayer) return;
+    if (pending || recovery || !room || !myPlayer || !opponentPlayer) return;
 
     const bothInitialized =
       !!myPlayer.start_title &&
@@ -887,7 +903,7 @@ function DuelGameSession() {
         setPhase(PHASE.VS_INTRO);
       }
     }
-  }, [room, myPlayer, opponentPlayer, roomId, phase, loadLocalGameState]);
+  }, [room, myPlayer, opponentPlayer, roomId, phase, pending, recovery, loadLocalGameState]);
 
   /**
    * 5슬롯 지급. **`ensure_duel_item_grant_v3`는 멱등이다** — 행이 이미 있으면 그대로
@@ -1716,24 +1732,14 @@ function DuelGameSession() {
 
     eventChannelRef.current = channel;
     channel.subscribe((status, error) => {
-      if (eventChannelRef.current !== channel) return;
-      if (resultShownRef.current) return;
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        console.error("duel event realtime disconnected:", status, error);
-        setPending(false);
-        setPhase(PHASE.LOADING);
-        setRecovery({
-          mode: "retryable",
-          message: "상대 상태 연결이 끊겼습니다. 서버 상태를 다시 확인해 주세요.",
-        });
-      }
+      if (eventChannelRef.current === channel) handleSubscriptionStatus("events", status, error);
     });
 
     return () => {
       if (eventChannelRef.current === channel) eventChannelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomId, user?.id]);
+  }, [roomId, user?.id, handleSubscriptionStatus]);
 
   useEffect(() => {
     if (phase !== PHASE.VS_INTRO) return;
@@ -1984,9 +1990,11 @@ function DuelGameSession() {
       <RaceFrame motion={moveMotion} mode="duel" strip label="1:1 대전" inert={isResult}>
         <RaceHud>
           <HudBrand mode="1:1" sub={useItems ? "아이템" : "일반"} />
-          <HudDoc kind="current" label="현재 문서" title={currentTitle} />
-          <HudArrow />
-          <HudDoc kind="goal" label="목표 문서" title={myTargetTitle} valueClassName="mp-game-goal-value" />
+          <div className="wr-duel-hud-course">
+            <HudDoc kind="current" label="현재 문서" title={currentTitle} />
+            <HudArrow />
+            <HudDoc kind="goal" label="목표 문서" title={myTargetTitle} valueClassName="mp-game-goal-value" />
+          </div>
           <HudStatus>
             <span className="mp-game-status wr-sr-only">
               {phase === PHASE.PLAYING && "레이스 진행 중"}
@@ -2153,7 +2161,7 @@ function DuelGameSession() {
           scene={duelEndScene} ready={endPlayersReady} eligible={reachedPlayingRef.current && !resultRecoveredRef.current}
           myPlayer={myPlayer} opponentPlayer={opponentPlayer}>
         <ResultScreen mode="duel" tone={duelOutcome.tone} layer="overlay" titleId="wr-duel-result-title" resultKey={roomId} motionEligible={false} confirmed={room?.status === "finished"} testId="duel-result">
-          <ResultScene reached={duelOutcome.reached} celebration={duelOutcome.celebration} destination={commonTargetTitle || null} recordedAt={room?.finished_at} />
+          <ResultScene reached={duelOutcome.reached} celebration={duelOutcome.celebration} mascot={duelOutcome.mascot} destination={commonTargetTitle || null} recordedAt={room?.finished_at} />
           <ResultCard>
             <ResultOutcome
               kicker={duelOutcome.kicker}

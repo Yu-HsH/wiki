@@ -258,7 +258,8 @@ test("ProfilePage: 업로드 UI 제거, 편집기 연결, legacy 값은 계속 �
 });
 
 test("ProfileRewardEditor: 서버 응답만 반영 (낙관적 갱신 없음), 접히는 섹션, 빈 alt 없음", () => {
-  const editor = read("components/ProfileRewardEditor.jsx");
+  // The editor presenter moved into the service-free module; exclude the separate album decoration.
+  const editor = read("components/ProfileRewardEditor.jsx") + read("components/AchievementRewardPreview.jsx").split("export function AchievementCard(")[0];
   assert.match(editor, /<details className="preward" open>/);
   // Confirmed-response feedback may run between the await and equipment rendering.
   assert.match(editor, /const equipment = await request\(\);[\s\S]*?onEquipment\?\.\(equipment\);/);
