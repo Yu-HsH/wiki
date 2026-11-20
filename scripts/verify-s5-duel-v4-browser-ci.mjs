@@ -227,7 +227,7 @@ async function duelRound() {
   sql("insert into duel_v4.admission(user_id,expires_at) values "+
     members.map(u=>`(${quote(u.id)},clock_timestamp()+interval '1 hour')`).join(",")+";");
   const agents=[];
-  for(let i=0;i<2;i++){const a=await actor(members[i],i===0?390:1280); agents.push(a); await navigate(a,"/multiplayer/duel-v4");}
+  for(let i=0;i<2;i++){const a=await actor(members[i],390); agents.push(a); await navigate(a,"/multiplayer/duel-v4");}
   const host=agents[0].page, guest=agents[1].page;
   await host.getByRole("button",{name:"방 만들기"}).click();
   await host.waitForURL(/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/, {timeout:20000});
@@ -258,7 +258,9 @@ async function duelRound() {
   await guest.getByRole("button",{name:"패링"}).waitFor({state:"visible",timeout:12000});
   const parry=guest.getByRole("button",{name:"패링"});
   const box=await parry.boundingBox();
-  assert.ok(box?.width>=63&&box?.height>=63,"actual 390px parry touch target >=64px");
+  await guest.screenshot({path:path.join(directory,"duel-v4-parry-mobile-before-click.png"),animations:"disabled"});
+  console.log("MEASURE duel v4 parry at 390px",JSON.stringify(box));
+  assert.ok(box?.width>=63&&box?.height>=63,"actual 390px parry touch target >=64px: "+JSON.stringify(box));
   await parry.click();
   await guest.screenshot({path:path.join(directory,"duel-v4-parry-desktop.png"),animations:"disabled"});
   log("duel v4 real ink attack and mobile parry input");
