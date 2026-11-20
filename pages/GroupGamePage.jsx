@@ -82,6 +82,7 @@ import {
     getGroupDeadlineView,
     getGroupGraceCopy,
     getWatchView,
+    isReactionFresh,
     orderGroupParticipants,
 } from "../utils/groupRacePresentation.js";
 import ScrollToTopButton from "../components/ScrollToTopButton";
@@ -1736,6 +1737,8 @@ export default function GroupGamePage() {
                         onSend={handleSendSpectatorEmoji}
                         cooldownSeconds={cooldownSeconds}
                         ended={ended}
+                        recent={visibleSpectatorEmojis.filter((event) => isReactionFresh(event, displayNow)).slice(-2)}
+                        namesByUserId={new Map(players.map((player) => [player.user_id, player.nickname_snapshot || "탐험가"]))}
                         muteAll={muteAllSpectatorEmojis}
                         onToggleMuteAll={() => setMuteAllSpectatorEmojis((current) => !current)}
                         muteMode={muteMode}
@@ -1757,15 +1760,6 @@ export default function GroupGamePage() {
                             { id: "compare", label: "경로 비교", content: comparePanel },
                             { id: "route", label: "내 경로", content: myRoute(myPath) },
                         ]}
-                        footer={
-                            <ReactionDock
-                                compact
-                                presets={GROUP_SPECTATOR_PRESETS}
-                                onSend={handleSendSpectatorEmoji}
-                                cooldownSeconds={cooldownSeconds}
-                                ended={ended}
-                            />
-                        }
                     />
                 </RaceFrame>
             </>

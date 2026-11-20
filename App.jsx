@@ -210,8 +210,12 @@ function SingleGameRoute() {
  * - /ranking: 전체 랭킹 (인증 필수)
  * - /profile: 내 프로필 (인증 필수)
  */
-const ProductGroupItemsRoute = import.meta.env.MODE === "s4-product-candidate"
+const ProductGroupItemsRoute = (import.meta.env.MODE === "s4-product-candidate" ||
+  import.meta.env.VITE_GROUP_ITEMS_S5_ENTRY === "1")
   ? React.lazy(() => import("./components/group-items-jungle/ProductGroupItemsRoute.jsx"))
+  : null;
+const DuelV4Route = import.meta.env.VITE_DUEL_ITEMS_V4_ENTRY === "1"
+  ? React.lazy(() => import("./pages/DuelV4Page.jsx"))
   : null;
 
 function AppRoutes() {
@@ -221,6 +225,15 @@ function AppRoutes() {
   return (
     <><AudioControls />
     <Routes>
+      {DuelV4Route && (
+        <Route path="/multiplayer/duel-v4/:roomId?" element={
+          <OnlineRoute>
+            <React.Suspense fallback={<p role="status">1:1 아이템전 준비 중…</p>}>
+              <DuelV4Route />
+            </React.Suspense>
+          </OnlineRoute>
+        } />
+      )}
       {ProductGroupItemsRoute && (
         <Route path="/multiplayer/group-items/:roomId?" element={
           <OnlineRoute>

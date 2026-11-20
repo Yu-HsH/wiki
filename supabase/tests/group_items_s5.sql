@@ -33,6 +33,27 @@ BEGIN
     'room rows must go through the RPC';
   ASSERT NOT has_function_privilege('anon', 'public.get_group_items_product_room_v1(uuid,jsonb)', 'EXECUTE'),
     'anon may not call room RPC';
+  ASSERT NOT has_function_privilege('anon', 'public.get_group_items_entry_v1(text)', 'EXECUTE'),
+    'S5 entry RPC must not be available to anonymous callers';
+  ASSERT has_function_privilege('authenticated', 'public.get_group_items_entry_v1(text)', 'EXECUTE'),
+    'signed-in players can execute the entry RPC';
+  ASSERT NOT has_function_privilege('authenticated', 'ink_product.request_actor_v1()', 'EXECUTE'),
+    'JWT claim helper must remain private to the S5 owner';
+  ASSERT NOT has_schema_privilege('ink_product_owner', 'auth', 'USAGE'),
+    'S5 does not borrow managed Auth schema privileges';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM pg_class c,
+      LATERAL aclexplode(c.relacl) acl
+      JOIN pg_roles grantee ON grantee.oid=acl.grantee
+    WHERE c.oid='public.profiles'::regclass AND grantee.rolname='ink_product_owner'
+      AND acl.privilege_type='REFERENCES'
+  ), 'temporary profiles REFERENCES grant must be removed after S5 DDL';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM pg_auth_members m JOIN pg_roles owner_role ON owner_role.oid=m.roleid
+      JOIN pg_roles member_role ON member_role.oid=m.member
+    WHERE owner_role.rolname='ink_product_owner' AND member_role.rolname=current_user
+      AND m.grantor=(SELECT oid FROM pg_roles WHERE rolname=current_user)
+  ), 'temporary owner membership must leave no self-granted row';
   ASSERT NOT has_function_privilege('authenticated', 'ink_product.run_due_batch_v1(uuid,integer)', 'EXECUTE'),
     'player cannot act as worker';
 
@@ -42,6 +63,12 @@ BEGIN
   INSERT INTO public.profiles (id,username,nickname,synthetic_email)
     SELECT actor,'s5_'||substr(replace(actor::text,'-',''),1,12),'S5 player '||position,actor::text||'@example.invalid'
     FROM unnest(actors) WITH ORDINALITY AS a(actor,position) ON CONFLICT (id) DO NOTHING;
+
+  -- The deployed migrator cannot write S5-owned tables. Borrow only SET
+  -- inside this rolled-back fixture, after checking the deployed ACL above.
+  EXECUTE format('GRANT ink_product_owner TO %I WITH INHERIT FALSE', session_user);
+  EXECUTE format('GRANT ink_product_owner TO %I WITH SET TRUE', session_user);
+  SET LOCAL ROLE ink_product_owner;
 
   INSERT INTO ink_product.wiki_snapshots (id,page_id,revision_id,canonical_title,wiki_snapshot_id)
     VALUES (start_doc,'11','101','시작',gen_random_uuid()),(goal_doc,'22','102','목표',gen_random_uuid());
@@ -58,6 +85,11 @@ BEGIN
   INSERT INTO ink_product.entry_policy_v1 VALUES ('review',binding,false,1,'group-3-8-20m-third-120s-v1');
 
   PERFORM set_config('request.jwt.claim.sub', actors[1]::text, true);
+  SET LOCAL ROLE authenticated;
+  result := public.get_group_items_entry_v1('review');
+  SET LOCAL ROLE ink_product_owner;
+  ASSERT result->>'available' = 'true' AND result->>'admissionEnabled' = 'false',
+    'signed-in entry reads claims without direct Auth schema access';
   result := public.act_group_items_product_room_v1('create',NULL,gen_random_uuid(),NULL,binding,'{}');
   ASSERT result->>'code' = 'PRODUCT_NEW_MATCHES_DISABLED', 'closed entry rejects create';
   UPDATE ink_product.entry_policy_v1 SET admission_enabled = true WHERE channel = 'review';
@@ -105,6 +137,7 @@ BEGIN
   ASSERT ink_product_engine.ink_s5_phase2_due_v1(session,started,started+interval '20 seconds')=1, 'first supply at 20s';
   ASSERT ink_product_engine.ink_s5_phase2_due_v1(session,started,started+interval '44.999 seconds')=1, '25s period';
   ASSERT ink_product_engine.ink_s5_phase2_due_v1(session,started,started+interval '45 seconds')=2, 'second supply at 45s';
+  ASSERT ink_product_engine.ink_s5_phase2_due_v1(session,started,started+interval '70 seconds')=3, 'third supply at 70s';
   ASSERT ink_product_engine.ink_s5_phase2_due_v1(session,started,started+interval '95 seconds')=4, 'fourth supply remains scheduled';
 
   SELECT * INTO STRICT member FROM ink_product_engine.ink_members_v1
@@ -126,17 +159,28 @@ BEGIN
   result := public.act_group_items_product_v1(room,session,binding,gen_random_uuid(),'protect',payload);
   ASSERT result->'body'->>'ok' = 'false', 'second use with stale inventory is rejected';
 
-  -- Move the fixture start back while passing the actual wall clock to the supply engine.
-  -- This exercises overdue catch-up without letting a caller submit authority from the future.
+  -- Move the fixture start back and issue only the authenticated *read* RPC.
+  -- No player item click or standalone C worker should be needed for due
+  -- supplies while a player is connected and polling their own room.
   UPDATE ink_product_engine.ink_sessions_v1 SET started_at=started-interval '96 seconds'
     WHERE session_id=session;
-  ASSERT ink_product_engine.ink_s3_tick_v1(session,clock_timestamp(),gen_random_uuid(),false)=12,
-    'four overdue rounds are recorded for three players';
+  SET LOCAL ROLE authenticated;
+  result := public.get_group_items_product_state_v1(room,session,binding);
+  SET LOCAL ROLE ink_product_owner;
+  ASSERT result->'body'->>'code' = 'STATE', 'state is readable after automatic due processing';
+  ASSERT (SELECT count(*) FROM ink_product_engine.ink_supply_rounds_v1
+      WHERE session_id=session AND closed_through_round BETWEEN 1 AND 4)=12,
+    'four overdue rounds are settled on read for three players';
   ASSERT ink_product_engine.ink_s3_tick_v1(session,clock_timestamp(),gen_random_uuid(),false)=0,
     'same supply boundary cannot issue twice';
+  ASSERT EXISTS (SELECT FROM ink_product.worker_schedule_v1 WHERE room_id=room AND expired_through IS NOT NULL),
+    'online advance updates the worker watermark';
   ASSERT (SELECT bool_and(active=2) FROM (
     SELECT count(*) AS active FROM ink_product_engine.ink_grants_v1
     WHERE session_id=session AND consumed_at IS NULL GROUP BY owner_participant_id) AS slots), 'two-slot cap';
+  RESET ROLE;
+  EXECUTE format('REVOKE ink_product_owner FROM %I GRANTED BY CURRENT_USER', session_user);
+  ASSERT NOT pg_has_role(session_user, 'ink_product_owner','SET'), 'fixture membership is revoked';
   ASSERT NOT EXISTS (SELECT FROM public.game_rooms WHERE id=room), 'item room is absent from regular rooms';
   RAISE NOTICE 'PASS S5 gate, ACL, three players, start draw, retry, resume, periodic supply, two-slot cap and mode isolation';
 END

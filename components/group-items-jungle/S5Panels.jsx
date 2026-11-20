@@ -17,7 +17,7 @@ function SearchForm({ search, disabled, onSearch, missed }) {
   </section>;
 }
 
-function LinkList({ index, disabled, onLink, censoredPages }) {
+export function LinkList({ index, disabled, onLink, censoredPages }) {
   const [filter,setFilter] = useState('');
   const query = filter.trim().toLocaleLowerCase('ko');
   const links = index.entries.filter(link => link.title.toLocaleLowerCase('ko').includes(query));
@@ -42,8 +42,8 @@ export default function S5Panels({ state, now, slots, inventory=[], lastReceipt,
   const search = state.search?.expiresAt > now ? state.search : null;
   const linkIndex = state.linkIndex?.expiresAt > now ? state.linkIndex : null;
   const modifiers = state.modifiers.filter(effect => effect.startsAt <= now && (effect.expiresAt===null || now < effect.expiresAt));
-  return <aside className="s5-panels" aria-label="S5 시험 아이템 효과">
-    <p>S5 시험 규칙</p>
+  return <aside className="s5-panels" aria-label="아이템 효과 및 보상">
+    <p>적용 중인 아이템 효과</p>
     {(modifiers.length > 0 || state.rouletteSupplyWeakened) && <p aria-label="보유 효과">
       {modifiers.map(effect => `${itemName(effect.kind)} ${effect.remainingCharges}회${effect.pendingCharges ? ` (대기 ${effect.pendingCharges})` : ''}`).join(' · ')}
       {modifiers.length > 0 && state.rouletteSupplyWeakened ? ' · ' : ''}

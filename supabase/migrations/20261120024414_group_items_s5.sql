@@ -9,8 +9,27 @@ IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='ink_product_worker')THEN CREAT
 IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='wiki_s5_worker')THEN CREATE ROLE wiki_s5_worker NOLOGIN NOINHERIT NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION;ELSIF EXISTS(SELECT FROM pg_roles WHERE rolname='wiki_s5_worker'AND(rolsuper OR rolcanlogin OR rolinherit OR rolbypassrls OR rolcreatedb OR rolcreaterole OR rolreplication))OR EXISTS(SELECT FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.member WHERE r.rolname='wiki_s5_worker')THEN RAISE EXCEPTION 'ROLE_CONTRACT_MISMATCH wiki_s5_worker';END IF;
 END $roles$;
 
+-- On PostgreSQL 17 a non-superuser CREATEROLE migrator gets ADMIN, but SET
+-- FALSE, on a role it creates. ALTER ... OWNER requires the SET option.
+-- Borrow SET access only for this transaction, without inheriting any owner
+-- permissions. Revoke only the membership that this migrator grants itself;
+-- the unrelated supabase_admin bootstrap membership must remain unchanged.
+DO $owner_membership$
+BEGIN
+  IF NOT pg_has_role(current_user, 'ink_product_owner', 'SET') THEN
+    -- PostgreSQL 17 accepts one role-membership option per GRANT statement.
+    EXECUTE format('GRANT ink_product_owner TO %I WITH INHERIT FALSE', current_user);
+    EXECUTE format('GRANT ink_product_owner TO %I WITH SET TRUE', current_user);
+    IF NOT pg_has_role(current_user, 'ink_product_owner', 'SET') THEN
+      RAISE EXCEPTION 'S5_MIGRATION_OWNER_SET_UNAVAILABLE';
+    END IF;
+    PERFORM set_config('wiki_s5_migration.temporary_owner_set', 'yes', true);
+  END IF;
+END $owner_membership$;
+
 SET LOCAL check_function_bodies=false;
-GRANT CREATE,USAGE ON SCHEMA public TO ink_product_owner;GRANT USAGE ON SCHEMA auth,realtime TO ink_product_owner;GRANT EXECUTE ON FUNCTION auth.uid(),public.grant_xp_v1(uuid,text,uuid,integer,integer,text) TO ink_product_owner;
+GRANT CREATE,USAGE ON SCHEMA public TO ink_product_owner;
+GRANT EXECUTE ON FUNCTION public.grant_xp_v1(uuid,text,uuid,integer,integer,text) TO ink_product_owner;
 CREATE FUNCTION public.act_group_items_product_room_v1(p_operation text, p_room uuid, p_request uuid, p_expected_version text, p_binding jsonb, p_payload jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -18,7 +37,7 @@ CREATE FUNCTION public.act_group_items_product_room_v1(p_operation text, p_room 
  SET search_path TO ''
 AS $function$
 DECLARE
-  actor uuid := auth.uid(); r ink_product.rooms; m ink_product.members; policy ink_product.policies;
+  actor uuid := ink_product.request_actor_v1(); r ink_product.rooms; m ink_product.members; policy ink_product.policies;
   old ink_product.room_receipts; command jsonb; response jsonb; code text; result_room uuid := p_room;
 BEGIN
   SELECT * INTO policy FROM ink_product.policies WHERE binding=p_binding;
@@ -148,7 +167,6 @@ BEGIN
 END $function$
 ;
 ALTER FUNCTION act_group_items_product_room_v1(text,uuid,uuid,text,jsonb,jsonb) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION act_group_items_product_room_v1(text,uuid,uuid,text,jsonb,jsonb) TO authenticated;
 CREATE FUNCTION public.get_group_items_product_receipt_v1(p_room uuid, p_session uuid, p_binding jsonb, p_request uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -158,7 +176,7 @@ AS $function$
 DECLARE r ink_product.rooms; m ink_product.members; saved jsonb;
 BEGIN
   SELECT * INTO r FROM ink_product.rooms WHERE id=p_room AND session_id=p_session AND binding=p_binding;
-  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=auth.uid();
+  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=ink_product.request_actor_v1();
   IF m.actor_id IS NULL OR p_request IS NULL THEN RAISE EXCEPTION 'PRODUCT_MATCH_UNAVAILABLE' USING ERRCODE='42501'; END IF;
   SELECT response INTO saved FROM ink_product.match_receipts
     WHERE room_id=r.id AND actor_id=m.actor_id AND owner_epoch=m.owner_epoch AND request_id=p_request;
@@ -166,7 +184,6 @@ BEGIN
 END $function$
 ;
 ALTER FUNCTION get_group_items_product_receipt_v1(uuid,uuid,jsonb,uuid) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION get_group_items_product_receipt_v1(uuid,uuid,jsonb,uuid) TO authenticated;
 CREATE FUNCTION public.get_group_items_product_state_v1(p_room uuid, p_session uuid, p_binding jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -176,7 +193,7 @@ AS $function$
 DECLARE r ink_product.rooms; m ink_product.members; body jsonb;
 BEGIN
   SELECT * INTO r FROM ink_product.rooms WHERE id=p_room AND session_id=p_session AND binding=p_binding;
-  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=auth.uid();
+  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=ink_product.request_actor_v1();
   IF m.actor_id IS NULL THEN RAISE EXCEPTION 'PRODUCT_MATCH_UNAVAILABLE' USING ERRCODE='42501'; END IF;
   IF r.phase='finished' OR m.status IN ('finished','left') THEN
     body := '{"ok":true,"code":"SESSION_TERMINAL","readOnly":true,"canAct":false}';
@@ -188,13 +205,25 @@ BEGIN
     IF jsonb_typeof(body) IS DISTINCT FROM 'object' OR body->>'code' IS DISTINCT FROM 'STATE' THEN
       RAISE EXCEPTION 'PRODUCT_INVALID_ENGINE_STATE';
     END IF;
+    -- State polling is also a server-authoritative wake-up path for *active*
+    -- matches. Presence was just refreshed by read_match_state_v1; an idle
+    -- browser must not need to click/use an item to receive due supplies.
+    IF ink_product.advance_due_room_v1(r.id) THEN
+      SELECT * INTO r FROM ink_product.rooms WHERE id=p_room AND session_id=p_session AND binding=p_binding;
+      SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=ink_product.request_actor_v1();
+      IF r.phase='finished' OR m.status IN ('finished','left') THEN
+        body := '{"ok":true,"code":"SESSION_TERMINAL","readOnly":true,"canAct":false}';
+      ELSE
+        EXECUTE 'SELECT ink_product.read_match_state_v1($1,$2)' INTO body USING r.id,m.actor_id;
+        IF body->>'code' IS DISTINCT FROM 'STATE' THEN RAISE EXCEPTION 'PRODUCT_INVALID_ENGINE_STATE'; END IF;
+      END IF;
+    END IF;
   END IF;
   RETURN jsonb_build_object('scope',ink_product.match_scope(r,m),'body',body || jsonb_build_object(
     'binding',r.binding,'sessionId',r.session_id,'testOnly',false));
 END $function$
 ;
 ALTER FUNCTION get_group_items_product_state_v1(uuid,uuid,jsonb) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION get_group_items_product_state_v1(uuid,uuid,jsonb) TO authenticated;
 CREATE FUNCTION public.get_group_items_product_document_v1(p_room uuid, p_session uuid, p_binding jsonb, p_frame jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -204,7 +233,7 @@ AS $function$
 DECLARE r ink_product.rooms; m ink_product.members; s ink_product.wiki_snapshots; descriptor jsonb; edges jsonb; html text;
 BEGIN
   SELECT * INTO r FROM ink_product.rooms WHERE id=p_room AND session_id=p_session AND binding=p_binding AND phase='playing';
-  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=auth.uid() AND status='playing';
+  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=ink_product.request_actor_v1() AND status='playing';
   IF m.actor_id IS NULL THEN RAISE EXCEPTION 'PRODUCT_DOCUMENT_UNAVAILABLE' USING ERRCODE='42501'; END IF;
   SELECT * INTO STRICT s FROM ink_product.wiki_snapshots WHERE id=m.snapshot_id;
   descriptor := jsonb_build_object('pageId',s.page_id,'revisionId',s.revision_id,'snapshotId',s.id,'progressVersion',m.progress_version::text);
@@ -217,7 +246,6 @@ BEGIN
 END $function$
 ;
 ALTER FUNCTION get_group_items_product_document_v1(uuid,uuid,jsonb,jsonb) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION get_group_items_product_document_v1(uuid,uuid,jsonb,jsonb) TO authenticated;
 CREATE FUNCTION public.act_group_items_product_v1(p_room uuid, p_session uuid, p_binding jsonb, p_request uuid, p_operation text, p_payload jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -229,7 +257,7 @@ DECLARE r ink_product.rooms; m ink_product.members; old ink_product.match_receip
   verified ink_product.wiki_links;
 BEGIN
   SELECT * INTO r FROM ink_product.rooms WHERE id=p_room AND session_id=p_session AND binding=p_binding FOR UPDATE;
-  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=auth.uid() FOR UPDATE;
+  SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=ink_product.request_actor_v1() FOR UPDATE;
   IF m.actor_id IS NULL OR p_request IS NULL THEN RAISE EXCEPTION 'PRODUCT_MATCH_UNAVAILABLE' USING ERRCODE='42501'; END IF;
   IF EXISTS(SELECT FROM ink_product.receipt_retention_v1 t WHERE t.room_id=r.id)THEN
     RETURN jsonb_build_object('scope',ink_product.match_scope(r,m),'body',jsonb_build_object('ok',false,'code','RECEIPT_EXPIRED','requestId',p_request,'operation',p_operation));
@@ -270,7 +298,6 @@ BEGIN
 END $function$
 ;
 ALTER FUNCTION act_group_items_product_v1(uuid,uuid,jsonb,uuid,text,jsonb) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION act_group_items_product_v1(uuid,uuid,jsonb,uuid,text,jsonb) TO authenticated;
 CREATE FUNCTION public.get_group_items_entry_v1(p_channel text DEFAULT 'production'::text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -279,7 +306,7 @@ CREATE FUNCTION public.get_group_items_entry_v1(p_channel text DEFAULT 'producti
 AS $function$
 DECLARE p ink_product.entry_policy_v1; limits ink_product.policies;
 BEGIN
- IF auth.uid() IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED' USING ERRCODE='42501'; END IF;
+ IF ink_product.request_actor_v1() IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED' USING ERRCODE='42501'; END IF;
  SELECT * INTO p FROM ink_product.entry_policy_v1 WHERE channel=p_channel;
  IF p.channel IS NULL THEN RETURN jsonb_build_object('available',false,'admissionEnabled',false); END IF;
  SELECT * INTO STRICT limits FROM ink_product.policies WHERE binding=p.binding;
@@ -290,14 +317,13 @@ BEGIN
 END $function$
 ;
 ALTER FUNCTION get_group_items_entry_v1(text) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION get_group_items_entry_v1(text) TO authenticated;
 CREATE FUNCTION public.get_group_items_history_v1(p_limit integer DEFAULT 20)
  RETURNS jsonb
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
-DECLARE actor uuid:=auth.uid(); entries jsonb; summary jsonb;
+DECLARE actor uuid:=ink_product.request_actor_v1(); entries jsonb; summary jsonb;
 BEGIN
  IF actor IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED' USING ERRCODE='42501'; END IF;
  IF p_limit NOT BETWEEN 1 AND 50 THEN RAISE EXCEPTION 'INVALID_LIMIT' USING ERRCODE='22023'; END IF;
@@ -311,7 +337,6 @@ BEGIN
 END $function$
 ;
 ALTER FUNCTION get_group_items_history_v1(integer) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION get_group_items_history_v1(integer) TO authenticated;
 CREATE FUNCTION public.get_group_items_product_room_v1(p_room uuid, p_binding jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -320,7 +345,7 @@ CREATE FUNCTION public.get_group_items_product_room_v1(p_room uuid, p_binding js
 AS $function$
 DECLARE
   r ink_product.rooms; m ink_product.members; policy ink_product.policies; goal ink_product.wiki_snapshots;
-  actor uuid := auth.uid(); actions jsonb := '[]'; people jsonb; ranks jsonb := '[]'; role_name text := 'player';
+  actor uuid := ink_product.request_actor_v1(); actions jsonb := '[]'; people jsonb; ranks jsonb := '[]'; role_name text := 'player';
 BEGIN
   SELECT * INTO r FROM ink_product.rooms WHERE id=p_room AND (binding=p_binding OR p_binding IS NULL);
   SELECT * INTO m FROM ink_product.members WHERE room_id=r.id AND actor_id=actor;
@@ -361,7 +386,6 @@ BEGIN
 END $function$
 ;
 ALTER FUNCTION get_group_items_product_room_v1(uuid,jsonb) OWNER TO ink_product_owner;
-GRANT EXECUTE ON FUNCTION get_group_items_product_room_v1(uuid,jsonb) TO authenticated;
 
 --
 -- PostgreSQL database dump
@@ -378,14 +402,91 @@ SET LOCAL check_function_bodies = false;
 SET LOCAL xmloption = content;
 SET LOCAL client_min_messages = warning;
 
+-- S5-only Postgres Changes. Register as the migration/publication owner
+-- before handing the tables to the unprivileged S5 function owner.
+-- The application never reads these tables through PostgREST; the schema is
+-- intentionally absent from the exposed API schemas.
+CREATE SCHEMA ink_product_events;
+CREATE TABLE ink_product_events.signals_v1 (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id uuid NOT NULL,
+  recipient_id uuid NOT NULL,
+  version bigint NOT NULL DEFAULT 1 CHECK (version > 0),
+  changed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(room_id, recipient_id)
+);
+CREATE TABLE ink_product_events.emotes_v1 (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id uuid NOT NULL,
+  recipient_id uuid NOT NULL,
+  sender_participant_id uuid NOT NULL,
+  emote_id text NOT NULL CHECK (emote_id IN (
+    'hello','ready','go','good','wait','hurry','wow','lol','sad','gg'
+  )),
+  sent_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(room_id, recipient_id, sender_participant_id)
+);
+CREATE TABLE ink_product_events.emote_limits_v1 (
+  room_id uuid NOT NULL,
+  sender_id uuid NOT NULL,
+  last_sent_at timestamptz NOT NULL,
+  PRIMARY KEY (room_id, sender_id)
+);
+ALTER TABLE ink_product_events.signals_v1 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ink_product_events.emotes_v1 ENABLE ROW LEVEL SECURITY;
+CREATE POLICY s5_signal_recipient ON ink_product_events.signals_v1
+  FOR SELECT TO authenticated USING (recipient_id = coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'
+  )::uuid);
+CREATE POLICY s5_emote_recipient ON ink_product_events.emotes_v1
+  FOR SELECT TO authenticated USING (recipient_id = coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'
+  )::uuid);
+DO $s5_publication$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_publication WHERE pubname = 'supabase_realtime') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE
+      ink_product_events.signals_v1, ink_product_events.emotes_v1;
+  END IF;
+END $s5_publication$;
+REVOKE ALL ON SCHEMA ink_product_events FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON TABLE
+  ink_product_events.signals_v1,
+  ink_product_events.emotes_v1,
+  ink_product_events.emote_limits_v1
+FROM PUBLIC, anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA ink_product_events TO authenticated;
+GRANT SELECT ON TABLE ink_product_events.signals_v1, ink_product_events.emotes_v1 TO authenticated;
+ALTER SCHEMA ink_product_events OWNER TO ink_product_owner;
+ALTER TABLE ink_product_events.signals_v1 OWNER TO ink_product_owner;
+ALTER TABLE ink_product_events.emotes_v1 OWNER TO ink_product_owner;
+ALTER TABLE ink_product_events.emote_limits_v1 OWNER TO ink_product_owner;
+
 --
 -- Name: ink_product; Type: SCHEMA; Schema: -; Owner: ink_product_owner
 --
 
 CREATE SCHEMA ink_product;
 
+-- auth.uid() requires USAGE on Supabase's managed auth schema. A custom
+-- SECURITY DEFINER owner cannot receive that USAGE from the migration role.
+-- Read the same JWT request settings directly, without widening auth access.
+-- Only internal owner-executed S5 functions may call this helper.
+CREATE FUNCTION ink_product.request_actor_v1() RETURNS uuid
+    LANGUAGE sql STABLE
+    SET search_path TO ''
+    AS $$
+      SELECT coalesce(
+        nullif(current_setting('request.jwt.claim.sub', true), ''),
+        nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'
+      )::uuid
+    $$;
+
 
 ALTER SCHEMA ink_product OWNER TO ink_product_owner;
+ALTER FUNCTION ink_product.request_actor_v1() OWNER TO ink_product_owner;
 
 --
 -- Name: ink_product_engine; Type: SCHEMA; Schema: -; Owner: ink_product_owner
@@ -395,6 +496,13 @@ CREATE SCHEMA ink_product_engine;
 
 
 ALTER SCHEMA ink_product_engine OWNER TO ink_product_owner;
+
+-- PostgreSQL 17 does not inherit CREATE on a schema owned by another role
+-- when the migration's temporary role membership uses INHERIT FALSE.
+-- Finish the S5-only dump as the target schema owner. The one external FK
+-- needs REFERENCES on profiles during DDL, not while the game is running.
+GRANT REFERENCES ON TABLE public.profiles TO ink_product_owner;
+SET LOCAL ROLE ink_product_owner;
 
 --
 -- Name: admission_order_v1(); Type: FUNCTION; Schema: ink_product; Owner: ink_product_owner
@@ -483,7 +591,7 @@ CREATE FUNCTION ink_product.apply_match_command_v1(p_room uuid, p_actor uuid, p_
 DECLARE r ink_product.rooms; b jsonb; internal_payload jsonb := p_payload; e ink_product_engine.ink_members_v1;
   next_document ink_product.wiki_snapshots; options jsonb;
 BEGIN
-  IF p_actor IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
+  IF p_actor IS DISTINCT FROM ink_product.request_actor_v1() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
   IF ink_product.is_next_v1(p_room) AND ink_product.checkpoint_v1(p_room) THEN
     RETURN jsonb_build_object('ok',false,'code','MATCH_FINISHED','receiptId',p_receipt);
   END IF;
@@ -538,7 +646,7 @@ CREATE FUNCTION ink_product.can_read_product_topic(p_topic text) RETURNS boolean
     AS $$
   SELECT EXISTS (
     SELECT FROM ink_product.members m JOIN ink_product.rooms r ON r.id=m.room_id
-    WHERE m.actor_id=auth.uid() AND (r.phase<>'waiting' OR m.status<>'left')
+    WHERE m.actor_id=ink_product.request_actor_v1() AND (r.phase<>'waiting' OR m.status<>'left')
       AND (r.phase='waiting' OR NOT ink_product.is_next_v1(r.id) OR EXISTS(SELECT FROM ink_product_engine.ink_members_v1 engine_member
        WHERE engine_member.session_id=r.session_id AND engine_member.participant_id=m.participant_id AND engine_member.user_id=m.actor_id))
       AND p_topic='group-items-product:'||r.id::text||':'||m.actor_id::text
@@ -873,7 +981,7 @@ CREATE FUNCTION ink_product.forfeit_match_v1(p_room uuid, p_actor uuid) RETURNS 
     AS $$
 DECLARE r ink_product.rooms;
 BEGIN
-  IF p_actor IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
+  IF p_actor IS DISTINCT FROM ink_product.request_actor_v1() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
   IF ink_product.is_next_v1(p_room) AND ink_product.checkpoint_v1(p_room) THEN RETURN; END IF;
   SELECT * INTO STRICT r FROM ink_product.rooms WHERE id=p_room AND phase='playing' FOR UPDATE;
   UPDATE ink_product_engine.ink_members_v1 SET player_status='retired' WHERE session_id=r.session_id AND user_id=p_actor AND player_status='playing';
@@ -962,19 +1070,20 @@ ALTER FUNCTION ink_product.has_due_v2(p_room uuid) OWNER TO ink_product_owner;
 CREATE FUNCTION ink_product.invalidate_room(p_room uuid) RETURNS void
     LANGUAGE plpgsql
     SET search_path TO ''
-    AS $broadcast$
+    AS $signal$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_policy
-      WHERE polrelid=pg_catalog.to_regclass('realtime.messages')
-        AND polname='s4_product_invalidation_writer') THEN
-    RETURN;
-  END IF;
-  PERFORM realtime.send('{}'::jsonb,'invalidate','group-items-product:'||r.id::text||':'||m.actor_id::text,true)
+  -- A hint, not authoritative state. The receiver fetches the room/state RPC.
+  -- UPSERT coalesces pending hints, and no client has write permission.
+  INSERT INTO ink_product_events.signals_v1 AS current_signal(room_id, recipient_id)
+  SELECT r.id, m.actor_id
   FROM ink_product.members m JOIN ink_product.rooms r ON r.id=m.room_id
   WHERE r.id=p_room AND (r.phase<>'waiting' OR m.status<>'left') AND (r.phase='waiting' OR NOT ink_product.is_next_v1(r.id) OR EXISTS(SELECT FROM ink_product_engine.ink_members_v1 engine_member
-       WHERE engine_member.session_id=r.session_id AND engine_member.participant_id=m.participant_id AND engine_member.user_id=m.actor_id));
+       WHERE engine_member.session_id=r.session_id AND engine_member.participant_id=m.participant_id AND engine_member.user_id=m.actor_id))
+  ON CONFLICT (room_id, recipient_id) DO UPDATE
+    SET version = current_signal.version + 1,
+        changed_at = clock_timestamp();
 END
-$broadcast$;
+$signal$;
 
 
 ALTER FUNCTION ink_product.invalidate_room(p_room uuid) OWNER TO ink_product_owner;
@@ -1244,7 +1353,7 @@ CREATE FUNCTION ink_product.read_match_state_v1_grant(p_room uuid, p_actor uuid)
     AS $$
 DECLARE r ink_product.rooms; m ink_product.members; s ink_product.wiki_snapshots; b jsonb; key text; effects jsonb; w jsonb; e ink_product_engine.ink_members_v1; now_at timestamptz := clock_timestamp();
 BEGIN
-  IF p_actor IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
+  IF p_actor IS DISTINCT FROM ink_product.request_actor_v1() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
   SELECT * INTO STRICT r FROM ink_product.rooms WHERE id=p_room AND phase='playing';
   SELECT * INTO STRICT m FROM ink_product.members WHERE room_id=r.id AND actor_id=p_actor AND status='playing';
   SELECT * INTO STRICT s FROM ink_product.wiki_snapshots WHERE id=m.snapshot_id;
@@ -1290,7 +1399,7 @@ CREATE FUNCTION ink_product.read_match_state_v1_legacy(p_room uuid, p_actor uuid
     AS $$
 DECLARE r ink_product.rooms; m ink_product.members; s ink_product.wiki_snapshots; b jsonb; key text; effects jsonb; w jsonb; e ink_product_engine.ink_members_v1; now_at timestamptz := clock_timestamp();
 BEGIN
-  IF p_actor IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
+  IF p_actor IS DISTINCT FROM ink_product.request_actor_v1() THEN RAISE EXCEPTION 'PRODUCT_ACTOR_MISMATCH'; END IF;
   SELECT * INTO STRICT r FROM ink_product.rooms WHERE id=p_room AND phase='playing';
   SELECT * INTO STRICT m FROM ink_product.members WHERE room_id=r.id AND actor_id=p_actor AND status='playing';
   SELECT * INTO STRICT s FROM ink_product.wiki_snapshots WHERE id=m.snapshot_id;
@@ -1398,6 +1507,43 @@ END $$;
 
 
 ALTER FUNCTION ink_product.run_due_batch_v1(p_worker uuid, p_limit integer) OWNER TO ink_product_owner;
+
+-- An authenticated, scoped state read can settle the *same* room's due work.
+-- This keeps the online match responsive without enabling the deferred C
+-- operational worker or sweeping unrelated rooms on every client heartbeat.
+CREATE FUNCTION ink_product.advance_due_room_v1(p_room uuid) RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO ''
+    AS $$
+DECLARE r ink_product.rooms; result jsonb;
+  worker constant uuid := 'a3500000-0000-4000-9000-000000000007';
+BEGIN
+  IF NOT ink_product.has_due_v2(p_room) THEN RETURN false; END IF;
+  SELECT * INTO r FROM ink_product.rooms WHERE id=p_room AND phase='playing'
+    FOR UPDATE SKIP LOCKED;
+  IF NOT FOUND OR NOT ink_product.has_due_v2(p_room) THEN RETURN false; END IF;
+  IF ink_product.is_next_v1(r.id) THEN
+    PERFORM ink_product.checkpoint_v1(r.id);
+  ELSE
+    result := ink_product_engine.ink_s4_dispatch_v1(r.session_id, gen_random_uuid(),
+      ink_product_engine.ink_s4_client_binding_v1(), 'worker', worker, 'advance', '{}'::jsonb);
+    IF result->>'code' IS DISTINCT FROM 'ADVANCED' THEN
+      RAISE EXCEPTION 'PRODUCT_ONLINE_ADVANCE_FAILED: %', result->>'code';
+    END IF;
+    PERFORM ink_product.finish_if_terminal_v1(r.id);
+  END IF;
+  PERFORM ink_product.close_expired_v2(r.session_id);
+  -- Keep the expired-effect watermark consistent with run_due_batch_v1;
+  -- otherwise an already-expired effect can make every heartbeat look due.
+  INSERT INTO ink_product.worker_schedule_v1(room_id,last_polled_at,expired_through)
+    VALUES (r.id, clock_timestamp(), ink_product.dispatch_now_v1(r.session_id))
+    ON CONFLICT (room_id) DO UPDATE SET last_polled_at=EXCLUDED.last_polled_at,
+      expired_through=EXCLUDED.expired_through;
+  PERFORM ink_product.invalidate_room(r.id);
+  RETURN true;
+END $$;
+ALTER FUNCTION ink_product.advance_due_room_v1(uuid) OWNER TO ink_product_owner;
+REVOKE ALL ON FUNCTION ink_product.advance_due_room_v1(uuid) FROM PUBLIC, anon, authenticated, service_role;
 
 --
 -- Name: start_match_v1(uuid); Type: FUNCTION; Schema: ink_product; Owner: ink_product_owner
@@ -1541,7 +1687,7 @@ DECLARE
   v_binding jsonb := ink_product_engine.ink_s3_binding_v1();
 BEGIN
   BEGIN
-    v_actor := auth.uid();
+    v_actor := ink_product.request_actor_v1();
   EXCEPTION WHEN invalid_text_representation THEN
     RETURN pg_catalog.jsonb_build_object('ok',false,'code','SESSION_NOT_AVAILABLE');
   END;
@@ -1878,7 +2024,7 @@ CREATE FUNCTION ink_product_engine.ink_s3_assert_supply_v1(p_session uuid, p_sta
 BEGIN
   IF EXISTS (
     SELECT 1 FROM ink_product_engine.ink_members_v1 m WHERE m.session_id=p_session
-      AND m.user_id=auth.uid() AND m.member_role='player' AND m.player_status='playing'
+      AND m.user_id=ink_product.request_actor_v1() AND m.member_role='player' AND m.player_status='playing'
       AND coalesce((SELECT max(r.closed_through_round) FROM ink_product_engine.ink_supply_rounds_v1 r
         WHERE r.session_id=p_session AND r.recipient_participant_id=m.participant_id AND r.recipient_epoch=m.owner_epoch),-1)
         < ink_product_engine.ink_s5_phase2_due_v1(p_session,p_started,p_at)
@@ -1953,7 +2099,7 @@ DECLARE
 BEGIN
   v_session := ink_product_engine.ink_s3_lock_v1(p_session,p_authority_at);
   SELECT * INTO STRICT v_member FROM ink_product_engine.ink_members_v1 WHERE session_id=p_session
-    AND user_id=auth.uid() AND member_role='player' AND player_status='playing';
+    AND user_id=ink_product.request_actor_v1() AND member_role='player' AND player_status='playing';
   PERFORM ink_product_engine.ink_s3_assert_supply_v1(p_session,v_session.started_at,p_authority_at);
   IF p_receipt IS NULL THEN RAISE EXCEPTION 'Missing S3 receipt context'; END IF;
   IF p_expected_inventory IS DISTINCT FROM v_member.inventory_version THEN
@@ -2088,7 +2234,7 @@ DECLARE
 BEGIN
   v_session := ink_product_engine.ink_s3_lock_v1(p_session,p_authority_at);
   SELECT * INTO STRICT v_member FROM ink_product_engine.ink_members_v1 WHERE session_id=p_session
-    AND user_id=auth.uid() AND member_role='player' AND player_status='playing';
+    AND user_id=ink_product.request_actor_v1() AND member_role='player' AND player_status='playing';
   PERFORM ink_product_engine.ink_s3_assert_supply_v1(p_session,v_session.started_at,p_authority_at);
   IF p_receipt IS NULL THEN RAISE EXCEPTION 'Missing S3 receipt context'; END IF;
   IF p_expected_progress IS DISTINCT FROM v_member.progress_version THEN
@@ -2552,7 +2698,7 @@ BEGIN
   IF NOT FOUND THEN RETURN pg_catalog.jsonb_build_object('accepted',false,'code','SESSION_NOT_AVAILABLE'); END IF;
   SELECT m.* INTO v_member FROM ink_product_engine.ink_members_v1 m
     WHERE m.session_id=p_session AND m.participant_id=(p_member).participant_id AND m.owner_epoch=(p_member).owner_epoch
-      AND m.user_id=auth.uid() AND m.member_role='player' AND m.player_status='playing';
+      AND m.user_id=ink_product.request_actor_v1() AND m.member_role='player' AND m.player_status='playing';
   IF NOT FOUND THEN RETURN pg_catalog.jsonb_build_object('accepted',false,'code','PARTICIPANT_READ_ONLY'); END IF;
   IF pg_catalog.jsonb_typeof(p_payload) IS DISTINCT FROM 'object'
       OR pg_catalog.jsonb_typeof(p_payload->'grantId') IS DISTINCT FROM 'string' THEN
@@ -3694,14 +3840,14 @@ BEGIN
     RETURN pg_catalog.jsonb_build_object('accepted',false,'code','INVALID_INPUT');
   END IF;
 
-  IF auth.uid() IS NULL OR p_member.session_id IS DISTINCT FROM p_session
-      OR p_member.user_id IS DISTINCT FROM auth.uid() THEN
+  IF ink_product.request_actor_v1() IS NULL OR p_member.session_id IS DISTINCT FROM p_session
+      OR p_member.user_id IS DISTINCT FROM ink_product.request_actor_v1() THEN
     RETURN pg_catalog.jsonb_build_object('accepted',false,'code','NOT_A_PARTICIPANT');
   END IF;
   v_session := ink_product_engine.ink_s3_lock_v1(p_session,p_at);
   SELECT m.* INTO v_member FROM ink_product_engine.ink_members_v1 m
     WHERE m.session_id=p_session AND m.participant_id=p_member.participant_id
-      AND m.owner_epoch=p_member.owner_epoch AND m.user_id=auth.uid()
+      AND m.owner_epoch=p_member.owner_epoch AND m.user_id=ink_product.request_actor_v1()
       AND m.member_role='player' AND m.player_status='playing'
     FOR UPDATE;
   IF NOT FOUND THEN
@@ -5422,7 +5568,7 @@ DECLARE
   v_search jsonb;
   v_links jsonb;
 BEGIN
-  IF p_member.session_id=p_session AND p_member.player_status='playing' AND p_member.user_id=auth.uid() THEN
+  IF p_member.session_id=p_session AND p_member.player_status='playing' AND p_member.user_id=ink_product.request_actor_v1() THEN
     v_snapshot := ink_product.course_document(p_session,p_member.current_page_id);
     IF v_snapshot.revision_id=p_member.current_revision_id THEN
       FOR v_window IN
@@ -5484,7 +5630,7 @@ DECLARE
   v_mask_seed uuid;
 BEGIN
   IF p_member.session_id IS DISTINCT FROM p_session OR p_member.player_status IS DISTINCT FROM 'playing'
-      OR p_member.user_id IS DISTINCT FROM auth.uid() THEN
+      OR p_member.user_id IS DISTINCT FROM ink_product.request_actor_v1() THEN
     RETURN jsonb_build_object('accepted',false,'code','PARTICIPANT_READ_ONLY');
   END IF;
   IF p_operation IN ('search','link_index') THEN
@@ -6573,7 +6719,7 @@ DECLARE w ink_product_engine.ink_s5_phase2_search_v1;g ink_product_engine.ink_gr
  snapshot ink_product.wiki_snapshots;query text;hits integer;available timestamptz;grade text;limit_uses integer;
 BEGIN
  snapshot:=ink_product.course_document(p_member.session_id,p_member.current_page_id);
- IF p_member.user_id IS DISTINCT FROM auth.uid() OR p_member.player_status<>'playing' THEN RETURN jsonb_build_object('accepted',false,'code','PARTICIPANT_READ_ONLY');END IF;
+ IF p_member.user_id IS DISTINCT FROM ink_product.request_actor_v1() OR p_member.player_status<>'playing' THEN RETURN jsonb_build_object('accepted',false,'code','PARTICIPANT_READ_ONLY');END IF;
  IF p_payload->>'expectedSnapshotId' IS DISTINCT FROM snapshot.id::text OR p_payload->>'expectedProgressVersion' IS DISTINCT FROM p_member.progress_version::text THEN RETURN jsonb_build_object('accepted',false,'code','DOCUMENT_SOURCE_CHANGED');END IF;
  SELECT * INTO doc FROM ink_product_engine.ink_s5_search_documents_v1 WHERE snapshot_id=snapshot.id;
  IF doc.snapshot_id IS NULL THEN RETURN jsonb_build_object('accepted',false,'code','SEARCH_DOCUMENT_UNAVAILABLE');END IF;
@@ -12295,37 +12441,99 @@ REVOKE ALL ON FUNCTION ink_product_engine.ink_s5_weakening_v2(p_member ink_produ
 
 
 
-REVOKE CREATE ON SCHEMA public FROM ink_product_owner;
-
 INSERT INTO ink_product_engine.s5_transition_control_v1 (singleton, new_rooms_enabled, revision)
 VALUES (true, false, 0);
 
--- Database-only Supabase stacks have no Realtime relations. The S5 route polls in that case.
-DO $realtime$
+-- Clean up signal/emote rows when a retained room is eventually removed.
+-- Only the S5 owner, not web callers, can write either published table.
+ALTER TABLE ink_product_events.signals_v1
+  ADD CONSTRAINT signals_v1_room_fk FOREIGN KEY (room_id) REFERENCES ink_product.rooms(id) ON DELETE CASCADE;
+ALTER TABLE ink_product_events.emotes_v1
+  ADD CONSTRAINT emotes_v1_room_fk FOREIGN KEY (room_id) REFERENCES ink_product.rooms(id) ON DELETE CASCADE;
+ALTER TABLE ink_product_events.emote_limits_v1
+  ADD CONSTRAINT emote_limits_v1_room_fk FOREIGN KEY (room_id) REFERENCES ink_product.rooms(id) ON DELETE CASCADE;
+
+-- Kion is presentation-only. Never reuse item actions or client-supplied
+-- identities to authenticate a reaction. Spectators may send after finishing.
+CREATE FUNCTION public.send_group_items_kion_v1(p_room uuid, p_emote_id text)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $s5_kion_send$
+DECLARE
+  actor uuid := ink_product.request_actor_v1();
+  sender_participant uuid;
+  rate_at timestamptz;
+  now_at timestamptz := clock_timestamp();
+  own_event ink_product_events.emotes_v1;
 BEGIN
-  IF pg_catalog.to_regprocedure('realtime.send(jsonb,text,text,boolean)') IS NOT NULL
-     AND pg_catalog.to_regprocedure('realtime.topic()') IS NOT NULL
-     AND EXISTS (SELECT 1 FROM pg_catalog.pg_class
-       WHERE oid=pg_catalog.to_regclass('realtime.messages') AND relrowsecurity) THEN
-    GRANT EXECUTE ON FUNCTION realtime.send(jsonb,text,text,boolean) TO ink_product_owner;
-    CREATE POLICY s4_product_anon_boundary ON realtime.messages AS RESTRICTIVE TO anon USING (((COALESCE(realtime.topic(), ''::text) !~~ 'group-items-product:%'::text) AND (COALESCE(topic, ''::text) !~~ 'group-items-product:%'::text))) WITH CHECK (((COALESCE(realtime.topic(), ''::text) !~~ 'group-items-product:%'::text) AND (COALESCE(topic, ''::text) !~~ 'group-items-product:%'::text)));
+  IF actor IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED' USING ERRCODE='42501'; END IF;
+  IF p_emote_id IS NULL OR p_emote_id NOT IN (
+    'hello','ready','go','good','wait','hurry','wow','lol','sad','gg'
+  ) THEN RETURN jsonb_build_object('accepted',false,'code','EMOTE_INVALID'); END IF;
 
-    CREATE POLICY s4_product_auth_boundary ON realtime.messages AS RESTRICTIVE TO authenticated USING (
-    CASE
-        WHEN ((COALESCE(realtime.topic(), ''::text) ~~ 'group-items-product:%'::text) OR (COALESCE(topic, ''::text) ~~ 'group-items-product:%'::text)) THEN ((extension = 'broadcast'::text) AND (topic = realtime.topic()) AND ink_product.can_read_product_topic(topic))
-        ELSE true
-    END) WITH CHECK (((COALESCE(realtime.topic(), ''::text) !~~ 'group-items-product:%'::text) AND (COALESCE(topic, ''::text) !~~ 'group-items-product:%'::text)));
+  SELECT m.participant_id INTO sender_participant
+  FROM ink_product.rooms r JOIN ink_product.members m ON m.room_id=r.id
+  WHERE r.id=p_room AND r.phase='playing' AND m.actor_id=actor
+    AND m.status IN ('playing','finished') AND (
+      NOT ink_product.is_next_v1(r.id) OR EXISTS (
+        SELECT 1 FROM ink_product_engine.ink_members_v1 e
+        WHERE e.session_id=r.session_id AND e.participant_id=m.participant_id AND e.user_id=actor
+      )
+    ) FOR SHARE OF r, m;
+  IF sender_participant IS NULL THEN RETURN jsonb_build_object('accepted',false,'code','SENDER_NOT_ACTIVE'); END IF;
 
-    CREATE POLICY s4_product_delete_boundary ON realtime.messages AS RESTRICTIVE FOR DELETE TO authenticated USING (((COALESCE(realtime.topic(), ''::text) !~~ 'group-items-product:%'::text) AND (COALESCE(topic, ''::text) !~~ 'group-items-product:%'::text)));
+  INSERT INTO ink_product_events.emote_limits_v1 AS limit_row(room_id,sender_id,last_sent_at)
+  VALUES (p_room,actor,now_at)
+  ON CONFLICT (room_id,sender_id) DO UPDATE SET last_sent_at=EXCLUDED.last_sent_at
+  WHERE limit_row.last_sent_at <= EXCLUDED.last_sent_at-interval '3 seconds'
+  RETURNING last_sent_at INTO rate_at;
+  IF rate_at IS NULL THEN RETURN jsonb_build_object('accepted',false,'code','EMOTE_RATE_LIMIT'); END IF;
 
-    CREATE POLICY s4_product_invalidation_writer ON realtime.messages FOR INSERT TO ink_product_owner WITH CHECK (((extension = 'broadcast'::text) AND (event = 'invalidate'::text) AND private AND (topic = realtime.topic()) AND (topic ~ '^group-items-product:[0-9a-f-]{36}:[0-9a-f-]{36}$'::text) AND (jsonb_typeof(payload) = 'object'::text) AND ((payload - 'id'::text) = '{}'::jsonb) AND (jsonb_typeof((payload -> 'id'::text)) = 'string'::text) AND ((payload ->> 'id'::text) = (id)::text)));
+  INSERT INTO ink_product_events.emotes_v1(room_id,recipient_id,sender_participant_id,emote_id,sent_at)
+  SELECT p_room,m.actor_id,sender_participant,p_emote_id,now_at
+  FROM ink_product.members m
+  WHERE m.room_id=p_room AND m.status IN ('playing','finished')
+  ON CONFLICT (room_id,recipient_id,sender_participant_id) DO UPDATE
+    SET id=gen_random_uuid(), emote_id=EXCLUDED.emote_id, sent_at=EXCLUDED.sent_at;
 
-    CREATE POLICY s4_product_member_receive ON realtime.messages FOR SELECT TO authenticated USING (((extension = 'broadcast'::text) AND (topic ~~ 'group-items-product:%'::text) AND (topic = realtime.topic()) AND ink_product.can_read_product_topic(topic)));
+  SELECT * INTO own_event FROM ink_product_events.emotes_v1
+  WHERE room_id=p_room AND recipient_id=actor AND sender_participant_id=sender_participant;
+  RETURN jsonb_build_object('accepted',true,'code','ACCEPTED','event',to_jsonb(own_event));
+END $s5_kion_send$;
 
-    GRANT INSERT(id,payload,event,topic,private,extension)ON realtime.messages TO ink_product_owner;
-  END IF;
-END $realtime$;
+CREATE FUNCTION public.get_group_items_kion_v1(p_room uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $s5_kion_read$
+DECLARE actor uuid := ink_product.request_actor_v1(); recent jsonb;
+BEGIN
+  IF actor IS NULL OR NOT EXISTS (
+    SELECT 1 FROM ink_product.members m JOIN ink_product.rooms r ON r.id=m.room_id
+    WHERE r.id=p_room AND r.phase='playing' AND m.actor_id=actor
+      AND m.status IN ('playing','finished') AND (
+        NOT ink_product.is_next_v1(r.id) OR EXISTS (
+          SELECT 1 FROM ink_product_engine.ink_members_v1 e
+          WHERE e.session_id=r.session_id AND e.participant_id=m.participant_id AND e.user_id=actor
+        )
+      )
+  ) THEN RETURN '[]'::jsonb; END IF;
+  SELECT coalesce(jsonb_agg(to_jsonb(e) ORDER BY e.sent_at), '[]'::jsonb) INTO recent
+  FROM ink_product_events.emotes_v1 e
+  WHERE e.room_id=p_room AND e.recipient_id=actor
+    AND e.sent_at >= clock_timestamp()-interval '6 seconds';
+  RETURN recent;
+END $s5_kion_read$;
 
+-- Return to the migration role for external grants and Realtime policies.
+RESET ROLE;
+REVOKE REFERENCES ON TABLE public.profiles FROM ink_product_owner;
+REVOKE CREATE ON SCHEMA public FROM ink_product_owner;
+
+-- No realtime.messages grants or S5 Broadcast RLS policies are needed. The
+-- publication and recipient-selective RLS above are the sole event transport.
+
+-- The eight public RPCs and the JWT helper are now owned by ink_product_owner.
+-- Only their owner can reliably set EXECUTE ACLs: the migrator's old GRANT
+-- commands emitted no-privilege warnings after each ALTER ... OWNER.
+SET LOCAL ROLE ink_product_owner;
+REVOKE ALL ON FUNCTION ink_product.request_actor_v1()
+  FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION
   public.act_group_items_product_room_v1(text,uuid,uuid,text,jsonb,jsonb),
   public.get_group_items_product_receipt_v1(uuid,uuid,jsonb,uuid),
@@ -12334,8 +12542,42 @@ REVOKE ALL ON FUNCTION
   public.act_group_items_product_v1(uuid,uuid,jsonb,uuid,text,jsonb),
   public.get_group_items_entry_v1(text),
   public.get_group_items_history_v1(integer),
-  public.get_group_items_product_room_v1(uuid,jsonb)
-FROM PUBLIC, anon, service_role;
+  public.get_group_items_product_room_v1(uuid,jsonb),
+  public.send_group_items_kion_v1(uuid,text),
+  public.get_group_items_kion_v1(uuid)
+FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION
+  public.act_group_items_product_room_v1(text,uuid,uuid,text,jsonb,jsonb),
+  public.get_group_items_product_receipt_v1(uuid,uuid,jsonb,uuid),
+  public.get_group_items_product_state_v1(uuid,uuid,jsonb),
+  public.get_group_items_product_document_v1(uuid,uuid,jsonb,jsonb),
+  public.act_group_items_product_v1(uuid,uuid,jsonb,uuid,text,jsonb),
+  public.get_group_items_entry_v1(text),
+  public.get_group_items_history_v1(integer),
+  public.get_group_items_product_room_v1(uuid,jsonb),
+  public.send_group_items_kion_v1(uuid,text),
+  public.get_group_items_kion_v1(uuid)
+TO authenticated;
 REVOKE ALL ON ALL TABLES IN SCHEMA ink_product, ink_product_engine FROM PUBLIC, anon, authenticated, service_role;
+RESET ROLE;
+-- Remove the entire temporary membership *from this grantor*. Revoking only
+-- SET leaves an unwanted INHERIT row, while omitting GRANTED BY might touch
+-- the independent bootstrap ADMIN membership installed by supabase_admin.
+DO $owner_membership_cleanup$
+BEGIN
+  IF current_setting('wiki_s5_migration.temporary_owner_set', true) = 'yes' THEN
+    EXECUTE format('REVOKE ink_product_owner FROM %I GRANTED BY CURRENT_USER', current_user);
+    IF EXISTS (
+      SELECT 1 FROM pg_auth_members m
+      JOIN pg_roles owner_role ON owner_role.oid=m.roleid
+      JOIN pg_roles member_role ON member_role.oid=m.member
+      WHERE owner_role.rolname='ink_product_owner'
+        AND member_role.rolname=current_user
+        AND m.grantor=(SELECT oid FROM pg_roles WHERE rolname=current_user)
+    ) THEN
+      RAISE EXCEPTION 'S5_MIGRATION_OWNER_MEMBERSHIP_NOT_RESTORED';
+    END IF;
+  END IF;
+END $owner_membership_cleanup$;
 NOTIFY pgrst, 'reload schema';
 COMMIT;

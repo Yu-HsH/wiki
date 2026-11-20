@@ -21,7 +21,7 @@ import { isS5Scope } from './s5UiContract.js';
 
 const isScopeFailure = error => ["AUTH_REQUIRED","TRANSPORT_SCOPE_MISMATCH","RECEIPT_SCOPE_MISMATCH"].includes(error?.message);
 
-function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation }) {
+function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock }) {
   const product = isProductS4Scope(scope);
   const s5 = isS5Scope(scope);
   const [view, setView] = useState(null);
@@ -289,6 +289,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         </div>
       </div>
       <div className="group-items-jungle-dock" data-s5-sticky-dock={finalAssets ? true : undefined}>
+        {kionDock}
         {frame && !readOnly && <div className="group-items-jungle-supply" role="status">
           {view.supply ? `보급 ${view.supply.lastClosedRound} · ${view.supply.outcome === "granted" ? "받음" : "가방이 가득 차 건너뜀"}` : "보급 기록 없음"}
           {frame.protection.length>0 && <span> · 편집보호 활성</span>}

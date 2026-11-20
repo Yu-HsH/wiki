@@ -65,6 +65,19 @@ try {
     await group.getByRole("button", { name: /문서 링크 0/ }).click();
     await group.getByRole("button", { name: /문서 링크 1/ }).waitFor();
 
+    // A real Wikipedia article can be several screens tall. Sending and
+    // received stickers must stay in the viewport without scrolling back up.
+    await page.evaluate(() => {
+      document.querySelector("#duel .article").style.minHeight = "210vh";
+      window.scrollTo(0, 650);
+    });
+    await page.waitForFunction(() => window.scrollY >= 200);
+    for (const selector of ["#duel .wr-race-emotes", "#group .wr-race-emotes"]) {
+      const box = await page.locator(selector).boundingBox();
+      assert.ok(box && box.y >= -1 && box.y + box.height <= height + 1,
+        `Reaction dock stays visible at article scroll for ${selector} ${width}px: ${JSON.stringify(box)}`);
+    }
+
     await page.evaluate(() => document.querySelectorAll(".wr-race-emotes img")
       .forEach((image) => { image.loading = "eager"; }));
     await page.waitForFunction(() =>

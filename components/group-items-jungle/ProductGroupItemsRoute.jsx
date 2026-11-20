@@ -16,8 +16,10 @@ import { createFinalAssetAudio } from "./finalAssetAudio.js";
 import { createFinalAssetPresentation } from "./finalAssetPresentation.js";
 import { FIXED_PRODUCT_WIKI_BINDING, readFixedProductWikiDocument } from "./productFixedWikiDocument.js";
 import { loadProductWikiDocument } from "./productWikiDocument.js";
+import S5KionDock from "./S5KionDock.jsx";
 
 const productPath = "/multiplayer/group-items";
+const entryChannel = import.meta.env.MODE === "s4-product-candidate" ? "review" : "production";
 const fallbackIntervalMs = 750;
 const heartbeatIntervalMs = 4500;
 const audioSetting = "group-items-product:ink-audio";
@@ -95,19 +97,23 @@ function ProductEntry({ binding, actorId }) {
   }
   return <main>
     <h1>그룹 아이템전</h1>
+    <p>3~8명이 같은 문서를 출발해 목표 문서까지 경주합니다. 시작 시 아이템 1개를 받고, 20초 뒤 첫 보급부터 25초마다 새 아이템을 받습니다. 가방은 최대 2칸입니다.</p>
     <button type="button" disabled={pending} onClick={()=>void enter("create", {})}>아이템 방 만들기</button>
     <form onSubmit={event=>{event.preventDefault(); void enter("join", { roomCode:code.trim().toUpperCase() });}}>
       <label>아이템 방 코드 <input value={code} onChange={event=>setCode(event.target.value)} required maxLength={16}/></label>
       <button disabled={pending}>입장</button>
     </form>
+    <button type="button" onClick={()=>navigate("/play")}>모드 선택으로 돌아가기</button>
     {error && <p role="alert">{error}</p>}
   </main>;
 }
 
-function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe }) {
+function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players }) {
   const previewAudio = import.meta.env.VITE_GROUP_ITEMS_INK_PREVIEW === "1";
   const fixedAudio = productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING);
-  const finalAssets = import.meta.env.VITE_GROUP_ITEMS_FINAL_ASSETS === "1" &&
+  const finalAssets = (import.meta.env.VITE_GROUP_ITEMS_FINAL_ASSETS === "1" ||
+    (import.meta.env.VITE_GROUP_ITEMS_FINAL_ASSETS !== "0" &&
+      (import.meta.env.MODE === "s4-product-candidate" || import.meta.env.VITE_GROUP_ITEMS_S5_ENTRY === "1"))) &&
     binding.rulesVersion === "ink-s5-test-v1" && binding.catalogVersion === "ink-s5-test-v1" &&
     binding.modePolicyVersion === "wikipedia-s5-test-v1";
   const audioPreference = finalAssets ? "group-items:final-asset-audio" : audioSetting;
@@ -167,7 +173,8 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       setVolume(next);
     }}/></label>}</div>}
     <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
-      target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}/>
+      target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
+      kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>
   </>;
 }
 
@@ -176,6 +183,7 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
   const [failure, setFailure] = useState("");
+  const [copied, setCopied] = useState(false);
   const [lastSync, setLastSync] = useState("initial");
   const binding = room?.binding ?? defaultBinding;
   const roomRef = useRef(null), reloadRef = useRef(null), itemListeners = useRef(new Set());
@@ -227,8 +235,12 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
     const visibility = ()=>{ if (!document.hidden) invalidate("resume", true); };
     reloadRef.current = load;
     void load("initial");
-    const channel = supabase.channel("group-items-product:"+roomId+":"+actorId,{config:{private:true}})
-      .on("broadcast",{event:"invalidate"},()=>invalidate("websocket", false))
+    const channel = supabase.channel("group-items-signals:"+roomId+":"+actorId)
+      .on("postgres_changes",{
+        event:"*",schema:"ink_product_events",table:"signals_v1",filter:"recipient_id=eq."+actorId,
+      },change=>{
+        if (change.new?.room_id===roomId && change.new?.recipient_id===actorId) invalidate("websocket",false);
+      })
       .subscribe(status=>{
         if (abort.signal.aborted) return;
         liveRef.current = status === "SUBSCRIBED";
@@ -269,15 +281,19 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
     data-product-document-source={productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING) ? "fixed" : "wikipedia"}>
     {room.phase === "waiting" && <section aria-label="아이템 그룹 대기실">
       <h1>아이템 그룹 대기실</h1>
-      {room.roomCode && <p>방 코드 <output aria-label="아이템 방 코드">{room.roomCode}</output></p>}
+      <p>모든 참가자가 준비하면 방장이 경기를 시작할 수 있어요. 최소 {room.minimumPlayers}명, 최대 {room.maximumPlayers}명입니다.</p>
+      {room.roomCode && <p>방 코드 <output aria-label="아이템 방 코드">{room.roomCode}</output> <button type="button" onClick={()=>{
+        void navigator.clipboard?.writeText(room.roomCode).then(()=>setCopied(true)).catch(()=>setCopied(false));
+      }}>코드 복사</button>{copied && <span role="status"> 복사 완료</span>}</p>}
       <ul>{room.players.map(player=><li key={player.participantId}>{player.name} {player.ready ? "준비 완료" : "대기 중"}</li>)}</ul>
     </section>}
     {room.lifecycle && (room.phase2Policy && room.phase==='playing' ? <Phase2Countdown lifecycle={room.lifecycle} serverObservedAt={room.serverObservedAt}/> : <p aria-label="아이템전 경기 기한">최대 20분 · 3위 완주 후 최대 2분 유예{room.phase === "playing" && room.lifecycle.grace_ends_at && " · 유예 진행 중"}</p>)}
 
     {room.phase === "playing" && (room.role === "player" ? <ProductMatch roomId={roomId} sessionId={room.sessionId}
       participantId={room.participantId} ownerEpoch={room.ownerEpoch} actorId={actorId} binding={binding}
-      warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe}/> : <section aria-label="아이템 그룹 관전">
+      warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe} players={room.players}/> : <section aria-label="아이템 그룹 관전">
       <h1>아이템 그룹 관전</h1><ul>{room.players.map(player=><li key={player.participantId}>{player.name} {player.currentTitle}</li>)}</ul>
+      <S5KionDock roomId={roomId} actorId={actorId} players={room.players} spectator/>
     </section>)}
     {room.phase === "finished" && <section aria-label="아이템 그룹 결과"><h1>아이템 그룹 결과</h1>
       <ol>{[...room.results].sort((a,b)=>a.rank-b.rank).map(row=><li key={row.participantId}>
@@ -299,14 +315,20 @@ export default function ProductGroupItemsRoute() {
     if(roomId || !user?.id) return;
     const abort=new AbortController();
     void readIdentity().then(identity=>rpc("get_group_items_entry_v1",{
-      p_channel:"review"
+      p_channel:entryChannel
     },identity.accessToken,abort.signal)).then(policy=>{
       if(!abort.signal.aborted) setEntry({...policy,binding:policy.available?readProductBinding(policy.binding):null});
     }).catch(()=>{if(!abort.signal.aborted)setEntryError("아이템전 진입 정보를 확인할 수 없습니다.");});
     return ()=>abort.abort();
   },[roomId,user?.id]);
   if (!supabase || !productId(user?.id) || (roomId && !productId(roomId))) return <p role="alert">아이템 그룹을 사용할 수 없습니다.</p>;
-  if(!roomId && (!entry || !binding || !entry.admissionEnabled)) return <p role="status">{entryError || (entry && !entry.admissionEnabled ? "새 아이템전 입장이 중지되어 있습니다." : "아이템전 진입 정보를 확인하는 중…")}</p>;
+  if (!roomId && (!entry || !binding || !entry.admissionEnabled)) return <main>
+    <h1>그룹 아이템전</h1>
+    <p role={entryError ? "alert" : "status"}>{entryError || (!entry
+      ? "아이템전 이용 가능 여부를 확인하는 중…"
+      : !entry.available ? "아이템전이 아직 열리지 않았습니다. 일반 그룹 레이스는 이용할 수 있습니다."
+      : !entry.admissionEnabled ? "아이템전 방 생성과 새 입장이 일시 중지되어 있습니다." : "아이템전 준비 상태를 확인하는 중…")}</p>
+  </main>;
   const key = user.id + ":" + (roomId ?? "entry");
   return roomId ? <ProductRoom key={key} roomId={roomId} binding={binding} actorId={user.id}/>
     : <ProductEntry key={key} binding={binding} actorId={user.id}/>;
