@@ -61,8 +61,18 @@ async function createUser(index) {
   if (error || !data?.user?.id) throw Error("LOCAL Auth create: " + error?.message);
   const client = createClient(env.API_URL, env.ANON_KEY,
     { auth: { persistSession: false, autoRefreshToken: false } });
-  const signed = await client.auth.signInWithPassword({ email, password });
-  if (signed.error || !signed.data.session) throw Error("LOCAL Auth sign-in: " + signed.error?.message);
+  let signed;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    signed = await client.auth.signInWithPassword({ email, password });
+    if (!signed.error && signed.data?.session) break;
+    const failure = { index, attempt, name: signed.error?.name, status: signed.error?.status,
+      code: signed.error?.code, message: signed.error?.message };
+    console.warn("LOCAL Auth sign-in retry", JSON.stringify(failure));
+    if (attempt < 3) await delay(1000 * attempt);
+  }
+  if (signed.error || !signed.data?.session) throw Error("LOCAL Auth sign-in failed after 3 attempts: " +
+    JSON.stringify({ index, name: signed.error?.name, status: signed.error?.status,
+      code: signed.error?.code, message: signed.error?.message }));
   sql("insert into public.profiles(id,username,nickname,synthetic_email) values (" +
     [data.user.id, username, "QA " + index, email].map(quote).join(",") + ") on conflict(id) do nothing;");
   const user = { id: data.user.id, client, session: signed.data.session };
