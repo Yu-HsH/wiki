@@ -1,3 +1,14 @@
+# 현재 상태 — S5 그룹 아이템전 Draft 검토
+
+갱신 2026-11-20 KST. 기준 커밋 `dc247aa57eed3328bbfea7cbfbbfe990d03cedf0`, 통합 기준 `origin/main` `5c0238fde555a2e151725b338e81f786de6721c4`. 브랜치 `codex/s5-item-overhaul-20261120`. S5 C `C_DEFERRED_BY_USER`, `actualC=NOT_RUN`.
+
+- [산출물] 11월 10일 r11 앱의 11월 11일 보존 소스 ZIP `9d3dc018bd51e00ebc50bdb83f82758c68ae86fbd7b15876d4b95cbf45d0c3d0` 및 매니페스트 586개 입력의 SHA-256을 확인했다. [코드] `components/group-items-jungle/`, `components/group-items-playtest/`, `public/group-items-final-s5/`에서 S5 카탈로그와 아이콘·효과·음향을 복구했다. `App.jsx`는 로컬 검토 빌드에 온라인 계정용 전용 경로를 추가했다.
+- [코드] `supabase/migrations/20261120024414_group_items_s5.sql`은 보급이 세 번으로 제한된 초기 후보에 필요한 r19 연속 보급·방/영수증 계약을 반영한다. r19의 제품 SQL 출처 SHA-256은 `4c045cabdf3f958557e1370fb158622c9c534c941aebf69f43b9dc8a83cd3fcc`다. 새 migration은 입장 정책과 코스 데이터 없이 시작하며 익명 실행 권한을 명시적으로 회수한다. Realtime 관리 스키마가 없는 로컬 DB에서는 폴링 경로가 남는다.
+- [산출물] 기준 `5c0238f` + 이식 작업 트리, 2026-11-20 KST. `npm test` 899/899, 기본 및 S5 검토 빌드 통과. 호스트 포트 없는 새 로컬 DB에서 기존 migration 59개와 신규 1개를 적용했다. `supabase/tests/group_items_s5.sql`에서 3인 생성·입장·시작, 시작 1개, 20초·25초 경계와 4회차까지의 보급, 두 칸 제한, 권한과 재접속을 확인했다. 별도 연결 3개의 동시 소비에서 같은 ID는 같은 영수증, 다른 ID는 소비 1회였다. 기존 재경기 32/32, 이모트 22/22, 1:1 아이템 157/157 통과.
+- **BLOCK** 브라우저 3인 실경기, 실기기 패링 입력, 자연 보급 Worker 장시간 실측, 냉간 Realtime의 첫 이벤트 전달, `AUTHORITY_TIME_REGRESSION`의 최초 발생 원인. 이 변경은 검토용이다.
+
+---
+
 # 현재 상태 — PR #62 Preview P0 싱글 이탈 확인 보정
 
 갱신 **2026-11-20 KST**. 제품 기준 **91034ec** (P0 수정) 및 **8059496** (P0 전용 CI 분리), 브랜치 `integrate/tutorial-items-group-20261119`, [Draft PR #62](https://github.com/Yu-HsH/wiki/pull/62), 운영 `main` 기준 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`. API로 재구성한 원격 커밋 SHA는 해당 파일 트리의 로컬 커밋 SHA와 다를 수 있다.
