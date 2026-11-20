@@ -107,7 +107,7 @@ const s5Start = randomUUID(), s5Goal = randomUUID();
 function seedS5() {
   const b = quote(JSON.stringify(binding));
   const a = quote(s5Start), z = quote(s5Goal);
-  const htmlA = `<p>시작</p><p><a href="/wiki/목표">목표</a></p>`, htmlB = `<p>목표</p>`;
+  const htmlA = `<p>시작</p><p><a href="#" data-wiki-title="목표">목표</a></p>`, htmlB = `<p>목표</p>`;
   const statement = `BEGIN;
 GRANT ink_product_owner TO postgres WITH INHERIT FALSE, SET TRUE;
 SET LOCAL ROLE ink_product_owner;
@@ -184,6 +184,71 @@ async function s5Action(user, operation, roomId, payload={}) {
   assert.equal(result.ok,true,`${operation}: ${JSON.stringify(result)}`);
   return result;
 }
+
+async function verifyS5FinishAndRematch(count, room, members, agents) {
+  const link = a=>a.page.locator('article.article-content a[data-wiki-title="목표"]');
+  // Every player must reach the seeded goal through the actual article click,
+  // not by direct SQL updates or a fabricated terminal state.
+  for(let i=0;i<count;i++){
+    await link(agents[i]).waitFor({state:"visible",timeout:30000});
+    await link(agents[i]).click();
+    await waitFor(()=>sql("select status from ink_product.members where room_id="+quote(room)+
+      " and actor_id="+quote(members[i].id))==="finished",
+      `S5 ${count} player ${i+1} real goal completion`,70,300);
+  }
+  await waitFor(()=>sql("select phase from ink_product.rooms where id="+quote(room))==="finished",
+    `S5 ${count} authoritative terminal`,100,400);
+  const resultCount=()=>Number(sql("select count(*) from ink_product.results where room_id="+quote(room)));
+  const projected=()=>Number(sql("select count(*) from ink_product.result_projection_v1 where room_id="+quote(room)));
+  const xpCount=()=>Number(sql("select count(*) from public.xp_ledger where source_id in ("+
+    "select participant_id from ink_product.results where room_id="+quote(room)+")"));
+  await waitFor(()=>resultCount()===count&&projected()===count&&xpCount()>=count,
+    `S5 ${count} complete result and XP projection`,65,350);
+  const rankXp=sql("select string_agg(rank::text||':'||xp::text,',' order by rank) from ink_product.results where room_id="+quote(room));
+  const expected=Array.from({length:count},(_,i)=>`${i+1}:${[70,55,45][i]??35}`).join(",");
+  assert.equal(rankXp,expected,`S5 ${count} ranking XP`);
+  for(let i=0;i<count;i++){
+    const a=agents[i];
+    await a.page.locator('[data-product-group-phase="finished"]').waitFor({state:"visible",timeout:30000});
+    await a.page.locator('section[aria-label="아이템 그룹 결과"]').waitFor({state:"visible"});
+    const expectedXp=[70,55,45][i]??35;
+    const ownRoom=await rpc(members[i],"get_group_items_product_room_v1",{p_room:room,p_binding:null});
+    assert.equal(ownRoom.phase,"finished");
+    const own=ownRoom.results.find(row=>row.participantId===ownRoom.participantId);
+    assert.equal(own?.xp,expectedXp,`S5 ${count} member ${i+1} XP`);
+  }
+  await agents[0].page.reload({waitUntil:"domcontentloaded"});
+  await agents[0].page.locator('section[aria-label="아이템 그룹 결과"]').waitFor({state:"visible",timeout:20000});
+  log(`S5 ${count} real goal clicks, result DOM, all ranks/XP and F5 verified`);
+  const before={results:resultCount(),projection:projected(),xp:xpCount()};
+  const host=agents[0].page;
+  await host.getByRole("button",{name:"재경기"}).click();
+  await host.waitForURL(/\\/multiplayer\\/group-items\\/[a-f0-9-]{36}$/, {timeout:20000});
+  const nextRoom=host.url().split("/").at(-1);
+  assert.notEqual(nextRoom,room,"S5 rematch room must be new");
+  const next=await rpc(members[0],"get_group_items_product_room_v1",{p_room:nextRoom,p_binding:null});
+  assert.equal(next.phase,"waiting");
+  assert.equal(next.players.length,1,"S5 rematch starts with host, no implicit member rejoin");
+  assert.equal(sql("select previous_room_id from ink_product.rooms where id="+quote(nextRoom)),room);
+  const code=next.roomCode;
+  for(let i=1;i<count;i++){
+    const p=agents[i].page;
+    await p.goto(url+"/multiplayer/group-items",{waitUntil:"domcontentloaded"});
+    await p.getByLabel("아이템 방 코드").fill(code);
+    await p.getByRole("button",{name:"입장",exact:true}).click();
+    await p.waitForURL(new RegExp("/multiplayer/group-items/"+nextRoom+"$"),{timeout:20000});
+  }
+  for(const a of agents)await a.page.getByRole("button",{name:"준비",exact:true}).click();
+  await host.getByRole("button",{name:"경기 시작"}).waitFor({state:"visible",timeout:30000});
+  await host.getByRole("button",{name:"경기 시작"}).click();
+  await host.locator('[data-product-group-phase="playing"]').waitFor({state:"visible",timeout:25000});
+  assert.equal(Number(sql("select count(*) from ink_product.members where room_id="+quote(nextRoom)+" and status='playing'")),count);
+  assert.deepEqual({results:resultCount(),projection:projected(),xp:xpCount()},before,
+    `S5 ${count} rematch must not duplicate old results/XP`);
+  await host.screenshot({path:path.join(directory,`s5-${count}-finished-rematch.png`),animations:"disabled"});
+  log(`S5 ${count} UI rematch, all players rejoin/ready, fresh restart, old result/XP immutable`);
+}
+
 async function groupRound(count) {
   const members=users.slice(0,count);
   const created=await s5Action(members[0],"create",null);
@@ -228,6 +293,7 @@ async function groupRound(count) {
     }
     log("S5 actual 320/360/390/430px mobile viewport + F5 layout");
   }
+  await verifyS5FinishAndRematch(count,room,members,agents);
   for(const a of agents) assert.equal(a.errors.length,0,`S5 page error: ${a.errors.join("; ")}`);
   await Promise.all(agents.map(a=>a.context.close()));
   log(`S5 ${count}-player match browser phase completed`);
@@ -301,6 +367,53 @@ async function duelRound() {
   for(const a of agents) assert.equal(a.errors.length,0,"duel v4 page errors: "+a.errors.join("; "));
   await Promise.all(agents.map(a=>a.context.close()));
   log("duel v4 F5 authoritative progress retained");
+
+  // Normal goal arrival must close the real result projection and show both players
+  // their authoritative XP in a browser, followed by an actual UI rematch.
+  const link=title=>host.locator('article.article-content a[data-wiki-title]').filter({hasText:title}).first();
+  await link(middle.title).waitFor({state:"visible",timeout:30000});
+  await link(middle.title).click();
+  await waitFor(async()=>Number((await rpc(members[0],"get_duel_v4_state",{p_room:room}))
+    .players.find(p=>p.id===members[0].id).moves)===1,"duel v4 first actual link move",80,300);
+  await link(goal.title).waitFor({state:"visible",timeout:25000});
+  await link(goal.title).click();
+  await host.locator('section[aria-label="경기 결과"]').waitFor({state:"visible",timeout:25000});
+  await guest.locator('section[aria-label="경기 결과"]').waitFor({state:"visible",timeout:25000});
+  const winner=await rpc(members[0],"get_duel_v4_state",{p_room:room});
+  const loser=await rpc(members[1],"get_duel_v4_state",{p_room:room});
+  assert.equal(winner.winnerId,members[0].id);
+  assert.equal(winner.finishReason,"normal_finish");
+  assert.equal(winner.xp,50);
+  assert.equal(loser.xp,25);
+  assert.equal(winner.players.find(p=>p.id===members[0].id).moves,2);
+  assert.match(await host.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \\+50/);
+  assert.match(await guest.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \\+25/);
+  const resultRoom=sql("select result_room_id from duel_v4.rooms where id="+quote(room));
+  const history=()=>Number(sql("select count(*) from public.match_history where room_id="+quote(resultRoom)));
+  const ledger=()=>Number(sql("select count(*) from public.xp_ledger where source_id in ("+
+    "select id from public.match_history where room_id="+quote(resultRoom)+")"));
+  assert.equal(history(),1,"duel v4 exactly one historical result");
+  assert.equal(ledger(),2,"duel v4 winner and loser each got one XP entry");
+  await host.reload({waitUntil:"domcontentloaded"});
+  await host.locator('section[aria-label="경기 결과"]').waitFor({state:"visible",timeout:20000});
+  const old={history:history(),xp:ledger()};
+  await host.getByRole("button",{name:"재경기"}).click();
+  await host.waitForURL(/\\/multiplayer\\/duel-v4\\/[a-f0-9-]{36}$/, {timeout:20000});
+  const nextRoom=host.url().split("/").at(-1);
+  assert.notEqual(nextRoom,room);
+  await guest.getByRole("button",{name:"재경기"}).click();
+  await guest.waitForURL(new RegExp("/multiplayer/duel-v4/"+nextRoom+"$"),{timeout:20000});
+  assert.equal(Number(sql("select count(*) from duel_v4.members where room_id="+quote(nextRoom))),2);
+  assert.equal(Number(sql("select count(*) from duel_v4.grants where room_id="+quote(nextRoom))),0);
+  assert.deepEqual({history:history(),xp:ledger()},old,"duel v4 rematch no old XP/result duplication");
+  await host.getByRole("button",{name:"게임 시작"}).click();
+  await waitFor(async()=>Boolean((await rpc(members[0],"get_duel_v4_state",{p_room:nextRoom})).startedAt),
+    "duel v4 rematch starts with new inventory",80,350);
+  assert.equal(Number(sql("select count(*) from duel_v4.grants where room_id="+quote(nextRoom)+
+    " and consumed_at is null")),2);
+  await host.screenshot({path:path.join(directory,"duel-v4-finished-rematch.png"),animations:"disabled"});
+  log("duel v4 real two-link finish, result DOM/XP, F5, UI rematch and new supply");
+
 }
 try {
   seedWiki(); seedS5();
