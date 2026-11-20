@@ -107,7 +107,7 @@ const s5Start = randomUUID(), s5Goal = randomUUID();
 function seedS5() {
   const b = quote(JSON.stringify(binding));
   const a = quote(s5Start), z = quote(s5Goal);
-  const htmlA = `<p>시작</p><p><a href="#" data-wiki-title="목표">목표</a></p>`, htmlB = `<p>목표</p>`;
+  const htmlA = `<p>시작</p><p><a href="/wiki/목표">목표</a></p>`, htmlB = `<p>목표</p>`;
   const statement = `BEGIN;
 GRANT ink_product_owner TO postgres WITH INHERIT FALSE, SET TRUE;
 SET LOCAL ROLE ink_product_owner;
@@ -236,7 +236,7 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   const before={results:resultCount(),projection:projected(),xp:xpCount()};
   const host=agents[0].page;
   await host.getByRole("button",{name:"재경기"}).click();
-  await host.waitForURL(/\/multiplayer\/group-items\/[a-f0-9-]{36}$/, {timeout:20000});
+  await host.waitForURL(next=>/\/multiplayer\/group-items\/[a-f0-9-]{36}$/.test(next.pathname) && next.pathname!=="/multiplayer/group-items/"+room,{timeout:20000});
   const nextRoom=host.url().split("/").at(-1);
   assert.notEqual(nextRoom,room,"S5 rematch room must be new");
   const next=await rpc(members[0],"get_group_items_product_room_v1",{p_room:nextRoom,p_binding:null});
@@ -410,7 +410,7 @@ async function duelRound() {
   await host.locator('section[aria-label="경기 결과"]').waitFor({state:"visible",timeout:20000});
   const old={history:history(),xp:ledger()};
   await host.getByRole("button",{name:"재경기"}).click();
-  await host.waitForURL(/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/, {timeout:20000});
+  await host.waitForURL(next=>/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/.test(next.pathname) && next.pathname!=="/multiplayer/duel-v4/"+room,{timeout:20000});
   const nextRoom=host.url().split("/").at(-1);
   assert.notEqual(nextRoom,room);
   await guest.getByRole("button",{name:"재경기"}).click();
