@@ -1,0 +1,13 @@
+<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HOME vector banner QA</title></head><body>
+<div id="root"></div><script type="module">
+ import React from "react";import {createRoot} from "react-dom/client";
+ import "../../appStyles.js";import "../../css/jungle65.css";import "../../css/wikiRaceHome.css";
+ import ExpeditionHero from "../../components/wiki-race/ExpeditionHero.jsx";
+ createRoot(document.getElementById("root")).render(
+  React.createElement("div",{className:"wr-page wr-home wr65-field"},
+   React.createElement("div",{className:"wr-shell",style:{maxWidth:"1120px",margin:"0 auto"}},
+    React.createElement(ExpeditionHero,{onPlay:()=>document.body.dataset.playStarted="true"})
+   )
+  )
+ );
+</script></body></html>
