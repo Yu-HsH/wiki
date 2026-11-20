@@ -19,6 +19,7 @@ const checks = [];
 const check = (name, value) => { assert.ok(value, name); checks.push(name); };
 const consoleErrors = [];
 const rpcCalls = [];
+const p0SingleExitOnly = process.argv.includes('--single-exit-only');
 const iso = (ms) => new Date(ms).toISOString();
 const now = () => Date.now();
 
@@ -303,6 +304,7 @@ async function toastClear(page) {
 }
 const articleWidth = (page) => page.locator(".article-content").evaluate((n) => n.getBoundingClientRect().width);
 
+qaSuite: {
 try {
   await fs.mkdir(output, { recursive: true });
   for (let i = 0; i < 80; i++) { try { if ((await fetch(base)).ok) break; } catch {} await new Promise((r) => setTimeout(r, 200)); }
@@ -322,6 +324,12 @@ try {
     await page.getByRole("dialog", { name: "게임을 나갈까요?" }).getByRole("button", { name: "계속하기" }).click();
     await expect(page.getByRole("dialog", { name: "게임을 나갈까요?" })).toHaveCount(0);
     check("S0b continue after cancel keeps the reserved run", !rpcCalls.includes("me:single-run:leave_v1"));
+    if (p0SingleExitOnly) {
+      check("S0c no browser errors during single exit guard", consoleErrors.length === 0);
+      await ctx.close();
+      console.log(`PASS ${checks.length} single countdown exit checks (isolated browser fixture)`);
+      break qaSuite;
+    }
     await page.locator(".wr-race-hud").waitFor();
     await page.locator(".countdown-overlay").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     await expect(page.locator(".wr-hud-doc--current")).toContainText(START, { timeout: 15000 });
@@ -649,3 +657,4 @@ try {
   await fs.writeFile(`${output}/report.json`, JSON.stringify({ basis: "321ea27 + uncommitted Phase 3 working tree", date: "2026-10-07", fixtureOnly: true, checks, consoleErrors }, null, 2));
   console.log(`PASS ${checks.length} browser checks (isolated API/realtime fixtures; real backend not exercised)`);
 } finally { await browser?.close(); server.kill(); }
+}

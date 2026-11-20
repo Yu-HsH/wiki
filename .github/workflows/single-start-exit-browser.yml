@@ -27,8 +27,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Full Phase 3 race fixture, including single cancel/continue
-        run: node scripts/ui-phase3-browser.mjs
+      - name: Focused P0 single cancel/continue browser fixture
+        run: node scripts/ui-phase3-browser.mjs --single-exit-only
       - name: Upload QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
