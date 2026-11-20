@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "asOfKst": "2026-11-09",
+  "mode": "research_only_no_runtime_import",
+  "selectionBasis": "goal_document_only",
+  "researchCaveat": "cachedIncomingSources counts distinct sources in sampled Wiki Race snapshots, not full Wikipedia backlinks; Wikipedia page opens do not prove pageprops/disambiguation status or gameplay clickability.",
+  "candidateTargets": [
+    {
+      "title": "커피",
+      "domain": "생활·식품",
+      "cachedIncomingSources": 39,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "발효",
+      "domain": "생활·식품",
+      "cachedIncomingSources": 26,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "전자레인지",
+      "domain": "생활·식품",
+      "cachedIncomingSources": 13,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "공기청정기",
+      "domain": "생활·식품",
+      "cachedIncomingSources": 15,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "태풍",
+      "domain": "자연·환경",
+      "cachedIncomingSources": 41,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "미세먼지",
+      "domain": "자연·환경",
+      "cachedIncomingSources": 14,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "산호초",
+      "domain": "자연·환경",
+      "cachedIncomingSources": 16,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "엘니뇨",
+      "domain": "자연·환경",
+      "cachedIncomingSources": 20,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "카페인",
+      "domain": "건강·심리",
+      "cachedIncomingSources": 23,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "백신",
+      "domain": "건강·심리",
+      "cachedIncomingSources": 19,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "알레르기",
+      "domain": "건강·심리",
+      "cachedIncomingSources": 20,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "도파민",
+      "domain": "건강·심리",
+      "cachedIncomingSources": 17,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "훈민정음",
+      "domain": "역사·사회",
+      "cachedIncomingSources": 23,
+      "existingActiveTarget": true,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "경복궁",
+      "domain": "역사·사회",
+      "cachedIncomingSources": 28,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "비단길",
+      "domain": "역사·사회",
+      "cachedIncomingSources": 17,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "인플레이션",
+      "domain": "역사·사회",
+      "cachedIncomingSources": 26,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "인공지능",
+      "domain": "IT·현대기술",
+      "cachedIncomingSources": 55,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "카카오톡",
+      "domain": "IT·현대기술",
+      "cachedIncomingSources": 8,
+      "existingActiveTarget": true,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "챗GPT",
+      "domain": "IT·현대기술",
+      "cachedIncomingSources": 5,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "넷플릭스",
+      "domain": "IT·현대기술",
+      "cachedIncomingSources": 43,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "K-pop",
+      "domain": "문화·스포츠",
+      "cachedIncomingSources": 43,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "리그 오브 레전드",
+      "domain": "문화·스포츠",
+      "cachedIncomingSources": 29,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "태권도",
+      "domain": "문화·스포츠",
+      "cachedIncomingSources": 28,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    },
+    {
+      "title": "웹툰",
+      "domain": "문화·스포츠",
+      "cachedIncomingSources": 7,
+      "existingActiveTarget": false,
+      "source": "wiki_race_goal_pool_review_20261109",
+      "publicArticlePageOpened": true,
+      "mediaWikiPagepropsVerified": false,
+      "backlinksApiVerified": false,
+      "wikiViewerClickableVerified": false,
+      "recommendation": "review"
+    }
+  ],
+  "existingActiveTargetReview": [
+    {
+      "title": "벤치 프레스",
+      "recommendation": "review"
+    },
+    {
+      "title": "고래상어",
+      "recommendation": "hold"
+    },
+    {
+      "title": "GPT (언어 모델)",
+      "recommendation": "hold"
+    },
+    {
+      "title": "교황 프란치스코",
+      "recommendation": "review"
+    },
+    {
+      "title": "SQL",
+      "recommendation": "review"
+    },
+    {
+      "title": "백준 온라인 저지",
+      "recommendation": "hold"
+    },
+    {
+      "title": "생맥주",
+      "recommendation": "hold"
+    },
+    {
+      "title": "레드벨벳 (아이돌)",
+      "recommendation": "stale_title_confirmed_20261108"
+    },
+    {
+      "title": "메이플스토리",
+      "recommendation": "retain"
+    },
+    {
+      "title": "라면",
+      "recommendation": "retain"
+    },
+    {
+      "title": "카카오톡",
+      "recommendation": "retain"
+    },
+    {
+      "title": "화성",
+      "recommendation": "retain"
+    },
+    {
+      "title": "한강",
+      "recommendation": "retain"
+    },
+    {
+      "title": "월드 와이드 웹",
+      "recommendation": "retain"
+    },
+    {
+      "title": "김치",
+      "recommendation": "retain"
+    },
+    {
+      "title": "훈민정음",
+      "recommendation": "retain"
+    },
+    {
+      "title": "광합성",
+      "recommendation": "retain"
+    }
+  ]
+}

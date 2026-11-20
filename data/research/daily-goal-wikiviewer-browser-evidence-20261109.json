@@ -1,0 +1,110 @@
+{
+  "source": "GitHub Actions Playwright Chromium on real public Wiki pages via fetchPageData and actual WikiViewer",
+  "dateKst": "2026-11-09",
+  "workflowRunId": 42584064305,
+  "jobId": 129049501944,
+  "summary": {
+    "tested": 9,
+    "passed": 9,
+    "failed": 0,
+    "scope": "actual Wiki Race fetchPageData sanitizer and WikiViewer onLinkClick, not server movement or authenticated daily match"
+  },
+  "verifiedCases": [
+    {
+      "field": "food",
+      "source": "간장",
+      "target": "발효",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 5,
+        "clickedTarget": "발효"
+      }
+    },
+    {
+      "field": "life",
+      "source": "가전제품",
+      "target": "전자레인지",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 3,
+        "clickedTarget": "전자레인지"
+      }
+    },
+    {
+      "field": "environment",
+      "source": "기상",
+      "target": "태풍",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 5,
+        "clickedTarget": "태풍"
+      }
+    },
+    {
+      "field": "environment",
+      "source": "공기조화",
+      "target": "미세먼지",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 2,
+        "clickedTarget": "미세먼지"
+      }
+    },
+    {
+      "field": "health",
+      "source": "모카 포트",
+      "target": "카페인",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 1,
+        "clickedTarget": "카페인"
+      }
+    },
+    {
+      "field": "history",
+      "source": "국제무역",
+      "target": "비단길",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 1,
+        "clickedTarget": "비단길"
+      }
+    },
+    {
+      "field": "it",
+      "source": "인공지능",
+      "target": "챗GPT",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 1,
+        "clickedTarget": "챗GPT"
+      }
+    },
+    {
+      "field": "culture",
+      "source": "T1 (e스포츠)",
+      "target": "리그 오브 레전드",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 5,
+        "clickedTarget": "리그 오브 레전드"
+      }
+    },
+    {
+      "field": "culture",
+      "source": "기안84",
+      "target": "웹툰",
+      "status": "PASS",
+      "detail": {
+        "clickableLinks": 2,
+        "clickedTarget": "웹툰"
+      }
+    }
+  ],
+  "limitations": [
+    "Does not execute server-authorized page movement",
+    "Does not validate signed-in daily match",
+    "Does not prove all 24 goals have equally accessible links",
+    "Open-source Wikipedia content can change"
+  ]
+}

@@ -1,0 +1,1170 @@
+{
+  "schemaVersion": 1,
+  "dateKst": "2026-11-09",
+  "method": "Supabase MCP SELECT-only, latest cached revision per source + wiki_snapshot_links. Cross-check target_page_id against official public MediaWiki pageid",
+  "sourceCacheIsIncomplete": true,
+  "gameplayClickableVerified": false,
+  "summary": {
+    "targets": 24,
+    "sourceIdMismatchTargets": 0,
+    "targetsWithCachedInbounds": 24
+  },
+  "rows": [
+    {
+      "title": "K-pop",
+      "officialPageId": 329164,
+      "cachedIncomingSources": 43,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 25,
+      "examples": [
+        {
+          "label": "K-pop",
+          "source": "Aespa",
+          "ordinal": 3
+        },
+        {
+          "label": "K-pop",
+          "source": "BLACKPINK",
+          "ordinal": 4
+        },
+        {
+          "label": "K-pop",
+          "source": "INVU (음반)",
+          "ordinal": 3
+        },
+        {
+          "label": "K-Pop",
+          "source": "IVE",
+          "ordinal": 10
+        },
+        {
+          "label": "K-pop",
+          "source": "IZ*ONE",
+          "ordinal": 14
+        },
+        {
+          "label": "K-pop",
+          "source": "K-POP (음악 그룹)",
+          "ordinal": 16
+        },
+        {
+          "label": "K-pop",
+          "source": "NewJeans",
+          "ordinal": 4
+        },
+        {
+          "label": "K-pop",
+          "source": "김이나",
+          "ordinal": 4
+        }
+      ]
+    },
+    {
+      "title": "경복궁",
+      "officialPageId": 6611,
+      "cachedIncomingSources": 28,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 12,
+      "examples": [
+        {
+          "label": "경복궁",
+          "source": "건축",
+          "ordinal": 46
+        },
+        {
+          "label": "경복궁",
+          "source": "경복궁역",
+          "ordinal": 35
+        },
+        {
+          "label": "경복궁",
+          "source": "고종 (대한제국)",
+          "ordinal": 114
+        },
+        {
+          "label": "경복궁",
+          "source": "구찌",
+          "ordinal": 68
+        },
+        {
+          "label": "경복궁",
+          "source": "노무현",
+          "ordinal": 412
+        },
+        {
+          "label": "경복궁",
+          "source": "노무현의 죽음과 장례",
+          "ordinal": 44
+        },
+        {
+          "label": "경복궁",
+          "source": "대한민국 국가인권위원회",
+          "ordinal": 166
+        },
+        {
+          "label": "경복궁",
+          "source": "대한민국 원",
+          "ordinal": 62
+        }
+      ]
+    },
+    {
+      "title": "공기청정기",
+      "officialPageId": 138257,
+      "cachedIncomingSources": 15,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 12,
+      "examples": [
+        {
+          "label": "공기청정기",
+          "source": "LG전자",
+          "ordinal": 45
+        },
+        {
+          "label": "공기청정기",
+          "source": "가전제품",
+          "ordinal": 67
+        },
+        {
+          "label": "공기청정기",
+          "source": "공기조화",
+          "ordinal": 180
+        },
+        {
+          "label": "공기청정기",
+          "source": "김치냉장고",
+          "ordinal": 9
+        },
+        {
+          "label": "공기청정기",
+          "source": "빨래 건조기",
+          "ordinal": 26
+        },
+        {
+          "label": "공기청정기",
+          "source": "상태 함수",
+          "ordinal": 182
+        },
+        {
+          "label": "공기청정기",
+          "source": "세탁기",
+          "ordinal": 52
+        },
+        {
+          "label": "공기청정기",
+          "source": "습도",
+          "ordinal": 69
+        }
+      ]
+    },
+    {
+      "title": "넷플릭스",
+      "officialPageId": 1326170,
+      "cachedIncomingSources": 43,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 21,
+      "examples": [
+        {
+          "label": "넷플릭스",
+          "source": "BLACKPINK",
+          "ordinal": 62
+        },
+        {
+          "label": "넷플릭스",
+          "source": "CJ엔터테인먼트",
+          "ordinal": 85
+        },
+        {
+          "label": "넷플릭스",
+          "source": "게이",
+          "ordinal": 456
+        },
+        {
+          "label": "넷플릭스",
+          "source": "길거리 음식",
+          "ordinal": 155
+        },
+        {
+          "label": "넷플릭스",
+          "source": "나스닥 100",
+          "ordinal": 54
+        },
+        {
+          "label": "넷플릭스",
+          "source": "네이버",
+          "ordinal": 189
+        },
+        {
+          "label": "넷플릭스",
+          "source": "농심",
+          "ordinal": 50
+        },
+        {
+          "label": "넷플릭스",
+          "source": "다우기술",
+          "ordinal": 134
+        }
+      ]
+    },
+    {
+      "title": "도파민",
+      "officialPageId": 204992,
+      "cachedIncomingSources": 17,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 11,
+      "examples": [
+        {
+          "label": "도파민",
+          "source": "뇌",
+          "ordinal": 171
+        },
+        {
+          "label": "도파민",
+          "source": "변태 성욕",
+          "ordinal": 11
+        },
+        {
+          "label": "도파민",
+          "source": "비디오 게임",
+          "ordinal": 380
+        },
+        {
+          "label": "도파민",
+          "source": "사랑",
+          "ordinal": 116
+        },
+        {
+          "label": "도파민",
+          "source": "성도착",
+          "ordinal": 14
+        },
+        {
+          "label": "프로락틴 억제 호르몬",
+          "source": "시상하부",
+          "ordinal": 33
+        },
+        {
+          "label": "도파민",
+          "source": "식도",
+          "ordinal": 110
+        },
+        {
+          "label": "도파민",
+          "source": "에스트로겐",
+          "ordinal": 47
+        }
+      ]
+    },
+    {
+      "title": "리그 오브 레전드",
+      "officialPageId": 710049,
+      "cachedIncomingSources": 29,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 26,
+      "examples": [
+        {
+          "label": "리그 오브 레전드",
+          "source": "Dplus Kia",
+          "ordinal": 6
+        },
+        {
+          "label": "리그 오브 레전드",
+          "source": "E스포츠",
+          "ordinal": 6
+        },
+        {
+          "label": "리그 오브 레전드",
+          "source": "Gen.G (리그 오브 레전드)",
+          "ordinal": 3
+        },
+        {
+          "label": "리그 오브 레전드",
+          "source": "LOL",
+          "ordinal": 1
+        },
+        {
+          "label": "리그 오브 레전드",
+          "source": "SOOP",
+          "ordinal": 73
+        },
+        {
+          "label": "리그 오브 레전드",
+          "source": "T1 (e스포츠)",
+          "ordinal": 8
+        },
+        {
+          "label": "리그 오브 레전드",
+          "source": "T1 (리그 오브 레전드)",
+          "ordinal": 3
+        },
+        {
+          "label": "리그 오브 레전드",
+          "source": "도란",
+          "ordinal": 3
+        }
+      ]
+    },
+    {
+      "title": "미세먼지",
+      "officialPageId": 48995,
+      "cachedIncomingSources": 14,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 10,
+      "examples": [
+        {
+          "label": "미세먼지",
+          "source": "공기조화",
+          "ordinal": 183
+        },
+        {
+          "label": "초미세먼지",
+          "source": "방향제",
+          "ordinal": 62
+        },
+        {
+          "label": "미세먼지",
+          "source": "삼겹살구이",
+          "ordinal": 95
+        },
+        {
+          "label": "미세먼지",
+          "source": "상태 함수",
+          "ordinal": 168
+        },
+        {
+          "label": "미세먼지",
+          "source": "습도",
+          "ordinal": 55
+        },
+        {
+          "label": "미세먼지",
+          "source": "열전달",
+          "ordinal": 24
+        },
+        {
+          "label": "미세먼지",
+          "source": "열펌프",
+          "ordinal": 11
+        },
+        {
+          "label": "미세먼지",
+          "source": "인간이 환경에 미치는 영향",
+          "ordinal": 31
+        }
+      ]
+    },
+    {
+      "title": "발효",
+      "officialPageId": 12940,
+      "cachedIncomingSources": 26,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 19,
+      "examples": [
+        {
+          "label": "발효",
+          "source": "DNA",
+          "ordinal": 275
+        },
+        {
+          "label": "발효",
+          "source": "간장",
+          "ordinal": 10
+        },
+        {
+          "label": "발효",
+          "source": "김치",
+          "ordinal": 301
+        },
+        {
+          "label": "발효",
+          "source": "끓음",
+          "ordinal": 49
+        },
+        {
+          "label": "발효",
+          "source": "동물 학대",
+          "ordinal": 89
+        },
+        {
+          "label": "발효",
+          "source": "럼",
+          "ordinal": 4
+        },
+        {
+          "label": "발효",
+          "source": "맥주",
+          "ordinal": 21
+        },
+        {
+          "label": "발효",
+          "source": "바이러스학",
+          "ordinal": 75
+        }
+      ]
+    },
+    {
+      "title": "백신",
+      "officialPageId": 9409,
+      "cachedIncomingSources": 19,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 12,
+      "examples": [
+        {
+          "label": "백신",
+          "source": "SARS-CoV-2",
+          "ordinal": 62
+        },
+        {
+          "label": "백신",
+          "source": "감염 관리",
+          "ordinal": 174
+        },
+        {
+          "label": "백신",
+          "source": "감염병",
+          "ordinal": 33
+        },
+        {
+          "label": "백신",
+          "source": "과학사",
+          "ordinal": 411
+        },
+        {
+          "label": "백신",
+          "source": "노로바이러스",
+          "ordinal": 15
+        },
+        {
+          "label": "백신",
+          "source": "동물",
+          "ordinal": 243
+        },
+        {
+          "label": "백신",
+          "source": "물고기",
+          "ordinal": 289
+        },
+        {
+          "label": "백신",
+          "source": "성 호르몬",
+          "ordinal": 132
+        }
+      ]
+    },
+    {
+      "title": "비단길",
+      "officialPageId": 89028,
+      "cachedIncomingSources": 17,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 10,
+      "examples": [
+        {
+          "label": "실크로드",
+          "source": "고양이",
+          "ordinal": 77
+        },
+        {
+          "label": "비단길",
+          "source": "교통",
+          "ordinal": 69
+        },
+        {
+          "label": "비단길",
+          "source": "국제무역",
+          "ordinal": 9
+        },
+        {
+          "label": "비단길",
+          "source": "당나라",
+          "ordinal": 110
+        },
+        {
+          "label": "실크로드",
+          "source": "대항해시대",
+          "ordinal": 33
+        },
+        {
+          "label": "비단길",
+          "source": "동아시아 불교",
+          "ordinal": 16
+        },
+        {
+          "label": "비단길",
+          "source": "만두",
+          "ordinal": 44
+        },
+        {
+          "label": "실크로드",
+          "source": "무역로",
+          "ordinal": 36
+        }
+      ]
+    },
+    {
+      "title": "산호초",
+      "officialPageId": 515290,
+      "cachedIncomingSources": 16,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 7,
+      "examples": [
+        {
+          "label": "산호초",
+          "source": "건축물",
+          "ordinal": 201
+        },
+        {
+          "label": "산호초",
+          "source": "남극해",
+          "ordinal": 511
+        },
+        {
+          "label": "산호초",
+          "source": "대륙",
+          "ordinal": 178
+        },
+        {
+          "label": "산호초",
+          "source": "독도",
+          "ordinal": 132
+        },
+        {
+          "label": "산호초",
+          "source": "동물지리학",
+          "ordinal": 34
+        },
+        {
+          "label": "산호초",
+          "source": "물고기",
+          "ordinal": 292
+        },
+        {
+          "label": "산호초",
+          "source": "바다",
+          "ordinal": 31
+        },
+        {
+          "label": "산호초",
+          "source": "생물 군계",
+          "ordinal": 51
+        }
+      ]
+    },
+    {
+      "title": "알레르기",
+      "officialPageId": 6212,
+      "cachedIncomingSources": 20,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 14,
+      "examples": [
+        {
+          "label": "저자극성",
+          "source": "공기조화",
+          "ordinal": 128
+        },
+        {
+          "label": "알레르기",
+          "source": "독일어",
+          "ordinal": 170
+        },
+        {
+          "label": "알레르기",
+          "source": "마취",
+          "ordinal": 50
+        },
+        {
+          "label": "알레르기",
+          "source": "비뇨의학과",
+          "ordinal": 56
+        },
+        {
+          "label": "알레르기",
+          "source": "성형외과",
+          "ordinal": 89
+        },
+        {
+          "label": "알레르기",
+          "source": "소화기외과",
+          "ordinal": 33
+        },
+        {
+          "label": "알레르기",
+          "source": "수면 위생",
+          "ordinal": 14
+        },
+        {
+          "label": "알레르기",
+          "source": "수면제",
+          "ordinal": 51
+        }
+      ]
+    },
+    {
+      "title": "엘니뇨",
+      "officialPageId": 55409,
+      "cachedIncomingSources": 20,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 4,
+      "examples": [
+        {
+          "label": "엘니뇨",
+          "source": "2018학년도 대학수학능력시험",
+          "ordinal": 87
+        },
+        {
+          "label": "엘니뇨",
+          "source": "감염병",
+          "ordinal": 182
+        },
+        {
+          "label": "엘니뇨",
+          "source": "기후",
+          "ordinal": 56
+        },
+        {
+          "label": "엘니뇨",
+          "source": "뇌우",
+          "ordinal": 129
+        },
+        {
+          "label": "엘니뇨",
+          "source": "대설",
+          "ordinal": 108
+        },
+        {
+          "label": "엘니뇨-",
+          "source": "오스트레일리아",
+          "ordinal": 217
+        },
+        {
+          "label": "엘니뇨",
+          "source": "우박",
+          "ordinal": 100
+        },
+        {
+          "label": "엘니뇨",
+          "source": "입동",
+          "ordinal": 106
+        }
+      ]
+    },
+    {
+      "title": "웹툰",
+      "officialPageId": 76811,
+      "cachedIncomingSources": 7,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 4,
+      "examples": [
+        {
+          "label": "웹툰",
+          "source": "기안84",
+          "ordinal": 12
+        },
+        {
+          "label": "웹툰",
+          "source": "대한민국 문화체육관광부",
+          "ordinal": 105
+        },
+        {
+          "label": "인터넷",
+          "source": "만화",
+          "ordinal": 47
+        },
+        {
+          "label": "웹툰",
+          "source": "애니메이션",
+          "ordinal": 167
+        },
+        {
+          "label": "웹툰",
+          "source": "일본 만화",
+          "ordinal": 107
+        },
+        {
+          "label": "웹툰",
+          "source": "일본의 웹 애니메이션",
+          "ordinal": 9
+        },
+        {
+          "label": "웹툰",
+          "source": "한국어식 영어",
+          "ordinal": 44
+        }
+      ]
+    },
+    {
+      "title": "인공지능",
+      "officialPageId": 104257,
+      "cachedIncomingSources": 55,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 23,
+      "examples": [
+        {
+          "label": "인공지능",
+          "source": "GPT (언어 모델)",
+          "ordinal": 134
+        },
+        {
+          "label": "인공지능",
+          "source": "SQL",
+          "ordinal": 212
+        },
+        {
+          "label": "인공지능",
+          "source": "객체 지향 프로그래밍",
+          "ordinal": 62
+        },
+        {
+          "label": "인공지능",
+          "source": "건설",
+          "ordinal": 68
+        },
+        {
+          "label": "인공지능",
+          "source": "건축",
+          "ordinal": 216
+        },
+        {
+          "label": "인공지능",
+          "source": "게임",
+          "ordinal": 64
+        },
+        {
+          "label": "인공지능",
+          "source": "과학사",
+          "ordinal": 487
+        },
+        {
+          "label": "인공지능",
+          "source": "관계형 데이터베이스",
+          "ordinal": 247
+        }
+      ]
+    },
+    {
+      "title": "인플레이션",
+      "officialPageId": 32835,
+      "cachedIncomingSources": 26,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 13,
+      "examples": [
+        {
+          "label": "인플레이션",
+          "source": "구매력 평가",
+          "ordinal": 42
+        },
+        {
+          "label": "인플레이션",
+          "source": "남아메리카",
+          "ordinal": 92
+        },
+        {
+          "label": "인플레이션",
+          "source": "농업",
+          "ordinal": 90
+        },
+        {
+          "label": "인플레이션",
+          "source": "대한민국 원",
+          "ordinal": 15
+        },
+        {
+          "label": "인플레이션",
+          "source": "대한민국의 경제",
+          "ordinal": 142
+        },
+        {
+          "label": "인플레이션",
+          "source": "러시아",
+          "ordinal": 340
+        },
+        {
+          "label": "인플레이션",
+          "source": "러시아의 범죄",
+          "ordinal": 87
+        },
+        {
+          "label": "인플레이션",
+          "source": "멕시코",
+          "ordinal": 186
+        }
+      ]
+    },
+    {
+      "title": "전자레인지",
+      "officialPageId": 331416,
+      "cachedIncomingSources": 13,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 11,
+      "examples": [
+        {
+          "label": "전자레인지",
+          "source": "LG전자",
+          "ordinal": 52
+        },
+        {
+          "label": "전자 레인지",
+          "source": "가전제품",
+          "ordinal": 19
+        },
+        {
+          "label": "전자레인지",
+          "source": "감자칩",
+          "ordinal": 16
+        },
+        {
+          "label": "전자레인지",
+          "source": "김치냉장고",
+          "ordinal": 35
+        },
+        {
+          "label": "전자레인지",
+          "source": "빨래 건조기",
+          "ordinal": 52
+        },
+        {
+          "label": "전자레인지",
+          "source": "세탁기",
+          "ordinal": 78
+        },
+        {
+          "label": "전자레인지",
+          "source": "식기건조기",
+          "ordinal": 31
+        },
+        {
+          "label": "전자레인지",
+          "source": "식기세척기",
+          "ordinal": 44
+        }
+      ]
+    },
+    {
+      "title": "챗GPT",
+      "officialPageId": 3330767,
+      "cachedIncomingSources": 5,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 2,
+      "examples": [
+        {
+          "label": "챗GPT",
+          "source": "GPT (언어 모델)",
+          "ordinal": 213
+        },
+        {
+          "label": "ChatGPT",
+          "source": "검색 엔진",
+          "ordinal": 122
+        },
+        {
+          "label": "챗GPT",
+          "source": "구글 검색",
+          "ordinal": 77
+        },
+        {
+          "label": "ChatGPT",
+          "source": "마이크로소프트",
+          "ordinal": 87
+        },
+        {
+          "label": "챗GPT",
+          "source": "인공지능",
+          "ordinal": 136
+        }
+      ]
+    },
+    {
+      "title": "카카오톡",
+      "officialPageId": 622566,
+      "cachedIncomingSources": 8,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 4,
+      "examples": [
+        {
+          "label": "카카오톡",
+          "source": "Toss",
+          "ordinal": 16
+        },
+        {
+          "label": "카카오톡",
+          "source": "김범수 (기업인)",
+          "ordinal": 14
+        },
+        {
+          "label": "카카오톡",
+          "source": "다음",
+          "ordinal": 104
+        },
+        {
+          "label": "카카오톡",
+          "source": "대한민국의 애니메이션",
+          "ordinal": 335
+        },
+        {
+          "label": "카카오톡",
+          "source": "디스코드",
+          "ordinal": 186
+        },
+        {
+          "label": "카카오톡",
+          "source": "이태원 참사",
+          "ordinal": 115
+        },
+        {
+          "label": "카카오톡",
+          "source": "카카오 (2006~2014년 기업)",
+          "ordinal": 13
+        },
+        {
+          "label": "카카오톡",
+          "source": "카카오 (기업)",
+          "ordinal": 15
+        }
+      ]
+    },
+    {
+      "title": "카페인",
+      "officialPageId": 64752,
+      "cachedIncomingSources": 23,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 21,
+      "examples": [
+        {
+          "label": "카페인",
+          "source": "까페 스어 다",
+          "ordinal": 34
+        },
+        {
+          "label": "카페인",
+          "source": "노로바이러스",
+          "ordinal": 19
+        },
+        {
+          "label": "카페인",
+          "source": "녹차",
+          "ordinal": 38
+        },
+        {
+          "label": "카페인",
+          "source": "마약",
+          "ordinal": 33
+        },
+        {
+          "label": "카페인",
+          "source": "모카 포트",
+          "ordinal": 28
+        },
+        {
+          "label": "카페인",
+          "source": "불면증",
+          "ordinal": 30
+        },
+        {
+          "label": "카페인",
+          "source": "수면 부족",
+          "ordinal": 11
+        },
+        {
+          "label": "카페인",
+          "source": "수면 위생",
+          "ordinal": 3
+        }
+      ]
+    },
+    {
+      "title": "커피",
+      "officialPageId": 15907,
+      "cachedIncomingSources": 39,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 29,
+      "examples": [
+        {
+          "label": "커피",
+          "source": "고종 (대한제국)",
+          "ordinal": 316
+        },
+        {
+          "label": "커피",
+          "source": "고종 독살설",
+          "ordinal": 15
+        },
+        {
+          "label": "커피",
+          "source": "기호품",
+          "ordinal": 3
+        },
+        {
+          "label": "커피",
+          "source": "까페 스어 다",
+          "ordinal": 0
+        },
+        {
+          "label": "커피",
+          "source": "녹차",
+          "ordinal": 37
+        },
+        {
+          "label": "커피",
+          "source": "대설",
+          "ordinal": 113
+        },
+        {
+          "label": "커피",
+          "source": "동물 학대",
+          "ordinal": 87
+        },
+        {
+          "label": "커피",
+          "source": "동서식품",
+          "ordinal": 3
+        }
+      ]
+    },
+    {
+      "title": "태권도",
+      "officialPageId": 48497,
+      "cachedIncomingSources": 28,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 20,
+      "examples": [
+        {
+          "label": "태권도",
+          "source": "강남구",
+          "ordinal": 52
+        },
+        {
+          "label": "태권도",
+          "source": "강민호",
+          "ordinal": 299
+        },
+        {
+          "label": "태권도",
+          "source": "게임",
+          "ordinal": 26
+        },
+        {
+          "label": "태권도",
+          "source": "격투 스포츠",
+          "ordinal": 3
+        },
+        {
+          "label": "태권도",
+          "source": "그레코로만형 레슬링",
+          "ordinal": 48
+        },
+        {
+          "label": "태권도",
+          "source": "대한민국",
+          "ordinal": 1066
+        },
+        {
+          "label": "태권도",
+          "source": "대한민국의 대외 관계",
+          "ordinal": 211
+        },
+        {
+          "label": "태권도",
+          "source": "대한민국의 스포츠",
+          "ordinal": 0
+        }
+      ]
+    },
+    {
+      "title": "태풍",
+      "officialPageId": 6261,
+      "cachedIncomingSources": 41,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 24,
+      "examples": [
+        {
+          "label": "태풍",
+          "source": "2018학년도 대학수학능력시험",
+          "ordinal": 84
+        },
+        {
+          "label": "태풍",
+          "source": "KBS 1TV",
+          "ordinal": 30
+        },
+        {
+          "label": "태풍",
+          "source": "감염병",
+          "ordinal": 127
+        },
+        {
+          "label": "태풍",
+          "source": "거제시",
+          "ordinal": 165
+        },
+        {
+          "label": "태풍",
+          "source": "겨울",
+          "ordinal": 26
+        },
+        {
+          "label": "태풍",
+          "source": "계절",
+          "ordinal": 24
+        },
+        {
+          "label": "태풍",
+          "source": "기상",
+          "ordinal": 25
+        },
+        {
+          "label": "태풍",
+          "source": "기상 캐스터",
+          "ordinal": 17
+        }
+      ]
+    },
+    {
+      "title": "훈민정음",
+      "officialPageId": 5786,
+      "cachedIncomingSources": 23,
+      "staleOrWrongPageIdSources": 0,
+      "first100OrdinalSources": 16,
+      "examples": [
+        {
+          "label": "훈민정음",
+          "source": "5·18 광주 민주화 운동",
+          "ordinal": 329
+        },
+        {
+          "label": "훈민정음",
+          "source": "ㄱ",
+          "ordinal": 22
+        },
+        {
+          "label": "훈민정음",
+          "source": "경복궁",
+          "ordinal": 146
+        },
+        {
+          "label": "훈민정음",
+          "source": "국어",
+          "ordinal": 22
+        },
+        {
+          "label": "훈민정음",
+          "source": "국채보상운동",
+          "ordinal": 65
+        },
+        {
+          "label": "훈민정음해례",
+          "source": "너구리",
+          "ordinal": 24
+        },
+        {
+          "label": "훈민정음",
+          "source": "대한민국",
+          "ordinal": 912
+        },
+        {
+          "label": "훈민정음",
+          "source": "뿌리깊은 나무 (2011년 드라마)",
+          "ordinal": 29
+        }
+      ]
+    }
+  ]
+}
