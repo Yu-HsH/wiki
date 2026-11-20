@@ -210,6 +210,10 @@ function SingleGameRoute() {
  * - /ranking: 전체 랭킹 (인증 필수)
  * - /profile: 내 프로필 (인증 필수)
  */
+const ProductGroupItemsRoute = import.meta.env.MODE === "s4-product-candidate"
+  ? React.lazy(() => import("./components/group-items-jungle/ProductGroupItemsRoute.jsx"))
+  : null;
+
 function AppRoutes() {
   const tutorial = useTutorialApp();
   const { pathname } = useLocation();
@@ -217,6 +221,16 @@ function AppRoutes() {
   return (
     <><AudioControls />
     <Routes>
+      {ProductGroupItemsRoute && (
+        <Route path="/multiplayer/group-items/:roomId?" element={
+          <OnlineRoute>
+            <React.Suspense fallback={<p role="status">아이템전 준비 중…</p>}>
+              <ProductGroupItemsRoute />
+            </React.Suspense>
+          </OnlineRoute>
+        } />
+      )}
+
       {/* 시작 화면 */}
       <Route path="/" element={<IntroPage />} />
 

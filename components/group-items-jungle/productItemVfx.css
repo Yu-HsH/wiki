@@ -1,0 +1,95 @@
+.s4-item-vfx {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+.s4-item-vfx-scene {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: min(99%, 600px);
+  aspect-ratio: 600 / 360;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 6px 10px #032d3549);
+}
+.s4-item-vfx[data-item-vfx="jack-in-box-v2"] .s4-item-vfx-scene {
+  top: 49%;
+  width: min(92%, 520px);
+  aspect-ratio: 480 / 340;
+  filter: drop-shadow(0 10px 13px #43272144);
+}
+.s4-ink-v4 .s4-ink-v4-slot.gip-ink-splash {
+  width: min(37%, 290px);
+  height: auto;
+  aspect-ratio: 1;
+  right: auto;
+  bottom: auto;
+  object-fit: contain;
+  translate: -50% -50%;
+  transform: rotate(var(--angle));
+  opacity: 1;
+  border-radius: 0;
+  background: none;
+  filter: drop-shadow(1px 5px 5px #1b192c4f);
+}
+[data-product-vfx="true"] .article-content a.duel-item-censored {
+  position: relative;
+  background: #3c4640;
+  color: #f4efdf !important;
+  border-radius: 3px;
+}
+[data-product-vfx="true"] .article-content a.duel-item-censored::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(97deg,#2b3633,#4b5148,#242f29);
+  border-radius: 3px;
+  opacity: 0;
+  transform-origin: left;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-product-vfx="true"]:has([data-item-vfx="parry-v3"]) {
+    animation: s4-vfx-paScreenShake 3.25s both;
+  }
+  [data-product-vfx="true"]:has([data-item-vfx="jack-in-box-v2"]) {
+    animation: s4-vfx-jackShake 3.4s both;
+  }
+  [data-item-vfx="parry-v3"] .s4-item-vfx-scene { animation: s4-vfx-paScene 3.25s ease both; }
+  [data-item-vfx="jack-in-box-v2"] .s4-item-vfx-scene { animation: s4-vfx-jackStage 3.4s both; }
+  .s4-vfx-parry-vignette { animation: s4-vfx-paVignette 3.25s both; }
+  .s4-vfx-parry-flash { animation: s4-vfx-paFlash 3.25s both; }
+  .s4-vfx-shield { animation: s4-vfx-shieldIn 3.2s both; }
+  .s4-vfx-slash { animation: s4-vfx-cleanse 2.8s both; }
+  .s4-ink-v4[data-recovered="false"] [data-index="1"] { animation: s4-vfx-inkPop1 1.85s both; }
+  .s4-ink-v4[data-recovered="false"] [data-index="2"] { animation: s4-vfx-inkPop2 1.67s both; }
+  .s4-ink-v4[data-recovered="false"] [data-index="3"] { animation: s4-vfx-inkPop3 1.49s both; }
+  [data-product-vfx="true"] .article-content a.duel-item-censored::after {
+    animation: s4-vfx-blackout 3.5s .55s both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .s4-vfx-shield { opacity: 1; transform: translate(-50%, -50%); }
+  .s4-vfx-slash { opacity: .65; }
+}
+
+/* Shapes and animation keyframes adapted from the approved V4 preview. */
+.s4-vfx-shield{position:absolute;left:50%;top:42%;width:150px;height:175px;transform:translate(-50%,-50%) scale(.1);opacity:0;filter:drop-shadow(0 9px 11px #184d534b)}
+.s4-vfx-shield::before{content:"";position:absolute;inset:0;background:linear-gradient(125deg,#9ff7e2cc,#2b9a96cc);clip-path:polygon(50% 0,100% 19%,90% 66%,50% 100%,10% 66%,0 19%);border-radius:30px}
+.s4-vfx-shield::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;font-size:88px;font-weight:900;color:#ecfff7}
+.s4-vfx-slash{position:absolute;top:40%;left:-45%;height:12px;width:150%;transform:rotate(-19deg);background:linear-gradient(90deg,transparent,#a7fff5,#57c9ab,transparent);box-shadow:0 0 13px #4cc8b8;opacity:0}
+.s4-vfx-parry-flash{position:absolute;inset:-8%;background:radial-gradient(ellipse at 51% 44%,#ffffffed 0%,#d5fffbbd 11%,#7df9e84a 31%,transparent 66%);opacity:0;mix-blend-mode:screen;pointer-events:none}
+.s4-vfx-parry-vignette{position:absolute;inset:-12%;background:radial-gradient(ellipse at 50% 50%,transparent 21%,#074d5950 71%,#04332f60 100%);opacity:0;pointer-events:none}
+@keyframes s4-vfx-paScene{0%,3%{opacity:0;transform:translate(-50%,-50%) scale(.96)}10%,86%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}
+@keyframes s4-vfx-jackStage{0%,6%{opacity:0;transform:translate(-50%,-46%) scale(.72)}14%,86%{opacity:1;transform:translate(-50%,-50%) scale(1)}92%,100%{opacity:0;transform:translate(-50%,-54%) scale(.92)}}
+@keyframes s4-vfx-paFlash{0%,28%{opacity:0}30%,32%{opacity:.9}35%{opacity:.25}40%,100%{opacity:0}}
+@keyframes s4-vfx-paVignette{0%,23%{opacity:0}29%,35%{opacity:1}51%{opacity:.52}76%,100%{opacity:0}}
+@keyframes s4-vfx-paScreenShake{0%,28%,42%,100%{transform:translate(0,0)}29%{transform:translate(-2px,1px)}31%{transform:translate(3px,-2px)}33%{transform:translate(-5px,3px)}35%{transform:translate(5px,-4px)}37%{transform:translate(-3px,2px)}39%{transform:translate(2px,-1px)}}
+@keyframes s4-vfx-jackShake{0%,33%,49%,100%{transform:translate(0,0)}36%{transform:translate(-8px,4px)}38%{transform:translate(9px,-6px)}40%{transform:translate(-6px,4px)}43%{transform:translate(5px,-2px)}46%{transform:translate(-2px,1px)}}
+@keyframes s4-vfx-shieldIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.1)}19%{opacity:1;transform:translate(-50%,-50%) scale(1.16)}26%,76%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.82)}}
+@keyframes s4-vfx-cleanse{0%,17%{left:-90%;opacity:0}28%{opacity:1}58%{left:20%;opacity:1}68%,100%{left:120%;opacity:0}}
+@keyframes s4-vfx-inkPop1{0%{opacity:0;transform:translate(30px,-42px) rotate(-35deg) scale(.07,.04)}6%{opacity:1}15%{transform:translate(-2px,8px) rotate(-12deg) scale(1.17,.86)}23%{transform:translate(0,0) rotate(var(--angle)) scale(.98,1.04)}35%,91%{opacity:1;transform:translate(0,0) rotate(var(--angle)) scale(1)}100%{opacity:1;transform:rotate(var(--angle))}}
+@keyframes s4-vfx-inkPop2{0%{opacity:0;transform:translate(-42px,-35px) rotate(27deg) scale(.06,.08)}6%{opacity:1}18%{transform:translate(2px,7px) rotate(17deg) scale(1.15,.88)}25%{transform:translate(0,0) rotate(var(--angle)) scale(.97,1.06)}38%,89%{opacity:1;transform:translate(0,0) rotate(var(--angle)) scale(1)}100%{opacity:1;transform:rotate(var(--angle))}}
+@keyframes s4-vfx-inkPop3{0%{opacity:0;transform:translate(30px,-48px) rotate(3deg) scale(.03,.08)}6%{opacity:1}20%{transform:translate(0,9px) rotate(28deg) scale(1.16,.85)}29%{transform:translate(0,-3px) rotate(var(--angle)) scale(.97,1.05)}43%,88%{opacity:1;transform:translate(0,0) rotate(var(--angle)) scale(1)}100%{opacity:1;transform:rotate(var(--angle))}}
+@keyframes s4-vfx-blackout{0%,12%{transform:scaleX(0);opacity:0}26%,83%{transform:scaleX(1);opacity:1}100%{transform:scaleX(0);opacity:0}}

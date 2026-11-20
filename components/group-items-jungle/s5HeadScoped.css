@@ -1,0 +1,2124 @@
+:where(.group-items-jungle):is(.group-items-jungle), :where(.group-items-jungle) :is(.group-items-jungle) {
+  --bg: #efefef;
+  --bg-soft: #f8f9fa;
+  --card: #ffffff;
+  --text: #373a3c;
+  --text-dim: #777777;
+  --link: #0275d8;
+  --link-hover: #01447e;
+  --line: #cccccc;
+  --border-light: #e0e0e0;
+  --brand: #0275d8;
+  --danger: #d9534f;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --radius-lg: 4px;
+  --radius-md: 2px;
+}
+
+:where(.group-items-jungle):is(*), :where(.group-items-jungle) :is(*) {
+  box-sizing: border-box;
+}
+
+:where(.group-items-jungle):is(.group-items-jungle), :where(.group-items-jungle) :is(.group-items-jungle) {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "IBM Plex Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.6;
+}
+
+:where(.group-items-jungle):is(.wiki-game-page), :where(.group-items-jungle) :is(.wiki-game-page) {
+  position: relative;
+  min-height: 100vh;
+  padding: 30px 15px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+:where(.group-items-jungle):is(.countdown-overlay), :where(.group-items-jungle) :is(.countdown-overlay) {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+:where(.group-items-jungle):is(.countdown-number), :where(.group-items-jungle) :is(.countdown-number) {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 120px;
+  line-height: 1;
+  animation: s5-head-countdownPulse 0.58s ease both;
+  user-select: none;
+}
+
+:where(.group-items-jungle):is(.wiki-shell), :where(.group-items-jungle) :is(.wiki-shell) {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+:where(.group-items-jungle):is(.hero-card,
+.mission-card,
+.stat-card,
+.current-page-card,
+.links-card,
+.win-banner), :where(.group-items-jungle) :is(.hero-card,
+.mission-card,
+.stat-card,
+.current-page-card,
+.links-card,
+.win-banner) {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+:where(.group-items-jungle):is(.hero-card), :where(.group-items-jungle) :is(.hero-card) {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 3px solid #545454;
+}
+
+:where(.group-items-jungle):is(.hero-actions), :where(.group-items-jungle) :is(.hero-actions) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+:where(.group-items-jungle):is(.badge), :where(.group-items-jungle) :is(.badge) {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 3px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+:where(.group-items-jungle):is(.hero-card h1), :where(.group-items-jungle) :is(.hero-card h1) {
+  margin: 0 0 10px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+:where(.group-items-jungle):is(.hero-subtitle), :where(.group-items-jungle) :is(.hero-subtitle) {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+:where(.group-items-jungle):is(.mode-controls), :where(.group-items-jungle) :is(.mode-controls) {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+:where(.group-items-jungle):is(.mode-btn,
+.restart-btn,
+.target-start-btn), :where(.group-items-jungle) :is(.mode-btn,
+.restart-btn,
+.target-start-btn) {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+:where(.group-items-jungle):is(.mode-btn:hover:enabled,
+.restart-btn:hover:enabled,
+.target-start-btn:hover:enabled), :where(.group-items-jungle) :is(.mode-btn:hover:enabled,
+.restart-btn:hover:enabled,
+.target-start-btn:hover:enabled) {
+  background: #e2e2e2;
+}
+
+:where(.group-items-jungle):is(.mode-btn.active), :where(.group-items-jungle) :is(.mode-btn.active) {
+  border-color: var(--text);
+  background: var(--text);
+  color: #fff;
+}
+
+:where(.group-items-jungle):is(.mode-btn:disabled,
+.restart-btn:disabled,
+.target-start-btn:disabled), :where(.group-items-jungle) :is(.mode-btn:disabled,
+.restart-btn:disabled,
+.target-start-btn:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+:where(.group-items-jungle):is(.restart-btn), :where(.group-items-jungle) :is(.restart-btn) {
+  border-color: var(--link);
+  color: var(--link);
+}
+
+:where(.group-items-jungle):is(.target-form), :where(.group-items-jungle) :is(.target-form) {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+:where(.group-items-jungle):is(.target-input), :where(.group-items-jungle) :is(.target-input) {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  min-width: 250px;
+  font-size: 14px;
+}
+
+:where(.group-items-jungle):is(.mission-card), :where(.group-items-jungle) :is(.mission-card) {
+  padding: 20px 24px;
+}
+
+:where(.group-items-jungle):is(.mission-head), :where(.group-items-jungle) :is(.mission-head) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+:where(.group-items-jungle):is(.mission-label), :where(.group-items-jungle) :is(.mission-label) {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+:where(.group-items-jungle):is(.timer-pill), :where(.group-items-jungle) :is(.timer-pill) {
+  font-weight: 700;
+  color: var(--danger);
+}
+
+:where(.group-items-jungle):is(.mission-card h2), :where(.group-items-jungle) :is(.mission-card h2) {
+  margin: 0 0 10px;
+  font-size: 22px;
+  color: var(--text);
+}
+
+:where(.group-items-jungle):is(.mission-card p), :where(.group-items-jungle) :is(.mission-card p) {
+  margin: 0;
+  color: #444;
+  font-size: 14.5px;
+}
+
+:where(.group-items-jungle):is(.target-meta), :where(.group-items-jungle) :is(.target-meta) {
+  margin-bottom: 10px !important;
+  font-size: 13px !important;
+  color: var(--text-dim) !important;
+}
+
+:where(.group-items-jungle):is(.stats-grid), :where(.group-items-jungle) :is(.stats-grid) {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+:where(.group-items-jungle):is(.stat-card), :where(.group-items-jungle) :is(.stat-card) {
+  padding: 15px;
+  text-align: center;
+}
+
+:where(.group-items-jungle):is(.stat-label), :where(.group-items-jungle) :is(.stat-label) {
+  margin: 0 0 5px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+:where(.group-items-jungle):is(.stat-value), :where(.group-items-jungle) :is(.stat-value) {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+:where(.group-items-jungle):is(.state-text), :where(.group-items-jungle) :is(.state-text) {
+  font-size: 14px;
+  padding: 10px;
+  color: var(--text-dim);
+}
+
+:where(.group-items-jungle):is(.state-text.error), :where(.group-items-jungle) :is(.state-text.error) {
+  color: var(--danger);
+}
+
+:where(.group-items-jungle):is(.state-text.loading), :where(.group-items-jungle) :is(.state-text.loading) {
+  color: var(--link);
+}
+
+:where(.group-items-jungle):is(.win-banner), :where(.group-items-jungle) :is(.win-banner) {
+  padding: 15px;
+  background: #e8f4f8;
+  border-left: 4px solid var(--brand);
+}
+
+:where(.group-items-jungle):is(.current-page-card), :where(.group-items-jungle) :is(.current-page-card) {
+  padding: 24px;
+}
+
+:where(.group-items-jungle):is(.current-page-card h3), :where(.group-items-jungle) :is(.current-page-card h3) {
+  margin: 0 0 5px;
+  font-size: 26px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+:where(.group-items-jungle):is(.article-head span), :where(.group-items-jungle) :is(.article-head span) {
+  display: block;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 15px;
+}
+
+:where(.group-items-jungle):is(.article-summary-preview), :where(.group-items-jungle) :is(.article-summary-preview) {
+  margin: 0 0 20px;
+  padding: 15px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-light);
+  font-size: 14.5px;
+  color: #333;
+}
+
+:where(.group-items-jungle):is(.article-content), :where(.group-items-jungle) :is(.article-content) {
+  color: var(--text);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+:where(.group-items-jungle):is(.article-content table), :where(.group-items-jungle) :is(.article-content table) {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+:where(.group-items-jungle):is(.article-content th,
+.article-content td), :where(.group-items-jungle) :is(.article-content th,
+.article-content td) {
+  padding: 6px 8px;
+  border: 1px solid var(--border-light);
+  vertical-align: top;
+}
+
+:where(.group-items-jungle):is(.article-content figure,
+.article-content figcaption), :where(.group-items-jungle) :is(.article-content figure,
+.article-content figcaption) {
+  max-width: 100%;
+  margin-inline: 0;
+}
+
+:where(.group-items-jungle):is(.article-content img), :where(.group-items-jungle) :is(.article-content img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+:where(.group-items-jungle):is(.article-content h2,
+.article-content h3), :where(.group-items-jungle) :is(.article-content h2,
+.article-content h3) {
+  margin: 1.5em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border-light);
+}
+
+:where(.group-items-jungle):is(.article-content h2), :where(.group-items-jungle) :is(.article-content h2) {
+  font-size: 22px;
+}
+
+:where(.group-items-jungle):is(.article-content h3), :where(.group-items-jungle) :is(.article-content h3) {
+  font-size: 18px;
+}
+
+:where(.group-items-jungle):is(.article-content blockquote), :where(.group-items-jungle) :is(.article-content blockquote) {
+  margin: 1em 0;
+  padding: 10px 15px;
+  border-left: 4px solid var(--line);
+  background: var(--bg-soft);
+}
+
+:where(.group-items-jungle):is(.wiki-inline-link), :where(.group-items-jungle) :is(.wiki-inline-link) {
+  color: var(--link);
+  text-decoration: none;
+}
+
+:where(.group-items-jungle):is(.wiki-inline-link:hover), :where(.group-items-jungle) :is(.wiki-inline-link:hover) {
+  text-decoration: underline;
+  color: var(--link-hover);
+}
+
+:where(.group-items-jungle):is(.links-card), :where(.group-items-jungle) :is(.links-card) {
+  padding: 20px 24px;
+}
+
+:where(.group-items-jungle):is(.links-header), :where(.group-items-jungle) :is(.links-header) {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+:where(.group-items-jungle):is(.links-header h3), :where(.group-items-jungle) :is(.links-header h3) {
+  margin: 0;
+  font-size: 18px;
+}
+
+:where(.group-items-jungle):is(.links-count), :where(.group-items-jungle) :is(.links-count) {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+:where(.group-items-jungle):is(.links-grid), :where(.group-items-jungle) :is(.links-grid) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:where(.group-items-jungle):is(.link-chip), :where(.group-items-jungle) :is(.link-chip) {
+  border: 1px solid var(--border-light);
+  background: var(--card);
+  color: var(--link);
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+
+:where(.group-items-jungle):is(.link-chip:hover:enabled), :where(.group-items-jungle) :is(.link-chip:hover:enabled) {
+  background: var(--bg-soft);
+  text-decoration: underline;
+}
+
+:where(.group-items-jungle):is(.link-chip:disabled), :where(.group-items-jungle) :is(.link-chip:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+@keyframes s5-head-countdownPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  :where(.group-items-jungle):is(.stats-grid), :where(.group-items-jungle) :is(.stats-grid) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  :where(.group-items-jungle):is(.wiki-shell), :where(.group-items-jungle) :is(.wiki-shell) {
+    gap: 10px;
+  }
+}
+
+:where(.group-items-jungle):is(.game-search-panel), :where(.group-items-jungle) :is(.game-search-panel) {
+  position: fixed;
+  top: 88px;
+  left: 50%;
+  z-index: 80;
+  width: min(92vw, 420px);
+  transform: translateX(-50%);
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+:where(.group-items-jungle):is(.game-search-panel__head), :where(.group-items-jungle) :is(.game-search-panel__head) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+:where(.group-items-jungle):is(.game-search-panel__head button,
+.game-search-panel__body button), :where(.group-items-jungle) :is(.game-search-panel__head button,
+.game-search-panel__body button) {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 800;
+  background: rgba(96, 165, 250, 0.22);
+  color: #fff;
+}
+
+:where(.group-items-jungle):is(.game-search-panel__body), :where(.group-items-jungle) :is(.game-search-panel__body) {
+  display: flex;
+  gap: 8px;
+}
+
+:where(.group-items-jungle):is(.game-search-panel__body input), :where(.group-items-jungle) :is(.game-search-panel__body input) {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  outline: none;
+}
+
+:where(.group-items-jungle):is(.game-search-panel__body input::placeholder), :where(.group-items-jungle) :is(.game-search-panel__body input::placeholder) {
+  color: rgba(255, 255, 255, 0.56);
+}
+
+:where(.group-items-jungle):is(.game-search-panel__message), :where(.group-items-jungle) :is(.game-search-panel__message) {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+:where(.group-items-jungle):is(.game-search-highlight), :where(.group-items-jungle) :is(.game-search-highlight) {
+  background: #fde047;
+  color: #111827;
+  border-radius: 4px;
+  padding: 0 2px;
+  font-weight: 900;
+}
+
+:where(.group-items-jungle):is(.link-chip.wiki-link--highlighted), :where(.group-items-jungle) :is(.link-chip.wiki-link--highlighted) {
+  border: 3px solid red !important;
+  background: rgba(255, 0, 0, 0.18) !important;
+  color: #ffdddd !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 14px rgba(255, 0, 0, 0.55) !important;
+  transform: scale(1.03);
+}
+
+:where(.group-items-jungle):is(.article-content a.wiki-link--highlighted), :where(.group-items-jungle) :is(.article-content a.wiki-link--highlighted) {
+  position: relative;
+  color: #dc2626 !important;
+  background: rgba(239, 68, 68, 0.18) !important;
+  border: 2px solid rgba(239, 68, 68, 0.8);
+  border-radius: 6px;
+  padding: 1px 4px;
+  font-weight: 900;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
+
+:where(.group-items-jungle):is(.article-content a.wiki-link--highlighted::after), :where(.group-items-jungle) :is(.article-content a.wiki-link--highlighted::after) {
+  content: " 추천";
+  margin-left: 4px;
+  font-size: 11px;
+  color: #dc2626;
+  font-weight: 900;
+}
+
+:where(.group-items-jungle):is(.link-chip.wiki-link--highlighted), :where(.group-items-jungle) :is(.link-chip.wiki-link--highlighted) {
+  border: 3px solid #dc2626 !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #991b1b !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.45) !important;
+}
+
+:where(.group-items-jungle):is(.blind-overlay), :where(.group-items-jungle) :is(.blind-overlay) {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:where(.group-items-jungle):is(.blind-text), :where(.group-items-jungle) :is(.blind-text) {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+:where(.group-items-jungle):is(.ink-overlay), :where(.group-items-jungle) :is(.ink-overlay) {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+  animation: s5-head-inkFadeOut 4s ease forwards;
+}
+
+:where(.group-items-jungle):is(.ink-splat), :where(.group-items-jungle) :is(.ink-splat) {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(3px);
+  opacity: 0.9;
+  transform: scale(0);
+  animation: s5-head-splatPop 0.45s ease-out forwards, s5-head-splatWobble 1.6s ease-in-out infinite;
+}
+
+:where(.group-items-jungle):is(.splat-1), :where(.group-items-jungle) :is(.splat-1) {
+  width: 360px;
+  height: 260px;
+  left: 8%;
+  top: 18%;
+  background: radial-gradient(circle, #111 0%, #000 45%, transparent 72%);
+  animation-delay: 0s;
+}
+
+:where(.group-items-jungle):is(.splat-2), :where(.group-items-jungle) :is(.splat-2) {
+  width: 300px;
+  height: 220px;
+  right: 10%;
+  top: 12%;
+  background: radial-gradient(circle, #3b0764 0%, #111 50%, transparent 72%);
+  animation-delay: 0.12s;
+}
+
+:where(.group-items-jungle):is(.splat-3), :where(.group-items-jungle) :is(.splat-3) {
+  width: 420px;
+  height: 300px;
+  left: 32%;
+  bottom: 10%;
+  background: radial-gradient(circle, #020617 0%, #000 48%, transparent 75%);
+  animation-delay: 0.22s;
+}
+
+:where(.group-items-jungle):is(.splat-4), :where(.group-items-jungle) :is(.splat-4) {
+  width: 260px;
+  height: 200px;
+  right: 22%;
+  bottom: 28%;
+  background: radial-gradient(circle, #7f1d1d 0%, #111 45%, transparent 70%);
+  animation-delay: 0.32s;
+}
+
+:where(.group-items-jungle):is(.splat-5), :where(.group-items-jungle) :is(.splat-5) {
+  width: 220px;
+  height: 180px;
+  left: 18%;
+  bottom: 6%;
+  background: radial-gradient(circle, #064e3b 0%, #050505 48%, transparent 72%);
+  animation-delay: 0.42s;
+}
+
+@keyframes s5-head-splatPop {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.12) rotate(8deg);
+    opacity: 0.95;
+  }
+
+  100% {
+    transform: scale(1) rotate(-4deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes s5-head-splatWobble {
+
+  0%,
+  100% {
+    border-radius: 50% 45% 55% 48%;
+  }
+
+  50% {
+    border-radius: 42% 58% 46% 54%;
+  }
+}
+
+@keyframes s5-head-inkFadeOut {
+
+  0%,
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+:where(.group-items-jungle):is(.floating-message), :where(.group-items-jungle) :is(.floating-message) {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  color: white;
+  font-weight: 700;
+}
+
+:where(.group-items-jungle):is(.immune-badge), :where(.group-items-jungle) :is(.immune-badge) {
+  position: fixed;
+  top: 90px;
+  right: 24px;
+  z-index: 10000;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  font-weight: 800;
+}
+
+:where(.group-items-jungle):is(.language-chaos), :where(.group-items-jungle) :is(.language-chaos) {
+  position: fixed;
+  top: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  width: min(720px, 90vw);
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(127, 29, 29, 0.96);
+  color: white;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  animation: s5-head-languageGlitch 0.25s infinite;
+}
+
+:where(.group-items-jungle):is(.language-chaos-title), :where(.group-items-jungle) :is(.language-chaos-title) {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+@keyframes s5-head-languageGlitch {
+  0% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  25% {
+    transform: translateX(calc(-50% - 4px)) rotate(-1deg);
+  }
+
+  50% {
+    transform: translateX(calc(-50% + 4px)) rotate(1deg);
+  }
+
+  75% {
+    transform: translateX(calc(-50% - 2px)) rotate(-1deg);
+  }
+
+  100% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+}
+
+:where(.group-items-jungle):is(.mini-game-overlay), :where(.group-items-jungle) :is(.mini-game-overlay) {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+:where(.group-items-jungle):is(.mini-game-card), :where(.group-items-jungle) :is(.mini-game-card) {
+  width: min(460px, 92vw);
+  padding: 28px;
+  border-radius: 24px;
+  background: white;
+  color: #111827;
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+:where(.group-items-jungle):is(.mini-game-card h2), :where(.group-items-jungle) :is(.mini-game-card h2) {
+  margin-bottom: 10px;
+  font-size: 28px;
+}
+
+:where(.group-items-jungle):is(.mini-game-buttons), :where(.group-items-jungle) :is(.mini-game-buttons) {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+:where(.group-items-jungle):is(.mini-game-buttons button), :where(.group-items-jungle) :is(.mini-game-buttons button) {
+  padding: 14px 18px;
+  border: none;
+  border-radius: 16px;
+  background: #2563eb;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+:where(.group-items-jungle):is(.mini-game-buttons button:hover), :where(.group-items-jungle) :is(.mini-game-buttons button:hover) {
+  transform: translateY(-2px);
+}
+
+:where(.group-items-jungle):is(.wr-page), :where(.group-items-jungle) :is(.wr-page) { min-height: 100vh; padding: 32px 24px 48px; background: var(--wr-canvas); color: var(--wr-ink); font: 14px/1.65 var(--wr-font-body); }
+
+:where(.group-items-jungle):is(.wr-page button, .wr-page input), :where(.group-items-jungle) :is(.wr-page button, .wr-page input) { font: inherit; }
+
+:where(.group-items-jungle):is(.wr-page a), :where(.group-items-jungle) :is(.wr-page a) { color: var(--wr-blue); text-underline-offset: 3px; }
+
+:where(.group-items-jungle):is(.wr-page h1, .wr-page h2, .wr-page h3), :where(.group-items-jungle) :is(.wr-page h1, .wr-page h2, .wr-page h3) { font-family: var(--wr-font-heading); line-height: 1.2; }
+
+:where(.group-items-jungle):is(.wr-page :is(button, a, input):focus-visible), :where(.group-items-jungle) :is(.wr-page :is(button, a, input):focus-visible) { outline: 3px solid var(--wr-blue); outline-offset: 3px; }
+
+:where(.group-items-jungle):is(.wr-shell), :where(.group-items-jungle) :is(.wr-shell) { position: relative; width: min(1200px, 100%); margin: auto; background: var(--wr-paper); border: 1px solid var(--wr-frame); border-radius: var(--wr-radius-shell); box-shadow: var(--wr-shadow-shell); overflow: clip; }
+
+:where(.group-items-jungle):is(.wr-skip-link), :where(.group-items-jungle) :is(.wr-skip-link) { position: absolute; top: -80px; left: 16px; z-index: 10; background: var(--wr-paper); padding: 8px; }
+
+:where(.group-items-jungle):is(.wr-skip-link:focus), :where(.group-items-jungle) :is(.wr-skip-link:focus) { top: 8px; }
+
+:where(.group-items-jungle):is(.wr-header), :where(.group-items-jungle) :is(.wr-header) { min-height: 56px; display: flex; align-items: center; gap: 28px; padding: 12px 28px; border-bottom: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-brand), :where(.group-items-jungle) :is(.wr-brand) { font-family: var(--wr-font-heading); font-size: 20px; font-weight: 800; letter-spacing: .08em; text-decoration: none; color: var(--wr-ink) !important; line-height: 1; }
+
+:where(.group-items-jungle):is(.wr-brand span), :where(.group-items-jungle) :is(.wr-brand span) { display: block; font-size: 8px; letter-spacing: .18em; margin-top: 5px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-header nav), :where(.group-items-jungle) :is(.wr-header nav) { display: flex; gap: 20px; }
+
+:where(.group-items-jungle):is(.wr-header nav a), :where(.group-items-jungle) :is(.wr-header nav a) { color: var(--wr-ink-2); text-decoration: none; border-bottom: 2px solid transparent; }
+
+:where(.group-items-jungle):is(.wr-header nav a.active), :where(.group-items-jungle) :is(.wr-header nav a.active) { color: var(--wr-blue); border-color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-header-user), :where(.group-items-jungle) :is(.wr-header-user) { margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 12px; }
+
+:where(.group-items-jungle):is(.wr-header-user a), :where(.group-items-jungle) :is(.wr-header-user a) { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+
+:where(.group-items-jungle):is(.wr-header-user button, .wr-board-links button), :where(.group-items-jungle) :is(.wr-header-user button, .wr-board-links button) { border: 0; background: transparent; color: var(--wr-blue); cursor: pointer; padding: 4px; }
+
+:where(.group-items-jungle):is(.wr-avatar), :where(.group-items-jungle) :is(.wr-avatar) { border-radius: 50%; border: 1px dashed var(--wr-frame); object-fit: cover; background: var(--wr-paper-2); flex-shrink: 0; }
+
+:where(.group-items-jungle):is(.wr-kicker), :where(.group-items-jungle) :is(.wr-kicker) { display: block; font-family: var(--wr-font-heading); font-size: 11px; font-weight: 600; letter-spacing: .14em; color: var(--wr-ink-2); margin: 0 0 8px; }
+
+:where(.group-items-jungle):is(.wr-hero), :where(.group-items-jungle) :is(.wr-hero) { height: 330px; position: relative; overflow: hidden; background: var(--wr-canvas); }
+
+:where(.group-items-jungle):is(.wr-landscape), :where(.group-items-jungle) :is(.wr-landscape) { position: absolute; bottom: -6px; width: 100%; height: auto; pointer-events: none; }
+
+:where(.group-items-jungle):is(.wr-explorer), :where(.group-items-jungle) :is(.wr-explorer) { position: absolute; bottom: 10px; left: 8%; height: 235px; pointer-events: none; }
+
+:where(.group-items-jungle):is(.wr-hero-entry), :where(.group-items-jungle) :is(.wr-hero-entry) { position: absolute; left: 27%; bottom: 110px; }
+
+:where(.group-items-jungle):is(.wr-visually-hidden), :where(.group-items-jungle) :is(.wr-visually-hidden) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+:where(.group-items-jungle):is(.wr-hero-entry h1), :where(.group-items-jungle) :is(.wr-hero-entry h1) { font-size: clamp(22px, 3vw, 34px); margin: 0 0 20px; }
+
+:where(.group-items-jungle):is(.wr-play-launcher), :where(.group-items-jungle) :is(.wr-play-launcher) { display: flex; align-items: center; gap: 20px; color: var(--wr-paper); background: var(--wr-blue); padding: 15px 24px; border: 0; border-radius: 14px; font-size: 26px !important; font-weight: 800 !important; cursor: pointer; box-shadow: 0 5px 0 var(--wr-blue-press), 0 0 0 4px var(--wr-paper); }
+
+:where(.group-items-jungle):is(.wr-play-launcher span), :where(.group-items-jungle) :is(.wr-play-launcher span) { font-size: 14px; font-weight: 500; }
+
+:where(.group-items-jungle):is(.wr-expedition-trail), :where(.group-items-jungle) :is(.wr-expedition-trail) { position: absolute; width: 55%; right: 0; bottom: 36px; pointer-events: none; opacity: .7; }
+
+:where(.group-items-jungle):is(.wr-page .dashboard-card), :where(.group-items-jungle) :is(.wr-page .dashboard-card) { margin: 0; border: 0; border-bottom: 1px solid var(--wr-divider); border-radius: 0; background: transparent; box-shadow: none; padding: 20px 28px; }
+
+:where(.group-items-jungle):is(.wr-page .daily-card), :where(.group-items-jungle) :is(.wr-page .daily-card) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 28px; padding: 16px 28px; background: var(--wr-paper-2); color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-page .daily-card::before), :where(.group-items-jungle) :is(.wr-page .daily-card::before) { display: none; }
+
+:where(.group-items-jungle):is(.wr-page .daily-head), :where(.group-items-jungle) :is(.wr-page .daily-head) { grid-column: 1; margin: 0 0 4px; justify-content: flex-start; gap: 18px; }
+
+:where(.group-items-jungle):is(.wr-page .daily-badge), :where(.group-items-jungle) :is(.wr-page .daily-badge) { color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-page .daily-date, .wr-page .daily-hint), :where(.group-items-jungle) :is(.wr-page .daily-date, .wr-page .daily-hint) { color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-page .daily-keyword), :where(.group-items-jungle) :is(.wr-page .daily-keyword) { font-size: 20px; color: var(--wr-gold); background: none; -webkit-text-fill-color: currentColor; margin: 0; overflow-wrap: anywhere; }
+
+:where(.group-items-jungle):is(.wr-page .daily-hint), :where(.group-items-jungle) :is(.wr-page .daily-hint) { grid-column: 1; margin: 4px 0 0; }
+
+:where(.group-items-jungle):is(.wr-page .daily-course), :where(.group-items-jungle) :is(.wr-page .daily-course) { grid-column: 1; margin: 4px 0 0; color: var(--wr-ink-2); overflow-wrap: anywhere; }
+
+:where(.group-items-jungle):is(.wr-page .daily-btn), :where(.group-items-jungle) :is(.wr-page .daily-btn) { grid-column: 2; grid-row: 1 / 4; align-self: center; width: auto; background: var(--wr-blue); color: var(--wr-paper); border-radius: var(--wr-radius-control); }
+
+:where(.group-items-jungle):is(.wr-page button:disabled), :where(.group-items-jungle) :is(.wr-page button:disabled) { cursor: default; opacity: .55; }
+
+:where(.group-items-jungle):is(.wr-explorer-featured), :where(.group-items-jungle) :is(.wr-explorer-featured) { display: grid; grid-template-columns: 330px minmax(0, 1fr); position: relative; }
+
+:where(.group-items-jungle):is(.wr-my-explorer), :where(.group-items-jungle) :is(.wr-my-explorer) { padding: 22px 28px; background: var(--wr-paper-2); border-right: 1px solid var(--wr-divider); border-bottom: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-explorer-identity), :where(.group-items-jungle) :is(.wr-explorer-identity) { display: flex; align-items: center; gap: 16px; }
+
+:where(.group-items-jungle):is(.wr-explorer-identity h2), :where(.group-items-jungle) :is(.wr-explorer-identity h2) { font-size: 22px; margin: 0; overflow-wrap: anywhere; }
+
+:where(.group-items-jungle):is(.wr-explorer-identity p), :where(.group-items-jungle) :is(.wr-explorer-identity p) { color: var(--wr-gold); margin: 6px 0; }
+
+:where(.group-items-jungle):is(.wr-xp), :where(.group-items-jungle) :is(.wr-xp) { display: grid; gap: 5px; margin-top: 18px; font-size: 12px; }
+
+:where(.group-items-jungle):is(.wr-xp progress), :where(.group-items-jungle) :is(.wr-xp progress) { width: 100%; accent-color: var(--wr-gold); }
+
+:where(.group-items-jungle):is(.wr-explorer-links), :where(.group-items-jungle) :is(.wr-explorer-links) { display: flex; gap: 20px; margin-top: 14px; font-size: 12px; }
+
+:where(.group-items-jungle):is(.wr-page .recent-head h2), :where(.group-items-jungle) :is(.wr-page .recent-head h2) { font-size: 18px; }
+
+:where(.group-items-jungle):is(.wr-page .ranking-tabs button), :where(.group-items-jungle) :is(.wr-page .ranking-tabs button) { color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-page .ranking-tabs button.active), :where(.group-items-jungle) :is(.wr-page .ranking-tabs button.active) { color: var(--wr-blue); border-color: var(--wr-blue); background: var(--wr-paper-2); }
+
+:where(.group-items-jungle):is(.wr-page .weekly-item, .wr-page .recent-item), :where(.group-items-jungle) :is(.wr-page .weekly-item, .wr-page .recent-item) { background: transparent; border: 0; border-bottom: 1px dashed var(--wr-divider); border-radius: 0; padding: 8px 0; }
+
+:where(.group-items-jungle):is(.wr-page .weekly-item:hover), :where(.group-items-jungle) :is(.wr-page .weekly-item:hover) { background: var(--wr-paper-2); }
+
+:where(.group-items-jungle):is(.wr-page .wi-time, .wr-page .ri-time), :where(.group-items-jungle) :is(.wr-page .wi-time, .wr-page .ri-time) { color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-page .wi-medal, .wr-page .ri-title), :where(.group-items-jungle) :is(.wr-page .wi-medal, .wr-page .ri-title) { color: var(--wr-gold); }
+
+:where(.group-items-jungle):is(.wr-page .recent-card), :where(.group-items-jungle) :is(.wr-page .recent-card) { position: relative; }
+
+:where(.group-items-jungle):is(.wr-recent-route), :where(.group-items-jungle) :is(.wr-recent-route) { position: absolute; top: 4px; right: 28px; height: 40px; opacity: .55; pointer-events: none; }
+
+:where(.group-items-jungle):is(.wr-page .recent-head), :where(.group-items-jungle) :is(.wr-page .recent-head) { position: relative; }
+
+:where(.group-items-jungle):is(.wr-base-board), :where(.group-items-jungle) :is(.wr-base-board) { background: var(--wr-paper-2); padding: 18px 28px; }
+
+:where(.group-items-jungle):is(.wr-page .dashboard-grid), :where(.group-items-jungle) :is(.wr-page .dashboard-grid) { margin: 0; gap: 0; }
+
+:where(.group-items-jungle):is(.wr-page .dashboard-grid .dashboard-card), :where(.group-items-jungle) :is(.wr-page .dashboard-grid .dashboard-card) { padding: 12px 16px 12px 0; border-bottom: 0; }
+
+:where(.group-items-jungle):is(.wr-page .card-value), :where(.group-items-jungle) :is(.wr-page .card-value) { font-size: 22px; color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-board-links), :where(.group-items-jungle) :is(.wr-board-links) { display: flex; align-items: center; gap: 20px; font-size: 12px; border-top: 1px dashed var(--wr-divider); padding-top: 12px; }
+
+:where(.group-items-jungle):is(.wr-board-links img), :where(.group-items-jungle) :is(.wr-board-links img) { margin-left: auto; }
+
+:where(.group-items-jungle):is(.wr-page .dashboard-footer-links), :where(.group-items-jungle) :is(.wr-page .dashboard-footer-links) { padding: 12px 24px; margin: 0; flex-wrap: wrap; }
+
+:where(.group-items-jungle):is(.wr-page .qs-modal-backdrop, .wr-page .help-backdrop), :where(.group-items-jungle) :is(.wr-page .qs-modal-backdrop, .wr-page .help-backdrop) { backdrop-filter: none; }
+
+:where(.group-items-jungle):is(.wr-page .qs-modal, .wr-page .help-modal), :where(.group-items-jungle) :is(.wr-page .qs-modal, .wr-page .help-modal) { background: var(--wr-paper); border: 1px solid var(--wr-frame); border-radius: 12px; max-height: 90dvh; overflow-y: auto; }
+
+:where(.group-items-jungle):is(.wr-page .app-btn-primary), :where(.group-items-jungle) :is(.wr-page .app-btn-primary) { background: var(--wr-blue); color: var(--wr-paper); }
+
+:where(.group-items-jungle):is(.wr-page .app-btn-secondary), :where(.group-items-jungle) :is(.wr-page .app-btn-secondary) { background: var(--wr-paper-2); color: var(--wr-blue); border: 1px solid var(--wr-frame); }
+
+:where(.group-items-jungle):is(.wr-page .app-btn-ghost), :where(.group-items-jungle) :is(.wr-page .app-btn-ghost) { color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-page .search-item), :where(.group-items-jungle) :is(.wr-page .search-item) { background: var(--wr-paper); color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-page button.search-item), :where(.group-items-jungle) :is(.wr-page button.search-item) { width: 100%; text-align: left; }
+
+:where(.group-items-jungle):is(.wr-page .search-item.selected), :where(.group-items-jungle) :is(.wr-page .search-item.selected) { border-color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-page .ach-notice), :where(.group-items-jungle) :is(.wr-page .ach-notice) { margin: 0; border-radius: 0; background: #F0EBF7; border-color: var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-page .ach-notice-link), :where(.group-items-jungle) :is(.wr-page .ach-notice-link) { color: var(--wr-purple); }
+
+:where(.group-items-jungle):is(.wr-play-heading), :where(.group-items-jungle) :is(.wr-play-heading) { padding: 26px 32px 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+
+:where(.group-items-jungle):is(.wr-play-heading h1), :where(.group-items-jungle) :is(.wr-play-heading h1) { font-size: 28px; margin: 0; }
+
+:where(.group-items-jungle):is(.wr-play-heading img), :where(.group-items-jungle) :is(.wr-play-heading img) { width: auto; object-fit: contain; }
+
+:where(.group-items-jungle):is(.wr-modes), :where(.group-items-jungle) :is(.wr-modes) { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-play-contours), :where(.group-items-jungle) :is(.wr-play-contours) { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; opacity: .65; fill: none; stroke: var(--wr-divider); stroke-width: 1; stroke-dasharray: 5 7; }
+
+:where(.group-items-jungle):is(.wr-mode), :where(.group-items-jungle) :is(.wr-mode) { appearance: none; display: flex; flex-direction: column; text-align: left; min-width: 0; min-height: 360px; padding: 24px; color: var(--wr-ink); background: transparent; border: 0; border-left: 1px solid var(--wr-divider); cursor: pointer; }
+
+:where(.group-items-jungle):is(.wr-mode:first-child), :where(.group-items-jungle) :is(.wr-mode:first-child) { border-left: 0; }
+
+:where(.group-items-jungle):is(.wr-mode:not([aria-disabled="true"]):is(:hover, :focus-visible)), :where(.group-items-jungle) :is(.wr-mode:not([aria-disabled="true"]):is(:hover, :focus-visible)) { background: var(--wr-paper-2); }
+
+:where(.group-items-jungle):is(.wr-page .wr-mode:focus-visible), :where(.group-items-jungle) :is(.wr-page .wr-mode:focus-visible) { outline: 0; box-shadow: inset 0 0 0 3px var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-mode[aria-disabled="true"]), :where(.group-items-jungle) :is(.wr-mode[aria-disabled="true"]) { cursor: default; }
+
+:where(.group-items-jungle):is(.wr-mode-heading), :where(.group-items-jungle) :is(.wr-mode-heading) { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; gap: 12px; }
+
+:where(.group-items-jungle):is(.wr-mode-title), :where(.group-items-jungle) :is(.wr-mode-title) { display: block; font: 600 30px/1.1 var(--wr-font-heading); }
+
+:where(.group-items-jungle):is(.wr-mode-ordinal), :where(.group-items-jungle) :is(.wr-mode-ordinal) { font: 600 40px/1 var(--wr-font-heading); color: var(--wr-frame); }
+
+:where(.group-items-jungle):is(.wr-vignette), :where(.group-items-jungle) :is(.wr-vignette) { margin: 24px 0 18px; }
+
+:where(.group-items-jungle):is(.wr-mode-desc), :where(.group-items-jungle) :is(.wr-mode-desc) { font-size: 13px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-mode-tags), :where(.group-items-jungle) :is(.wr-mode-tags) { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
+:where(.group-items-jungle):is(.wr-mode-tags span), :where(.group-items-jungle) :is(.wr-mode-tags span) { border: 1px solid var(--wr-divider); border-radius: 6px; background: var(--wr-paper); padding: 3px 8px; font-size: 11px; }
+
+:where(.group-items-jungle):is(.wr-mode-action), :where(.group-items-jungle) :is(.wr-mode-action) { margin-top: auto; padding-top: 22px; font-size: 17px; font-weight: 600; }
+
+:where(.group-items-jungle):is(.wr-mode:not([aria-disabled="true"]):not(:disabled):is(:hover, :focus-visible) .wr-mode-action), :where(.group-items-jungle) :is(.wr-mode:not([aria-disabled="true"]):not(:disabled):is(:hover, :focus-visible) .wr-mode-action) { color: var(--wr-mode-action-hover-color, var(--wr-blue)); text-decoration: underline; text-underline-offset: 4px; }
+
+@media (max-width: 760px) {
+  :where(.group-items-jungle):is(.wr-page), :where(.group-items-jungle) :is(.wr-page) { padding: 12px 12px 28px; }
+  :where(.group-items-jungle):is(.wr-header), :where(.group-items-jungle) :is(.wr-header) { flex-wrap: wrap; padding: 14px 18px; gap: 14px; }
+  :where(.group-items-jungle):is(.wr-header nav), :where(.group-items-jungle) :is(.wr-header nav) { order: 3; flex-basis: 100%; gap: 24px; }
+  :where(.group-items-jungle):is(.wr-header-user a span), :where(.group-items-jungle) :is(.wr-header-user a span) { display: none; }
+  :where(.group-items-jungle):is(.wr-hero), :where(.group-items-jungle) :is(.wr-hero) { height: 280px; }
+  :where(.group-items-jungle):is(.wr-landscape), :where(.group-items-jungle) :is(.wr-landscape) { width: 850px; max-width: none; left: 50%; margin-left: -425px; }
+  :where(.group-items-jungle):is(.wr-explorer), :where(.group-items-jungle) :is(.wr-explorer) { height: 165px; left: 5%; bottom: 0; }
+  :where(.group-items-jungle):is(.wr-hero-entry), :where(.group-items-jungle) :is(.wr-hero-entry) { left: 35%; bottom: 100px; }
+  :where(.group-items-jungle):is(.wr-hero-entry h1), :where(.group-items-jungle) :is(.wr-hero-entry h1) { font-size: 22px; }
+  :where(.group-items-jungle):is(.wr-hero-entry .wr-kicker), :where(.group-items-jungle) :is(.wr-hero-entry .wr-kicker) { font-size: 9px; }
+  :where(.group-items-jungle):is(.wr-play-launcher), :where(.group-items-jungle) :is(.wr-play-launcher) { padding: 12px 18px; gap: 12px; }
+  :where(.group-items-jungle):is(.wr-expedition-trail), :where(.group-items-jungle) :is(.wr-expedition-trail) { display: none; }
+  :where(.group-items-jungle):is(.wr-page .daily-card), :where(.group-items-jungle) :is(.wr-page .daily-card) { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 16px 20px; }
+  :where(.group-items-jungle):is(.wr-page .daily-btn), :where(.group-items-jungle) :is(.wr-page .daily-btn) { grid-column: 1; grid-row: auto; justify-self: start; }
+  :where(.group-items-jungle):is(.wr-explorer-featured), :where(.group-items-jungle) :is(.wr-explorer-featured) { grid-template-columns: minmax(0, 1fr); }
+  :where(.group-items-jungle):is(.wr-my-explorer), :where(.group-items-jungle) :is(.wr-my-explorer) { border-right: 0; padding: 20px; }
+  :where(.group-items-jungle):is(.wr-page .dashboard-card), :where(.group-items-jungle) :is(.wr-page .dashboard-card) { padding: 20px; }
+  :where(.group-items-jungle):is(.wr-base-board), :where(.group-items-jungle) :is(.wr-base-board) { padding: 18px 20px; }
+  :where(.group-items-jungle):is(.wr-recent-route, .wr-board-links img), :where(.group-items-jungle) :is(.wr-recent-route, .wr-board-links img) { display: none; }
+  :where(.group-items-jungle):is(.wr-page .recent-item), :where(.group-items-jungle) :is(.wr-page .recent-item) { grid-template-columns: minmax(0, 1fr) auto; }
+  :where(.group-items-jungle):is(.wr-page .weekly-item), :where(.group-items-jungle) :is(.wr-page .weekly-item) { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  :where(.group-items-jungle):is(.wr-page .wi-target), :where(.group-items-jungle) :is(.wr-page .wi-target) { display: block; grid-row: 2; grid-column: 2; white-space: normal; }
+  :where(.group-items-jungle):is(.wr-page .wi-time), :where(.group-items-jungle) :is(.wr-page .wi-time) { grid-row: 1; grid-column: 3; }
+  :where(.group-items-jungle):is(.wr-modes), :where(.group-items-jungle) :is(.wr-modes) { grid-template-columns: minmax(0, 1fr); }
+  :where(.group-items-jungle):is(.wr-play-contours), :where(.group-items-jungle) :is(.wr-play-contours) { display: none; }
+  :where(.group-items-jungle):is(.wr-mode), :where(.group-items-jungle) :is(.wr-mode) { border-left: 0; border-top: 1px solid var(--wr-divider); min-height: 310px; }
+  :where(.group-items-jungle):is(.wr-mode:first-child), :where(.group-items-jungle) :is(.wr-mode:first-child) { border-top: 0; }
+  :where(.group-items-jungle):is(.wr-play-heading), :where(.group-items-jungle) :is(.wr-play-heading) { padding: 22px 24px 14px; }
+  :where(.group-items-jungle):is(.wr-play-heading h1), :where(.group-items-jungle) :is(.wr-play-heading h1) { font-size: 24px; }
+  :where(.group-items-jungle):is(.wr-play-heading img), :where(.group-items-jungle) :is(.wr-play-heading img) { height: 60px; }
+}
+
+@media (max-width: 380px) {
+  :where(.group-items-jungle):is(.wr-header), :where(.group-items-jungle) :is(.wr-header) { gap: 10px; padding: 12px; }
+  :where(.group-items-jungle):is(.wr-header-user), :where(.group-items-jungle) :is(.wr-header-user) { gap: 8px; font-size: 11px; }
+  :where(.group-items-jungle):is(.wr-header nav), :where(.group-items-jungle) :is(.wr-header nav) { gap: 18px; }
+  :where(.group-items-jungle):is(.wr-hero-entry), :where(.group-items-jungle) :is(.wr-hero-entry) { left: 30%; }
+  :where(.group-items-jungle):is(.wr-hero-entry h1), :where(.group-items-jungle) :is(.wr-hero-entry h1) { font-size: 20px; }
+  :where(.group-items-jungle):is(.wr-play-launcher), :where(.group-items-jungle) :is(.wr-play-launcher) { padding: 12px; }
+  :where(.group-items-jungle):is(.wr-play-heading img, .wr-board-links img), :where(.group-items-jungle) :is(.wr-play-heading img, .wr-board-links img) { display: none; }
+}
+
+/* Shared expedition margins. HOME's approved artwork also frames PLAY,
+   ranking, profile, achievements, duel/group lobbies and game screens.
+   Decorative spans never capture input or obscure the main sheet. */
+
+:where(.group-items-jungle):is(.wr-page), :where(.group-items-jungle) :is(.wr-page) { position: relative; background-color: #e9e0c9; }
+
+:where(.group-items-jungle):is(.wr-page > .wr-shell), :where(.group-items-jungle) :is(.wr-page > .wr-shell) { position: relative; z-index: 1; }
+
+:where(.group-items-jungle):is(.wr-page > .wr-home-side-art), :where(.group-items-jungle) :is(.wr-page > .wr-home-side-art) { display: none; pointer-events: none; }
+
+:where(.group-items-jungle):is(.wr-header-avatar.pcard-avatar), :where(.group-items-jungle) :is(.wr-header-avatar.pcard-avatar) { border: 1px solid var(--wr-frame); }
+
+@media (min-width: 1280px) {
+  :where(.group-items-jungle):is(.wr-page > .wr-home-side-art), :where(.group-items-jungle) :is(.wr-page > .wr-home-side-art) {
+    display: block;
+    position: absolute;
+    inset: 0 0 auto;
+    height: clamp(600px, calc(75vw - 480px), 1080px);
+    overflow: clip;
+    z-index: 0;
+    opacity: .84;
+    mask-image: linear-gradient(to bottom, #000 65%, transparent 100%);
+  }
+  :where(.group-items-jungle):is(.wr-page > .wr-home-side-art > span), :where(.group-items-jungle) :is(.wr-page > .wr-home-side-art > span) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: max(0px, calc((100% - 1200px) / 2));
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+    filter: saturate(.86);
+  }
+  :where(.group-items-jungle):is(.wr-page > .wr-home-side-art-left), :where(.group-items-jungle) :is(.wr-page > .wr-home-side-art-left) {
+    left: 0;
+    background-image: url('/assets/wiki-race/home/wiki-home-left-decoration.webp');
+    background-position: left top;
+    mask-image: linear-gradient(to right, #000 35%, #000b 68%, transparent 100%);
+  }
+  :where(.group-items-jungle):is(.wr-page > .wr-home-side-art-right), :where(.group-items-jungle) :is(.wr-page > .wr-home-side-art-right) {
+    right: 0;
+    background-image: url('/assets/wiki-race/home/wiki-home-right-decoration.webp');
+    background-position: right top;
+    mask-image: linear-gradient(to left, #000 35%, #000b 68%, transparent 100%);
+  }
+}
+
+/* Phase 3 RACE layer — scoped to .wr-race. Article first: HUD is compact, Wikipedia body owns the space.
+   Visual intensity LOW. Gold = target (HUD only) · Blue = current/me/links · Teal = healthy/active effect ·
+   Coral = hit/attack · neutral = ended/retired. Motion only on state change (see bottom). */
+
+:where(.group-items-jungle):is(.wr-page.wr-race), :where(.group-items-jungle) :is(.wr-page.wr-race) { padding: 16px 16px 0; min-height: 100vh; }
+
+:where(.group-items-jungle):is(.wr-race), :where(.group-items-jungle) :is(.wr-race) {
+  --race-hud-h: 56px; --race-strip-h: 36px; --race-dock-h: 72px; --race-rail-w: 200px; --race-roster-w: 248px;
+  --race-top: var(--race-hud-h);
+  --wr-blue-bg: #E6EEF7; --wr-teal-press: #1F6B63;
+}
+
+:where(.group-items-jungle):is(.wr-race.has-strip), :where(.group-items-jungle) :is(.wr-race.has-strip) { --race-top: calc(var(--race-hud-h) + var(--race-strip-h)); }
+
+:where(.group-items-jungle):is(.wr-race.has-tabs), :where(.group-items-jungle) :is(.wr-race.has-tabs) { --race-top: calc(var(--race-hud-h) + 38px); }
+
+:where(.group-items-jungle):is(.wr-race-shell), :where(.group-items-jungle) :is(.wr-race-shell) { position: relative; width: min(1200px, 100%); margin: 0 auto; min-height: calc(100vh - 16px); display: flex; flex-direction: column; background: #FFF; border: 1px solid var(--wr-frame); border-bottom: 0; border-radius: var(--wr-radius-shell) var(--wr-radius-shell) 0 0; box-shadow: var(--wr-shadow-shell); }
+
+:where(.group-items-jungle):is(.wr-race h1, .wr-race h2, .wr-race h3, .wr-race p), :where(.group-items-jungle) :is(.wr-race h1, .wr-race h2, .wr-race h3, .wr-race p) { margin: 0; }
+
+:where(.group-items-jungle):is(.wr-race ul, .wr-race ol), :where(.group-items-jungle) :is(.wr-race ul, .wr-race ol) { list-style: none; margin: 0; padding: 0; }
+
+:where(.group-items-jungle):is(.wr-race button), :where(.group-items-jungle) :is(.wr-race button) { font: inherit; }
+
+:where(.group-items-jungle):is(.wr-race :is(button, a, input, [tabindex]):focus-visible), :where(.group-items-jungle) :is(.wr-race :is(button, a, input, [tabindex]):focus-visible) { outline: 3px solid var(--wr-blue); outline-offset: 2px; }
+
+:where(.group-items-jungle):is(.wr-race .wr-num), :where(.group-items-jungle) :is(.wr-race .wr-num) { font-variant-numeric: tabular-nums; }
+
+/* ── HUD ───────────────────────────────────────────── */
+
+:where(.group-items-jungle):is(.wr-race-hud), :where(.group-items-jungle) :is(.wr-race-hud) { position: sticky; top: 0; z-index: 40; display: flex; align-items: stretch; min-height: var(--race-hud-h); background: var(--wr-paper-2); border-bottom: 1px solid var(--wr-divider); border-radius: var(--wr-radius-shell) var(--wr-radius-shell) 0 0; }
+
+:where(.group-items-jungle):is(.wr-hud-cell), :where(.group-items-jungle) :is(.wr-hud-cell) { display: flex; align-items: center; gap: 8px; padding: 0 18px; border-right: 1px solid var(--wr-divider); min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-hud-cell:last-child), :where(.group-items-jungle) :is(.wr-hud-cell:last-child) { border-right: 0; }
+
+:where(.group-items-jungle):is(.wr-hud-brand), :where(.group-items-jungle) :is(.wr-hud-brand) { gap: 10px; padding: 0 14px 0 16px; }
+
+:where(.group-items-jungle):is(.wr-brand-mark), :where(.group-items-jungle) :is(.wr-brand-mark) { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: var(--wr-ink); color: var(--wr-paper); font: 700 11px/1 var(--wr-font-heading); letter-spacing: .04em; flex: none; }
+
+:where(.group-items-jungle):is(.wr-mode-tag), :where(.group-items-jungle) :is(.wr-mode-tag) { display: inline-flex; justify-content: center; min-width: 40px; padding: 1px 8px; border: 1px solid var(--wr-frame); border-radius: 99px; background: var(--wr-paper); color: var(--wr-ink-2); font-size: 10px; font-weight: 700; white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-hud-mode), :where(.group-items-jungle) :is(.wr-hud-mode) { flex-direction: column; justify-content: center; align-items: flex-start; gap: 3px; padding: 0 12px; }
+
+:where(.group-items-jungle):is(.wr-hud-label), :where(.group-items-jungle) :is(.wr-hud-label) { display: block; font: 600 10px/1.2 var(--wr-font-heading); letter-spacing: .1em; text-transform: uppercase; color: var(--wr-ink-3); white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-hud-doc), :where(.group-items-jungle) :is(.wr-hud-doc) { flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; flex: 0 1 auto; }
+
+:where(.group-items-jungle):is(.wr-hud-doc-value), :where(.group-items-jungle) :is(.wr-hud-doc-value) { display: flex; align-items: center; gap: 6px; max-width: 100%; font: 600 20px/1.1 var(--wr-font-heading); color: var(--wr-ink); min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-hud-doc-value > span), :where(.group-items-jungle) :is(.wr-hud-doc-value > span) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-hud-doc--goal .wr-hud-doc-value), :where(.group-items-jungle) :is(.wr-hud-doc--goal .wr-hud-doc-value) { color: var(--wr-gold); }
+
+:where(.group-items-jungle):is(.wr-hud-doc--current .wr-icon), :where(.group-items-jungle) :is(.wr-hud-doc--current .wr-icon) { color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-hud-arrow), :where(.group-items-jungle) :is(.wr-hud-arrow) { padding: 0 10px; color: var(--wr-frame); }
+
+:where(.group-items-jungle):is(.wr-hud-arrow svg), :where(.group-items-jungle) :is(.wr-hud-arrow svg) { display: block; }
+
+:where(.group-items-jungle):is(.wr-hud-status), :where(.group-items-jungle) :is(.wr-hud-status) { flex: 1 1 auto; justify-content: flex-end; flex-wrap: wrap; gap: 6px; padding: 6px 14px; }
+
+:where(.group-items-jungle):is(.wr-hud-stat), :where(.group-items-jungle) :is(.wr-hud-stat) { flex-direction: column; align-items: flex-end; justify-content: center; gap: 3px; padding: 0 18px; }
+
+:where(.group-items-jungle):is(.wr-hud-stat-value), :where(.group-items-jungle) :is(.wr-hud-stat-value) { font: 600 24px/1 var(--wr-font-heading); color: var(--wr-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-hud-timer), :where(.group-items-jungle) :is(.wr-hud-timer) { min-width: 118px; transition: background var(--wr-motion-ui) var(--wr-ease-out), box-shadow var(--wr-motion-ui) var(--wr-ease-out); }
+
+:where(.group-items-jungle):is(.wr-hud-timer.is-deadline), :where(.group-items-jungle) :is(.wr-hud-timer.is-deadline) { background: var(--wr-gold-bg); box-shadow: inset 0 -2px 0 var(--wr-gold); }
+
+:where(.group-items-jungle):is(.wr-hud-timer.is-deadline .wr-hud-label), :where(.group-items-jungle) :is(.wr-hud-timer.is-deadline .wr-hud-label) { color: #8E6B1C; display: inline-flex; align-items: center; gap: 4px; }
+
+:where(.group-items-jungle):is(.wr-hud-timer.is-ended), :where(.group-items-jungle) :is(.wr-hud-timer.is-ended) { background: var(--wr-neutral-bg); }
+
+:where(.group-items-jungle):is(.wr-hud-exit), :where(.group-items-jungle) :is(.wr-hud-exit) { padding: 0 14px; }
+
+:where(.group-items-jungle):is(.wr-hud-record), :where(.group-items-jungle) :is(.wr-hud-record) { flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; }
+
+:where(.group-items-jungle):is(.wr-hud-record strong), :where(.group-items-jungle) :is(.wr-hud-record strong) { font: 600 18px/1.1 var(--wr-font-heading); display: inline-flex; align-items: center; gap: 6px; }
+
+:where(.group-items-jungle):is(.wr-hud-record small), :where(.group-items-jungle) :is(.wr-hud-record small) { font-size: 11px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-hud-watch), :where(.group-items-jungle) :is(.wr-hud-watch) { flex: 0 1 auto; }
+
+:where(.group-items-jungle):is(.wr-hud-watch.is-live), :where(.group-items-jungle) :is(.wr-hud-watch.is-live) { background: var(--wr-blue-bg); box-shadow: inset 0 -2px 0 var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-hud-watch .wr-icon), :where(.group-items-jungle) :is(.wr-hud-watch .wr-icon) { color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-hud-watch.is-live .wr-icon), :where(.group-items-jungle) :is(.wr-hud-watch.is-live .wr-icon) { color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-race .wr-sr-only), :where(.group-items-jungle) :is(.wr-race .wr-sr-only) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Buttons */
+
+:where(.group-items-jungle):is(.wr-race-btn), :where(.group-items-jungle) :is(.wr-race-btn) { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 0 14px; border-radius: 8px; border: 1.5px solid var(--wr-frame); background: var(--wr-paper); color: var(--wr-ink-2); font: 600 13px/1.2 var(--wr-font-heading) !important; letter-spacing: .02em; cursor: pointer; white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-race-btn:hover:not(:disabled)), :where(.group-items-jungle) :is(.wr-race-btn:hover:not(:disabled)) { background: var(--wr-paper-2); }
+
+:where(.group-items-jungle):is(.wr-race-btn--primary), :where(.group-items-jungle) :is(.wr-race-btn--primary) { background: var(--wr-blue); border-color: var(--wr-blue); color: var(--wr-paper); box-shadow: 0 4px 0 var(--wr-blue-press); }
+
+:where(.group-items-jungle):is(.wr-race-btn--primary:hover:not(:disabled)), :where(.group-items-jungle) :is(.wr-race-btn--primary:hover:not(:disabled)) { background: var(--wr-blue-press); }
+
+:where(.group-items-jungle):is(.wr-race-btn--ghost), :where(.group-items-jungle) :is(.wr-race-btn--ghost) { background: transparent; border-color: rgb(50 104 168 / 45%); color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-race-btn--lg), :where(.group-items-jungle) :is(.wr-race-btn--lg) { min-height: 44px; padding: 0 22px; font-size: 15px !important; }
+
+:where(.group-items-jungle):is(.wr-race-btn:disabled), :where(.group-items-jungle) :is(.wr-race-btn:disabled) { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+:where(.group-items-jungle):is(.wr-race-link), :where(.group-items-jungle) :is(.wr-race-link) { border: 0; background: none; padding: 2px 0; color: var(--wr-blue); font-size: 12px !important; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* Pills / dots */
+
+:where(.group-items-jungle):is(.wr-pill), :where(.group-items-jungle) :is(.wr-pill) { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; line-height: 1.4; white-space: nowrap; border: 1.5px solid transparent; background: var(--wr-paper); }
+
+:where(.group-items-jungle):is(.wr-pill--teal), :where(.group-items-jungle) :is(.wr-pill--teal) { color: var(--wr-teal); border-color: rgb(39 135 125 / 50%); }
+
+:where(.group-items-jungle):is(.wr-pill--teal.is-filled), :where(.group-items-jungle) :is(.wr-pill--teal.is-filled) { background: #E6F2F0; border-color: transparent; }
+
+:where(.group-items-jungle):is(.wr-pill--gold), :where(.group-items-jungle) :is(.wr-pill--gold) { color: #8E6B1C; border-color: rgb(199 154 50 / 50%); }
+
+:where(.group-items-jungle):is(.wr-pill--gold.is-filled), :where(.group-items-jungle) :is(.wr-pill--gold.is-filled) { background: var(--wr-gold-bg); border-color: transparent; }
+
+:where(.group-items-jungle):is(.wr-pill--coral), :where(.group-items-jungle) :is(.wr-pill--coral) { color: #B44A37; border-color: rgb(214 103 82 / 50%); }
+
+:where(.group-items-jungle):is(.wr-pill--coral.is-filled), :where(.group-items-jungle) :is(.wr-pill--coral.is-filled) { background: #FBEAE6; border-color: transparent; }
+
+:where(.group-items-jungle):is(.wr-pill--blue), :where(.group-items-jungle) :is(.wr-pill--blue) { color: var(--wr-blue); border-color: rgb(50 104 168 / 45%); }
+
+:where(.group-items-jungle):is(.wr-pill--blue.is-filled), :where(.group-items-jungle) :is(.wr-pill--blue.is-filled) { background: var(--wr-blue-bg); border-color: transparent; }
+
+:where(.group-items-jungle):is(.wr-pill--neutral), :where(.group-items-jungle) :is(.wr-pill--neutral) { color: var(--wr-ink-2); border-color: var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-pill--neutral.is-filled), :where(.group-items-jungle) :is(.wr-pill--neutral.is-filled) { background: var(--wr-neutral-bg); border-color: transparent; }
+
+:where(.group-items-jungle):is(.wr-pill.is-wrap), :where(.group-items-jungle) :is(.wr-pill.is-wrap) { white-space: normal; }
+
+:where(.group-items-jungle):is(.wr-conn), :where(.group-items-jungle) :is(.wr-conn) { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--wr-ink-2); white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-conn-dot), :where(.group-items-jungle) :is(.wr-conn-dot) { width: 8px; height: 8px; border-radius: 50%; background: var(--wr-teal); flex: none; }
+
+:where(.group-items-jungle):is(.wr-conn.has-halo .wr-conn-dot), :where(.group-items-jungle) :is(.wr-conn.has-halo .wr-conn-dot) { width: 9px; height: 9px; box-shadow: 0 0 0 3px rgb(39 135 125 / 18%); }
+
+:where(.group-items-jungle):is(.wr-conn.is-bad .wr-conn-dot), :where(.group-items-jungle) :is(.wr-conn.is-bad .wr-conn-dot) { background: var(--wr-coral); }
+
+:where(.group-items-jungle):is(.wr-conn.is-bad.has-halo .wr-conn-dot), :where(.group-items-jungle) :is(.wr-conn.is-bad.has-halo .wr-conn-dot) { box-shadow: 0 0 0 3px rgb(214 103 82 / 18%); }
+
+/* ── Duel opponent strip ────────────────────────────── */
+
+:where(.group-items-jungle):is(.wr-race-strip), :where(.group-items-jungle) :is(.wr-race-strip) { position: sticky; top: var(--race-hud-h); z-index: 39; display: flex; align-items: center; gap: 10px; min-height: var(--race-strip-h); padding: 0 20px; background: var(--wr-paper); border-bottom: 1px solid var(--wr-divider); font-size: 12px; color: var(--wr-ink-2); flex-wrap: wrap; }
+
+:where(.group-items-jungle):is(.wr-strip-name), :where(.group-items-jungle) :is(.wr-strip-name) { font-size: 13px; font-weight: 700; color: var(--wr-ink); max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-race .mp-opponent-box), :where(.group-items-jungle) :is(.wr-race .mp-opponent-box) { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; margin: 0; padding: 0; border-radius: 0; background: none; }
+
+:where(.group-items-jungle):is(.wr-race .mp-opponent-label), :where(.group-items-jungle) :is(.wr-race .mp-opponent-label) { margin: 0; color: var(--wr-ink-3); font-size: 11px; }
+
+:where(.group-items-jungle):is(.wr-race .mp-opponent-value), :where(.group-items-jungle) :is(.wr-race .mp-opponent-value) { font-size: 12px; line-height: 1.3; color: var(--wr-ink); font-weight: 700; max-width: 16em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-strip-end), :where(.group-items-jungle) :is(.wr-strip-end) { margin-left: auto; }
+
+/* ── Body: rail / roster + article ─────────────────── */
+
+:where(.group-items-jungle):is(.wr-race-body), :where(.group-items-jungle) :is(.wr-race-body) { display: grid; grid-template-columns: var(--race-rail-w) minmax(0, 1fr); flex: 1 0 auto; }
+
+:where(.group-items-jungle):is(.wr-race--group .wr-race-body), :where(.group-items-jungle) :is(.wr-race--group .wr-race-body) { grid-template-columns: var(--race-roster-w) minmax(0, 1fr); }
+
+:where(.group-items-jungle):is(.wr-race-body.is-wide), :where(.group-items-jungle) :is(.wr-race-body.is-wide) { grid-template-columns: minmax(0, 1fr); }
+
+:where(.group-items-jungle):is(.wr-race-side), :where(.group-items-jungle) :is(.wr-race-side) { position: sticky; top: var(--race-top); align-self: start; max-height: calc(100vh - var(--race-top)); overflow-y: auto; border-right: 1px solid var(--wr-divider); background: var(--wr-paper); display: flex; flex-direction: column; }
+
+:where(.group-items-jungle):is(.wr-race-main), :where(.group-items-jungle) :is(.wr-race-main) { min-width: 0; position: relative; }
+
+:where(.group-items-jungle):is(.wr-race-main.is-dimmed .article-content), :where(.group-items-jungle) :is(.wr-race-main.is-dimmed .article-content) { opacity: .55; }
+
+:where(.group-items-jungle):is(.wr-race-main.is-stale .article-content), :where(.group-items-jungle) :is(.wr-race-main.is-stale .article-content) { opacity: .7; }
+
+/* Route rail (내 경로) */
+
+:where(.group-items-jungle):is(.wr-route), :where(.group-items-jungle) :is(.wr-route) { display: flex; flex-direction: column; flex: 1; }
+
+:where(.group-items-jungle):is(.wr-route-head), :where(.group-items-jungle) :is(.wr-route-head) { display: flex; align-items: baseline; gap: 8px; padding: 14px 16px 10px; }
+
+:where(.group-items-jungle):is(.wr-route-head h2), :where(.group-items-jungle) :is(.wr-route-head h2) { font: 600 15px/1.1 var(--wr-font-heading); }
+
+:where(.group-items-jungle):is(.wr-route-head small), :where(.group-items-jungle) :is(.wr-route-head small) { font-size: 11px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-route-list), :where(.group-items-jungle) :is(.wr-route-list) { margin: 0 16px !important; padding-left: 14px !important; border-left: 1.5px solid var(--wr-frame); }
+
+:where(.group-items-jungle):is(.wr-route-step), :where(.group-items-jungle) :is(.wr-route-step) { position: relative; display: flex; align-items: baseline; gap: 9px; padding: 5px 0; font-size: 12px; color: var(--wr-ink-2); min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-route-step::before), :where(.group-items-jungle) :is(.wr-route-step::before) { content: ""; position: absolute; left: -21px; top: 9px; width: 11px; height: 11px; border-radius: 50%; background: var(--wr-paper); border: 2px solid var(--wr-ink-3); box-sizing: border-box; }
+
+:where(.group-items-jungle):is(.wr-route-step span:first-child), :where(.group-items-jungle) :is(.wr-route-step span:first-child) { overflow-wrap: anywhere; min-width: 0; flex: 1; }
+
+:where(.group-items-jungle):is(.wr-route-step small), :where(.group-items-jungle) :is(.wr-route-step small) { font: 600 10px/1.2 var(--wr-font-heading); color: var(--wr-ink-3); white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-route-step.is-current), :where(.group-items-jungle) :is(.wr-route-step.is-current) { color: var(--wr-blue); font-weight: 700; }
+
+:where(.group-items-jungle):is(.wr-route-step.is-current::before), :where(.group-items-jungle) :is(.wr-route-step.is-current::before) { left: -22px; width: 13px; height: 13px; border: 0; background: var(--wr-blue); box-shadow: 0 0 0 3px rgb(50 104 168 / 20%); }
+
+:where(.group-items-jungle):is(.wr-route-step.is-start::before), :where(.group-items-jungle) :is(.wr-route-step.is-start::before) { border-color: #CFBF8E; background: #EEE7CF; }
+
+:where(.group-items-jungle):is(.wr-route-foot), :where(.group-items-jungle) :is(.wr-route-foot) { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--wr-divider); font-size: 10px; line-height: 1.6; color: var(--wr-ink-3); }
+
+/* Route chain (compact) */
+
+:where(.group-items-jungle):is(.wr-chain), :where(.group-items-jungle) :is(.wr-chain) { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 11px; }
+
+:where(.group-items-jungle):is(.wr-chain-chip), :where(.group-items-jungle) :is(.wr-chain-chip) { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--wr-frame); border-radius: 6px; background: var(--wr-paper); max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-chain-chip.is-target), :where(.group-items-jungle) :is(.wr-chain-chip.is-target) { background: var(--wr-gold); border-color: var(--wr-gold); color: var(--wr-paper); font-weight: 700; }
+
+:where(.group-items-jungle):is(.wr-chain-more), :where(.group-items-jungle) :is(.wr-chain-more) { color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-chain-sep), :where(.group-items-jungle) :is(.wr-chain-sep) { width: 10px; height: 1px; background: var(--wr-frame); flex: none; }
+
+/* ── Article (WikiViewer race variant) ─────────────── */
+
+:where(.group-items-jungle):is(.wr-race .wiki-shell), :where(.group-items-jungle) :is(.wr-race .wiki-shell) { display: block; gap: 0; }
+
+:where(.group-items-jungle):is(.wr-race .current-page-card), :where(.group-items-jungle) :is(.wr-race .current-page-card) { padding: 22px 36px 32px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+
+:where(.group-items-jungle):is(.wr-article-head), :where(.group-items-jungle) :is(.wr-article-head) { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; padding-bottom: 10px; border-bottom: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-article-head h1), :where(.group-items-jungle) :is(.wr-article-head h1) { font: 600 28px/1.1 var(--wr-font-heading) !important; color: var(--wr-ink); overflow-wrap: anywhere; min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-article-sub), :where(.group-items-jungle) :is(.wr-article-sub) { font-size: 12px; color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-article-tag), :where(.group-items-jungle) :is(.wr-article-tag) { margin-left: auto; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 11px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-censor-legend), :where(.group-items-jungle) :is(.wr-censor-legend) { display: inline-flex; align-items: center; gap: 6px; }
+
+:where(.group-items-jungle):is(.wr-censor-legend::before), :where(.group-items-jungle) :is(.wr-censor-legend::before) { content: ""; width: 14px; border-top: 2px solid var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-race .article-content), :where(.group-items-jungle) :is(.wr-race .article-content) { margin-top: 16px; font-size: 16px; line-height: 1.85; color: var(--wr-ink); text-wrap: pretty; }
+
+:where(.group-items-jungle):is(.wr-race .article-content p), :where(.group-items-jungle) :is(.wr-race .article-content p) { margin: 0 0 14px; }
+
+:where(.group-items-jungle):is(.wr-race .article-content h2, .wr-race .article-content h3), :where(.group-items-jungle) :is(.wr-race .article-content h2, .wr-race .article-content h3) { font-family: var(--wr-font-heading); font-weight: 600; color: var(--wr-ink); border-bottom: 1px solid var(--wr-divider); padding-bottom: 6px; margin: 22px 0 12px; }
+
+:where(.group-items-jungle):is(.wr-race .article-content h2), :where(.group-items-jungle) :is(.wr-race .article-content h2) { font-size: 20px; }
+
+:where(.group-items-jungle):is(.wr-race .article-content h3), :where(.group-items-jungle) :is(.wr-race .article-content h3) { font-size: 17px; border-bottom: 0; }
+
+:where(.group-items-jungle):is(.wr-race .article-content table), :where(.group-items-jungle) :is(.wr-race .article-content table) { border: 1px solid var(--wr-divider); border-radius: 6px; font-size: 14px; }
+
+:where(.group-items-jungle):is(.wr-race .article-content th, .wr-race .article-content td), :where(.group-items-jungle) :is(.wr-race .article-content th, .wr-race .article-content td) { padding: 6px 10px; border-color: var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-race .article-content a, .wr-race .article-content a:visited), :where(.group-items-jungle) :is(.wr-race .article-content a, .wr-race .article-content a:visited) { color: var(--wr-blue); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; background: none; font-weight: inherit; }
+
+:where(.group-items-jungle):is(.wr-race .article-content a:hover), :where(.group-items-jungle) :is(.wr-race .article-content a:hover) { color: var(--wr-blue-press); }
+
+/* 링크 검열 — 서버 집합. 회색 · 밑줄 없음 · 클릭 불가 · 취소선 없음 */
+
+:where(.group-items-jungle):is(.wr-race .article-content a.duel-item-censored, .wr-race .article-content a.duel-item-censored:hover), :where(.group-items-jungle) :is(.wr-race .article-content a.duel-item-censored, .wr-race .article-content a.duel-item-censored:hover) { color: var(--wr-ink-3) !important; text-decoration: none !important; cursor: default; pointer-events: none; }
+
+/* 싱글 전용 highlight_links 아이템 — 임시 힌트. Gold/목표처럼 보이지 않게, 목표 보장 암시 없음 */
+
+:where(.group-items-jungle):is(.wr-race .article-content a.wiki-link--highlighted), :where(.group-items-jungle) :is(.wr-race .article-content a.wiki-link--highlighted) { color: var(--wr-blue) !important; background: transparent !important; border: 0; box-shadow: none; padding: 0; font-weight: inherit; outline: 1.5px dashed var(--wr-teal); outline-offset: 2px; border-radius: 3px; }
+
+:where(.group-items-jungle):is(.wr-race .article-content a.wiki-link--highlighted::after), :where(.group-items-jungle) :is(.wr-race .article-content a.wiki-link--highlighted::after) { content: "힌트"; margin-left: 4px; padding: 0 4px; border-radius: 4px; background: #E6F2F0; color: var(--wr-teal-press); font-size: 10px; font-weight: 700; vertical-align: 1px; }
+
+/* 관전 화면 — 읽기 전용, 이동 없음 */
+
+:where(.group-items-jungle):is(.wr-race .wr-readonly .article-content a), :where(.group-items-jungle) :is(.wr-race .wr-readonly .article-content a) { color: var(--wr-ink-2) !important; text-decoration: underline dotted var(--wr-ink-3) !important; cursor: default; pointer-events: none; }
+
+:where(.group-items-jungle):is(.wr-race .state-text), :where(.group-items-jungle) :is(.wr-race .state-text) { margin: 12px 36px; font-size: 13px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-race .state-text.error), :where(.group-items-jungle) :is(.wr-race .state-text.error) { color: #A4402E; }
+
+/* Target brief (목표 설명) */
+
+:where(.group-items-jungle):is(.wr-target-brief), :where(.group-items-jungle) :is(.wr-target-brief) { margin: 14px 36px 0; border: 1px solid var(--wr-divider); border-radius: 8px; background: var(--wr-paper); font-size: 13px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-target-brief > summary), :where(.group-items-jungle) :is(.wr-target-brief > summary) { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; list-style: none; }
+
+:where(.group-items-jungle):is(.wr-target-brief > summary::-webkit-details-marker), :where(.group-items-jungle) :is(.wr-target-brief > summary::-webkit-details-marker) { display: none; }
+
+:where(.group-items-jungle):is(.wr-target-brief > summary strong), :where(.group-items-jungle) :is(.wr-target-brief > summary strong) { color: #8E6B1C; font-family: var(--wr-font-heading); font-size: 14px; }
+
+:where(.group-items-jungle):is(.wr-target-brief > summary::after), :where(.group-items-jungle) :is(.wr-target-brief > summary::after) { content: "▾"; margin-left: auto; color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-target-brief[open] > summary::after), :where(.group-items-jungle) :is(.wr-target-brief[open] > summary::after) { content: "▴"; }
+
+:where(.group-items-jungle):is(.wr-target-brief-body), :where(.group-items-jungle) :is(.wr-target-brief-body) { padding: 0 12px 10px; }
+
+:where(.group-items-jungle):is(.wr-race .target-summary, .wr-race .target-summary-status, .wr-race .target-meta), :where(.group-items-jungle) :is(.wr-race .target-summary, .wr-race .target-summary-status, .wr-race .target-meta) { margin: 0 0 6px; font-size: 13px; line-height: 1.6; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-race .target-summary--collapsed), :where(.group-items-jungle) :is(.wr-race .target-summary--collapsed) { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+:where(.group-items-jungle):is(.wr-race .target-summary-toggle, .wr-race .target-summary-retry), :where(.group-items-jungle) :is(.wr-race .target-summary-toggle, .wr-race .target-summary-retry) { border: 0; background: none; padding: 0; color: var(--wr-blue); font-size: 12px; text-decoration: underline; cursor: pointer; }
+
+:where(.group-items-jungle):is(.wr-race .target-summary-error), :where(.group-items-jungle) :is(.wr-race .target-summary-error) { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* Heading rail + toasts restyled lightly */
+
+:where(.group-items-jungle):is(.wr-race .wiki-nav-rail), :where(.group-items-jungle) :is(.wr-race .wiki-nav-rail) { opacity: 1; }
+
+:where(.group-items-jungle):is(.wr-race .wiki-find-block-toast), :where(.group-items-jungle) :is(.wr-race .wiki-find-block-toast) { top: calc(var(--race-top) + 12px); }
+
+:where(.group-items-jungle):is(.wr-race .game-search-panel), :where(.group-items-jungle) :is(.wr-race .game-search-panel) { top: calc(var(--race-top) + 12px); background: var(--wr-paper); border: 1px solid var(--wr-frame); color: var(--wr-ink); border-radius: 10px; box-shadow: 0 10px 24px rgb(36 52 48 / 12%); }
+
+/* ── Dock (items) ──────────────────────────────────── */
+
+:where(.group-items-jungle):is(.wr-race-dock), :where(.group-items-jungle) :is(.wr-race-dock) { position: sticky; bottom: 0; z-index: 41; /* above the HUD: the dock is the stacking context of the Link Index sheet */ display: flex; align-items: stretch; min-height: var(--race-dock-h); background: var(--wr-paper-2); border-top: 1px solid var(--wr-frame); }
+
+:where(.group-items-jungle):is(.wr-race-dock-hint), :where(.group-items-jungle) :is(.wr-race-dock-hint) { flex: 1; display: flex; align-items: center; padding: 0 16px; font-size: 11px; color: var(--wr-ink-3); min-width: 0; }
+
+/* Duel item tray (DuelItemBar inside the dock) */
+
+/* backdrop-filter would make the tray the containing block for the fixed Link Index/preview overlays */
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar), :where(.group-items-jungle) :is(.wr-race .duel-item-bar) { backdrop-filter: none; -webkit-backdrop-filter: none; position: static; display: flex; flex-direction: row; min-height: 0; align-items: center; gap: 10px; padding: 9px 16px; width: auto; max-width: none; background: transparent; border: 0; border-right: 1px solid var(--wr-divider); box-shadow: none; border-radius: 0; color: var(--wr-ink); transform: none; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar__head), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__head) { display: flex; flex-direction: column; gap: 2px; min-width: 52px; margin: 0; font-size: 11px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar__count strong), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__count strong) { font: 600 18px/1 var(--wr-font-heading); color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar__cooldown), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__cooldown) { font: 600 12px/1 var(--wr-font-heading); color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar__gauge), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__gauge) { position: absolute; left: 16px; right: 16px; top: 0; height: 2px; margin: 0; background: transparent; border-radius: 0; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar__gauge-fill), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__gauge-fill) { background: var(--wr-ink-3); border-radius: 0; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar__slots), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__slots) { display: flex; gap: 8px; margin: 0; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot), :where(.group-items-jungle) :is(.wr-race .duel-item-slot) { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 104px; height: 54px; min-height: 0; padding: 5px 8px; margin: 0; border: 1.5px solid var(--wr-frame); border-radius: 8px; background: var(--wr-paper); color: var(--wr-ink); text-align: left; cursor: pointer; box-shadow: none; transform: none; font-family: var(--wr-font-heading); transition: border-color var(--wr-motion-fast) var(--wr-ease-out), background var(--wr-motion-fast) var(--wr-ease-out); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot:hover:not(:disabled)), :where(.group-items-jungle) :is(.wr-race .duel-item-slot:hover:not(:disabled)) { border-color: var(--wr-ink-3); background: #FFF; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot__role), :where(.group-items-jungle) :is(.wr-race .duel-item-slot__role) { order: -1; font: 600 9px/1.2 var(--wr-font-heading); letter-spacing: .1em; color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot--attack .duel-item-slot__role), :where(.group-items-jungle) :is(.wr-race .duel-item-slot--attack .duel-item-slot__role) { color: var(--wr-coral); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot--search .duel-item-slot__role, .wr-race .duel-item-slot--defense .duel-item-slot__role), :where(.group-items-jungle) :is(.wr-race .duel-item-slot--search .duel-item-slot__role, .wr-race .duel-item-slot--defense .duel-item-slot__role) { color: var(--wr-teal); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot--joker .duel-item-slot__role), :where(.group-items-jungle) :is(.wr-race .duel-item-slot--joker .duel-item-slot__role) { color: var(--wr-purple); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot__name), :where(.group-items-jungle) :is(.wr-race .duel-item-slot__name) { font: 600 13px/1.2 var(--wr-font-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot__icon), :where(.group-items-jungle) :is(.wr-race .duel-item-slot__icon) { position: absolute; right: 6px; bottom: 5px; font-size: 13px; opacity: .55; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot:disabled:not(.duel-item-slot--used)), :where(.group-items-jungle) :is(.wr-race .duel-item-slot:disabled:not(.duel-item-slot--used)) { opacity: .55; cursor: not-allowed; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot--used), :where(.group-items-jungle) :is(.wr-race .duel-item-slot--used) { border-style: dashed; border-color: var(--wr-divider); background: transparent; cursor: default; opacity: 1; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot--used .duel-item-slot__name), :where(.group-items-jungle) :is(.wr-race .duel-item-slot--used .duel-item-slot__name) { color: var(--wr-frame); font-weight: 400; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot__stamp), :where(.group-items-jungle) :is(.wr-race .duel-item-slot__stamp) { position: static; margin-top: auto; padding: 0; background: none; border: 0; transform: none; font: 400 9px/1 var(--wr-font-body); color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot--pending), :where(.group-items-jungle) :is(.wr-race .duel-item-slot--pending) { border-color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot--empty), :where(.group-items-jungle) :is(.wr-race .duel-item-slot--empty) { border-style: dashed; border-color: var(--wr-divider); background: transparent; cursor: default; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot.is-active), :where(.group-items-jungle) :is(.wr-race .duel-item-slot.is-active) { border-color: var(--wr-teal); background: #E6F2F0; box-shadow: 0 0 0 3px rgb(39 135 125 / 18%); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-bar--off), :where(.group-items-jungle) :is(.wr-race .duel-item-bar--off) { display: none; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-effects), :where(.group-items-jungle) :is(.wr-race .duel-item-effects) { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-effects__row), :where(.group-items-jungle) :is(.wr-race .duel-item-effects__row) { display: inline-flex; gap: 6px; align-items: center; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; white-space: nowrap; background: none; border: 1.5px solid transparent; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-effects__row--guard), :where(.group-items-jungle) :is(.wr-race .duel-item-effects__row--guard) { color: var(--wr-teal); border-color: rgb(39 135 125 / 50%); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-effects__row--hit), :where(.group-items-jungle) :is(.wr-race .duel-item-effects__row--hit) { color: #B44A37; border-color: rgb(214 103 82 / 50%); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-notice), :where(.group-items-jungle) :is(.wr-race .duel-item-notice) { position: absolute; bottom: calc(100% + 8px); left: 16px; max-width: 360px; padding: 10px 34px 10px 12px; border-radius: 8px; border: 1px solid var(--wr-frame); background: var(--wr-paper); color: var(--wr-ink); box-shadow: 0 8px 20px rgb(36 52 48 / 12%); font-size: 12px; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-notice__close), :where(.group-items-jungle) :is(.wr-race .duel-item-notice__close) { position: absolute; top: 6px; right: 6px; border: 0; background: none; color: var(--wr-ink-3); cursor: pointer; }
+
+/* Single item tray (existing ItemBar, same props) inside the dock */
+
+:where(.group-items-jungle):is(.wr-race .item-panel), :where(.group-items-jungle) :is(.wr-race .item-panel) { position: relative; top: auto; right: auto; transform: none; z-index: 1; display: flex; align-items: center; padding: 0 16px; border-right: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-race .item-panel-toggle), :where(.group-items-jungle) :is(.wr-race .item-panel-toggle) { min-height: 36px; padding: 0 14px; border: 1.5px solid var(--wr-frame); border-radius: 8px; background: var(--wr-paper); color: var(--wr-ink); font: 600 13px/1.2 var(--wr-font-heading); box-shadow: none; cursor: pointer; }
+
+:where(.group-items-jungle):is(.wr-race .item-panel--open .item-panel-toggle), :where(.group-items-jungle) :is(.wr-race .item-panel--open .item-panel-toggle) { border-color: var(--wr-teal); background: #E6F2F0; color: var(--wr-teal-press); }
+
+:where(.group-items-jungle):is(.wr-race .item-panel__body), :where(.group-items-jungle) :is(.wr-race .item-panel__body) { position: absolute; left: 16px; right: auto; top: auto; bottom: calc(100% + 8px); width: 260px; max-height: 50vh; overflow-y: auto; padding: 8px; background: var(--wr-paper); border: 1px solid var(--wr-frame); border-radius: 10px; box-shadow: 0 12px 28px rgb(36 52 48 / 14%); animation: s5-head-wr-race-fade var(--wr-motion-ui) var(--wr-ease-out); }
+
+:where(.group-items-jungle):is(.wr-race .item-card), :where(.group-items-jungle) :is(.wr-race .item-card) { margin: 0 0 6px; padding: 8px 10px; background: #FFF; color: var(--wr-ink); border: 1.5px solid var(--wr-frame); border-radius: 8px; box-shadow: none; transform: none; }
+
+:where(.group-items-jungle):is(.wr-race .item-card:hover:not(:disabled)), :where(.group-items-jungle) :is(.wr-race .item-card:hover:not(:disabled)) { transform: none; border-color: var(--wr-teal); }
+
+:where(.group-items-jungle):is(.wr-race .item-card--used, .wr-race .item-card:disabled), :where(.group-items-jungle) :is(.wr-race .item-card--used, .wr-race .item-card:disabled) { border-style: dashed; border-color: var(--wr-divider); color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-race .item-card__name), :where(.group-items-jungle) :is(.wr-race .item-card__name) { color: inherit; font: 600 13px/1.2 var(--wr-font-heading); }
+
+:where(.group-items-jungle):is(.wr-race .item-card__badge), :where(.group-items-jungle) :is(.wr-race .item-card__badge) { background: var(--wr-neutral-bg) !important; color: var(--wr-ink-2); font-size: 10px; }
+
+:where(.group-items-jungle):is(.wr-race .item-card__desc), :where(.group-items-jungle) :is(.wr-race .item-card__desc) { color: var(--wr-ink-2); font-size: 11px; }
+
+/* Link preview panel (existing item) */
+
+:where(.group-items-jungle):is(.wr-race .duel-item-preview), :where(.group-items-jungle) :is(.wr-race .duel-item-preview) { position: fixed; z-index: 45; left: 50%; bottom: calc(var(--race-dock-h) + 12px); transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); max-height: 50vh; overflow: auto; background: var(--wr-paper); color: var(--wr-ink); border: 1px solid var(--wr-frame); border-radius: 12px; box-shadow: 0 16px 36px rgb(36 52 48 / 16%); }
+
+/* 링크만 보기 (link_index) overlay — over the article area only; rail/HUD/dock stay visible */
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index), :where(.group-items-jungle) :is(.wr-race .duel-item-index) { position: fixed; z-index: 44; top: calc(var(--race-top) + 16px); /* + page top padding: header never slides under the strip */ bottom: var(--race-dock-h); left: calc(max(16px, (100vw - 1200px) / 2) + var(--race-rail-w) + 1px); right: max(16px, (100vw - 1200px) / 2); display: flex; flex-direction: column; margin: 0; padding: 0; width: auto; max-height: none; background: var(--wr-paper); border: 0; border-left: 1px solid var(--wr-divider); border-radius: 0; box-shadow: none; color: var(--wr-ink); animation: s5-head-wr-race-fade var(--wr-motion-ui) var(--wr-ease-out); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__head), :where(.group-items-jungle) :is(.wr-race .duel-item-index__head) { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 24px; background: var(--wr-paper-2); border-bottom: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__title), :where(.group-items-jungle) :is(.wr-race .duel-item-index__title) { font: 600 18px/1.1 var(--wr-font-heading); color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__meta), :where(.group-items-jungle) :is(.wr-race .duel-item-index__meta) { font-size: 11px; color: var(--wr-ink-2); font-variant-numeric: tabular-nums; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__timer), :where(.group-items-jungle) :is(.wr-race .duel-item-index__timer) { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--wr-teal); background: #E6F2F0; color: var(--wr-teal); font: 600 13px/1.2 var(--wr-font-heading); font-variant-numeric: tabular-nums; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__close), :where(.group-items-jungle) :is(.wr-race .duel-item-index__close) { position: static; width: auto; height: auto; padding: 5px 12px; border: 1.5px solid var(--wr-frame); border-radius: 8px; background: var(--wr-paper); color: var(--wr-ink-2); font: 600 13px/1.2 var(--wr-font-heading); cursor: pointer; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__filter), :where(.group-items-jungle) :is(.wr-race .duel-item-index__filter) { flex: 1 1 200px; max-width: 340px; height: 32px; margin: 0; padding: 0 12px; border: 1px solid var(--wr-frame); border-radius: 8px; background: #FFF; color: var(--wr-ink); font-size: 13px; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__filter:focus), :where(.group-items-jungle) :is(.wr-race .duel-item-index__filter:focus) { outline: 0; border-color: var(--wr-blue); box-shadow: 0 0 0 3px rgb(50 104 168 / 20%); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__censor-note), :where(.group-items-jungle) :is(.wr-race .duel-item-index__censor-note) { display: flex; align-items: center; gap: 6px; padding: 6px 24px; border-bottom: 1px solid var(--wr-divider); font-size: 11px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__censor-note::before), :where(.group-items-jungle) :is(.wr-race .duel-item-index__censor-note::before) { content: ""; width: 14px; border-top: 2px solid var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__words), :where(.group-items-jungle) :is(.wr-race .duel-item-index__words) { flex: 1; min-height: 0; max-height: none; background: transparent; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; margin: 0; padding: 14px 24px 20px; list-style: none; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__word), :where(.group-items-jungle) :is(.wr-race .duel-item-index__word) { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; margin: 0; border: 1px solid var(--wr-frame); border-radius: 6px; background: #FFF; color: var(--wr-blue); font-size: 13px; line-height: 1; cursor: pointer; text-decoration: none; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__word:hover:not(:disabled)), :where(.group-items-jungle) :is(.wr-race .duel-item-index__word:hover:not(:disabled)) { border-color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__word--censored, .wr-race .duel-item-index__word--censored:hover:enabled), :where(.group-items-jungle) :is(.wr-race .duel-item-index__word--censored, .wr-race .duel-item-index__word--censored:hover:enabled) { color: var(--wr-ink-3); border: 1px dashed var(--wr-divider); background: transparent; text-decoration: none; cursor: default; }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__tag), :where(.group-items-jungle) :is(.wr-race .duel-item-index__tag) { padding: 0 4px; border: 1px dashed var(--wr-divider); border-radius: 4px; font-size: 9px; line-height: 14px; color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-index__empty), :where(.group-items-jungle) :is(.wr-race .duel-item-index__empty) { font-size: 13px; color: var(--wr-ink-3); }
+
+/* ── Group roster ──────────────────────────────────── */
+
+:where(.group-items-jungle):is(.wr-roster-head), :where(.group-items-jungle) :is(.wr-roster-head) { display: flex; align-items: baseline; gap: 8px; padding: 14px 14px 10px; }
+
+:where(.group-items-jungle):is(.wr-roster-head h2), :where(.group-items-jungle) :is(.wr-roster-head h2) { font: 600 15px/1.1 var(--wr-font-heading); }
+
+:where(.group-items-jungle):is(.wr-roster-head small), :where(.group-items-jungle) :is(.wr-roster-head small) { margin-left: auto; font-size: 11px; color: var(--wr-ink-2); text-align: right; }
+
+:where(.group-items-jungle):is(.wr-roster-list > li), :where(.group-items-jungle) :is(.wr-roster-list > li) { border-top: 1px dashed var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-prow), :where(.group-items-jungle) :is(.wr-prow) { line-height: 1.35; display: grid; grid-template-columns: 24px 24px minmax(0, 1fr) auto; grid-template-areas: "rank av name state" "rank av sub sub"; column-gap: 8px; row-gap: 1px; align-items: center; width: 100%; padding: 7px 14px 7px 12px; border: 0; background: transparent; text-align: left; color: var(--wr-ink); font: inherit; }
+
+:where(.group-items-jungle):is(button.wr-prow), :where(.group-items-jungle) :is(button.wr-prow) { cursor: pointer; }
+
+:where(.group-items-jungle):is(button.wr-prow:hover), :where(.group-items-jungle) :is(button.wr-prow:hover) { background: var(--wr-paper-2); }
+
+:where(.group-items-jungle):is(.wr-prow.is-me, .wr-prow.is-watched), :where(.group-items-jungle) :is(.wr-prow.is-me, .wr-prow.is-watched) { background: var(--wr-blue-bg); }
+
+:where(.group-items-jungle):is(.wr-prow.is-watched), :where(.group-items-jungle) :is(.wr-prow.is-watched) { box-shadow: inset 3px 0 0 var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-prow.is-watched-stale), :where(.group-items-jungle) :is(.wr-prow.is-watched-stale) { box-shadow: inset 3px 0 0 var(--wr-frame); }
+
+:where(.group-items-jungle):is(.wr-prow-rank), :where(.group-items-jungle) :is(.wr-prow-rank) { grid-area: rank; font: 600 14px/1 var(--wr-font-heading); font-variant-numeric: tabular-nums; color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-prow .pcard-avatar), :where(.group-items-jungle) :is(.wr-prow .pcard-avatar) { grid-area: av; width: 24px; height: 24px; font-size: 11px; }
+
+:where(.group-items-jungle):is(.wr-prow-name), :where(.group-items-jungle) :is(.wr-prow-name) { grid-area: name; display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 13px; font-weight: 700; }
+
+:where(.group-items-jungle):is(.wr-prow-name > span:first-of-type), :where(.group-items-jungle) :is(.wr-prow-name > span:first-of-type) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-prow-me-dot), :where(.group-items-jungle) :is(.wr-prow-me-dot) { width: 8px; height: 8px; border-radius: 50%; background: var(--wr-blue); box-shadow: 0 0 0 3px rgb(50 104 168 / 20%); flex: none; }
+
+:where(.group-items-jungle):is(.wr-prow-me), :where(.group-items-jungle) :is(.wr-prow-me) { font-size: 10px; font-weight: 700; color: var(--wr-blue); flex: none; }
+
+:where(.group-items-jungle):is(.wr-prow-state), :where(.group-items-jungle) :is(.wr-prow-state) { grid-area: state; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--wr-ink-3); white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-prow-state.is-done), :where(.group-items-jungle) :is(.wr-prow-state.is-done) { color: var(--wr-ink); font-weight: 700; }
+
+:where(.group-items-jungle):is(.wr-prow-state.is-watch), :where(.group-items-jungle) :is(.wr-prow-state.is-watch) { color: var(--wr-blue); font-weight: 700; }
+
+:where(.group-items-jungle):is(.wr-prow-sub), :where(.group-items-jungle) :is(.wr-prow-sub) { grid-area: sub; font-size: 11px; color: var(--wr-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-prow.is-dim .wr-prow-name), :where(.group-items-jungle) :is(.wr-prow.is-dim .wr-prow-name) { color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-prow.is-dim .pcard-avatar), :where(.group-items-jungle) :is(.wr-prow.is-dim .pcard-avatar) { opacity: .7; }
+
+:where(.group-items-jungle):is(.wr-prow.is-retired .wr-prow-name, .wr-prow.is-retired .wr-prow-sub), :where(.group-items-jungle) :is(.wr-prow.is-retired .wr-prow-name, .wr-prow.is-retired .wr-prow-sub) { color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-prow.is-retired .pcard-avatar), :where(.group-items-jungle) :is(.wr-prow.is-retired .pcard-avatar) { opacity: .45; }
+
+:where(.group-items-jungle):is(.wr-done-glyph), :where(.group-items-jungle) :is(.wr-done-glyph) { display: inline-grid; place-items: center; width: 13px; height: 13px; border-radius: 50%; background: var(--wr-gold); color: #FFF; font-size: 9px; line-height: 1; }
+
+:where(.group-items-jungle):is(.wr-roster-hint), :where(.group-items-jungle) :is(.wr-roster-hint) { padding: 8px 14px; font-size: 10px; color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-roster-foot), :where(.group-items-jungle) :is(.wr-roster-foot) { margin-top: auto; padding: 10px 14px 12px; border-top: 1px solid var(--wr-divider); display: flex; flex-direction: column; gap: 8px; }
+
+:where(.group-items-jungle):is(.wr-roster-foot-head), :where(.group-items-jungle) :is(.wr-roster-foot-head) { display: flex; align-items: baseline; gap: 6px; }
+
+:where(.group-items-jungle):is(.wr-roster-foot-head .wr-race-link), :where(.group-items-jungle) :is(.wr-roster-foot-head .wr-race-link) { margin-left: auto; }
+
+:where(.group-items-jungle):is(.wr-reaction-stamp.group-spectator-reaction), :where(.group-items-jungle) :is(.wr-reaction-stamp.group-spectator-reaction) { display: inline-flex; align-items: center; padding: 0 9px; border: 1.5px solid var(--wr-frame); border-radius: 99px; background: var(--wr-paper); font: 600 13px/17px var(--wr-font-heading); color: var(--wr-ink); white-space: nowrap; animation: s5-head-wr-race-pop var(--wr-motion-ui) var(--wr-ease-out); }
+
+:where(.group-items-jungle):is(.wr-reaction-stamp.is-stale), :where(.group-items-jungle) :is(.wr-reaction-stamp.is-stale) { display: none; }
+
+/* Spectator tab bar */
+
+:where(.group-items-jungle):is(.wr-race-tabs), :where(.group-items-jungle) :is(.wr-race-tabs) { position: sticky; top: var(--race-hud-h); z-index: 39; display: flex; align-items: stretch; min-height: 38px; background: var(--wr-paper); border-bottom: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-race-tab), :where(.group-items-jungle) :is(.wr-race-tab) { display: inline-flex; align-items: center; gap: 6px; padding: 0 20px; border: 0; border-right: 1px solid var(--wr-divider); background: transparent; color: var(--wr-ink-2); font: 600 14px/1 var(--wr-font-heading) !important; letter-spacing: .02em; cursor: pointer; }
+
+:where(.group-items-jungle):is(.wr-race-tab[aria-selected="true"]), :where(.group-items-jungle) :is(.wr-race-tab[aria-selected="true"]) { color: var(--wr-blue); box-shadow: inset 0 -2px 0 var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-race-tab.is-ended[aria-selected="true"]), :where(.group-items-jungle) :is(.wr-race-tab.is-ended[aria-selected="true"]) { color: var(--wr-ink); box-shadow: inset 0 -2px 0 var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-race-tabs-end), :where(.group-items-jungle) :is(.wr-race-tabs-end) { margin-left: auto; display: flex; align-items: center; padding: 0 14px; }
+
+/* Route comparison panel */
+
+:where(.group-items-jungle):is(.wr-compare), :where(.group-items-jungle) :is(.wr-compare) { padding: 20px 28px; display: flex; flex-direction: column; gap: 18px; background: var(--wr-paper); min-height: 100%; }
+
+:where(.group-items-jungle):is(.wr-compare-head), :where(.group-items-jungle) :is(.wr-compare-head) { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+
+:where(.group-items-jungle):is(.wr-compare-head h2), :where(.group-items-jungle) :is(.wr-compare-head h2) { font: 600 20px/1.1 var(--wr-font-heading); }
+
+:where(.group-items-jungle):is(.wr-compare-head small), :where(.group-items-jungle) :is(.wr-compare-head small) { font-size: 12px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-compare-row), :where(.group-items-jungle) :is(.wr-compare-row) { display: grid; grid-template-columns: 30px minmax(0, 150px) 80px minmax(0, 1fr); gap: 10px; align-items: center; padding: 11px 0; border-top: 1px dashed var(--wr-divider); font-size: 13px; }
+
+:where(.group-items-jungle):is(.wr-compare-row strong), :where(.group-items-jungle) :is(.wr-compare-row strong) { display: block; overflow-wrap: anywhere; }
+
+:where(.group-items-jungle):is(.wr-compare-rank), :where(.group-items-jungle) :is(.wr-compare-rank) { color: var(--wr-ink-2); white-space: nowrap; font-weight: 600; }
+
+:where(.group-items-jungle):is(.wr-compare-player), :where(.group-items-jungle) :is(.wr-compare-player) { min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-compare-player small), :where(.group-items-jungle) :is(.wr-compare-player small) { display: flex; gap: 4px; flex-wrap: wrap; align-items: baseline; }
+
+:where(.group-items-jungle):is(.wr-compare-player small > span, .wr-compare-state), :where(.group-items-jungle) :is(.wr-compare-player small > span, .wr-compare-state) { white-space: nowrap; }
+
+:where(.group-items-jungle):is(.wr-compare-row small), :where(.group-items-jungle) :is(.wr-compare-row small) { font-size: 11px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-compare-active), :where(.group-items-jungle) :is(.wr-compare-active) { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px dashed var(--wr-divider); font-size: 13px; flex-wrap: wrap; }
+
+:where(.group-items-jungle):is(.wr-compare-active > span:nth-child(2)), :where(.group-items-jungle) :is(.wr-compare-active > span:nth-child(2)) { color: var(--wr-ink-2); font-size: 12px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+/* Reaction dock */
+
+:where(.group-items-jungle):is(.wr-reaction-dock), :where(.group-items-jungle) :is(.wr-reaction-dock) { position: sticky; bottom: 0; z-index: 38; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 52px; padding: 6px 16px; background: var(--wr-paper-2); border-top: 1px solid var(--wr-frame); }
+
+:where(.group-items-jungle):is(.wr-reaction-dock .wr-race-btn), :where(.group-items-jungle) :is(.wr-reaction-dock .wr-race-btn) { min-height: 30px; }
+
+:where(.group-items-jungle):is(.wr-reaction-note), :where(.group-items-jungle) :is(.wr-reaction-note) { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-reaction-end), :where(.group-items-jungle) :is(.wr-reaction-end) { margin-left: auto; display: inline-flex; gap: 10px; align-items: center; }
+
+:where(.group-items-jungle):is(.wr-mute-list), :where(.group-items-jungle) :is(.wr-mute-list) { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px; border-top: 1px dashed var(--wr-divider); background: var(--wr-paper-2); }
+
+/* Holding / interim / recovery panels inside the race shell */
+
+:where(.group-items-jungle):is(.wr-race-hold), :where(.group-items-jungle) :is(.wr-race-hold) { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 48px 36px 56px; max-width: 640px; }
+
+:where(.group-items-jungle):is(.wr-race-hold h1), :where(.group-items-jungle) :is(.wr-race-hold h1) { font: 600 26px/1.15 var(--wr-font-heading); color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-race-hold p), :where(.group-items-jungle) :is(.wr-race-hold p) { font-size: 14px; line-height: 1.7; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-race-hold-actions), :where(.group-items-jungle) :is(.wr-race-hold-actions) { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+
+/* ── Group Result A (완주 · 경기 진행 중) — Freeze 08 6c ───────── */
+
+:where(.group-items-jungle):is(.wr-page.wr-race.wr-result-a), :where(.group-items-jungle) :is(.wr-page.wr-race.wr-result-a) { padding: 24px 16px 40px; }
+
+:where(.group-items-jungle):is(.wr-result-a-frame), :where(.group-items-jungle) :is(.wr-result-a-frame) { position: relative; width: min(920px, 100%); min-height: 640px; margin: 0 auto; padding: 22px 16px 32px; background: var(--wr-canvas); border: 1px solid var(--wr-frame); border-radius: var(--wr-radius-shell); box-shadow: var(--wr-shadow-shell); overflow: hidden; background-image: radial-gradient(120% 60% at 50% 115%, #B9CFA4 0 40%, transparent 41%), radial-gradient(90% 50% at 15% 110%, #C8D6BC 0 45%, transparent 46%), radial-gradient(90% 50% at 85% 112%, #D7E0CC 0 45%, transparent 46%); }
+
+:where(.group-items-jungle):is(.wr-result-a-scene), :where(.group-items-jungle) :is(.wr-result-a-scene) { position: relative; height: 150px; display: flex; justify-content: center; align-items: flex-end; }
+
+:where(.group-items-jungle):is(.wr-result-a-scene img), :where(.group-items-jungle) :is(.wr-result-a-scene img) { height: 118px; width: auto; animation: s5-head-wr-race-pop var(--wr-motion-page) var(--wr-ease-out); }
+
+:where(.group-items-jungle):is(.wr-result-a-scene.is-first::before, .wr-result-a-scene.is-podium::before), :where(.group-items-jungle) :is(.wr-result-a-scene.is-first::before, .wr-result-a-scene.is-podium::before) { content: ""; position: absolute; top: 18px; left: calc(50% - 70px); width: 140px; height: 50px; background: radial-gradient(circle 4px at 10% 40%, var(--wr-gold) 98%, transparent) , radial-gradient(circle 3px at 50% 10%, var(--wr-gold) 98%, transparent), radial-gradient(circle 4px at 90% 50%, var(--wr-gold) 98%, transparent); }
+
+:where(.group-items-jungle):is(.wr-result-a-scene.is-first::before), :where(.group-items-jungle) :is(.wr-result-a-scene.is-first::before) { background: radial-gradient(circle 4px at 10% 40%, var(--wr-gold) 98%, transparent), radial-gradient(circle 3px at 50% 10%, var(--wr-teal) 98%, transparent), radial-gradient(circle 4px at 90% 50%, var(--wr-purple) 98%, transparent); }
+
+:where(.group-items-jungle):is(.wr-result-card), :where(.group-items-jungle) :is(.wr-result-card) { position: relative; width: min(640px, 100%); margin: 4px auto 0; background: var(--wr-paper); border: 1px solid var(--wr-frame); border-radius: 14px; box-shadow: inset 0 0 0 5px var(--wr-paper), inset 0 0 0 6.5px var(--wr-divider), 0 20px 50px rgb(36 52 48 / 16%); }
+
+:where(.group-items-jungle):is(.wr-result-row), :where(.group-items-jungle) :is(.wr-result-row) { padding: 14px 32px; border-bottom: 1px solid var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-result-row:last-child), :where(.group-items-jungle) :is(.wr-result-row:last-child) { border-bottom: 0; }
+
+:where(.group-items-jungle):is(.wr-result-head), :where(.group-items-jungle) :is(.wr-result-head) { padding: 24px 32px 18px; }
+
+:where(.group-items-jungle):is(.wr-result-headline), :where(.group-items-jungle) :is(.wr-result-headline) { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; }
+
+:where(.group-items-jungle):is(.wr-result-headline h1), :where(.group-items-jungle) :is(.wr-result-headline h1) { font: 600 52px/1 var(--wr-font-heading); color: var(--wr-gold); }
+
+:where(.group-items-jungle):is(.wr-result-headline > span:not(.wr-pill)), :where(.group-items-jungle) :is(.wr-result-headline > span:not(.wr-pill)) { font-size: 13px; color: var(--wr-ink-2); }
+
+:where(.group-items-jungle):is(.wr-result-headline .wr-pill), :where(.group-items-jungle) :is(.wr-result-headline .wr-pill) { margin-left: auto; }
+
+:where(.group-items-jungle):is(.wr-result-strip), :where(.group-items-jungle) :is(.wr-result-strip) { display: flex; align-items: center; gap: 12px; background: var(--wr-paper-2); color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-result-strip > div), :where(.group-items-jungle) :is(.wr-result-strip > div) { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-result-strip strong), :where(.group-items-jungle) :is(.wr-result-strip strong) { font-size: 13px; }
+
+:where(.group-items-jungle):is(.wr-result-strip small), :where(.group-items-jungle) :is(.wr-result-strip small) { font-size: 11px; color: var(--wr-ink-3); }
+
+:where(.group-items-jungle):is(.wr-result-deadline), :where(.group-items-jungle) :is(.wr-result-deadline) { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+:where(.group-items-jungle):is(.wr-result-deadline-value), :where(.group-items-jungle) :is(.wr-result-deadline-value) { display: inline-flex; align-items: center; gap: 6px; font: 600 18px/1 var(--wr-font-heading); font-variant-numeric: tabular-nums; }
+
+:where(.group-items-jungle):is(.wr-result-deadline small), :where(.group-items-jungle) :is(.wr-result-deadline small) { font-size: 10px; }
+
+:where(.group-items-jungle):is(.wr-result-stats), :where(.group-items-jungle) :is(.wr-result-stats) { display: flex; padding: 0 0; }
+
+:where(.group-items-jungle):is(.wr-result-stats > div), :where(.group-items-jungle) :is(.wr-result-stats > div) { display: flex; flex-direction: column; gap: 4px; padding: 16px 32px; border-right: 1px dashed var(--wr-divider); }
+
+:where(.group-items-jungle):is(.wr-result-stats > div.is-wide), :where(.group-items-jungle) :is(.wr-result-stats > div.is-wide) { flex: 1; border-right: 0; min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-result-stats strong), :where(.group-items-jungle) :is(.wr-result-stats strong) { font: 600 30px/1 var(--wr-font-heading); font-variant-numeric: tabular-nums; }
+
+:where(.group-items-jungle):is(.wr-result-course), :where(.group-items-jungle) :is(.wr-result-course) { font: 600 15px/1.3 var(--wr-font-heading); color: var(--wr-ink-2); overflow-wrap: anywhere; }
+
+:where(.group-items-jungle):is(.wr-result-course b), :where(.group-items-jungle) :is(.wr-result-course b) { color: var(--wr-gold); font-weight: 600; }
+
+:where(.group-items-jungle):is(.wr-result-route), :where(.group-items-jungle) :is(.wr-result-route) { display: flex; flex-direction: column; gap: 8px; }
+
+:where(.group-items-jungle):is(.wr-result-actions), :where(.group-items-jungle) :is(.wr-result-actions) { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 16px 32px 20px; }
+
+:where(.group-items-jungle):is(.wr-result-leave), :where(.group-items-jungle) :is(.wr-result-leave) { margin-left: auto; }
+
+:where(.group-items-jungle):is(.wr-mute-row), :where(.group-items-jungle) :is(.wr-mute-row) { padding: 0 14px 6px 46px; }
+
+@media (max-width: 760px) {
+  :where(.group-items-jungle):is(.wr-page.wr-race.wr-result-a), :where(.group-items-jungle) :is(.wr-page.wr-race.wr-result-a) { padding: 0; }
+  :where(.group-items-jungle):is(.wr-result-a-frame), :where(.group-items-jungle) :is(.wr-result-a-frame) { border-radius: 0; border: 0; box-shadow: none; min-height: 100vh; padding: 12px 10px 120px; }
+  :where(.group-items-jungle):is(.wr-result-a-scene), :where(.group-items-jungle) :is(.wr-result-a-scene) { height: 112px; }
+  :where(.group-items-jungle):is(.wr-result-a-scene img), :where(.group-items-jungle) :is(.wr-result-a-scene img) { height: 84px; }
+  :where(.group-items-jungle):is(.wr-result-row, .wr-result-head), :where(.group-items-jungle) :is(.wr-result-row, .wr-result-head) { padding-left: 18px; padding-right: 18px; }
+  :where(.group-items-jungle):is(.wr-result-headline h1), :where(.group-items-jungle) :is(.wr-result-headline h1) { font-size: 40px; }
+  :where(.group-items-jungle):is(.wr-result-headline .wr-pill), :where(.group-items-jungle) :is(.wr-result-headline .wr-pill) { margin-left: 0; }
+  :where(.group-items-jungle):is(.wr-result-strip), :where(.group-items-jungle) :is(.wr-result-strip) { flex-wrap: wrap; }
+  :where(.group-items-jungle):is(.wr-result-deadline small), :where(.group-items-jungle) :is(.wr-result-deadline small) { display: none; }
+  :where(.group-items-jungle):is(.wr-result-stats), :where(.group-items-jungle) :is(.wr-result-stats) { flex-wrap: wrap; }
+  :where(.group-items-jungle):is(.wr-result-stats > div), :where(.group-items-jungle) :is(.wr-result-stats > div) { flex: 1 1 40%; padding: 14px 18px; }
+  :where(.group-items-jungle):is(.wr-result-stats > div.is-wide), :where(.group-items-jungle) :is(.wr-result-stats > div.is-wide) { flex-basis: 100%; border-top: 1px dashed var(--wr-divider); }
+  :where(.group-items-jungle):is(.wr-result-stats strong), :where(.group-items-jungle) :is(.wr-result-stats strong) { font-size: 28px; }
+  :where(.group-items-jungle):is(.wr-result-actions), :where(.group-items-jungle) :is(.wr-result-actions) { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--wr-paper); border-top: 1px solid var(--wr-divider); padding: 12px 16px 16px; }
+  :where(.group-items-jungle):is(.wr-result-actions .wr-race-btn--primary), :where(.group-items-jungle) :is(.wr-result-actions .wr-race-btn--primary) { flex-basis: 100%; }
+}
+
+/* ── Item-use toast (EffectOverlay .floating-message · duel .item-effect-pop) ──────────────
+   Presentation only: same messages and timing. Rendered as siblings right after the race frame,
+   outside .wr-page, so colours/timings are literal here. Never covers the HUD, the article title,
+   or the Link Index header/filter; pointer-events none so it never blocks a click. */
+
+:where(.group-items-jungle):is(.wr-race ~ .floating-message, .wr-race ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race ~ .floating-message, .wr-race ~ .item-effect-pop) {
+  position: fixed; top: 200px; right: max(28px, calc((100vw - 1200px) / 2 + 28px)); left: auto; bottom: auto; transform: none;
+  z-index: 45; max-width: min(320px, calc(100vw - 32px)); padding: 6px 12px; border-radius: 99px;
+  background: #243430; color: #FCFCF7; font: 600 12px/1.4 "IBM Plex Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+  box-shadow: 0 6px 16px rgb(36 52 48 / 18%); pointer-events: none; animation: s5-head-wr-race-toast 220ms cubic-bezier(0, 0, .2, 1);
+}
+
+:where(.group-items-jungle):is(.wr-race ~ .item-effect-pop span), :where(.group-items-jungle) :is(.wr-race ~ .item-effect-pop span) { display: inline; padding: 0; border-radius: 0; background: none; color: inherit; font: inherit; box-shadow: none; }
+
+/* Duel: below HUD (56) + opponent strip (36) + article title row — same spot when the Link Index is open (below its header). */
+
+:where(.group-items-jungle):is(.wr-race--duel ~ .floating-message, .wr-race--duel ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race--duel ~ .floating-message, .wr-race--duel ~ .item-effect-pop) { top: 182px; }
+
+/* Duel can show both at once ("아이템이 적용됐습니다!" + the item name): stack, never overlap. */
+
+:where(.group-items-jungle):is(.wr-race--duel ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race--duel ~ .item-effect-pop) { top: 218px; }
+
+@keyframes s5-head-wr-race-toast { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 760px) {
+  /* Mobile: compact, just below the sticky race HUD, above content. */
+  :where(.group-items-jungle):is(.wr-race ~ .floating-message, .wr-race ~ .item-effect-pop, .wr-race--duel ~ .floating-message, .wr-race--duel ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race ~ .floating-message, .wr-race ~ .item-effect-pop, .wr-race--duel ~ .floating-message, .wr-race--duel ~ .item-effect-pop) { top: 84px; right: 12px; max-width: calc(100vw - 24px); padding: 5px 10px; font-size: 11px; }
+  :where(.group-items-jungle):is(.wr-race:has(.wr-hud-status .wr-pill) ~ .floating-message, .wr-race:has(.wr-hud-status .wr-pill) ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race:has(.wr-hud-status .wr-pill) ~ .floating-message, .wr-race:has(.wr-hud-status .wr-pill) ~ .item-effect-pop) { top: 112px; }
+  /* The item-name pop sits just above the dock so it never stacks onto the article title. */
+  :where(.group-items-jungle):is(.wr-race ~ .item-effect-pop, .wr-race--duel ~ .item-effect-pop, .wr-race:has(.wr-hud-status .wr-pill) ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race ~ .item-effect-pop, .wr-race--duel ~ .item-effect-pop, .wr-race:has(.wr-hud-status .wr-pill) ~ .item-effect-pop) { top: auto; bottom: calc(var(--race-dock-mobile, 62px) + 10px); }
+  /* Link Index is a full-screen sheet on mobile — keep the toast off its header and filter. */
+  :where(.group-items-jungle):is(.wr-race:has(.duel-item-index) ~ .floating-message), :where(.group-items-jungle) :is(.wr-race:has(.duel-item-index) ~ .floating-message) { top: auto; bottom: 16px; }
+  :where(.group-items-jungle):is(.wr-race:has(.duel-item-index) ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race:has(.duel-item-index) ~ .item-effect-pop) { top: auto; bottom: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.group-items-jungle):is(.wr-race ~ .floating-message, .wr-race ~ .item-effect-pop), :where(.group-items-jungle) :is(.wr-race ~ .floating-message, .wr-race ~ .item-effect-pop) { animation: none; }
+}
+
+/* Group mobile sheet (hidden on desktop) */
+
+:where(.group-items-jungle):is(.wr-group-sheet), :where(.group-items-jungle) :is(.wr-group-sheet) { display: none; }
+
+/* ── Motion: state changes only ─────────────────────── */
+
+:where(.group-items-jungle):is(.wr-race .wr-pill, .wr-race .wr-conn), :where(.group-items-jungle) :is(.wr-race .wr-pill, .wr-race .wr-conn) { animation: s5-head-wr-race-fade var(--wr-motion-ui) var(--wr-ease-out); }
+
+:where(.group-items-jungle):is(.wr-race .duel-item-slot.is-active, .wr-race-main.is-hit .article-content), :where(.group-items-jungle) :is(.wr-race .duel-item-slot.is-active, .wr-race-main.is-hit .article-content) { animation: s5-head-wr-race-pop var(--wr-motion-ui) var(--wr-ease-out); }
+
+@keyframes s5-head-wr-race-fade { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes s5-head-wr-race-pop { from { opacity: .4; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+/* ── Mobile ────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  :where(.group-items-jungle):is(.wr-page.wr-race), :where(.group-items-jungle) :is(.wr-page.wr-race) { padding: 0; }
+  :where(.group-items-jungle):is(.wr-race), :where(.group-items-jungle) :is(.wr-race) { --race-hud-h: auto; --race-top: 0px; --race-dock-h: 62px; }
+  :where(.group-items-jungle):is(.wr-race-shell), :where(.group-items-jungle) :is(.wr-race-shell) { border: 0; border-radius: 0; box-shadow: none; min-height: 100vh; }
+  :where(.group-items-jungle):is(.wr-race-hud), :where(.group-items-jungle) :is(.wr-race-hud) { position: sticky; top: 0; flex-wrap: wrap; border-radius: 0; min-height: 0; }
+  :where(.group-items-jungle):is(.wr-hud-cell), :where(.group-items-jungle) :is(.wr-hud-cell) { padding: 0 10px; border-right: 0; }
+  :where(.group-items-jungle):is(.wr-hud-brand), :where(.group-items-jungle) :is(.wr-hud-brand) { order: 0; padding: 8px 10px 4px 12px; }
+  :where(.group-items-jungle):is(.wr-hud-brand .wr-brand-mark), :where(.group-items-jungle) :is(.wr-hud-brand .wr-brand-mark) { width: 22px; height: 22px; font-size: 10px; }
+  :where(.group-items-jungle):is(.wr-hud-mode), :where(.group-items-jungle) :is(.wr-hud-mode) { display: none; }
+  :where(.group-items-jungle):is(.wr-hud-exit), :where(.group-items-jungle) :is(.wr-hud-exit) { order: 2; margin-left: auto; padding: 6px 10px 2px; }
+  :where(.group-items-jungle):is(.wr-hud-conn), :where(.group-items-jungle) :is(.wr-hud-conn) { order: 1; padding: 8px 4px 4px; }
+  :where(.group-items-jungle):is(.wr-hud-conn .wr-conn), :where(.group-items-jungle) :is(.wr-hud-conn .wr-conn) { font-size: 0; gap: 0; }
+  :where(.group-items-jungle):is(.wr-hud-stat, .wr-hud-timer), :where(.group-items-jungle) :is(.wr-hud-stat, .wr-hud-timer) { order: 1; flex-direction: row; align-items: baseline; gap: 4px; padding: 8px 6px 4px; min-width: 0; }
+  :where(.group-items-jungle):is(.wr-hud-stat-value), :where(.group-items-jungle) :is(.wr-hud-stat-value) { font-size: 16px; }
+  :where(.group-items-jungle):is(.wr-hud-timer.is-deadline, .wr-hud-timer.is-ended), :where(.group-items-jungle) :is(.wr-hud-timer.is-deadline, .wr-hud-timer.is-ended) { border-radius: 6px; padding: 4px 8px; margin-top: 4px; }
+  :where(.group-items-jungle):is(.wr-hud-doc, .wr-hud-arrow, .wr-hud-watch, .wr-hud-record), :where(.group-items-jungle) :is(.wr-hud-doc, .wr-hud-arrow, .wr-hud-watch, .wr-hud-record) { order: 3; padding: 2px 6px 8px; }
+  :where(.group-items-jungle):is(.wr-hud-doc--current, .wr-hud-watch), :where(.group-items-jungle) :is(.wr-hud-doc--current, .wr-hud-watch) { padding-left: 12px; max-width: 44%; }
+  :where(.group-items-jungle):is(.wr-hud-doc--goal), :where(.group-items-jungle) :is(.wr-hud-doc--goal) { max-width: 44%; }
+  :where(.group-items-jungle):is(.wr-hud-doc .wr-hud-label), :where(.group-items-jungle) :is(.wr-hud-doc .wr-hud-label) { display: none; }
+  :where(.group-items-jungle):is(.wr-hud-doc-value), :where(.group-items-jungle) :is(.wr-hud-doc-value) { font-size: 15px; }
+  :where(.group-items-jungle):is(.wr-hud-arrow), :where(.group-items-jungle) :is(.wr-hud-arrow) { padding: 2px 2px 8px; }
+  :where(.group-items-jungle):is(.wr-hud-status), :where(.group-items-jungle) :is(.wr-hud-status) { order: 4; flex-basis: 100%; justify-content: flex-start; padding: 0 12px 8px; }
+  :where(.group-items-jungle):is(.wr-hud-status:empty), :where(.group-items-jungle) :is(.wr-hud-status:empty) { display: none; }
+  :where(.group-items-jungle):is(.wr-hud-record), :where(.group-items-jungle) :is(.wr-hud-record) { padding-left: 12px; }
+  :where(.group-items-jungle):is(.wr-hud-record strong), :where(.group-items-jungle) :is(.wr-hud-record strong) { font-size: 15px; }
+  :where(.group-items-jungle):is(.wr-race-strip), :where(.group-items-jungle) :is(.wr-race-strip) { position: static; padding: 6px 12px; gap: 10px; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; min-height: 36px; }
+  :where(.group-items-jungle):is(.wr-race-strip .wr-strip-end), :where(.group-items-jungle) :is(.wr-race-strip .wr-strip-end) { margin-left: 0; }
+  :where(.group-items-jungle):is(.wr-race-strip > *), :where(.group-items-jungle) :is(.wr-race-strip > *) { flex: none; }
+  :where(.group-items-jungle):is(.wr-race-tabs), :where(.group-items-jungle) :is(.wr-race-tabs) { position: static; overflow-x: auto; }
+  :where(.group-items-jungle):is(.wr-race-body, .wr-race--group .wr-race-body), :where(.group-items-jungle) :is(.wr-race-body, .wr-race--group .wr-race-body) { grid-template-columns: minmax(0, 1fr); }
+  :where(.group-items-jungle):is(.wr-race-side), :where(.group-items-jungle) :is(.wr-race-side) { display: none; }
+  :where(.group-items-jungle):is(.wr-race .current-page-card), :where(.group-items-jungle) :is(.wr-race .current-page-card) { padding: 16px 16px 28px; }
+  :where(.group-items-jungle):is(.wr-article-head h1), :where(.group-items-jungle) :is(.wr-article-head h1) { font-size: 22px !important; }
+  :where(.group-items-jungle):is(.wr-article-tag), :where(.group-items-jungle) :is(.wr-article-tag) { margin-left: 0; flex-basis: 100%; }
+  :where(.group-items-jungle):is(.wr-race .article-content), :where(.group-items-jungle) :is(.wr-race .article-content) { font-size: 15px; line-height: 1.8; }
+  :where(.group-items-jungle):is(.wr-target-brief), :where(.group-items-jungle) :is(.wr-target-brief) { margin: 12px 16px 0; }
+  :where(.group-items-jungle):is(.wr-race .state-text), :where(.group-items-jungle) :is(.wr-race .state-text) { margin: 10px 16px; }
+  :where(.group-items-jungle):is(.wr-race-dock), :where(.group-items-jungle) :is(.wr-race-dock) { overflow-x: auto; }
+  /* Single's existing item menu opens above the dock; horizontal scrolling
+     otherwise clips that popup and prevents touch activation. */
+  :where(.group-items-jungle):is(.wr-race--single .wr-race-dock), :where(.group-items-jungle) :is(.wr-race--single .wr-race-dock) { overflow: visible; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-bar), :where(.group-items-jungle) :is(.wr-race .duel-item-bar) { padding: 8px 10px; gap: 8px; border-right: 0; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-bar__head), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__head) { display: none; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-bar__slots), :where(.group-items-jungle) :is(.wr-race .duel-item-bar__slots) { gap: 6px; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-slot), :where(.group-items-jungle) :is(.wr-race .duel-item-slot) { width: 64px; height: 46px; padding: 4px 6px; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-slot__name), :where(.group-items-jungle) :is(.wr-race .duel-item-slot__name) { font-size: 11px; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-slot__icon), :where(.group-items-jungle) :is(.wr-race .duel-item-slot__icon) { display: none; }
+  :where(.group-items-jungle):is(.wr-race-dock-hint), :where(.group-items-jungle) :is(.wr-race-dock-hint) { display: none; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-effects), :where(.group-items-jungle) :is(.wr-race .duel-item-effects) { position: absolute; bottom: calc(100% + 6px); right: 10px; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-index), :where(.group-items-jungle) :is(.wr-race .duel-item-index) { inset: 0; z-index: 60; border-left: 0; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-index__head), :where(.group-items-jungle) :is(.wr-race .duel-item-index__head) { padding: 10px 14px; gap: 8px; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-index__filter), :where(.group-items-jungle) :is(.wr-race .duel-item-index__filter) { flex-basis: 100%; max-width: none; height: 40px; font-size: 14px; order: 5; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-index__words), :where(.group-items-jungle) :is(.wr-race .duel-item-index__words) { display: block; padding: 0; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-index__words > li), :where(.group-items-jungle) :is(.wr-race .duel-item-index__words > li) { border-bottom: 1px solid var(--wr-divider); }
+  :where(.group-items-jungle):is(.wr-race .duel-item-index__word), :where(.group-items-jungle) :is(.wr-race .duel-item-index__word) { width: 100%; min-height: 44px; border: 0 !important; border-radius: 0; padding: 0 14px; font-size: 14px; justify-content: space-between; background: transparent; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-index__censor-note), :where(.group-items-jungle) :is(.wr-race .duel-item-index__censor-note) { padding: 6px 14px; }
+  :where(.group-items-jungle):is(.wr-compare), :where(.group-items-jungle) :is(.wr-compare) { padding: 16px; }
+  :where(.group-items-jungle):is(.wr-compare-row), :where(.group-items-jungle) :is(.wr-compare-row) { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; }
+  :where(.group-items-jungle):is(.wr-compare-row > .wr-chain), :where(.group-items-jungle) :is(.wr-compare-row > .wr-chain) { grid-column: 1 / -1; }
+  :where(.group-items-jungle):is(.wr-reaction-dock), :where(.group-items-jungle) :is(.wr-reaction-dock) { display: none; }
+  :where(.group-items-jungle):is(.wr-race-hold), :where(.group-items-jungle) :is(.wr-race-hold) { padding: 32px 16px 40px; }
+
+  /* Group bottom sheet */
+  :where(.group-items-jungle):is(.wr-group-sheet), :where(.group-items-jungle) :is(.wr-group-sheet) { display: block; position: sticky; bottom: 0; z-index: 42; background: var(--wr-paper); border-top: 1px solid var(--wr-frame); border-radius: 14px 14px 0 0; box-shadow: 0 -10px 24px rgb(36 52 48 / 10%); }
+  :where(.group-items-jungle):is(.wr-sheet-summary), :where(.group-items-jungle) :is(.wr-sheet-summary) { display: flex; align-items: stretch; min-height: 52px; }
+  :where(.group-items-jungle):is(.wr-sheet-summary > *), :where(.group-items-jungle) :is(.wr-sheet-summary > *) { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 12px; border-right: 1px solid var(--wr-divider); min-width: 0; }
+  :where(.group-items-jungle):is(.wr-sheet-summary strong), :where(.group-items-jungle) :is(.wr-sheet-summary strong) { font: 600 16px/1.1 var(--wr-font-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  :where(.group-items-jungle):is(.wr-sheet-summary .wr-hud-timer), :where(.group-items-jungle) :is(.wr-sheet-summary .wr-hud-timer) { order: 0; min-width: 86px; flex-direction: column; align-items: flex-start; margin: 0; border-radius: 0; padding: 6px 12px; }
+  :where(.group-items-jungle):is(.wr-sheet-summary .wr-hud-stat-value), :where(.group-items-jungle) :is(.wr-sheet-summary .wr-hud-stat-value) { font-size: 20px; }
+  :where(.group-items-jungle):is(.wr-sheet-toggle), :where(.group-items-jungle) :is(.wr-sheet-toggle) { margin-left: auto; width: 52px; flex: none; align-items: center !important; border: 0 !important; border-left: 1px solid var(--wr-divider) !important; background: transparent; color: var(--wr-blue); font-size: 18px; cursor: pointer; }
+  :where(.group-items-jungle):is(.wr-sheet-status), :where(.group-items-jungle) :is(.wr-sheet-status) { padding: 6px 12px 8px; border-top: 1px dashed var(--wr-divider); }
+  :where(.group-items-jungle):is(.wr-sheet-tabs), :where(.group-items-jungle) :is(.wr-sheet-tabs) { display: flex; border-top: 1px solid var(--wr-divider); }
+  :where(.group-items-jungle):is(.wr-sheet-tabs .wr-race-tab), :where(.group-items-jungle) :is(.wr-sheet-tabs .wr-race-tab) { flex: 1; justify-content: center; min-height: 44px; padding: 0 8px; border-right: 0; }
+  :where(.group-items-jungle):is(.wr-sheet-panel), :where(.group-items-jungle) :is(.wr-sheet-panel) { max-height: min(432px, 55vh); overflow-y: auto; overscroll-behavior: contain; }
+  :where(.group-items-jungle):is(.wr-sheet-panel .wr-prow), :where(.group-items-jungle) :is(.wr-sheet-panel .wr-prow) { padding: 9px 14px; grid-template-columns: 28px 28px minmax(0, 1fr) auto; }
+  :where(.group-items-jungle):is(.wr-sheet-panel .wr-prow-name), :where(.group-items-jungle) :is(.wr-sheet-panel .wr-prow-name) { font-size: 14px; }
+  :where(.group-items-jungle):is(.wr-sheet-panel .wr-prow-sub), :where(.group-items-jungle) :is(.wr-sheet-panel .wr-prow-sub) { font-size: 12px; }
+  :where(.group-items-jungle):is(.wr-sheet-reactions), :where(.group-items-jungle) :is(.wr-sheet-reactions) { display: grid; grid-template-columns: 34px repeat(5, minmax(0, 1fr)); gap: 6px; align-items: center; padding: 8px 12px 12px; border-top: 1px dashed var(--wr-divider); }
+  :where(.group-items-jungle):is(.wr-sheet-reactions .wr-race-btn), :where(.group-items-jungle) :is(.wr-sheet-reactions .wr-race-btn) { min-height: 40px; padding: 0 4px; font-size: 12px !important; }
+  :where(.group-items-jungle):is(.wr-sheet-reactions > small), :where(.group-items-jungle) :is(.wr-sheet-reactions > small) { font: 600 10px/1.1 var(--wr-font-heading); letter-spacing: .06em; color: var(--wr-ink-3); }
+  :where(.group-items-jungle):is(.wr-sheet-route), :where(.group-items-jungle) :is(.wr-sheet-route) { padding: 12px 14px; }
+}
+
+@media (max-width: 380px) {
+  :where(.group-items-jungle):is(.wr-hud-doc--current, .wr-hud-watch, .wr-hud-doc--goal), :where(.group-items-jungle) :is(.wr-hud-doc--current, .wr-hud-watch, .wr-hud-doc--goal) { max-width: 42%; }
+  :where(.group-items-jungle):is(.wr-race .duel-item-slot), :where(.group-items-jungle) :is(.wr-race .duel-item-slot) { width: 54px; }
+  :where(.group-items-jungle):is(.wr-sheet-summary > *), :where(.group-items-jungle) :is(.wr-sheet-summary > *) { padding: 6px 8px; }
+  :where(.group-items-jungle):is(.wr-sheet-summary .wr-hud-timer), :where(.group-items-jungle) :is(.wr-sheet-summary .wr-hud-timer) { min-width: 74px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.group-items-jungle):is(.wr-race *, .wr-race *::before, .wr-race *::after), :where(.group-items-jungle) :is(.wr-race *, .wr-race *::before, .wr-race *::after) { animation: none !important; transition: none !important; }
+}
+
+:where(.group-items-jungle):is(.wr-audio), :where(.group-items-jungle) :is(.wr-audio){position:relative;display:flex;justify-content:flex-end;padding:6px max(12px,env(safe-area-inset-right));box-sizing:border-box;min-height:56px;background:#fff9e9;z-index:20000;font:14px/1.5 system-ui,sans-serif;color:#243430}
+
+:where(.group-items-jungle):is(.wr-audio button), :where(.group-items-jungle) :is(.wr-audio button){font:inherit;color:inherit;cursor:pointer;min-height:44px;border:1px solid #8a987e;border-radius:12px;background:#fff9e9;padding:7px 12px}
+
+:where(.group-items-jungle):is(.wr-audio-toggle), :where(.group-items-jungle) :is(.wr-audio-toggle){display:flex;align-items:center;gap:6px;box-shadow:0 2px 10px #20342c20}
+
+:where(.group-items-jungle):is(.wr-audio-toggle>span:first-child), :where(.group-items-jungle) :is(.wr-audio-toggle>span:first-child){font-size:21px}
+
+:where(.group-items-jungle):is(.wr-audio-panel), :where(.group-items-jungle) :is(.wr-audio-panel){position:absolute;right:12px;top:100%;width:min(280px,calc(100vw - 24px));padding:16px;border:1px solid #8a987e;border-radius:14px;background:#fff9e9;box-shadow:0 8px 32px #20342c38;box-sizing:border-box;max-height:calc(100dvh - 90px);overflow:auto}
+
+:where(.group-items-jungle):is(.wr-audio-panel header,.wr-audio-volume>span), :where(.group-items-jungle) :is(.wr-audio-panel header,.wr-audio-volume>span){display:flex;justify-content:space-between;align-items:center;gap:12px}
+
+:where(.group-items-jungle):is(.wr-audio-mute), :where(.group-items-jungle) :is(.wr-audio-mute){display:flex;align-items:center;gap:9px;min-height:44px;margin:8px 0}
+
+:where(.group-items-jungle):is(.wr-audio-volume), :where(.group-items-jungle) :is(.wr-audio-volume){display:block;margin-top:12px}
+
+:where(.group-items-jungle):is(.wr-audio-volume input), :where(.group-items-jungle) :is(.wr-audio-volume input){width:100%;min-height:44px;margin:0;accent-color:#287066}
+
+:where(.group-items-jungle):is(.wr-audio input[type=checkbox]), :where(.group-items-jungle) :is(.wr-audio input[type=checkbox]){width:20px;height:20px;accent-color:#287066}
+
+:where(.group-items-jungle):is(.wr-audio :focus-visible), :where(.group-items-jungle) :is(.wr-audio :focus-visible){outline:3px solid #2b7fbd;outline-offset:3px}
+
+:where(.group-items-jungle):is(.wr-audio-enable), :where(.group-items-jungle) :is(.wr-audio-enable){margin-top:8px;width:100%}
+
+@media(max-width:760px){:where(.group-items-jungle):is(.wr-audio), :where(.group-items-jungle) :is(.wr-audio){padding-left:max(12px,env(safe-area-inset-left))}}
+
+/* Duel only. A reserved lane keeps stamps off article links and dock labels. */
+
+:where(.group-items-jungle):is(.wr-duel-feedback-lane), :where(.group-items-jungle) :is(.wr-duel-feedback-lane) { height: 80px; flex: 0 0 80px; min-width: 0; padding: 8px 16px; box-sizing: border-box; background: var(--wr-paper-2); border-bottom: 1px dashed var(--wr-divider); display: grid; grid-template-columns: minmax(0,1fr) 64px; align-items: center; gap: 10px; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-stack), :where(.group-items-jungle) :is(.wr-duel-feedback-stack) { grid-column: 1; grid-row: 1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; pointer-events: none; height: 100%; min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-lane .wr-duel-feedback-fallback), :where(.group-items-jungle) :is(.wr-duel-feedback-lane .wr-duel-feedback-fallback) { position: static; inset: auto; transform: none; grid-column: 1; grid-row: 1; justify-self: end; box-sizing: border-box; width: min(420px,100%); margin: 0; padding: 8px 12px; background: var(--wr-paper); color: var(--wr-blue); border: 1px solid var(--wr-blue); border-radius: 8px; font: 13px/1.2 var(--wr-font-body); overflow-wrap: anywhere; pointer-events: none; animation: none; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback, .wr-duel-impact), :where(.group-items-jungle) :is(.wr-duel-feedback, .wr-duel-impact) { --feedback-color: var(--wr-blue); color: var(--feedback-color); pointer-events: none; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback[data-tone="coral"], .wr-duel-impact[data-tone="coral"]), :where(.group-items-jungle) :is(.wr-duel-feedback[data-tone="coral"], .wr-duel-impact[data-tone="coral"]) { --feedback-color: var(--wr-coral); }
+
+:where(.group-items-jungle):is(.wr-duel-feedback[data-tone="teal"], .wr-duel-impact[data-tone="teal"]), :where(.group-items-jungle) :is(.wr-duel-feedback[data-tone="teal"], .wr-duel-impact[data-tone="teal"]) { --feedback-color: var(--wr-teal); }
+
+:where(.group-items-jungle):is(.wr-duel-feedback), :where(.group-items-jungle) :is(.wr-duel-feedback) { position: relative; display: flex; align-items: center; gap: 10px; box-sizing: border-box; width: min(420px,100%); height: 64px; padding: 7px 14px 7px 10px; border: 2px solid currentColor; border-radius: 8px 14px 10px 6px; background: var(--wr-paper); box-shadow: 2px 2px 0 var(--wr-divider); font-family: var(--wr-font-body); }
+
+:where(.group-items-jungle):is(.wr-duel-feedback::after), :where(.group-items-jungle) :is(.wr-duel-feedback::after) { content: ''; position: absolute; inset: 4px; border: 1px dashed currentColor; opacity: .35; border-radius: inherit; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback-symbol) { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-symbol svg), :where(.group-items-jungle) :is(.wr-duel-feedback-symbol svg) { width: 100%; height: 100%; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback[data-kind="block"] .wr-duel-feedback-symbol,
+.wr-duel-feedback[data-kind="reflect"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-kind="block"] .wr-duel-feedback-symbol,
+.wr-duel-feedback[data-kind="reflect"] .wr-duel-feedback-symbol) { width: 64px; height: 48px; flex-basis: 64px; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-copy), :where(.group-items-jungle) :is(.wr-duel-feedback-copy) { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-copy strong), :where(.group-items-jungle) :is(.wr-duel-feedback-copy strong) { font-size: 15px; line-height: 1.1; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-copy small), :where(.group-items-jungle) :is(.wr-duel-feedback-copy small) { color: var(--wr-ink-2); font-size: 11px; line-height: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-rays), :where(.group-items-jungle) :is(.wr-duel-feedback-rays) { position: absolute; inset: -8px; border: 2px solid currentColor; border-radius: inherit; opacity: 0; }
+
+:where(.group-items-jungle):is(.wr-race--duel .wr-duel-article), :where(.group-items-jungle) :is(.wr-race--duel .wr-duel-article) { position: relative; min-width: 0; isolation: isolate; }
+
+:where(.group-items-jungle):is(.wr-duel-impact-layer), :where(.group-items-jungle) :is(.wr-duel-impact-layer) { position: absolute; inset: 72px 0 auto; height: 210px; pointer-events: none; z-index: 22; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+:where(.group-items-jungle):is(.wr-duel-impact), :where(.group-items-jungle) :is(.wr-duel-impact) { position: relative; display: grid; place-items: center; width: 112px; height: 112px; flex: 0 0 112px; border-radius: 50%; background: color-mix(in srgb, var(--feedback-color) 10%, transparent); }
+
+:where(.group-items-jungle):is(.wr-duel-impact .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-impact .wr-duel-feedback-symbol) { width: 72px; height: 72px; }
+
+:where(.group-items-jungle):is(.wr-duel-impact[data-motif="seal"]), :where(.group-items-jungle) :is(.wr-duel-impact[data-motif="seal"]) { border: 2px dashed currentColor; border-radius: 10px; }
+
+:where(.group-items-jungle):is(.wr-duel-impact[data-motif="move"], .wr-duel-impact[data-motif="rewind"]), :where(.group-items-jungle) :is(.wr-duel-impact[data-motif="move"], .wr-duel-impact[data-motif="rewind"]) { background: linear-gradient(90deg,transparent,color-mix(in srgb,var(--feedback-color) 12%,transparent)); border-radius: 6px; }
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-slot[data-feedback-kind]), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-slot[data-feedback-kind]) { outline: 2px solid var(--wr-blue); outline-offset: -3px; }
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-slot[data-feedback-tone="coral"]), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-slot[data-feedback-tone="coral"]) { outline-color: var(--wr-coral); }
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-slot[data-feedback-tone="teal"]), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-slot[data-feedback-tone="teal"]) { outline-color: var(--wr-teal); }
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-slot[data-feedback-kind]), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-slot[data-feedback-kind]) { opacity: 1; }
+
+:where(.group-items-jungle):is(.wr-duel-slot-signal), :where(.group-items-jungle) :is(.wr-duel-slot-signal) { display: block; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: rgb(50 104 168 / 9%); }
+
+:where(.group-items-jungle):is(.wr-duel-slot-signal svg), :where(.group-items-jungle) :is(.wr-duel-slot-signal svg) { position: absolute; width: 32px; height: 32px; right: 4px; top: 4px; }
+
+:where(.group-items-jungle):is(.duel-item-slot[data-feedback-tone="coral"] .wr-duel-slot-signal), :where(.group-items-jungle) :is(.duel-item-slot[data-feedback-tone="coral"] .wr-duel-slot-signal) { color: var(--wr-coral); background: rgb(214 103 82 / 9%); }
+
+:where(.group-items-jungle):is(.duel-item-slot[data-feedback-tone="teal"] .wr-duel-slot-signal), :where(.group-items-jungle) :is(.duel-item-slot[data-feedback-tone="teal"] .wr-duel-slot-signal) { color: var(--wr-teal); background: rgb(39 135 125 / 9%); }
+
+:where(.group-items-jungle):is(.duel-item-slot[data-feedback-tone="blue"] .wr-duel-slot-signal), :where(.group-items-jungle) :is(.duel-item-slot[data-feedback-tone="blue"] .wr-duel-slot-signal) { color: var(--wr-blue); }
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-slot), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-slot) { position: relative; }
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-bar), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-bar) { min-width: 0; }
+
+:where(.group-items-jungle):is(.wr-race--duel .wr-race-dock-hint:empty), :where(.group-items-jungle) :is(.wr-race--duel .wr-race-dock-hint:empty) { display: none; }
+
+/* Preserve the actual blind-overlay in WikiViewer, with a static paper/ink treatment. */
+
+:where(.group-items-jungle):is(.wr-race--duel .blind-overlay), :where(.group-items-jungle) :is(.wr-race--duel .blind-overlay) { position: absolute; inset: 0; background: rgb(36 52 48 / 96%); animation: none; }
+
+:where(.group-items-jungle):is(.wr-race--duel .blind-text), :where(.group-items-jungle) :is(.wr-race--duel .blind-text) { color: var(--wr-paper); border: 1px dashed var(--wr-coral); border-radius: 8px; padding: 12px 18px; }
+
+:where(.group-items-jungle):is(.wr-duel-projectile), :where(.group-items-jungle) :is(.wr-duel-projectile) { stroke: var(--wr-coral); stroke-width: 5; opacity: 0; transform-box: fill-box; transform-origin: center; }
+
+:where(.group-items-jungle):is(.wr-duel-contact-spark), :where(.group-items-jungle) :is(.wr-duel-contact-spark) { stroke: var(--wr-teal); stroke-width: 3.5; opacity: 0; }
+
+:where(.group-items-jungle):is(.wr-duel-reflect-trail), :where(.group-items-jungle) :is(.wr-duel-reflect-trail) { stroke: var(--wr-teal); stroke-width: 4; opacity: 0; }
+
+:where(.group-items-jungle):is(.wr-duel-paper-leaf), :where(.group-items-jungle) :is(.wr-duel-paper-leaf) { transform-box: fill-box; transform-origin: left center; }
+
+:where(.group-items-jungle):is(.wr-duel-recent), :where(.group-items-jungle) :is(.wr-duel-recent) { grid-column: 2; grid-row: 1; align-self: stretch; display: grid; align-items: center; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-toggle), :where(.group-items-jungle) :is(.wr-duel-recent-toggle) { min-height: 44px; padding: 6px; border: 1px solid var(--wr-frame); border-radius: 8px; background: var(--wr-paper); color: var(--wr-blue); cursor: pointer; font: 12px var(--wr-font-body); }
+
+:where(.group-items-jungle):is(.wr-duel-recent-toggle:disabled), :where(.group-items-jungle) :is(.wr-duel-recent-toggle:disabled) { color: var(--wr-ink-3); cursor: default; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-toggle:focus-visible, .wr-duel-recent-panel button:focus-visible), :where(.group-items-jungle) :is(.wr-duel-recent-toggle:focus-visible, .wr-duel-recent-panel button:focus-visible) { outline: 2px solid var(--wr-blue); outline-offset: 2px; }
+
+/* The panel has its own row in the reserved space; it pushes content only on explicit opening. */
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel), :where(.group-items-jungle) :is(.wr-duel-recent-panel) { grid-column: 1 / -1; background: var(--wr-paper); border: 1px solid var(--wr-frame); border-radius: 8px; padding: 8px 12px; color: var(--wr-ink); }
+
+:where(.group-items-jungle):is(.wr-duel-feedback-lane:has(.wr-duel-recent-panel)), :where(.group-items-jungle) :is(.wr-duel-feedback-lane:has(.wr-duel-recent-panel)) { height: auto; flex-basis: auto; min-height: 80px; grid-template-rows: 64px auto; }
+
+:where(.group-items-jungle):is(.wr-duel-recent:has(.wr-duel-recent-panel)), :where(.group-items-jungle) :is(.wr-duel-recent:has(.wr-duel-recent-panel)) { display: contents; }
+
+:where(.group-items-jungle):is(.wr-duel-recent:has(.wr-duel-recent-panel) > .wr-duel-recent-toggle), :where(.group-items-jungle) :is(.wr-duel-recent:has(.wr-duel-recent-panel) > .wr-duel-recent-toggle) { grid-column: 2; grid-row: 1; align-self: center; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel header), :where(.group-items-jungle) :is(.wr-duel-recent-panel header) { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel button), :where(.group-items-jungle) :is(.wr-duel-recent-panel button) { min-height: 44px; padding: 6px 12px; border: 1px solid var(--wr-frame); border-radius: 6px; background: var(--wr-paper-2); color: var(--wr-blue); cursor: pointer; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel ol), :where(.group-items-jungle) :is(.wr-duel-recent-panel ol) { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel ol), :where(.group-items-jungle) :is(.wr-duel-recent-panel ol) { height: 156px; grid-template-rows: repeat(3,48px); gap: 4px; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel li), :where(.group-items-jungle) :is(.wr-duel-recent-panel li) { box-sizing: border-box; overflow: hidden; overflow-wrap: anywhere; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel li), :where(.group-items-jungle) :is(.wr-duel-recent-panel li) { border-left: 3px solid var(--wr-blue); padding: 3px 10px; display: flex; flex-direction: column; font-size: 13px; line-height: 1.1; }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel li[data-tone="coral"]), :where(.group-items-jungle) :is(.wr-duel-recent-panel li[data-tone="coral"]) { border-color: var(--wr-coral); }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel li[data-tone="teal"]), :where(.group-items-jungle) :is(.wr-duel-recent-panel li[data-tone="teal"]) { border-color: var(--wr-teal); }
+
+:where(.group-items-jungle):is(.wr-duel-recent-panel small), :where(.group-items-jungle) :is(.wr-duel-recent-panel small) { color: var(--wr-ink-2); font-size: 11px; line-height: 12px; }
+
+:where(.group-items-jungle):is(.wr-duel-article[data-motion]), :where(.group-items-jungle) :is(.wr-duel-article[data-motion]) { overflow-x: clip; }
+
+/* Keep functional panels below the live notice, instead of hiding either panel links or text. */
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-index), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-index) { top: max(calc(var(--race-top) + 16px), var(--duel-feedback-bottom, 0px)); }
+
+:where(.group-items-jungle):is(.wr-race--duel .game-search-panel), :where(.group-items-jungle) :is(.wr-race--duel .game-search-panel) { top: max(calc(var(--race-top) + 12px), calc(var(--duel-feedback-bottom, 0px) + 8px)); }
+
+:where(.group-items-jungle):is(.wr-race--duel .duel-item-preview), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-preview) { max-height: min(50vh, calc(100dvh - var(--duel-feedback-bottom, 0px) - var(--race-dock-h) - 24px)); }
+
+@media (max-width: 760px) {
+  /* Mobile HUD height is auto: never feed it into a fixed panel's calc(). */
+  :where(.group-items-jungle):is(.wr-race.wr-race--duel.has-strip), :where(.group-items-jungle) :is(.wr-race.wr-race--duel.has-strip) { --race-top: 0px; }
+  :where(.group-items-jungle):is(.wr-race--duel .duel-item-index), :where(.group-items-jungle) :is(.wr-race--duel .duel-item-index) { top: var(--duel-feedback-bottom, 0px); bottom: var(--duel-dock-inset, var(--race-dock-h)); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Text stays readable; only the accepted event's symbol reacts for 650ms. */
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"] .wr-duel-feedback-rays), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"] .wr-duel-feedback-rays) { animation: s5-head-wr-duel-ring 600ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="ink"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="ink"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-ink 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="seal"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="seal"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-seal 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="shield"][data-kind="use"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="shield"][data-kind="use"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-shield-arm 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-shield-face), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-shield-face) { animation: s5-head-wr-duel-shield-catch 650ms linear; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-shield-settle 650ms linear; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-projectile), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-projectile) { animation: s5-head-wr-duel-deflect 650ms linear; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-contact-spark,
+  .wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-contact-spark), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-kind="block"] .wr-duel-contact-spark,
+  .wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-contact-spark) { animation: s5-head-wr-duel-contact 650ms linear; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="reflect"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="reflect"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-reflect 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-projectile), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-projectile) { animation: s5-head-wr-duel-return-shot 650ms linear; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-reflect-trail), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-kind="reflect"] .wr-duel-reflect-trail) { animation: s5-head-wr-duel-return-trail 650ms linear; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="move"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="move"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-direction 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="rewind"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="rewind"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-rewind 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="rewind"] .wr-duel-paper-leaf), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="rewind"] .wr-duel-paper-leaf) { animation: s5-head-wr-duel-leaf-back 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="return"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="return"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-backstep 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="compass"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="compass"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-compass 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="search"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="search"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-find 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="preview"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="preview"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-peek 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-feedback[data-active="true"][data-motif="index"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback[data-active="true"][data-motif="index"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-index 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-impact[data-motif="ink"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-impact[data-motif="ink"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-ink 600ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-impact[data-motif="ink"]), :where(.group-items-jungle) :is(.wr-duel-impact[data-motif="ink"]) { width: 100%; height: 170px; border-radius: 0; background: radial-gradient(ellipse at 40% 45%,rgb(36 52 48 / 55%),transparent 65%); animation: s5-head-s5-head-wr-duel-ink-spread 650ms ease-out both; }
+  :where(.group-items-jungle):is(.wr-duel-article[data-impact-ink="true"] .blind-overlay::before), :where(.group-items-jungle) :is(.wr-duel-article[data-impact-ink="true"] .blind-overlay::before) { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 40% 45%,var(--wr-coral),transparent 62%); animation: s5-head-s5-head-wr-duel-ink-spread 650ms ease-out both; }
+  :where(.group-items-jungle):is(.wr-duel-impact[data-motif="seal"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-impact[data-motif="seal"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-seal 600ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-impact[data-motif="move"] .wr-duel-feedback-symbol, .wr-duel-impact[data-motif="rewind"] .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-impact[data-motif="move"] .wr-duel-feedback-symbol, .wr-duel-impact[data-motif="rewind"] .wr-duel-feedback-symbol) { animation: s5-head-wr-duel-direction 600ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-slot-signal), :where(.group-items-jungle) :is(.wr-duel-slot-signal) { animation: s5-head-wr-duel-ring 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-race--duel .wr-duel-article[data-impact-seal="true"] .article-content a.duel-item-censored), :where(.group-items-jungle) :is(.wr-race--duel .wr-duel-article[data-impact-seal="true"] .article-content a.duel-item-censored) { animation: s5-head-wr-duel-sealed-link 550ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-article[data-motion="move"] .current-page-card), :where(.group-items-jungle) :is(.wr-duel-article[data-motion="move"] .current-page-card) { animation: s5-head-wr-duel-page-forward 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-article[data-motion="rewind"] .current-page-card), :where(.group-items-jungle) :is(.wr-duel-article[data-motion="rewind"] .current-page-card) { animation: s5-head-wr-duel-page-rewind 650ms ease-out; transform-origin: left center; }
+  :where(.group-items-jungle):is(.wr-duel-article[data-motion="rewind"] .current-page-card), :where(.group-items-jungle) :is(.wr-duel-article[data-motion="rewind"] .current-page-card) { position: relative; }
+  :where(.group-items-jungle):is(.wr-duel-article[data-motion="rewind"] .current-page-card::after), :where(.group-items-jungle) :is(.wr-duel-article[data-motion="rewind"] .current-page-card::after) { content: ''; position: absolute; left: 0; top: 0; width: 44%; height: min(190px,100%); background: linear-gradient(90deg,var(--wr-paper),var(--wr-paper-2)); border-right: 2px solid var(--wr-frame); box-shadow: 7px 3px 9px rgb(36 52 48 / 18%); transform-origin: left center; pointer-events: none; animation: s5-head-wr-duel-leaf-back 650ms ease-out both; }
+  :where(.group-items-jungle):is(.wr-duel-article[data-motion="return"] .current-page-card), :where(.group-items-jungle) :is(.wr-duel-article[data-motion="return"] .current-page-card) { animation: s5-head-wr-duel-page-back 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-duel-article[data-motion="compass"] .current-page-card), :where(.group-items-jungle) :is(.wr-duel-article[data-motion="compass"] .current-page-card) { animation: s5-head-wr-duel-page-arrive 650ms ease-out; }
+  :where(.group-items-jungle):is(.wr-race-dock[data-feedback-feature="index"] .duel-item-index,
+  .wr-race-dock[data-feedback-feature="preview"] .duel-item-preview,
+  .wr-duel-article[data-feature="search"] .game-search-panel), :where(.group-items-jungle) :is(.wr-race-dock[data-feedback-feature="index"] .duel-item-index,
+  .wr-race-dock[data-feedback-feature="preview"] .duel-item-preview,
+  .wr-duel-article[data-feature="search"] .game-search-panel) { animation: s5-head-wr-duel-feature 650ms ease-out; }
+}
+
+@keyframes s5-head-wr-duel-stamp { 0% { opacity: 0; transform: translateY(12px) scale(.8) rotate(-6deg); } 25% { opacity: 1; transform: translateY(0) scale(1.05) rotate(2deg); } 45%,80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-4px); } }
+
+@keyframes s5-head-wr-duel-ring { 0% { opacity: .8; transform: scale(.88); } 100% { opacity: 0; transform: scale(1.2); } }
+
+@keyframes s5-head-wr-duel-ink { 0% { transform: scale(.2); } 35% { transform: scale(1.3) rotate(12deg); } 100% { transform: scale(1); } }
+
+@keyframes s5-head-wr-duel-seal { 0% { transform: translateY(-24px) rotate(-12deg); } 35% { transform: translateY(3px) rotate(3deg); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-direction { 0% { transform: translateX(-38px); opacity: 0; } 35%,70% { transform: none; opacity: 1; } 100% { transform: translateX(28px); opacity: 0; } }
+
+@keyframes s5-head-wr-duel-sealed-link { 25%,50% { box-shadow: 0 0 0 4px rgb(214 103 82 / 24%); outline: 1px dashed var(--wr-coral); outline-offset: 2px; background-color: rgb(214 103 82 / 18%); } }
+
+@keyframes s5-head-wr-duel-shield-arm { 0% { transform: scale(.7); } 40% { transform: scale(1.12); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-shield-catch { 0%,27% { transform: none; } 38% { transform: translateX(-5px) rotate(-7deg); } 60%,100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-shield-settle { 0%,24%,70%,100% { transform: none; } 38% { transform: scale(1.06); } }
+
+@keyframes s5-head-wr-duel-deflect { 0% { opacity: 0; transform: translateX(6px); } 12% { opacity: 1; transform: translateX(6px); } 32% { opacity: 1; transform: translateX(-5px); } 45% { opacity: 1; transform: translate(-2px,-5px) rotate(-25deg); } 78% { opacity: 1; transform: translate(6px,-22px) rotate(-55deg); } 94%,100% { opacity: 0; transform: translate(6px,-22px) rotate(-55deg); } }
+
+@keyframes s5-head-wr-duel-contact { 0%,25% { opacity: 0; } 32%,45% { opacity: 1; } 60%,100% { opacity: 0; } }
+
+@keyframes s5-head-wr-duel-reflect { 0% { transform: rotate(-35deg); } 40% { transform: rotate(20deg); } 70%,100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-return-shot { 0% { opacity: 0; transform: translateX(6px); } 12% { opacity: 1; transform: translateX(6px); } 32% { opacity: 1; transform: translateX(-10px); } 42% { opacity: 1; transform: translateX(-10px) scaleX(-1); } 82% { opacity: 1; transform: translateX(4px) scaleX(-1); } 98%,100% { opacity: 0; transform: translateX(6px) scaleX(-1); } }
+
+@keyframes s5-head-wr-duel-return-trail { 0%,38% { opacity: 0; } 50%,76% { opacity: 1; } 95%,100% { opacity: 0; } }
+
+@keyframes s5-head-wr-duel-rewind { 0% { transform: translateX(7px); } 45% { transform: translateX(-6px); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-leaf-back { 0% { opacity: .8; transform: perspective(500px) rotateY(0); } 40% { opacity: .9; transform: perspective(500px) rotateY(-100deg); } 75% { opacity: .25; transform: perspective(500px) rotateY(-155deg); } 100% { opacity: 0; transform: perspective(500px) rotateY(-170deg); } }
+
+@keyframes s5-head-wr-duel-backstep { 0% { transform: translateX(22px); } 40% { transform: translateX(-8px); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-compass { 0% { transform: rotate(-90deg); } 55% { transform: rotate(15deg); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-find { 0% { transform: translate(-8px,8px); } 35% { transform: translate(6px,-6px); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-peek { 0% { transform: scaleY(.2); } 45% { transform: scaleY(1.1); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-index { 0% { clip-path: inset(0 0 100%); } 65%,100% { clip-path: inset(0); } }
+
+@keyframes s5-head-wr-duel-page-forward { 0% { transform: translateX(22px); opacity: .65; } 70%,100% { transform: none; opacity: 1; } }
+
+@keyframes s5-head-wr-duel-page-rewind { 0% { transform: perspective(1000px) rotateY(-18deg) translateX(-32px); opacity: .78; } 75%,100% { transform: none; opacity: 1; } }
+
+@keyframes s5-head-wr-duel-page-back { 0% { transform: translateX(-16px); } 100% { transform: none; } }
+
+@keyframes s5-head-wr-duel-page-arrive { 0% { opacity: .6; } 100% { opacity: 1; } }
+
+@keyframes s5-head-wr-duel-feature { 25% { outline: 2px solid var(--wr-blue); outline-offset: 2px; } }
+
+@keyframes s5-head-wr-duel-ink-spread { 0% { opacity: .55; clip-path: circle(3% at 40% 45%); } 65% { opacity: .18; clip-path: circle(85% at 40% 45%); } 100% { opacity: 0; clip-path: circle(100%); } }
+
+@media (max-width: 760px) {
+  :where(.group-items-jungle):is(.wr-duel-feedback-lane), :where(.group-items-jungle) :is(.wr-duel-feedback-lane) { height: 72px; flex-basis: 72px; padding: 6px 12px; }
+  :where(.group-items-jungle):is(.wr-duel-feedback-stack), :where(.group-items-jungle) :is(.wr-duel-feedback-stack) { justify-content: center; gap: 4px; }
+  /* Keep the most recent stamp as the single mobile focal point during a burst. */
+  :where(.group-items-jungle):is(.wr-duel-feedback:not(:last-child)), :where(.group-items-jungle) :is(.wr-duel-feedback:not(:last-child)) { display: none; }
+  :where(.group-items-jungle):is(.wr-duel-feedback), :where(.group-items-jungle) :is(.wr-duel-feedback) { padding: 6px 8px; gap: 8px; height: 58px; max-width: 100%; }
+  :where(.group-items-jungle):is(.wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-feedback-symbol) { width: 42px; height: 42px; flex-basis: 42px; }
+  :where(.group-items-jungle):is(.wr-duel-feedback-copy strong), :where(.group-items-jungle) :is(.wr-duel-feedback-copy strong) { font-size: 13px; }
+  :where(.group-items-jungle):is(.wr-duel-impact-layer), :where(.group-items-jungle) :is(.wr-duel-impact-layer) { top: 82px; height: 120px; }
+  :where(.group-items-jungle):is(.wr-duel-impact), :where(.group-items-jungle) :is(.wr-duel-impact) { width: 84px; height: 84px; flex-basis: 84px; }
+  :where(.group-items-jungle):is(.wr-duel-impact .wr-duel-feedback-symbol), :where(.group-items-jungle) :is(.wr-duel-impact .wr-duel-feedback-symbol) { width: 58px; height: 58px; }
+  :where(.group-items-jungle):is(.wr-duel-impact-layer), :where(.group-items-jungle) :is(.wr-duel-impact-layer) { display: none; }
+  :where(.group-items-jungle):is(.wr-duel-feedback-lane:has(.wr-duel-recent-panel)), :where(.group-items-jungle) :is(.wr-duel-feedback-lane:has(.wr-duel-recent-panel)) { min-height: 72px; grid-template-rows: 58px auto; }
+}

@@ -1,0 +1,677 @@
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { normalizeTitle } from "../../services/wikiService";
+import { TARGET_SUMMARY_STATUS } from "../../utils/groupTargetSummary";
+
+/**
+ * 14b — 링크 검열 (가)의 표시 (`01-CONFIRMED-SPEC.md` §5.2 정정 2026-09-30).
+ * `censoredTitles`를 받은 본문 앵커는 회색 · 밑줄 없음 · 취소선 없음(Freeze 2026-10-06) + `aria-disabled`이고 눌러도 아무 일이
+ * 없다 — 오류가 아니다. **1:1만 이 prop을 넘긴다.** 싱글·그룹은 넘기지 않으므로 기본값
+ * (빈 배열)이 되고, 두 모드의 렌더는 빠른 링크 블록이 빠진 것 말고는 그대로다.
+ * 서버는 검열 링크 이동을 막지 않는다 — 부채 (`TRACKS.md` §8-14b Q1).
+ */
+const NO_CENSORED_TITLES = Object.freeze([]);
+export const CENSORED_LINK_CLASS = "duel-item-censored";
+
+
+
+
+export default function WikiViewer({
+  target,
+  currentTitle,
+  currentSummary,
+  currentDocumentHtml,
+  links,
+  isLoading,
+  // elapsedSeconds·clickCount·startTitle·timerLabel: Phase 3부터 각 페이지의 race HUD가 표시한다.
+  // 호출 계약을 바꾸지 않도록 받기만 한다.
+  elapsedSeconds, // eslint-disable-line no-unused-vars
+  clickCount, // eslint-disable-line no-unused-vars
+  startTitle, // eslint-disable-line no-unused-vars
+  onLinkClick,
+  timerLabel = "진행 시간", // eslint-disable-line no-unused-vars
+  searchAvailable = false,
+  searchExpiresAt = null, // Duel-only server deadline; Single/Group keep their existing contract.
+  onConsumeSearch,
+  onAuthorizedSearch,
+  authorizedSearchQuery,
+  highlightRequestId = 0,
+  status = {},
+  readOnly = false,
+  censoredTitles = NO_CENSORED_TITLES,
+  // Phase 3 race presentation: the page owns the HUD; the viewer renders the article first.
+  articleTag = null,
+  showTargetBrief = true,
+  openTargetBriefByDefault = false,
+}) {
+  const articleRef = useRef(null);
+  const censoredSet = useMemo(
+    () => new Set((censoredTitles || []).map((title) => normalizeTitle(title))),
+    [censoredTitles]
+  );
+  const [headings, setHeadings] = useState([]);
+  const [showFindToast, setShowFindToast] = useState(false);
+  const [activeId, setActiveId] = useState("");
+  const [railExpanded, setRailExpanded] = useState(false);
+  const [targetBriefOpen, setTargetBriefOpen] = useState(openTargetBriefByDefault);
+  const previousPageTitleRef = useRef(null);
+  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMessage, setSearchMessage] = useState("");
+  const [searchBusy,setSearchBusy]=useState(false);
+  const searchBusyRef=useRef(false);
+  const searchArticleRef=useRef(currentDocumentHtml);
+  searchArticleRef.current=currentDocumentHtml;
+  const [articleHighlightedLinks, setArticleHighlightedLinks] = useState([]);
+  const [targetSummaryExpanded, setTargetSummaryExpanded] = useState(false);
+  const [targetSummaryCanExpand, setTargetSummaryCanExpand] = useState(false);
+  const targetSummaryRef = useRef(null);
+  // Reset only after a confirmed article identity changes; never on a failed or blocked click.
+  // Layout phase executes after the new HTML is committed and before paint.
+  useLayoutEffect(() => {
+    const title = normalizeTitle(currentTitle || "");
+    if (!title) return;
+    const previous = previousPageTitleRef.current;
+    previousPageTitleRef.current = title;
+    if (previous && previous !== title) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [currentTitle]);
+
+  const hasCanonicalTargetTitle =
+    target?.canonicalTitle &&
+    normalizeTitle(target.canonicalTitle) !== normalizeTitle(target.title);
+
+  useEffect(() => {
+    setTargetSummaryExpanded(false);
+    setTargetSummaryCanExpand(false);
+  }, [target?.title, target?.summary]);
+
+  useEffect(() => {
+    if (targetSummaryExpanded || !targetSummaryRef.current) return undefined;
+
+    const measureOverflow = () => {
+      const element = targetSummaryRef.current;
+      if (!element) return;
+      setTargetSummaryCanExpand(element.scrollHeight > element.clientHeight + 1);
+    };
+
+    const frameId = window.requestAnimationFrame(measureOverflow);
+    window.addEventListener("resize", measureOverflow);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", measureOverflow);
+    };
+  }, [target?.title, target?.summary, targetSummaryExpanded]);
+
+  // 1. 페이지에서 찾기(Ctrl+F/Cmd+F) 및 우클릭 방지 (100% 차단은 불가능함을 주석으로 명시)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // 브라우저 기본 검색 기능 차단 시도
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        setShowFindToast(true);
+        setTimeout(() => setShowFindToast(false), 2000);
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      setShowFindToast(true);
+      setTimeout(() => setShowFindToast(false), 2000);
+    };
+
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    window.addEventListener("contextmenu", handleContextMenu);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+      window.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, []);
+  useEffect(() => {
+    if (searchAvailable) {
+      setSearchPanelOpen(true);
+      setSearchQuery("");
+      setSearchMessage("검색어를 입력하고 찾기를 누르세요.");
+    }
+  }, [searchAvailable]);
+  // 2. 문서 내 h2, h3 추출하여 네비게이션 바 생성
+  useEffect(() => {
+    if (!articleRef.current || isLoading) {
+      setHeadings([]);
+      return;
+    }
+
+    // 렌더링된 HTML 내부에서 h2, h3 요소 찾기
+    const elements = Array.from(articleRef.current.querySelectorAll("h2, h3"));
+    const extracted = elements.map((el, index) => {
+      // 고유 ID가 없으면 자동 부여
+      if (!el.id) {
+        el.id = `wiki-heading-${index}`;
+      }
+      return {
+        id: el.id,
+        text: el.textContent || `섹션 ${index}`,
+        level: el.tagName.toLowerCase() === "h2" ? 2 : 3,
+        element: el
+      };
+    });
+
+    setHeadings(extracted);
+
+    // 스크롤 시 현재 읽고 있는 섹션 하이라이트
+    const handleScroll = () => {
+      let currentActive = "";
+      const targets = [...elements];
+
+      for (const el of targets) {
+        const rect = el.getBoundingClientRect();
+        // 화면 상단에서 100px 정도 아래를 기준으로 활성 섹션 판단
+        if (rect.top <= 100) {
+          currentActive = el.id;
+        } else {
+          break; // 아래쪽 요소들은 무시
+        }
+      }
+      setActiveId(currentActive);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [currentDocumentHtml, isLoading]);
+  {
+    status?.translateCurrent && (
+      <div className="language-chaos">
+        <div className="language-chaos-title">LANGUAGE CONFUSION</div>
+        <p>
+          Opponent changed your document language temporarily.
+          Read carefully and find the next link!
+        </p>
+      </div>
+    )
+  }
+  useEffect(() => {
+    if (!highlightRequestId) return;
+    if (!articleRef.current) return;
+
+    const anchors = Array.from(
+      articleRef.current.querySelectorAll("a[data-wiki-title]")
+    );
+
+    const titles = anchors.map((a) =>
+      (a.getAttribute("data-wiki-title") || "").toLowerCase()
+    );
+
+    const targetText = target?.title?.toLowerCase() || "";
+
+    const scored = titles.map((title) => {
+      let score = 0;
+
+      if (title.includes(targetText)) score += 10;
+
+      const words = targetText.split(" ");
+      words.forEach((word) => {
+        if (word.length > 1 && title.includes(word)) {
+          score += 3;
+        }
+      });
+
+      score -= title.length * 0.01;
+
+      return { title, score };
+    });
+
+    const top = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((v) => v.title);
+
+    setArticleHighlightedLinks(top);
+  }, [highlightRequestId, currentDocumentHtml, target]);
+
+  useEffect(() => {
+    if (!articleRef.current) return;
+
+    const set = new Set(articleHighlightedLinks);
+
+    const anchors = Array.from(
+      articleRef.current.querySelectorAll("a[data-wiki-title]")
+    );
+
+    anchors.forEach((a) => {
+      const title = (a.getAttribute("data-wiki-title") || "").toLowerCase();
+
+      if (set.has(title)) {
+        a.classList.add("wiki-link--highlighted");
+      } else {
+        a.classList.remove("wiki-link--highlighted");
+      }
+    });
+  }, [articleHighlightedLinks, currentDocumentHtml]);
+
+  // 14b — 검열된 본문 앵커를 표시한다. 문서가 바뀌면 새 앵커에 다시 건다.
+  useEffect(() => {
+    if (!articleRef.current) return;
+
+    articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((a) => {
+      const censored = censoredSet.has(normalizeTitle(a.getAttribute("data-wiki-title") || ""));
+      a.classList.toggle(CENSORED_LINK_CLASS, censored);
+      if (censored) {
+        a.setAttribute("aria-disabled", "true");
+        a.setAttribute("tabindex", "-1"); // 검열 링크는 키보드로도 실행되지 않는다
+      } else if (!readOnly) {
+        a.removeAttribute("aria-disabled");
+        a.removeAttribute("tabindex");
+      }
+    });
+  }, [censoredSet, currentDocumentHtml, readOnly]);
+
+  const scrollToHeading = (id) => {
+    const el = articleRef.current?.querySelector(`#${CSS.escape(id)}`);
+    if (el) {
+      // 브라우저 기본 부드러운 스크롤 이동
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+  const handleDocumentClick = useCallback((event) => {
+
+    if (readOnly) return;
+
+    const element = event.target instanceof Element ? event.target : null;
+    if (!element) return;
+    const link = element.closest("a[data-wiki-title]");
+    if (!link) return;
+
+    event.preventDefault();
+    const nextTitle = link.getAttribute("data-wiki-title");
+    if (!nextTitle) return;
+    // 검열된 링크는 무반응이다 — 오류 안내도 이동 요청도 없다.
+    if (censoredSet.has(normalizeTitle(nextTitle))) return;
+    onLinkClick?.(nextTitle);
+  }, [censoredSet, onLinkClick, readOnly]);
+
+  // 관전(읽기 전용) 화면: 링크는 이동하지 않는다 (Freeze 06 — "링크를 눌러도 이동하지 않습니다").
+  // 마우스·키보드 모두 실행되지 않도록 탭 순서에서도 뺀다.
+  useEffect(() => {
+    if (!articleRef.current) return undefined;
+    if (!readOnly) {
+      // The reserved Single reuses the prefetched DOM when countdown ends.
+      // Restore native link semantics removed during read-only preparation.
+      articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((link) => {
+        link.setAttribute("href", "#");
+      });
+      return undefined;
+    }
+
+    articleRef.current.querySelectorAll("a[data-wiki-title]").forEach((link) => {
+      link.removeAttribute("href");
+      link.removeAttribute("target");
+      link.setAttribute("tabindex", "-1");
+      link.setAttribute("aria-disabled", "true");
+    });
+
+    return undefined;
+  }, [currentDocumentHtml, readOnly]);
+  const escapeRegExp = useCallback((value) => {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }, []);
+
+  const clearSearchHighlights = useCallback(() => {
+    if (!articleRef.current) return;
+
+    const marks = Array.from(
+      articleRef.current.querySelectorAll("mark.game-search-highlight")
+    );
+
+    marks.forEach((mark) => {
+      const textNode = document.createTextNode(mark.textContent || "");
+      mark.replaceWith(textNode);
+    });
+
+    articleRef.current.normalize();
+  }, []);
+
+  const highlightTextInNode = useCallback((root, query) => {
+    const escaped = escapeRegExp(query.trim());
+    if (!escaped) return 0;
+
+    const regex = new RegExp(escaped, "gi");
+    let count = 0;
+
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          if (!node.nodeValue || !regex.test(node.nodeValue)) {
+            regex.lastIndex = 0;
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          const parent = node.parentElement;
+          if (
+            parent &&
+            ["SCRIPT", "STYLE", "MARK"].includes(parent.tagName)
+          ) {
+            regex.lastIndex = 0;
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          regex.lastIndex = 0;
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      }
+    );
+
+    const textNodes = [];
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode);
+    }
+
+    textNodes.forEach((textNode) => {
+      const text = textNode.nodeValue;
+      const fragment = document.createDocumentFragment();
+
+      let lastIndex = 0;
+      text.replace(regex, (match, offset) => {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
+
+        const mark = document.createElement("mark");
+        mark.className = "game-search-highlight";
+        mark.textContent = match;
+        fragment.appendChild(mark);
+
+        lastIndex = offset + match.length;
+        count += 1;
+        return match;
+      });
+
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+      textNode.replaceWith(fragment);
+    });
+
+    return count;
+  }, [escapeRegExp]);
+
+  useEffect(() => {
+    if (authorizedSearchQuery === undefined || !articleRef.current) return;
+    clearSearchHighlights();
+    if (authorizedSearchQuery) {
+      highlightTextInNode(articleRef.current,authorizedSearchQuery);
+      articleRef.current.querySelector('mark.game-search-highlight')?.scrollIntoView({ block:'nearest' });
+    }
+  }, [authorizedSearchQuery,currentDocumentHtml,clearSearchHighlights,highlightTextInNode]);
+
+  const handleGameSearch = useCallback(async () => {
+    if (!articleRef.current) return;
+    if(searchBusyRef.current)return;
+    if (Number.isFinite(searchExpiresAt) && (!searchAvailable || searchExpiresAt <= Date.now())) {
+      setSearchMessage("검색 사용 가능 시간이 끝났거나 이미 사용했습니다.");
+      return;
+    }
+
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchMessage("검색어를 입력해주세요.");
+      return;
+    }
+
+    if(onAuthorizedSearch){
+      const article=currentDocumentHtml;
+      searchBusyRef.current=true;setSearchBusy(true);
+      try{
+        const result=await onAuthorizedSearch(query);
+        if(searchArticleRef.current!==article||!articleRef.current||searchExpiresAt<=Date.now())return;
+        if(!result?.ok){setSearchMessage(result?.code==='SEARCH_USED'?'이미 성공 검색을 사용했습니다.':'검색을 승인받지 못했습니다. 다시 확인해주세요.');return;}
+        if(result.count===0){clearSearchHighlights();setSearchMessage(`"${query}" 검색 결과가 없습니다.`);return;}
+        if(result.code!=='SEARCH_FOUND'||result.query!==query){setSearchMessage('검색 결과를 확인하지 못했습니다.');return;}
+      }catch{setSearchMessage('검색 결과를 확인하지 못했습니다. 다시 시도해주세요.');return;}
+      finally{searchBusyRef.current=false;setSearchBusy(false);}
+    }else if(Number.isFinite(searchExpiresAt)){
+      // A finite duel permit must never fall back to client-only success authorization.
+      setSearchMessage('서버 검색 확인이 필요합니다.');return;
+    }
+    clearSearchHighlights();
+
+    const count = highlightTextInNode(articleRef.current, query);
+
+    if (count === 0) {
+      setSearchMessage(`"${query}" 검색 결과가 없습니다.`);
+      return;
+    }
+
+    const firstMatch = articleRef.current.querySelector(".game-search-highlight");
+    if (firstMatch) {
+      firstMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    setSearchMessage(`"${query}" ${count}개 발견`);
+    onConsumeSearch?.();
+  }, [searchQuery, clearSearchHighlights, onConsumeSearch, onAuthorizedSearch, searchAvailable, searchExpiresAt,currentDocumentHtml,highlightTextInNode]);
+
+  const handleCloseSearchPanel = useCallback(() => {
+    setSearchPanelOpen(false);
+    setSearchQuery("");
+    setSearchMessage("");
+    clearSearchHighlights();
+  }, [clearSearchHighlights]);
+  useEffect(() => {
+    if (!Number.isFinite(searchExpiresAt)) return undefined;
+    const remaining = searchExpiresAt - Date.now();
+    const close = () => {
+      setSearchPanelOpen(false); setSearchQuery(""); setSearchMessage(""); clearSearchHighlights();
+    };
+    if (remaining <= 0) { close(); return undefined; }
+    const timer = setTimeout(close, remaining);
+    return () => clearTimeout(timer);
+  }, [searchExpiresAt, clearSearchHighlights]);
+  useEffect(() => {
+    setSearchPanelOpen(false);
+    setSearchQuery("");
+    setSearchMessage("");
+    setArticleHighlightedLinks([]);
+  }, [currentDocumentHtml]);
+  const hasTargetBrief = showTargetBrief && Boolean(
+    target?.requestedKeyword || hasCanonicalTargetTitle || target?.summaryStatus || target?.summary
+  );
+  const censoredActive = censoredSet.size > 0;
+
+  // Phase 3: article first. The page renders the compact HUD; this renders the Wikipedia body.
+  return (
+    <div className={`wiki-shell wr-race-viewer ${readOnly ? "wr-readonly" : ""}`}>
+      {
+        status?.translateCurrent && (
+          <div className="language-chaos">
+            <div className="language-chaos-title">
+              LANGUAGE CONFUSION
+            </div>
+            <p>
+              This document has been temporarily translated by your opponent.
+              Find the next link carefully.
+            </p>
+          </div>
+        )
+      }
+      {/* 단축키 사용 시 토스트 안내 */}
+      {showFindToast && (
+        <div className="wiki-find-block-toast" role="status">
+          찾기 기능은 사용할 수 없습니다. 문서 목차를 이용해 주세요.
+        </div>
+      )}
+
+      {/* Right article TOC: a compact rail that opens into readable sections on hover,
+          keyboard focus or explicit touch toggle. No movement or navigation authority changes. */}
+      {headings.length > 0 && (
+        <nav
+          className={`wiki-nav-rail ${railExpanded ? "is-expanded" : ""}`}
+          aria-label="현재 문서 목차"
+        >
+          <button
+            type="button"
+            className="wiki-nav-toggle"
+            aria-expanded={railExpanded}
+            aria-label={railExpanded ? "문서 목차 접기" : "문서 목차 펼치기"}
+            onClick={() => setRailExpanded((expanded) => !expanded)}
+          >
+            <span className="wiki-nav-toggle-mark" aria-hidden="true">☷</span>
+            <span className="wiki-nav-toggle-label">문서 목차</span>
+          </button>
+          <div className="wiki-nav-section-list">
+            {headings.map((h) => (
+              <button
+                type="button"
+                title={h.text}
+                aria-label={`목차: ${h.text}`}
+                aria-current={activeId === h.id ? "location" : undefined}
+                key={h.id}
+                className={`wiki-nav-item wiki-nav-level-${h.level} ${activeId === h.id ? "active" : ""}`}
+                onClick={() => scrollToHeading(h.id)}
+              >
+                <span className={`wiki-nav-dot level-${h.level}`} aria-hidden="true" />
+                <span className="wiki-nav-item-label">{h.text}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
+
+      {searchPanelOpen && (
+        <div className="game-search-panel">
+          <div className="game-search-panel__head">
+            <strong>아이템 검색</strong>
+            <button type="button" onClick={handleCloseSearchPanel}>
+              닫기
+            </button>
+          </div>
+
+          <div className="game-search-panel__body">
+            <input
+              type="text"
+              value={searchQuery}
+              placeholder="현재 문서에서 찾을 단어"
+              aria-label="현재 문서에서 찾을 단어"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229) handleGameSearch();
+              }}
+              autoFocus
+            />
+
+            <button type="button" onClick={handleGameSearch} disabled={searchBusy}>
+              찾기
+            </button>
+          </div>
+
+          {searchMessage && (
+            <p className="game-search-panel__message" role="status">{searchMessage}</p>
+          )}
+        </div>
+      )}
+
+      {/* 목표 설명 — HUD에는 목표 제목만 있다. 설명은 접힌 상태로 본문 위에 둔다 */}
+      {hasTargetBrief && (
+        <details className="wr-target-brief" open={targetBriefOpen} onToggle={(event) => setTargetBriefOpen(event.currentTarget.open)}>
+          <summary>
+            <span className="wr-hud-label">목표 설명</span>
+            <strong>{target.title || "목표 문서"}</strong>
+          </summary>
+          <div className="wr-target-brief-body">
+            {target.requestedKeyword && (
+              <p className="target-meta">입력 키워드: <strong>{target.requestedKeyword}</strong></p>
+            )}
+            {hasCanonicalTargetTitle && (
+              <p className="target-meta">
+                위키백과 문서: <strong>{target.canonicalTitle}</strong>
+              </p>
+            )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.LOADING && (
+              <p className="target-summary-status" role="status">
+                설명을 불러오는 중입니다.
+              </p>
+            )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.SUCCESS && (
+              <>
+                <p
+                  ref={targetSummaryRef}
+                  className={`target-summary ${
+                    !targetSummaryExpanded
+                      ? "target-summary--collapsed"
+                      : ""
+                  }`}
+                >
+                  {target.summary}
+                </p>
+                {targetSummaryCanExpand && (
+                  <button
+                    type="button"
+                    className="target-summary-toggle"
+                    aria-expanded={targetSummaryExpanded}
+                    onClick={() => setTargetSummaryExpanded((expanded) => !expanded)}
+                  >
+                    {targetSummaryExpanded ? "접기" : "더보기"}
+                  </button>
+                )}
+              </>
+            )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.EMPTY && (
+              <p className="target-summary-status">
+                목표 문서 설명을 찾을 수 없습니다.
+              </p>
+            )}
+            {target.summaryStatus === TARGET_SUMMARY_STATUS.ERROR && (
+              <div className="target-summary-error" role="status">
+                <span>목표 설명을 불러오지 못했습니다. 게임 진행에는 영향이 없습니다.</span>
+                {target.onSummaryRetry && (
+                  <button
+                    type="button"
+                    className="target-summary-retry"
+                    onClick={target.onSummaryRetry}
+                  >
+                    다시 시도
+                  </button>
+                )}
+              </div>
+            )}
+            {!target.summaryStatus && target.summary && <p className="target-summary">{target.summary}</p>}
+          </div>
+        </details>
+      )}
+
+      {isLoading && <p className="state-text loading" role="status">위키 문서를 불러오는 중입니다...</p>}
+
+      <section className="current-page-card" aria-labelledby="wr-article-title">
+        <div className="wr-article-head">
+          <h1 id="wr-article-title">{currentTitle || "현재 문서"}</h1>
+          <span className="wr-article-sub">위키백과, 우리 모두의 백과사전</span>
+          {(censoredActive || articleTag) && (
+            <span className="wr-article-tag">
+              {censoredActive && <span className="wr-censor-legend">회색 링크는 검열 중 · 이동 불가</span>}
+              {articleTag}
+            </span>
+          )}
+        </div>
+        <article
+          ref={articleRef}
+          className="article-content"
+          onClick={handleDocumentClick}
+          dangerouslySetInnerHTML={{ __html: currentDocumentHtml || "<p>내용을 불러오는 중...</p>" }}
+        />
+      </section>
+
+      {/* 14b — 아래 두 요소는 빠른 링크 블록 안에 있었다 (블록은 14b에서 제거됐다).
+          먹물 오버레이는 position: fixed라 DOM 위치가 바뀌어도 화면을 덮는 방식은 같다. */}
+      {!isLoading && !readOnly && links.length === 0 && (
+        <p className="state-text">이 문서에는 이동 가능한 내부 링크가 없습니다.</p>
+      )}
+      {status?.blind && (
+        <div className="blind-overlay">
+          <div className="blind-text">시야 방해 중...</div>
+        </div>
+      )}
+
+    </div>
+
+  );
+}

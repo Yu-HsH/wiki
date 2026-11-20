@@ -1,0 +1,24 @@
+.group-items-jungle .wr-race-body { min-height: 0; }
+.group-items-jungle .gip-document > .wr-race-main { flex: 1; min-width: 0; overflow: auto; }
+.group-items-jungle-dock { flex: none; min-width: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.group-items-jungle-supply, .group-items-jungle-status, .group-items-jungle-receipt {
+  display: block;
+  margin: 0;
+  padding: .2rem .6rem;
+  background: #f6edda;
+  color: #283e32;
+  font-size: .75rem;
+}
+@media (max-width: 680px) {
+  .group-items-jungle-dock .gip-panel { max-height: min(17dvh, 126px); }
+  .group-items-jungle-dock .gip-parry-dial { min-width: 64px; min-height: 64px; }
+}
+
+
+.s5-panels { max-height: 19dvh; overflow: auto; padding: .25rem .6rem; background: #f6edda; color: #283e32; font-size: .8rem; }
+.s5-panels p, .s5-panels ul { margin: .25rem 0; overflow-wrap: anywhere; }
+.s5-panels ul { padding-left: 1.1rem; }
+.s5-panels form, .s5-panels label { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
+.s5-panels input { min-width: 0; max-width: 100%; font-size: 1rem; }
+.s5-panels button, .s5-panels summary { min-height: 44px; }
+.s5-panels button { max-width: 100%; overflow-wrap: anywhere; }

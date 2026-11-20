@@ -1,0 +1,6 @@
+.s5-phase2-countdown{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:.6rem;min-height:44px;box-sizing:border-box;padding:.4rem .75rem;margin:0 auto;width:min(1200px,100%);background:#f6edda;color:#283e32;font-size:.9rem;position:relative;z-index:1}
+.s5-phase2-countdown strong{font-variant-numeric:tabular-nums;font-size:1.1rem}
+.s5-phase2-rewards{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.s5-phase2-rewards button{min-height:44px;margin:.2rem;max-width:100%;white-space:normal}
+.s5-phase2-rewards ol{padding-left:1.25rem}
+@media(max-width:480px){.s5-phase2-countdown{font-size:.8rem}.s5-phase2-rewards button{display:block;width:calc(100% - .4rem)}}

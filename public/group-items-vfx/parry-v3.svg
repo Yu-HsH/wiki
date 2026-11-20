@@ -1,0 +1,81 @@
+<svg class="parry-art" viewBox="0 0 600 360" xmlns="http://www.w3.org/2000/svg">
+<style>
+/* Animation from the approved V4 preview. */
+.parry-art {overflow:visible}
+.parry-back,.parry-shield,.parry-attack,.parry-impact,.parry-sparks,.parry-counter,.parry-shock,.parry-letters,.parry-glints,.parry-ring-a,.parry-ring-b,.parry-mark{opacity:0;transform-box:fill-box;transform-origin:center}
+.parry-attack{transform-origin:center}
+.parry-counter{transform-origin:10% 50%}
+.parry-shock{transform-origin:center}
+.parry-letters{transform-origin:center}
+.parry-back{animation:paBack 3.25s both}
+@keyframes paBack{0%,9%{opacity:0;transform:scale(.7)}21%{opacity:.5;transform:scale(.9)}31%,62%{opacity:.92;transform:scale(1.02)}88%,100%{opacity:0;transform:scale(1.25)}}
+.parry-ring-a{animation:paRingA 3.25s both}
+@keyframes paRingA{0%,12%{opacity:0;transform:rotate(-90deg) scale(.4)}23%{opacity:1;transform:rotate(-20deg) scale(.95)}34%{opacity:1;transform:rotate(32deg) scale(1.16)}60%{opacity:.8;transform:rotate(133deg) scale(1.2)}91%,100%{opacity:0;transform:rotate(195deg) scale(1.33)}}
+.parry-ring-b{animation:paRingB 3.25s both}
+@keyframes paRingB{0%,17%{opacity:0;transform:rotate(70deg) scale(.45)}27%{opacity:.95;transform:rotate(-12deg) scale(1.04)}44%{opacity:1;transform:rotate(-54deg) scale(1.09)}68%{opacity:.5;transform:rotate(-147deg) scale(1.23)}100%{opacity:0;transform:rotate(-200deg) scale(1.27)}}
+.parry-shield{animation:paShield 3.25s both}
+@keyframes paShield{0%,13%{opacity:0;transform:scale(.18) rotate(-45deg)}21%{opacity:1;transform:scale(1.19) rotate(10deg)}26%{opacity:1;transform:scale(.98) rotate(-3deg)}29%,32%{opacity:1;transform:scale(.98) rotate(-3deg)}36%{opacity:1;transform:translateX(-13px) scale(1.08) rotate(-8deg)}43%{opacity:1;transform:translateX(5px) scale(1.04) rotate(3deg)}74%{opacity:1;transform:scale(1.01)}100%{opacity:0;transform:scale(.82) rotate(14deg)}}
+.parry-attack{animation:paAttack 3.25s both}
+@keyframes paAttack{0%,6%{opacity:0;transform:translateX(150px) scaleX(1.17)}12%{opacity:1;transform:translateX(140px) scaleX(1.13)}25%{opacity:1;transform:translateX(-6px) scaleX(1.02)}29%,32%{opacity:1;transform:translateX(-12px) scaleX(.92)}34%{opacity:.38;transform:translateX(6px) scaleX(.68)}40%,100%{opacity:0;transform:translateX(50px) scaleX(.1)}}
+.parry-impact{animation:paImpact 3.25s both}
+@keyframes paImpact{0%,27%{opacity:0;transform:scale(.09) rotate(0)}29%,32%{opacity:1;transform:scale(1.06) rotate(9deg)}38%{opacity:.85;transform:scale(1.38) rotate(19deg)}48%,100%{opacity:0;transform:scale(1.8) rotate(27deg)}}
+.parry-shock{animation:paShock 3.25s both}
+@keyframes paShock{0%,28%{opacity:0;transform:scale(.16)}32%{opacity:1;transform:scale(.44)}42%{opacity:.65;transform:scale(1.55)}61%,100%{opacity:0;transform:scale(2.5)}}
+.parry-sparks{animation:paSparks 3.25s both}
+@keyframes paSparks{0%,28%{opacity:0;transform:scale(.2) rotate(-22deg)}31%,35%{opacity:1;transform:scale(1.12) rotate(9deg)}47%{opacity:.7;transform:scale(1.6) rotate(28deg)}67%,100%{opacity:0;transform:scale(2.25) rotate(54deg)}}
+.parry-counter{animation:paCounter 3.25s both}
+@keyframes paCounter{0%,36%{opacity:0;transform:translateX(-24px) scaleX(.13) scaleY(.7)}43%{opacity:1;transform:translateX(7px) scaleX(.75) scaleY(1.2)}51%{opacity:1;transform:translateX(125px) scaleX(1.28) scaleY(.94)}61%{opacity:.7;transform:translateX(265px) scaleX(1.48) scaleY(.7)}72%,100%{opacity:0;transform:translateX(380px) scaleX(1.7) scaleY(.6)}}
+.parry-glints{animation:paGlints 3.25s both}
+@keyframes paGlints{0%,31%{opacity:0;transform:scale(.7)}39%{opacity:1;transform:scale(1)}53%{opacity:.65;transform:scale(1.35)}73%,100%{opacity:0;transform:scale(1.6)}}
+.parry-letters{animation:paLetters 3.25s both}
+@keyframes paLetters{0%,32%{opacity:0;transform:translateY(25px) scale(.48) rotate(-7deg)}42%{opacity:1;transform:translateY(-7px) scale(1.14) rotate(3deg)}48%,68%{opacity:1;transform:translateY(0) scale(1)}83%,100%{opacity:0;transform:translateY(-13px) scale(1.06)}}
+.parry-mark{animation:paMark 3.25s both}
+@keyframes paMark{0%,26%{opacity:0;transform:scale(.25) rotate(-30deg)}31%,38%{opacity:1;transform:scale(1.18) rotate(4deg)}46%{opacity:.7;transform:scale(1.2) rotate(14deg)}58%,100%{opacity:0;transform:scale(1.4)}}
+@media (prefers-reduced-motion: reduce) {
+  svg * { animation:none !important; }
+  .parry-back, .parry-shield, .parry-ring-a, .parry-ring-b, .parry-letters { opacity:1; transform:none; }
+}
+</style>
+<defs>
+  <radialGradient id="paOcean"><stop stop-color="#074944" stop-opacity=".96"/><stop offset=".52" stop-color="#146e71" stop-opacity=".73"/><stop offset="1" stop-color="#0b4f61" stop-opacity="0"/></radialGradient>
+  <linearGradient id="paMetal" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#e8ffcd"/><stop offset=".28" stop-color="#9ffce0"/><stop offset=".6" stop-color="#138f95"/><stop offset="1" stop-color="#215e73"/></linearGradient>
+  <linearGradient id="paCore" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#0b525b"/><stop offset=".6" stop-color="#0e8490"/><stop offset="1" stop-color="#073a53"/></linearGradient>
+  <linearGradient id="paHeat" x1="1" x2="0"><stop stop-color="#c62642" stop-opacity="0"/><stop offset=".38" stop-color="#ff5b5d"/><stop offset=".78" stop-color="#ffca6a"/><stop offset="1" stop-color="#fff5bd"/></linearGradient>
+  <linearGradient id="paReturn" x1="0" x2="1"><stop stop-color="#edfff0"/><stop offset=".25" stop-color="#affff2"/><stop offset=".65" stop-color="#31d4e2"/><stop offset="1" stop-color="#209ab9" stop-opacity="0"/></linearGradient>
+  <radialGradient id="paHit"><stop stop-color="#ffffff"/><stop offset=".25" stop-color="#fffbd1"/><stop offset=".5" stop-color="#a8fff1"/><stop offset="1" stop-color="#4ecabf" stop-opacity="0"/></radialGradient>
+  <filter id="paGlow"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<g class="parry-back"><ellipse cx="304" cy="163" rx="185" ry="145" fill="url(#paOcean)"/></g>
+<g class="parry-ring-a" fill="none" stroke-linecap="round"><circle cx="304" cy="164" r="114" stroke="#3af6d8" stroke-width="8" stroke-dasharray="110 27 45 35" opacity=".84"/><circle cx="304" cy="164" r="135" stroke="#9afee1" stroke-width="2" stroke-dasharray="12 19"/><path d="M210 96Q304-24 401 103M196 229Q307 340 409 220" stroke="#c2fff2" stroke-width="7" opacity=".8"/></g>
+<g class="parry-ring-b" fill="none" stroke-linecap="round"><circle cx="304" cy="164" r="90" stroke="#1aafb0" stroke-width="11" stroke-dasharray="90 15 40 27" opacity=".75"/><path d="M254 65Q391 80 407 167M361 267Q220 256 199 155" stroke="#d8fff2" stroke-width="5"/><path d="M221 110q-45 39-41 88M389 236q43-38 31-92" stroke="#47ead5" stroke-width="4"/></g>
+<g class="parry-attack">
+<path d="M553 146L388 146L373 164L385 180L553 180L507 162Z" fill="url(#paHeat)" opacity=".9"/>
+<path d="M579 131L397 154L365 164L397 173L579 196L528 167Z" fill="#ff653c" opacity=".55"/>
+<path d="M540 162L415 162L381 164L412 168L540 168" fill="#fff6d1" stroke="#ffc575" stroke-width="4"/>
+<path d="M566 103L433 143M570 213L436 187M549 119L469 146" stroke="#ff8b5e" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+</g>
+<g class="parry-shield">
+  <path d="M305 70L378 96L372 191Q360 243 305 271Q250 244 239 191L231 97Z" fill="#073f56" stroke="#b6fff2" stroke-width="13" stroke-linejoin="round"/>
+  <path d="M305 83L362 103L355 184Q351 222 305 247Q264 225 255 181L249 105Z" fill="url(#paCore)" stroke="#6ceedd" stroke-width="4"/>
+  <path d="M305 91L331 104L324 201L305 239L293 214L299 103Z" fill="url(#paMetal)" opacity=".46"/>
+  <path d="M305 135C293 112 278 119 279 134C260 123 266 156 296 167C276 184 291 196 307 179C326 197 339 182 319 167C345 155 348 129 330 135C332 121 318 113 305 135Z" fill="#e4fff1" stroke="#60d9ba" stroke-width="3"/>
+  <path d="M306 149L306 192" stroke="#52bf9f" stroke-width="4" stroke-linecap="round"/>
+  <path d="M262 120L305 101L348 120" stroke="#b6fff2" stroke-width="3" fill="none" opacity=".7"/>
+  <path d="M265 207Q304 238 344 206" stroke="#d9fff4" stroke-width="4" fill="none" opacity=".65"/>
+</g>
+<g class="parry-impact"><ellipse cx="386" cy="162" rx="80" ry="82" fill="url(#paHit)" opacity=".96"/>
+<path d="M384 35L401 127L463 63L418 142L533 105L427 158L536 178L422 176L486 251L402 193L385 299L366 196L304 268L344 177L259 171L350 157L300 79L373 139Z" fill="#fffbd6" opacity=".86"/>
+<path d="M374 102L394 147L428 116L411 157L459 160L412 174L436 213L398 188L378 242L376 189L339 217L361 178L321 158L368 153Z" fill="#ffffff"/>
+</g>
+<g class="parry-shock" fill="none" stroke="#c3fff4"><circle cx="384" cy="164" r="67" stroke-width="11" opacity=".85"/><circle cx="384" cy="164" r="93" stroke-width="3" opacity=".55"/></g>
+<g class="parry-sparks" stroke-linecap="round"><path d="M391 36L402 83M474 79L436 122M497 170L443 169M462 242L422 206M376 279L380 223M315 247L346 209M279 140L334 154M299 82L346 129" stroke="#ffefb2" stroke-width="8"/><path d="M429 46L433 78M514 121L478 143M500 218L466 197M419 269L403 238M338 274L354 240" stroke="#58fff1" stroke-width="5"/><path d="M447 92l11-17M323 52l-12-19M470 244l25 17M295 231l-22 24" stroke="#ff954e" stroke-width="5"/></g>
+<g class="parry-counter">
+<path d="M374 149L577 120L541 145L598 163L535 177L579 206L374 176L398 161Z" fill="url(#paReturn)" opacity=".85"/>
+<path d="M378 158L598 163L387 174Z" fill="#fffce0"/>
+<path d="M398 144L555 88M416 185L559 238M433 137L513 119" fill="none" stroke="#79fff2" stroke-width="9" stroke-linecap="round"/>
+<path d="M391 151L578 142M407 180L558 190" fill="none" stroke="#f4fff7" stroke-width="4" stroke-linecap="round"/>
+</g>
+<g class="parry-glints" fill="#bbffdf"><path d="M208 67l9 21 21 9-21 10-9 22-9-22-22-10 22-9Z"/><path d="M432 62l6 13 14 6-14 6-6 14-6-14-14-6 14-6Z"/><path d="M193 249l6 15 16 6-16 6-6 15-6-15-15-6 15-6Z"/><circle cx="267" cy="50" r="5"/><circle cx="473" cy="218" r="5"/></g>
+<g class="parry-mark"><path d="M277 96L302 117L330 83" fill="none" stroke="#e6fff2" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g class="parry-letters"><rect x="179" y="280" width="250" height="45" rx="11" fill="#194d43" stroke="#f6d785" stroke-width="3"/><text x="304" y="309" fill="#fff8e1" stroke="#c79a32" stroke-width=".4" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="1000" font-size="24" letter-spacing="1.5">PERFECT PARRY!</text></g>
+</svg>

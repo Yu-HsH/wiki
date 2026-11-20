@@ -1,0 +1,23 @@
+/* Only the S5 product dock: seven targets must leave the action reachable. */
+@media (max-width: 680px) {
+  .group-items-jungle-dock[data-s5-sticky-dock] .gip-panel {
+    max-height: min(36dvh, 304px);
+    overflow-y: auto;
+  }
+  .group-items-jungle-dock[data-s5-sticky-dock] .gip-choices {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .group-items-jungle-dock[data-s5-sticky-dock] .gip-choices fieldset {
+    width: 100%;
+    flex: none;
+  }
+  .group-items-jungle-dock[data-s5-sticky-dock] .gip-use {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    min-height: 44px;
+    width: 100%;
+  }
+}
