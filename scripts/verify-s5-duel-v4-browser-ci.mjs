@@ -265,8 +265,19 @@ async function duelRound() {
   await guest.locator('[data-duel-v4-item="parry"]').waitFor({state:"visible",timeout:20000});
   await host.locator('[data-duel-v4-item="ink"]').click();
   await host.getByRole("button",{name:"사용",exact:true}).click();
-  await guest.getByRole("button",{name:"패링"}).waitFor({state:"visible",timeout:12000});
-  const parry=guest.getByRole("button",{name:"패링"});
+  // A parry inventory slot has the same accessible name as the timed attack response.
+  // Only the 64px response control proves the incoming warning is actionable.
+  const parry=guest.locator(".duel-v4-warning button.duel-v4-parry");
+  try {
+    await parry.waitFor({state:"visible",timeout:3500});
+  } catch (error) {
+    await guest.screenshot({path:path.join(directory,"duel-v4-missing-parry-warning.png"),animations:"disabled"});
+    const actual=await rpc(members[1],"get_duel_v4_state",{p_room:room});
+    throw Error("Timed parry response was not visible: "+JSON.stringify({
+      warningCount:actual.warnings?.length,warningIds:actual.warnings?.map(w=>w.id),
+      errors:await guest.locator(".duel-v4-messages").innerText(),
+      inventory:actual.inventory?.map(i=>i.itemId),reason:error.message}));
+  }
   const box=await parry.boundingBox();
   await guest.screenshot({path:path.join(directory,"duel-v4-parry-mobile-before-click.png"),animations:"disabled"});
   console.log("MEASURE duel v4 parry at 390px",JSON.stringify(box));
@@ -299,8 +310,18 @@ try {
       VITE_DUEL_ITEMS_V4_ENTRY:"1",VITE_GROUP_ITEMS_S5_ENTRY:"1",VITE_MAINTENANCE:""},stdio:"ignore"});
   await waitFor(async()=>{try{return(await fetch(url+"/login")).status<500}catch{return false}},"Vite QA host",100,300);
   browser=await chromium.launch({headless:true});
-  await duelRound();
-  for(const count of [3,4,8]) await groupRound(count);
+  const failures=[];
+  async function caseRun(name,work){
+    const starting=contexts.length;
+    try { await work(); log(name+" PASS"); }
+    catch(error) { failures.push(name+": "+error.message); console.error("FAIL "+name,error.stack); }
+    finally {
+      await Promise.all(contexts.splice(starting).map(context=>context.close().catch(()=>{})));
+    }
+  }
+  await caseRun("duel v4 two-player",duelRound);
+  for(const count of [3,4,8]) await caseRun("S5 "+count+"-player",()=>groupRound(count));
+  if(failures.length) throw Error("ISOLATED BROWSER GATE FAILURES: "+failures.join(" | "));
   console.log("PASS LOCAL S5/DUEL-V4 MULTIACCOUNT BROWSER GATE");
 } finally {
   await browser?.close().catch(()=>{});
