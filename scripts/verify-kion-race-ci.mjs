@@ -37,6 +37,11 @@ try {
     assert.equal(await group.locator(".wr-race-emotes__reaction").count(), 6,
       "A six-person group may have six distinct visible reactions at once");
     const trigger = duel.getByRole("button", { name: /키온 보내기/ });
+    assert.equal(await trigger.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return target === element || element.contains(target);
+    }), true, `Duel Kion trigger is not covered by the group fixture at ${width}px`);
     await trigger.click();
     const panel = duel.locator(".wr-kion-picker__panel");
     await panel.waitFor({ state: "visible" });
