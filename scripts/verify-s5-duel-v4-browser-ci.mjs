@@ -251,7 +251,20 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
     await p.getByRole("button",{name:"입장",exact:true}).click();
     await p.waitForURL(new RegExp("/multiplayer/group-items/"+nextRoom+"$"),{timeout:20000});
   }
-  for(const a of agents)await a.page.getByRole("button",{name:"준비",exact:true}).click();
+  // Room-ready commands use expected_version. Each prior ready increments that
+  // version, so refresh each real browser before the next player clicks ready.
+  for(let i=0;i<count;i++){
+    const page=agents[i].page;
+    await page.reload({waitUntil:"domcontentloaded"});
+    await page.getByRole("button",{name:"준비",exact:true}).waitFor({state:"visible",timeout:20000});
+    await page.getByRole("button",{name:"준비",exact:true}).click();
+    await waitFor(()=>sql("select ready from ink_product.members where room_id="+quote(nextRoom)+
+      " and actor_id="+quote(members[i].id))==="t",
+      `S5 ${count} rematch player ${i+1} ready acknowledged`,75,300);
+  }
+  assert.equal(Number(sql("select count(*) from ink_product.members where room_id="+quote(nextRoom)+
+    " and status='waiting' and ready")),count);
+  await host.reload({waitUntil:"domcontentloaded"});
   await host.getByRole("button",{name:"경기 시작"}).waitFor({state:"visible",timeout:30000});
   await host.getByRole("button",{name:"경기 시작"}).click();
   await host.locator('[data-product-group-phase="playing"]').waitFor({state:"visible",timeout:25000});
