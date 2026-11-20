@@ -1,3 +1,14 @@
+# 현재 상태 — PR #62 Preview P0 싱글 이탈 확인 보정
+
+갱신 **2026-11-20 KST**. 제품 기준 **91034ec** (`integrate/tutorial-items-group-20261119`), [Draft PR #62](https://github.com/Yu-HsH/wiki/pull/62), 운영 `main` 기준 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`.
+
+- 로그인한 사용자의 Vercel Preview에서 싱글 랜덤 목표 할당·출발 연출에 진입한 뒤 뜻하지 않은 이탈 및 `종료된 탐험입니다` 오류를 확인했다. 원인 조사에서 출발 연출의 `준비 취소`가 확인 없이 서버 이탈 요청을 보내고, 다음 라우트 이탈 확인이 뒤늦게 나타나는 경로를 찾았다. 숨겨진 `연출 건너뛰기`를 자동 선택했던 최초 재현의 정확한 포인터 대상은 미확정이므로 건너뛰기 자체가 이탈을 유발했다고 단정하지 않는다.
+- 출발 연출의 취소를 공통 이탈 확인 경로로 연결하고, 출발 연출(레이어 1500) 위에 확인창(레이어 1600)이 나타나게 했다. `계속하기`는 서버 기록을 포기하지 않고, `이탈하기`로 승인한 경우에만 기존 이탈 RPC를 사용한다. 싱글 레거시·서버 예약 양쪽 연출에 적용했다.
+- 새 정적 회귀 테스트 포함 `npm test` **891/891 PASS**, `npm run build` 및 `git diff --check` PASS. `scripts/ui-phase3-browser.mjs`에 취소·계속하기·서버 기록 보존 검사 두 개를 추가하고, PR 대상 GitHub Actions 브라우저 회귀 워크플로를 추가했다. 현 로컬 실행 환경에서는 Chromium 소켓 권한 제한으로 신규 브라우저 검사 직접 실행은 불가해 **새 PR CI 및 실 Preview 확인 전**이다.
+- 배포 정책은 P0 우선 수정, P1/P2 UX(튜토리얼 우하단 도움말 버튼 등) 후속 보류. 실기기 Safari·Android, 신규 Preview UI, 새 CI와 Production은 아직 검증·배포 전. 운영 도메인 3개는 `main` b7d5937 Vercel 배포를 가리킴을 읽기 전용 확인했다. 운영 DB·Edge·migration·환경변수 변경 0. S5 C `C_DEFERRED_BY_USER` / `NOT_RUN`.
+
+## 직전 PR 상태
+
 # 현재 상태 — PR #62 1:1 재연결 후속 검증
 
 갱신 **2026-11-20 KST**. 제품 기준 **0b111211650e305fb2dcf84e9c9224b3f9eb3f1c**, 브랜치 `integrate/tutorial-items-group-20261119`, 최신 `main` 기준 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`, [Draft PR #62](https://github.com/Yu-HsH/wiki/pull/62).
