@@ -190,7 +190,20 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   // Every player must reach the seeded goal through the actual article click,
   // not by direct SQL updates or a fabricated terminal state.
   for(let i=0;i<count;i++){
-    await link(agents[i]).waitFor({state:"visible",timeout:30000});
+    try {
+      await link(agents[i]).waitFor({state:"visible",timeout:7000});
+    } catch(error) {
+      const dom=await agents[i].page.evaluate(()=>({
+        phase:document.querySelector("[data-product-group-phase]")?.getAttribute("data-product-group-phase"),
+        documentSource:document.querySelector("[data-product-document-source]")?.getAttribute("data-product-document-source"),
+        article:document.querySelector("article.article-content")?.innerHTML.slice(0,1400),
+        anchors:[...document.querySelectorAll("article a")].map(a=>({html:a.outerHTML,visible:!!a.getClientRects().length})),
+        failure:document.querySelector(".gip-document")?.innerText.slice(0,700),
+      }));
+      console.error("S5 ARTICLE DIAGNOSTIC",JSON.stringify({count,player:i+1,dom}));
+      await agents[i].page.screenshot({path:path.join(directory,`s5-${count}-missing-goal-anchor.png`),animations:"disabled"});
+      throw error;
+    }
     await link(agents[i]).click();
     await waitFor(()=>sql("select status from ink_product.members where room_id="+quote(room)+
       " and actor_id="+quote(members[i].id))==="finished",
@@ -365,7 +378,6 @@ async function duelRound() {
   assert.equal(restored.players.find(p=>p.id===members[0].id).moves,
     original.players.find(p=>p.id===members[0].id).moves,"F5 no phantom move");
   for(const a of agents) assert.equal(a.errors.length,0,"duel v4 page errors: "+a.errors.join("; "));
-  await Promise.all(agents.map(a=>a.context.close()));
   log("duel v4 F5 authoritative progress retained");
 
   // Normal goal arrival must close the real result projection and show both players
@@ -413,6 +425,8 @@ async function duelRound() {
     " and consumed_at is null")),2);
   await host.screenshot({path:path.join(directory,"duel-v4-finished-rematch.png"),animations:"disabled"});
   log("duel v4 real two-link finish, result DOM/XP, F5, UI rematch and new supply");
+  for(const a of agents) assert.equal(a.errors.length,0,"duel v4 page errors: "+a.errors.join("; "));
+  await Promise.all(agents.map(a=>a.context.close()));
 
 }
 try {
