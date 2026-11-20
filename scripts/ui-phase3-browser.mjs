@@ -315,6 +315,13 @@ try {
     await page.locator(".wr-mode").first().locator(".wr-mode-action").click();
     await page.getByPlaceholder("예: 아인슈타인, 조선왕조...").fill("랜덤");
     await page.getByRole("button", { name: "랜덤 목표로 시작" }).click();
+    await page.getByRole("dialog", { name: "싱글 탐험 출발 준비" }).waitFor({ timeout: 15000 });
+    await page.getByRole("button", { name: "준비 취소", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "게임을 나갈까요?" })).toBeVisible();
+    check("S0 countdown cancel asks before abandoning the run", !rpcCalls.includes("me:single-run:leave_v1") && [...singleRuns.values()].every(run => run.status !== "abandoned"));
+    await page.getByRole("dialog", { name: "게임을 나갈까요?" }).getByRole("button", { name: "계속하기" }).click();
+    await expect(page.getByRole("dialog", { name: "게임을 나갈까요?" })).toHaveCount(0);
+    check("S0b continue after cancel keeps the reserved run", !rpcCalls.includes("me:single-run:leave_v1"));
     await page.locator(".wr-race-hud").waitFor();
     await page.locator(".countdown-overlay").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     await expect(page.locator(".wr-hud-doc--current")).toContainText(START, { timeout: 15000 });

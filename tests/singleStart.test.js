@@ -1,8 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createSingleServerClock, singleServerElapsed, singleStartFrame, singleStartVisualTime, singleReverseLeafFrame } from '../utils/singleStart.js';
 import { handleSingleStart } from '../supabase/functions/single-run/start.mjs';
 import { saveGuestSingleGameSession, readGuestSingleGameSession } from '../utils/singleGameSession.js';
+
+test('countdown cancellation opens the exit guard before abandoning a single run', () => {
+  const page = readFileSync(new URL('../pages/GamePage.jsx', import.meta.url), 'utf8');
+  assert.match(page, /enabled:\s*phase === PHASE\.COUNTDOWN \|\| phase === PHASE\.PLAYING/);
+  assert.match(page, /onConfirm:\s*handleGiveUp/);
+  assert.match(page, /<SingleStartCinematic\b[^>]*onCancel=\{requestExit\}/);
+  assert.match(page, /<LegacySingleStartCinematic\b[^>]*onCancel=\{requestExit\}/);
+  assert.match(page, /wr-single-start-exit-guard/);
+  const css = readFileSync(new URL('../css/wikiRaceSingleStart.css', import.meta.url), 'utf8');
+  assert.match(css, /\.wr-single-start-exit-guard > \.app-modal-backdrop \{ z-index: 1600; \}/);
+  assert.doesNotMatch(page, /<\w*SingleStartCinematic\b[^>]*onCancel=\{handleGiveUp\}/);
+});
 
 test('reserved clock ignores client wall clock changes and uses response receipt as a lower bound', () => {
   let monotonic = 12; const clock = createSingleServerClock('2026-10-15T00:00:00Z', () => monotonic);

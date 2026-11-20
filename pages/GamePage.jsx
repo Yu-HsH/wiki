@@ -1045,10 +1045,10 @@ export default function GamePage({
 
       {/* 카운트다운 오버레이 */}
       {phase === PHASE.COUNTDOWN && isReservedSingle(serverRun) && (
-        <SingleStartCinematic run={serverRun} getServerNow={reservedClockRef.current} recovered={restoredFromStorageRef.current} onDue={handleReservedDue} onCancel={handleGiveUp} />
+        <SingleStartCinematic run={serverRun} getServerNow={reservedClockRef.current} recovered={restoredFromStorageRef.current} onDue={handleReservedDue} onCancel={requestExit} />
       )}
       {phase === PHASE.COUNTDOWN && !isReservedSingle(serverRun) && (
-        <LegacySingleStartCinematic onComplete={handleCountdownComplete} run={serverRun} startTitle={startTitle} targetTitle={target.title} onCancel={handleGiveUp} />
+        <LegacySingleStartCinematic onComplete={handleCountdownComplete} run={serverRun} startTitle={startTitle} targetTitle={target.title} onCancel={requestExit} />
       )}
 
       {/* 결과 화면 — Phase 4 RESULT. 진입 흐름(handleWin)은 기존 그대로 */}
@@ -1069,7 +1069,7 @@ export default function GamePage({
 
       {phase === PHASE.PLAYING && <ScrollToTopButton race />}
 
-      {exitDialog}
+      {exitDialog && <div className={phase === PHASE.COUNTDOWN ? 'wr-single-start-exit-guard' : undefined}>{exitDialog}</div>}
     </>
   );
 }
