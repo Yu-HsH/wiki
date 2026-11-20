@@ -223,7 +223,7 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   const before={results:resultCount(),projection:projected(),xp:xpCount()};
   const host=agents[0].page;
   await host.getByRole("button",{name:"재경기"}).click();
-  await host.waitForURL(/\\/multiplayer\\/group-items\\/[a-f0-9-]{36}$/, {timeout:20000});
+  await host.waitForURL(/\/multiplayer\/group-items\/[a-f0-9-]{36}$/, {timeout:20000});
   const nextRoom=host.url().split("/").at(-1);
   assert.notEqual(nextRoom,room,"S5 rematch room must be new");
   const next=await rpc(members[0],"get_group_items_product_room_v1",{p_room:nextRoom,p_binding:null});
@@ -386,8 +386,8 @@ async function duelRound() {
   assert.equal(winner.xp,50);
   assert.equal(loser.xp,25);
   assert.equal(winner.players.find(p=>p.id===members[0].id).moves,2);
-  assert.match(await host.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \\+50/);
-  assert.match(await guest.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \\+25/);
+  assert.match(await host.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \+50/);
+  assert.match(await guest.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \+25/);
   const resultRoom=sql("select result_room_id from duel_v4.rooms where id="+quote(room));
   const history=()=>Number(sql("select count(*) from public.match_history where room_id="+quote(resultRoom)));
   const ledger=()=>Number(sql("select count(*) from public.xp_ledger where source_id in ("+
@@ -398,7 +398,7 @@ async function duelRound() {
   await host.locator('section[aria-label="경기 결과"]').waitFor({state:"visible",timeout:20000});
   const old={history:history(),xp:ledger()};
   await host.getByRole("button",{name:"재경기"}).click();
-  await host.waitForURL(/\\/multiplayer\\/duel-v4\\/[a-f0-9-]{36}$/, {timeout:20000});
+  await host.waitForURL(/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/, {timeout:20000});
   const nextRoom=host.url().split("/").at(-1);
   assert.notEqual(nextRoom,room);
   await guest.getByRole("button",{name:"재경기"}).click();
