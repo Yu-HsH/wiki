@@ -33,12 +33,13 @@ export default function AttackWarning({warnings=[],now=0,windowMs,running=false,
  </div>;
 }
 export function AttackWarningEdge({view,events=[],running=false,windowMs,tone="base"}){
- const now=useDisplayNow(view?.now??0,running),previous=useRef(new Set()),seen=useRef(new Set()),timer=useRef(null);
+ const now=useDisplayNow(view?.warningNow??view?.now??0,running),previous=useRef(new Set()),seen=useRef(new Set()),timer=useRef(null);
  const [intro,setIntro]=useState(null),[reduced,setReduced]=useState(()=>matchMedia("(prefers-reduced-motion: reduce)").matches);
  useEffect(()=>{const q=matchMedia("(prefers-reduced-motion: reduce)"),change=()=>setReduced(q.matches);q.addEventListener("change",change);return()=>q.removeEventListener("change",change);},[]);
  useEffect(()=>{setIntro(null);previous.current.clear();seen.current.clear();clearTimeout(timer.current);return()=>clearTimeout(timer.current);},[view?.viewer.id,view?.sessionId]);
- useEffect(()=>{const active=new Set((view?.warnings||[]).filter(w=>w.dueAt>view.now).map(w=>w.childId));
-  const fresh=events.find(event=>warningEventDecision(event,view).ok&&!seen.current.has(event.eventId));
+ useEffect(()=>{const active=new Set((view?.warnings||[]).filter(w=>w.dueAt>(view.warningNow??view.now)).map(w=>w.childId));
+  const warningView=view?{...view,now:view.warningNow??view.now}:view;
+  const fresh=events.find(event=>warningEventDecision(event,warningView).ok&&!seen.current.has(event.eventId));
   for(const event of events)if(event.type==="attack_warning")seen.current.add(event.eventId);
   if(fresh&&previous.current.size===0&&!reduced&&!document.hidden){setIntro(fresh.eventId);clearTimeout(timer.current);timer.current=setTimeout(()=>setIntro(null),300);}
   previous.current=active;

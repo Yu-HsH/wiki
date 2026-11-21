@@ -36,7 +36,7 @@ export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onRetu
    {view.bookmarkRight&&<p className="gip-right">↳ {view.bookmarkRight.originLabel} · 별도 복귀 권리</p>}
   </div>}
   {view.serverTransport==="s2.5"&&!readOnly&&view.protection?.length>0&&<p className="gip-right" role="status">보호 활성 · 차단 {view.protection[0].remainingCharges}회 남음</p>}
-  {enhancedFeedback?<AttackWarning warnings={warnings} now={view.now} windowMs={warningWindowMs} running={running} readOnly={readOnly} onParry={onParry}/>:!readOnly&&warnings.length>0&&<div className="gip-warnings" aria-label={"받은 공격 "+warnings.length+"건"}>{warnings.map((warning,index)=><div className="gip-warning" role="status" key={warning.childId}>
+  {enhancedFeedback?<AttackWarning warnings={warnings} now={view.warningNow ?? view.now} windowMs={warningWindowMs} running={running} readOnly={readOnly} onParry={onParry}/>:!readOnly&&warnings.length>0&&<div className="gip-warnings" aria-label={"받은 공격 "+warnings.length+"건"}>{warnings.map((warning,index)=><div className="gip-warning" role="status" key={warning.childId}>
    <span className="gip-warning-mark" aria-hidden="true">!</span><span className="gip-warning-copy"><strong>{warning.sourceLabel||"상대"} · 먹물 공격{index===0&&warnings.length>1&&<span className="gip-warning-count">총 {warnings.length}건 ↕</span>}</strong><small>{warning.status==="pending"?"지금 반응해 주세요":"보호 판정 대기"}{index===0&&warnings.length>1?" · 아래로 더 보기":""}</small></span>
    <button type="button" className="gip-parry" disabled={!warning.canParry} onClick={()=>onParry?.(warning)}>패링</button>
   </div>)}</div>}

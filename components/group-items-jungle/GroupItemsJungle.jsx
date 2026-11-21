@@ -45,7 +45,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
 
   useEffect(() => {
     const session = createGroupItemsSession({ scope, transport, journal, makeRequestId });
-    const presentation = createS25InkPresentation();
+    const presentation = createS25InkPresentation({ useReactionClock: s5 });
     let alive = true;
     let refreshing = false;
     let queued = false;

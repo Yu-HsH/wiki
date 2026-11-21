@@ -8,13 +8,18 @@ function sameScope(left, right) {
     && left.ownerEpoch === right.ownerEpoch && left.bindingDigest === right.bindingDigest;
 }
 
-export function createS25InkPresentation({ presentationNow = () => performance.now(), viewerLabel = "나", onPulseDecision } = {}) {
-  let current = null, anchor = null, suspended = false;
+export function createS25InkPresentation({ presentationNow = () => performance.now(), viewerLabel = "나", onPulseDecision, useReactionClock = false } = {}) {
+  let current = null, anchor = null, warningAnchor = null, suspended = false;
   const warningIds = new Set(), effectStates = new Map();
   let warningCues = [];
 
   function estimate(at) {
     return anchor === null ? null : anchor.server + Math.max(0, at - anchor.local);
+  }
+  // Display-only S5 reaction time: exclude transport latency before the server observed the state.
+  // The conservative effect/audio clock remains unchanged. Server alone judges parry deadlines.
+  function estimateWarning(at) {
+    return warningAnchor === null ? null : warningAnchor.server + Math.max(0, at - warningAnchor.local);
   }
 
   function accept(snapshot, { recovering = false } = {}) {
@@ -31,6 +36,9 @@ export function createS25InkPresentation({ presentationNow = () => performance.n
     if (snapshot.serverObservedAt !== null) {
       // Use a conservative RTT bound so delay cannot move a displayed deadline later.
       anchor = { local: at, server: Math.max(estimate(at) ?? 0, snapshot.serverObservedAt + snapshot.transportElapsedMs) };
+      if (useReactionClock) warningAnchor = {
+        local: at, server: Math.max(estimateWarning(at) ?? snapshot.serverObservedAt, snapshot.serverObservedAt),
+      };
     }
     current = snapshot;
     suspended = false;
@@ -62,6 +70,7 @@ export function createS25InkPresentation({ presentationNow = () => performance.n
     if (!current) return { now: null, view: null, pulse: null, events: [], pulseEvents: [] };
     const processedMonoMs = presentationNow();
     const now = estimate(processedMonoMs);
+    const warningNow = useReactionClock ? estimateWarning(processedMonoMs) : null;
     const { scope, projection, self } = current;
     const events = warningCues.filter(event => !suspended && projection.warnings.some(
       warning => warning.childId === event.childId && warning.dueAt > now));
@@ -101,7 +110,8 @@ export function createS25InkPresentation({ presentationNow = () => performance.n
         requiresTarget: item.requiresTarget ?? (item.action === "attack"),
         requiresWarning: item.action === "parry", targetLimit: item.targetLimit ?? projection.targetOptions.length };
     }
-    const view = { sessionId: scope.sessionId, now, presentationNow: processedMonoMs, status: projection.kind, serverTransport: "s2.5",
+    const view = { sessionId: scope.sessionId, now, ...(useReactionClock && warningNow !== null ? { warningNow } : {}),
+      presentationNow: processedMonoMs, status: projection.kind, serverTransport: "s2.5",
       viewer: { mode: "participant", id: scope.participantId, status: self?.status ?? projection.kind, displayName: viewerLabel, readOnly },
       document: self ? { id: self.currentPageId } : null,
       moveCount: self?.moveCount ?? 0,
