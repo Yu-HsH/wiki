@@ -66,6 +66,21 @@ jobs:
         run: npm run build
       - name: Build S5 plus duel v4
         run: VITE_GROUP_ITEMS_S5_ENTRY=1 VITE_DUEL_ITEMS_V4_ENTRY=1 npm run build
+      - name: Export verified candidate text for draft branch update
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { createHash } from 'node:crypto';
+          for(const file of ['package.json','package-lock.json','tests/rewardsUx.test.js']){
+            const data=fs.readFileSync(file,'utf8');
+            const sha=createHash('sha256').update(data).digest('hex');
+            const chunks=[];
+            for(let offset=0;offset<data.length;offset+=1200)chunks.push(data.slice(offset,offset+1200));
+            console.log('CANDIDATE_BEGIN|'+file+'|'+chunks.length+'|'+sha);
+            chunks.forEach((part,i)=>console.log('CANDIDATE_CHUNK|'+file+'|'+i+'|'+JSON.stringify(part)));
+            console.log('CANDIDATE_END|'+file+'|'+chunks.length);
+          }
+          NODE
       - name: Upload exactly patched package manifests
         if: always()
         uses: actions/upload-artifact@v4
