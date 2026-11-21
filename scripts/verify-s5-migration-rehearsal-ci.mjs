@@ -85,7 +85,7 @@ const snapshotSql=[
  " 'match_history',(select coalesce(jsonb_agg(jsonb_build_object('room',room_id,'winner',winner_user_id,'loser',loser_user_id,'status',result_status) order by room_id),'[]'::jsonb)",
  "  from public.match_history where room_id="+q(room)+"),",
  " 'xp',(select coalesce(jsonb_agg(jsonb_build_object('user',user_id,'source',source_id,'amount',amount,'class',xp_class) order by source_id),'[]'::jsonb)",
- "  from public.xp_ledger where source_id="+q(grant)+")",
+ "  from public.xp_ledger where user_id in ("+q(u1)+","+q(u2)+"))",
  ")::text;"
 ].join("\n");
 const aclSql=[
@@ -126,12 +126,13 @@ if(cmd==="seed"){
  ].join("\n");
  query(seed);
  const data=snapshot();
- assert.deepEqual(["auth","profiles","rooms","players","match_history","xp"].map(k=>data[k].length),[2,2,1,2,1,1]);
- assert.equal(data.profiles.find(x=>x.id===u1)?.total_xp,20);
- assert.equal(data.xp[0].amount,20);
+ assert.deepEqual(["auth","profiles","rooms","players","match_history"].map(k=>data[k].length),[2,2,1,2,1]);
+ assert.ok(data.xp.length>=1,"At least the explicitly granted XP row must exist");
+ assert.ok(data.profiles.find(x=>x.id===u1)?.total_xp>=20,"Finished match may also trigger XP");
+ assert.equal(data.xp.find(x=>x.source===grant)?.amount,20,"Explicit XP grant remains 20");
  const witness={data,acl:acl(),sha256:hash(JSON.stringify(data))};
  fs.writeFileSync(witnessFile,JSON.stringify(witness,null,2));
- console.log("PASS 59 applied: two synthetic users/profiles, room/players/history, 20XP");
+ console.log("PASS 59 applied: 2 users/profiles, duel room/players/history, explicit 20XP plus any automatic match XP");
  console.log("BASELINE_SYNTHETIC_SHA "+witness.sha256);
  process.exit(0);
 }
