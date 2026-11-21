@@ -1,0 +1,76 @@
+name: S5 group and duel v4 isolated Docker gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/s5-v4-isolated-docker.yml'
+      - 'supabase/migrations/*_group_items_s5.sql'
+      - 'supabase/migrations/*_duel_items_v4.sql'
+      - 'supabase/migrations/*_duel_v4_*.sql'
+      - 'supabase/tests/group_items_s5*.sql'
+      - 'supabase/tests/duel_items_v4.sql'
+      - 'supabase/tests/duel_v4_*.sql'
+      - 'pages/DuelV4Page.jsx'
+      - 'components/group-items-jungle/**'
+      - 'scripts/verify-s5-duel-v4-browser-ci.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-local-stack:
+    name: Fresh local Supabase, pgTAP and 2/3-player browser regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies and pinned Supabase CLI
+        run: npm ci
+      - name: Check S5 and duel v4 client contracts
+        run: >-
+          node --test
+          tests/s5ItemActions.test.js
+          tests/s5RealtimeEvents.test.js
+          tests/s5ReleaseReadiness.test.js
+          tests/duelV4Sections.test.js
+      - name: Start disposable Docker Supabase (no hosted project)
+        run: npx --no-install supabase start --yes --exclude vector
+      - name: Confirm locally applied migrations
+        run: npx --no-install supabase migration list --local
+      - name: Run every local pgTAP suite including S5 and duel v4
+        run: npx --no-install supabase test db --local
+      - name: Verify a rolled-back clock rejection left a diagnostic in local Postgres logs
+        run: |
+          docker logs supabase_db_wiki-packet13-r2-clean158 > "$RUNNER_TEMP/s5-postgres-clock.log" 2>&1
+          grep -q 'S5_AUTHORITY_TIME_REGRESSION fn=ink_s4_dispatch_v1_grant' "$RUNNER_TEMP/s5-postgres-clock.log"
+          echo "PASS S5 strict time rejection, diagnostic LOG and rolled-back fixture"
+      - name: Install isolated Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Real-browser 1:1 and 3-player base-mode finish/rematch regression
+        run: node scripts/verify-integrated-finish-rematch-ci.mjs
+      - name: Verify S5 and duel v4 multi-account browser runner syntax
+        run: node --check scripts/verify-s5-duel-v4-browser-ci.mjs
+      - name: Real S5 3/4/8-player and duel v4 browser QA
+        run: node scripts/verify-s5-duel-v4-browser-ci.mjs
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s5-v4-isolated-docker-browser-evidence
+          path: |
+            test-results/integrated-finish-rematch/*.png
+            test-results/s5-v4-browser/*.png
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Stop disposable Docker Supabase and delete its local volumes
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true

@@ -10,6 +10,9 @@
     .hud { background:#F5F7F0; padding:14px; font-weight:700; border-bottom:1px solid #CBD8C7; }
     .article { padding:14px; }
     .article button { min-height:44px; margin:4px; border:1px solid #8A9D91; border-radius:8px; background:#EFF5ED; cursor:pointer; }
+    /* Only one fixed dock mounts during an actual race. This fixture shows
+       both rooms together, so separate their click areas at mobile widths. */
+    #group .wr-race-emotes { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
     h1 { font-size:20px; }
   </style>
 </head><body><div id="root"></div><script type="module" src="./kion-race.jsx"></script></body></html>

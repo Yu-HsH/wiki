@@ -1,0 +1,80 @@
+name: S5 migration rehearsal, 59 to 64 (synthetic Docker only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/s5-migration-rehearsal.yml'
+      - 'scripts/verify-s5-migration-rehearsal-ci.mjs'
+      - 'supabase/migrations/*_group_items_s5.sql'
+      - 'supabase/migrations/*_duel_items_v4.sql'
+      - 'supabase/migrations/*_duel_v4_*.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      SUPABASE_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned CLI and application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify rehearsal script syntax
+        run: node --check scripts/verify-s5-migration-rehearsal-ci.mjs
+      - name: Move exactly five pending migration files off the isolated runner tree
+        run: node scripts/verify-s5-migration-rehearsal-ci.mjs stage
+      - name: Boot disposable Docker Supabase at 59 migrations
+        run: npx --no-install supabase start --yes --exclude vector
+      - name: Create synthetic old users, profiles, room, history and XP
+        run: node scripts/verify-s5-migration-rehearsal-ci.mjs seed
+      - name: Archive full synthetic-only baseline, validate backup format
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker exec supabase_db_wiki-packet13-r2-clean158 pg_dump -Fc -U postgres -d postgres --no-owner --no-acl > "$RUNNER_TEMP/s5-baseline-59.dump"
+          test -s "$RUNNER_TEMP/s5-baseline-59.dump"
+          docker exec -i supabase_db_wiki-packet13-r2-clean158 pg_restore -l < "$RUNNER_TEMP/s5-baseline-59.dump" > "$RUNNER_TEMP/s5-baseline-59.toc"
+          grep -q 'TABLE DATA public profiles' "$RUNNER_TEMP/s5-baseline-59.toc"
+          grep -q 'TABLE DATA public xp_ledger' "$RUNNER_TEMP/s5-baseline-59.toc"
+          echo "PASS baseline 59 full pg_dump created, archive TOC verified (not a full restore test)"
+      - name: Reintroduce exact five candidate files and validate their SHA
+        run: node scripts/verify-s5-migration-rehearsal-ci.mjs unstage
+      - name: Apply 5 migrations to the populated DB without resetting it
+        run: npx --no-install supabase migration up --local
+      - name: Assert no loss or privilege regression in synthetic legacy rows
+        run: node scripts/verify-s5-migration-rehearsal-ci.mjs verify
+      - name: Run all db regressions after upgrade
+        run: npx --no-install supabase test db --local
+      - name: Print migration list (no user data)
+        run: npx --no-install supabase migration list --local
+      - name: Restore worktree-only migration staging if interrupted
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          STAGED="$RUNNER_TEMP/wiki-s5-migration-rehearsal/pending"
+          if [ -d "$STAGED" ]; then
+            for f in "$STAGED"/*.sql; do
+              [ -f "$f" ] || continue
+              mv "$f" "supabase/migrations/$(basename "$f")"
+            done
+          fi
+      - name: Remove local Docker database and volumes
+        if: always()
+        run: npx --no-install supabase stop --no-backup || true
+      - name: Delete local-only backup and snapshots
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/s5-baseline-59.dump" "$RUNNER_TEMP/s5-baseline-59.toc"
+          rm -rf "$RUNNER_TEMP/wiki-s5-migration-rehearsal"

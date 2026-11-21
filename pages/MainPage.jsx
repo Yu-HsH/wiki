@@ -353,7 +353,7 @@ export default function MainPage({ view = "home", tutorialSession = null, onStar
           <PlayPage
             isGuest={user.isGuest}
             onSingle={() => { if (practice) { tutorialSession.act(soloToken); return; } setKeyword(""); setShowKeywordModal(true); }}
-            onMultiplayer={(mode) => { if (practice) return; navigate(`/multiplayer?mode=${mode}`); }}
+            onMultiplayer={(mode) => { if (practice) return; if (mode === "group-items") { navigate("/multiplayer/group-items"); return; } navigate(`/multiplayer?mode=${mode}`); }}
           />
         ) : <ExpeditionHero practice={practice} onPlay={() => { if (practice) { tutorialSession.act(homeToken); return; } navigate("/play"); }} />}
 

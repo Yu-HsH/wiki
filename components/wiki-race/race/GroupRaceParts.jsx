@@ -132,7 +132,7 @@ export function RouteCompare({ entries, myUserId, watchedId, onWatch, startTitle
 }
 
 /** 관전자 전용 프리셋 반응(텍스트 스탬프). 쿨다운·허용 판정은 서버가 하고 화면은 남은 초만 보인다. */
-export function ReactionDock({ presets, onSend, cooldownSeconds = 0, ended = false, muteAll, onToggleMuteAll, muteMode, onToggleMuteMode, mutedCount = 0, compact = false }) {
+export function ReactionDock({ presets, onSend, cooldownSeconds = 0, ended = false, muteAll, onToggleMuteAll, muteMode, onToggleMuteMode, mutedCount = 0, compact = false, recent = [], namesByUserId = new Map() }) {
   const disabled = ended || cooldownSeconds > 0;
   const note = ended ? "경기 종료 · 반응을 보낼 수 없습니다" : cooldownSeconds > 0 ? `${cooldownSeconds}초 후 다시 보낼 수 있습니다` : "보낸 뒤 3초 대기";
   const buttons = presets.map((preset) => <button
@@ -149,9 +149,19 @@ export function ReactionDock({ presets, onSend, cooldownSeconds = 0, ended = fal
       <KionEmotePicker presets={presets} disabled={disabled} onSend={onSend} label="반응 선택" />
     </div>;
   }
-  return <div className="wr-reaction-dock group-spectator-emoji-bar" role="group" aria-label="반응">
+  return <div className="wr-reaction-dock group-spectator-emoji-bar" role="group" aria-label="관전 중 키온 감정표현">
     <span className="wr-hud-label">반응</span>
-    {buttons}
+    <div className="wr-reaction-dock__latest" aria-label="최근 참가자 반응" aria-live="off">
+      {recent.map((event) => <span className="wr-race-emotes__reaction" key={event.id}>
+        <span className="wr-reaction-dock__sender" title={namesByUserId.get(event.userId) || "탐험가"}>{namesByUserId.get(event.userId) || "탐험가"}</span>
+        <KionEmoteBubble preset={event.preset} />
+      </span>)}
+      {recent.length === 0 && <span className="wr-race-emotes__empty">키온으로 응원해보세요.</span>}
+    </div>
+    <div className="wr-reaction-dock__presets">{buttons}</div>
+    <div className="wr-reaction-dock__mobile-picker">
+      <KionEmotePicker presets={presets} disabled={disabled} onSend={onSend} label="키온 보내기" />
+    </div>
     <span className="wr-reaction-note" role="status"><RaceIcon name="timer" size={12} />{note}</span>
     {!ended && <span className="wr-reaction-end">
       <button type="button" className="wr-race-link" aria-pressed={muteMode} onClick={onToggleMuteMode}>
