@@ -24,7 +24,7 @@ DECLARE
   payload jsonb;
   picked ink_product_engine.ink_grants_v1;
   member ink_product_engine.ink_members_v1;
-  clock_before timestamptz;
+  clock_receipt_count bigint;
   clock_future timestamptz;
   idx integer;
 BEGIN
@@ -161,18 +161,21 @@ BEGIN
   result := public.act_group_items_product_v1(room,session,binding,gen_random_uuid(),'protect',payload);
   ASSERT result->'body'->>'ok' = 'false', 'second use with stale inventory is rejected';
 
-  -- The rejected transaction must still write a server-side LOG entry.
-  -- Deliberately manipulate one synthetic receipt *inside a caught subtransaction*:
-  -- the future timestamps are rolled back before the normal supply smoke resumes.
-  SELECT authority_received_at INTO STRICT clock_before
-    FROM ink_product_engine.ink_receipts_v1
-    WHERE session_id=session AND request_id=request;
+  -- A synthetic future receipt inside a rolled-back subtransaction exercises
+  -- the existing guard without altering any prior real item receipt.
+  SELECT count(*) INTO clock_receipt_count FROM ink_product_engine.ink_receipts_v1 WHERE session_id=session;
   clock_future:=pg_catalog.clock_timestamp()+interval '2 minutes';
   BEGIN
-    UPDATE ink_product_engine.ink_receipts_v1
-      SET authority_received_at=clock_future,committed_at=clock_future
-      WHERE session_id=session AND request_id=request;
-    ASSERT FOUND, 'clock fixture must update one actual receipt';
+    INSERT INTO ink_product_engine.ink_receipts_v1
+      (session_id,receipt_id,principal_scope,principal_id,request_id,operation,
+       canonical_payload,payload_fingerprint,binding_digest,authority_received_at,
+       outcome_code,private_response,committed_at)
+    SELECT session,gen_random_uuid(),'worker','a3500000-0000-4000-9000-000000000007',
+           gen_random_uuid(),'clock_probe','{}'::jsonb,
+           sha256(convert_to('{}','UTF8')),s.policy_digest,clock_future,
+           'CLOCK_PROBE','{"ok":true}'::jsonb,clock_future
+      FROM ink_product_engine.ink_sessions_v1 s WHERE s.session_id=session;
+    ASSERT FOUND, 'test-only future receipt must be inserted';
     result := public.act_group_items_product_v1(room,session,binding,gen_random_uuid(),'protect',payload);
     ASSERT result->'body'->>'code'='AUTHORITY_TIME_REGRESSION',
       'future synthetic receipt must keep strict time guard';
@@ -180,9 +183,9 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM<>'S5_EXPECTED_CLOCK_PROBE_ROLLBACK' THEN RAISE; END IF;
   END;
-  ASSERT (SELECT authority_received_at FROM ink_product_engine.ink_receipts_v1
-          WHERE session_id=session AND request_id=request)=clock_before,
-    'rollback must restore the original receipt timestamp';
+  ASSERT (SELECT count(*) FROM ink_product_engine.ink_receipts_v1
+          WHERE session_id=session)=clock_receipt_count,
+    'rollback must remove the synthetic future receipt';
 
   -- Move the fixture start back and issue only the authenticated *read* RPC.
   -- No player item click or standalone C worker should be needed for due
