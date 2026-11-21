@@ -21,8 +21,8 @@ jobs:
           cache: npm
       - name: Generate patched runtime dependency lockfile (no repository write)
         run: |
-          npm install --save-exact react-router-dom@7.18.6 zod@4.6.6 --no-audit --no-fund
-          npm update ws --no-audit --no-fund
+          npm install --save-exact react-router-dom@7.18.6 zod@4.6.6 vite@8.3.8 --no-audit --no-fund
+          npm update --no-audit --no-fund
           npm ls react-router-dom react-router @remix-run/router zod ws
       - name: Reinstall generated lockfile reproducibly
         run: npm ci --no-audit --no-fund
@@ -47,9 +47,17 @@ jobs:
           const src=fs.readFileSync(file,'utf8');
           if(!src.includes(old)) throw Error("Expected React Router v6 test import missing");
           const upgraded=src.replace(old,'await import("react-router")');
-          const viteOld='server: { middlewareMode: true }, optimizeDeps: { noDiscovery: true, include: [] }';
-          if(!upgraded.includes(viteOld)) throw Error('Vite SSR test fixture not found');
-          fs.writeFileSync(file,upgraded.replace(viteOld,'server: { middlewareMode: true }, ssr: { noExternal: ["react-router-dom", "react-router"] }, optimizeDeps: { noDiscovery: true, include: [] }'));
+          fs.writeFileSync(file,upgraded);
+          NODE
+      - name: Verify full dependency vulnerability inventory
+        run: |
+          npm audit --json > "$RUNNER_TEMP/full-audit.json" || true
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/full-audit.json','utf8'));
+          if(!report.metadata?.vulnerabilities)throw Error('Invalid npm audit report');
+          console.log('FULL TOTALS',JSON.stringify(report.metadata.vulnerabilities));
+          for(const [name,issue] of Object.entries(report.vulnerabilities||{})) console.log('FULL PACKAGE',name,issue.severity,JSON.stringify(issue.fixAvailable));
           NODE
       - name: Run JavaScript test suite
         run: npm test
