@@ -275,6 +275,66 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   log(`S5 ${count} UI rematch, all players rejoin/ready, fresh restart, old result/XP immutable`);
 }
 
+
+async function verifyS5LatencyBrowser() {
+  // The browser performs real fetches through Playwright's local-only delayed
+  // route. This intentionally tests UI time presentation, NOT the server parry RPC.
+  const context=await browser.newContext({viewport:{width:390,height:844},
+    serviceWorkers:"block",reducedMotion:"reduce"});
+  contexts.push(context);
+  const page=await context.newPage();
+  let requests=0,deadline=null,firstObserved=null;
+  await page.route("**/__s5_rtt_probe",async route=>{
+    const n=requests++;
+    if(n===0) await delay(1400); // upstream delay BEFORE server observation
+    const serverObservedAt=Date.now();
+    if(n===0){firstObserved=serverObservedAt;deadline=serverObservedAt+1500;}
+    await route.fulfill({status:200,contentType:"application/json",
+      body:JSON.stringify({serverObservedAt,deadline,seq:n+1})});
+  });
+  await page.goto(url+"/login",{waitUntil:"domcontentloaded"});
+  await page.evaluate(async()=>{
+    const module=await import("/tests/s5ReactionBrowserHarness.jsx");
+    module.initialize();
+  });
+  const send=()=>page.evaluate(async()=>{
+    const started=performance.now();
+    const response=await fetch("/__s5_rtt_probe");
+    if(!response.ok)throw Error("LOCAL_CLOCK_PROBE_FAILED");
+    const sample=await response.json();
+    return window.__s5ReactionBrowser.accept(sample,performance.now()-started);
+  });
+  const slow=await send();
+  assert.ok(slow.rtt>=1300&&slow.rtt<5000,"actual delayed fetch RTT: "+slow.rtt);
+  assert.ok(slow.legacyNow-slow.fixedNow>=1200,
+    "the old conservative effect clock must retain the pre-server latency");
+  await delay(150); // original presentation would already have closed
+  const fast=await send();
+  assert.equal(requests,2,"one actual slow and one actual fast browser fetch");
+  assert.ok(fast.rtt<400,"fast follow-up request must be fast: "+fast.rtt);
+  assert.equal(fast.deadline,deadline);
+  const before=await page.evaluate(()=>window.__s5ReactionBrowser.frame());
+  assert.ok(before.legacyNow>=deadline,
+    "original warning clock must have prematurely expired for this test to be meaningful");
+  assert.ok(before.fixedNow<deadline,
+    "S5 warning clock must still precede the authoritative deadline");
+  await page.waitForFunction(()=> {
+    const legacy=document.querySelector('[data-reaction-clock="legacy"] button.gip-parry');
+    const fixed=document.querySelector('[data-reaction-clock="fixed"] button.gip-parry');
+    return legacy?.disabled===true&&fixed?.disabled===false;
+  },null,{timeout:2000});
+  await page.screenshot({path:path.join(directory,"s5-reaction-clock-high-rtt.png"),animations:"disabled"});
+  await page.locator('[data-reaction-clock="fixed"] button.gip-parry').click();
+  const clicks=await page.evaluate(()=>window.__s5ReactionBrowser.clicks());
+  assert.equal(clicks,1,"fixed S5 timed parry remains directly clickable");
+  // Both paths always retain the exact same received authority deadline.
+  const frame=await page.evaluate(()=>window.__s5ReactionBrowser.frame());
+  assert.equal(frame.fixedDeadline,frame.legacyDeadline);
+  assert.equal(frame.fixedDeadline,deadline);
+  log("S5 actual Chromium 1400ms pre-observation delay then fast response: legacy early-disabled, fixed 64px reaction clickable");
+  await context.close();
+}
+
 async function groupRound(count) {
   const members=users.slice(0,count);
   const created=await s5Action(members[0],"create",null);
@@ -459,6 +519,7 @@ try {
       await Promise.all(contexts.splice(starting).map(context=>context.close().catch(()=>{})));
     }
   }
+  await caseRun("S5 1400ms pre-server RTT reaction UI",verifyS5LatencyBrowser);
   await caseRun("duel v4 two-player",duelRound);
   for(const count of [3,4,8]) await caseRun("S5 "+count+"-player",()=>groupRound(count));
   if(failures.length) throw Error("ISOLATED BROWSER GATE FAILURES: "+failures.join(" | "));
