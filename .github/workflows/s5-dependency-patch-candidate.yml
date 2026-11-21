@@ -38,6 +38,16 @@ jobs:
           for (const [name,detail] of Object.entries(report.vulnerabilities)) console.log("VULNERABILITY",name,detail.severity,JSON.stringify(detail.fixAvailable));
           if (report.metadata.vulnerabilities.total!==0) process.exitCode=1;
           NODE
+      - name: Adapt test-only server router import to React Router 7
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file='tests/rewardsUx.test.js';
+          const old='await import("react-router-dom/server.js")';
+          const src=fs.readFileSync(file,'utf8');
+          if(!src.includes(old)) throw Error("Expected React Router v6 test import missing");
+          fs.writeFileSync(file,src.replace(old,'await import("react-router")'));
+          NODE
       - name: Run JavaScript test suite
         run: npm test
       - name: Build default app
@@ -52,4 +62,5 @@ jobs:
           path: |
             package.json
             package-lock.json
+            tests/rewardsUx.test.js
           retention-days: 5
