@@ -1,0 +1,55 @@
+name: S5 dependency patch candidate (read-only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/s5-dependency-patch-candidate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Generate patched runtime dependency lockfile (no repository write)
+        run: |
+          npm install --save-exact react-router-dom@7.18.0 zod@4.6.6 --no-audit --no-fund
+          npm update ws --no-audit --no-fund
+          npm ls react-router-dom react-router @remix-run/router zod ws
+      - name: Reinstall generated lockfile reproducibly
+        run: npm ci --no-audit --no-fund
+      - name: Verify runtime dependency security inventory
+        shell: bash
+        run: |
+          npm audit --omit=dev --json > "$RUNNER_TEMP/runtime-audit.json" || true
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const report=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/runtime-audit.json","utf8"));
+          if (!report.vulnerabilities || !report.metadata?.vulnerabilities) throw Error("npm audit did not produce a valid inventory");
+          console.log("RUNTIME TOTALS",JSON.stringify(report.metadata.vulnerabilities));
+          for (const [name,detail] of Object.entries(report.vulnerabilities)) console.log("VULNERABILITY",name,detail.severity,JSON.stringify(detail.fixAvailable));
+          if (report.metadata.vulnerabilities.total!==0) process.exitCode=1;
+          NODE
+      - name: Run JavaScript test suite
+        run: npm test
+      - name: Build default app
+        run: npm run build
+      - name: Build S5 plus duel v4
+        run: VITE_GROUP_ITEMS_S5_ENTRY=1 VITE_DUEL_ITEMS_V4_ENTRY=1 npm run build
+      - name: Upload exactly patched package manifests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s5-runtime-patch-manifests
+          path: |
+            package.json
+            package-lock.json
+          retention-days: 5
