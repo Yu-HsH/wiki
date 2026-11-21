@@ -21,7 +21,7 @@ jobs:
           cache: npm
       - name: Generate patched runtime dependency lockfile (no repository write)
         run: |
-          npm install --save-exact react-router-dom@7.18.0 zod@4.6.6 --no-audit --no-fund
+          npm install --save-exact react-router-dom@7.18.6 zod@4.6.6 --no-audit --no-fund
           npm update ws --no-audit --no-fund
           npm ls react-router-dom react-router @remix-run/router zod ws
       - name: Reinstall generated lockfile reproducibly
