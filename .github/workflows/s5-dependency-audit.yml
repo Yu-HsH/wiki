@@ -43,6 +43,7 @@ jobs:
           import fs from 'node:fs';
           const root=process.env.AUDIT_FOLDER;
           const lines=['## npm lockfile vulnerability inventory',''];
+          const reportsWithFindings=[];
           for(const [label,file] of [['All dependencies','audit-all.json'],['Runtime dependencies (excluding dev)','audit-production.json']]){
             const report=JSON.parse(fs.readFileSync(root+'/'+file,'utf8'));
             if(!report.vulnerabilities || !report.metadata?.vulnerabilities){
@@ -50,6 +51,7 @@ jobs:
             }
             lines.push('### '+label,'',JSON.stringify(report.metadata.vulnerabilities),'');
             console.log(label+' totals: '+JSON.stringify(report.metadata.vulnerabilities));
+            if (report.metadata.vulnerabilities.total>0) reportsWithFindings.push(label);
             for(const [name,issue] of Object.entries(report.vulnerabilities).sort(([a],[b])=>a.localeCompare(b))){
               const advisories=(issue.via||[]).filter(x=>typeof x==='object').map(x=>({title:x.title,url:x.url,severity:x.severity,range:x.range}));
               const summary={name,severity:issue.severity,isDirect:issue.isDirect,range:issue.range,fixAvailable:issue.fixAvailable,advisories};
@@ -60,4 +62,8 @@ jobs:
             lines.push('');
           }
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+          if (reportsWithFindings.length) {
+            console.error('Security gate failed: '+reportsWithFindings.join(', '));
+            process.exitCode=1;
+          }
           NODE
