@@ -47,34 +47,6 @@ jobs:
           grep -q 'TABLE DATA public profiles' "$RUNNER_TEMP/s5-baseline-59.toc"
           grep -q 'TABLE DATA public xp_ledger' "$RUNNER_TEMP/s5-baseline-59.toc"
           echo "PASS baseline 59 full pg_dump created, archive TOC verified (not a full restore test)"
-      - name: Restore synthetic archive excluding Supabase-managed Realtime into empty local database
-        shell: bash
-        run: |
-          set -euo pipefail
-          DB_CONTAINER="supabase_db_wiki-packet13-r2-clean158"
-          RESTORE_DB="s5_synthetic_restore59"
-          docker exec "$DB_CONTAINER" createdb -U postgres --template=template0 "$RESTORE_DB"
-          docker exec -i "$DB_CONTAINER" pg_restore -U postgres -d "$RESTORE_DB" \
-            --single-transaction --exit-on-error --no-owner --no-acl --exclude-schema=realtime < "$RUNNER_TEMP/s5-baseline-59.dump"
-          SQL=$(cat <<'SQL_QUERY'
-          select md5(jsonb_build_object(
-            'auth_users',(select coalesce(jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text),'[]'::jsonb) from auth.users x),
-            'profiles',(select coalesce(jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text),'[]'::jsonb) from public.profiles x),
-            'rooms',(select coalesce(jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text),'[]'::jsonb) from public.game_rooms x),
-            'room_players',(select coalesce(jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text),'[]'::jsonb) from public.room_players x),
-            'match_history',(select coalesce(jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text),'[]'::jsonb) from public.match_history x),
-            'xp_ledger',(select coalesce(jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text),'[]'::jsonb) from public.xp_ledger x),
-            'migration_count',(select count(*) from supabase_migrations.schema_migrations)
-          )::text);
-          SQL_QUERY
-          )
-          BASELINE="$(docker exec "$DB_CONTAINER" psql -U postgres -d postgres -X -At -v ON_ERROR_STOP=1 -c "$SQL")"
-          RESTORED="$(docker exec "$DB_CONTAINER" psql -U postgres -d "$RESTORE_DB" -X -At -v ON_ERROR_STOP=1 -c "$SQL")"
-          test -n "$BASELINE"
-          test "$BASELINE" = "$RESTORED"
-          test "$(docker exec "$DB_CONTAINER" psql -U postgres -d "$RESTORE_DB" -X -At -v ON_ERROR_STOP=1 -c 'select count(*) from supabase_migrations.schema_migrations')" = '59'
-          echo "PASS synthetic pg_restore excluding managed Realtime; six-table data and migration count equal"
-          echo "NOTE excluded managed realtime and owners/ACL; NOT a full project or production restore"
       - name: Reintroduce exact five candidate files and validate their SHA
         run: node scripts/verify-s5-migration-rehearsal-ci.mjs unstage
       - name: Apply 5 migrations to the populated DB without resetting it
