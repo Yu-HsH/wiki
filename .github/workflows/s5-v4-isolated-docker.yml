@@ -48,6 +48,11 @@ jobs:
         run: npx --no-install supabase migration list --local
       - name: Run every local pgTAP suite including S5 and duel v4
         run: npx --no-install supabase test db --local
+      - name: Verify a rolled-back clock rejection left a diagnostic in local Postgres logs
+        run: |
+          docker logs supabase_db_wiki-packet13-r2-clean158 > "$RUNNER_TEMP/s5-postgres-clock.log" 2>&1
+          grep -q 'S5_AUTHORITY_TIME_REGRESSION fn=ink_s4_dispatch_v1_grant' "$RUNNER_TEMP/s5-postgres-clock.log"
+          echo "PASS S5 strict time rejection, diagnostic LOG and rolled-back fixture"
       - name: Install isolated Chromium
         run: npx --no-install playwright install --with-deps chromium
       - name: Real-browser 1:1 and 3-player base-mode finish/rematch regression

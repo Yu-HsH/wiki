@@ -24,6 +24,8 @@ DECLARE
   payload jsonb;
   picked ink_product_engine.ink_grants_v1;
   member ink_product_engine.ink_members_v1;
+  clock_before timestamptz;
+  clock_future timestamptz;
   idx integer;
 BEGIN
   ASSERT NOT EXISTS (SELECT FROM ink_product.entry_policy_v1), 'no entry policy seeded';
@@ -158,6 +160,29 @@ BEGIN
       WHERE session_id=session AND grant_id=picked.grant_id), 'item was consumed';
   result := public.act_group_items_product_v1(room,session,binding,gen_random_uuid(),'protect',payload);
   ASSERT result->'body'->>'ok' = 'false', 'second use with stale inventory is rejected';
+
+  -- The rejected transaction must still write a server-side LOG entry.
+  -- Deliberately manipulate one synthetic receipt *inside a caught subtransaction*:
+  -- the future timestamps are rolled back before the normal supply smoke resumes.
+  SELECT authority_received_at INTO STRICT clock_before
+    FROM ink_product_engine.ink_receipts_v1
+    WHERE session_id=session AND request_id=request;
+  clock_future:=pg_catalog.clock_timestamp()+interval '2 minutes';
+  BEGIN
+    UPDATE ink_product_engine.ink_receipts_v1
+      SET authority_received_at=clock_future,committed_at=clock_future
+      WHERE session_id=session AND request_id=request;
+    ASSERT FOUND, 'clock fixture must update one actual receipt';
+    result := public.act_group_items_product_v1(room,session,binding,gen_random_uuid(),'protect',payload);
+    ASSERT result->'body'->>'code'='AUTHORITY_TIME_REGRESSION',
+      'future synthetic receipt must keep strict time guard';
+    RAISE EXCEPTION 'S5_EXPECTED_CLOCK_PROBE_ROLLBACK';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM<>'S5_EXPECTED_CLOCK_PROBE_ROLLBACK' THEN RAISE; END IF;
+  END;
+  ASSERT (SELECT authority_received_at FROM ink_product_engine.ink_receipts_v1
+          WHERE session_id=session AND request_id=request)=clock_before,
+    'rollback must restore the original receipt timestamp';
 
   -- Move the fixture start back and issue only the authenticated *read* RPC.
   -- No player item click or standalone C worker should be needed for due

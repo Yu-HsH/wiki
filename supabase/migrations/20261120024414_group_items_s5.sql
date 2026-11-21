@@ -2968,6 +2968,13 @@ BEGIN
   IF NOT pg_catalog.isfinite(v_now) OR EXISTS (
     SELECT 1 FROM ink_product_engine.ink_receipts_v1 WHERE session_id=p_session AND authority_received_at>v_now
   ) THEN
+    -- Keep the strict server decision. LOG survives transaction rollback.
+    -- Never emit actor credentials, request payloads, or article titles.
+    RAISE LOG 'S5_AUTHORITY_TIME_REGRESSION fn=% session=% request=% scope=% txid=% pid=% dispatch_at=% last_receipt_at=% wall_at=% statement_at=%',
+      'ink_s4_dispatch_v1_grant', p_session, p_request, p_scope,
+      pg_catalog.txid_current_if_assigned(), pg_catalog.pg_backend_pid(), v_now,
+      (SELECT max(r.authority_received_at) FROM ink_product_engine.ink_receipts_v1 r WHERE r.session_id=p_session),
+      pg_catalog.clock_timestamp(), pg_catalog.statement_timestamp();
     RETURN pg_catalog.jsonb_build_object('ok',false,'code','AUTHORITY_TIME_REGRESSION');
   END IF;
 
@@ -3400,6 +3407,13 @@ BEGIN
   IF NOT pg_catalog.isfinite(v_now) OR EXISTS (
     SELECT 1 FROM ink_product_engine.ink_receipts_v1 WHERE session_id=p_session AND authority_received_at>v_now
   ) THEN
+    -- Keep the strict server decision. LOG survives transaction rollback.
+    -- Never emit actor credentials, request payloads, or article titles.
+    RAISE LOG 'S5_AUTHORITY_TIME_REGRESSION fn=% session=% request=% scope=% txid=% pid=% dispatch_at=% last_receipt_at=% wall_at=% statement_at=%',
+      'ink_s4_dispatch_v1_legacy', p_session, p_request, p_scope,
+      pg_catalog.txid_current_if_assigned(), pg_catalog.pg_backend_pid(), v_now,
+      (SELECT max(r.authority_received_at) FROM ink_product_engine.ink_receipts_v1 r WHERE r.session_id=p_session),
+      pg_catalog.clock_timestamp(), pg_catalog.statement_timestamp();
     RETURN pg_catalog.jsonb_build_object('ok',false,'code','AUTHORITY_TIME_REGRESSION');
   END IF;
 
@@ -5912,6 +5926,13 @@ BEGIN
   IF NOT pg_catalog.isfinite(v_now) OR EXISTS (
     SELECT 1 FROM ink_product_engine.ink_receipts_v1 WHERE session_id=p_session AND authority_received_at>v_now
   ) THEN
+    -- Keep the strict server decision. LOG survives transaction rollback.
+    -- Never emit actor credentials, request payloads, or article titles.
+    RAISE LOG 'S5_AUTHORITY_TIME_REGRESSION fn=% session=% request=% scope=% txid=% pid=% dispatch_at=% last_receipt_at=% wall_at=% statement_at=%',
+      'ink_s5_phase1_auto_dispatch_v1', p_session, p_request, p_scope,
+      pg_catalog.txid_current_if_assigned(), pg_catalog.pg_backend_pid(), v_now,
+      (SELECT max(r.authority_received_at) FROM ink_product_engine.ink_receipts_v1 r WHERE r.session_id=p_session),
+      pg_catalog.clock_timestamp(), pg_catalog.statement_timestamp();
     RETURN pg_catalog.jsonb_build_object('ok',false,'code','AUTHORITY_TIME_REGRESSION');
   END IF;
 
