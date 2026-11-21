@@ -46,7 +46,10 @@ jobs:
           const old='await import("react-router-dom/server.js")';
           const src=fs.readFileSync(file,'utf8');
           if(!src.includes(old)) throw Error("Expected React Router v6 test import missing");
-          fs.writeFileSync(file,src.replace(old,'await import("react-router")'));
+          const upgraded=src.replace(old,'await import("react-router")');
+          const viteOld='server: { middlewareMode: true }, optimizeDeps: { noDiscovery: true, include: [] }';
+          if(!upgraded.includes(viteOld)) throw Error('Vite SSR test fixture not found');
+          fs.writeFileSync(file,upgraded.replace(viteOld,'server: { middlewareMode: true }, ssr: { noExternal: ["react-router-dom", "react-router"] }, optimizeDeps: { noDiscovery: true, include: [] }'));
           NODE
       - name: Run JavaScript test suite
         run: npm test
