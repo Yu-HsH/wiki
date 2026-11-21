@@ -176,9 +176,13 @@ BEGIN
            'CLOCK_PROBE','{"ok":true}'::jsonb,clock_future
       FROM ink_product_engine.ink_sessions_v1 s WHERE s.session_id=session;
     ASSERT FOUND, 'test-only future receipt must be inserted';
-    result := public.act_group_items_product_v1(room,session,binding,gen_random_uuid(),'protect',payload);
-    ASSERT result->'body'->>'code'='AUTHORITY_TIME_REGRESSION',
-      'future synthetic receipt must keep strict time guard';
+    -- Test the guard directly: public.act first invokes a checkpoint worker,
+    -- whose own guard can reject before this function logs its comparison.
+    result := ink_product_engine.ink_s4_dispatch_v1_grant(
+      session,gen_random_uuid(),ink_product_engine.ink_s4_client_binding_v1(),
+      'player',actors[1],'protect',payload);
+    ASSERT result->>'code'='AUTHORITY_TIME_REGRESSION',
+      'future synthetic receipt must keep strict grant-dispatch guard';
     RAISE EXCEPTION 'S5_EXPECTED_CLOCK_PROBE_ROLLBACK';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM<>'S5_EXPECTED_CLOCK_PROBE_ROLLBACK' THEN RAISE; END IF;
