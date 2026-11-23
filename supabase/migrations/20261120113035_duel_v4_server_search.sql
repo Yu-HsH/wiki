@@ -1,4 +1,4 @@
-begin;
+-- CLI owns the migration transaction and history INSERT.
 
 create table duel_v4.search_documents (
   snapshot_id uuid primary key references public.wiki_page_snapshots(id) on delete cascade,
@@ -215,4 +215,3 @@ grant execute on function public.get_duel_v4_search_source(uuid,uuid),public.sub
 grant execute on function public.store_duel_v4_search_document(uuid,uuid,uuid,uuid,text,text[]) to service_role;
 
 notify pgrst,'reload schema';
-commit;

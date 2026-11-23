@@ -1,22 +1,28 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { s5ActorDefinition, s5MigrationBranches } from './helpers/s5MigrationSource.js';
 
 const source = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-const migration = source("supabase/migrations/20261120024414_group_items_s5.sql");
+const envelope = source("supabase/migrations/20261120024414_group_items_s5.sql");
+const branches = s5MigrationBranches(envelope);
+const migration = branches.fresh.join(';\n');
 const app = source("App.jsx");
 const play = source("pages/PlayPage.jsx");
 const route = source("components/group-items-jungle/ProductGroupItemsRoute.jsx");
 
-test("S5 migration borrows PostgreSQL 17 SET ROLE only for unmerged migration ownership", () => {
-  assert.match(migration, /pg_has_role\(current_user, 'ink_product_owner', 'SET'\)/);
-  assert.match(migration, /GRANT ink_product_owner TO %I WITH INHERIT FALSE/);
-  assert.match(migration, /GRANT ink_product_owner TO %I WITH SET TRUE/);
-  assert.match(migration, /set_config\('wiki_s5_migration\.temporary_owner_set', 'yes', true\)/);
-  assert.match(migration, /REVOKE ink_product_owner FROM %I GRANTED BY CURRENT_USER/);
-  assert.match(migration, /S5_MIGRATION_OWNER_MEMBERSHIP_NOT_RESTORED/);
-  assert.ok(migration.indexOf("DO $owner_membership_cleanup$") > migration.lastIndexOf("ALTER FUNCTION"),
-    "owner SET privilege must be cleaned up after object ownership changes");
+test("S5 CLI transaction restores borrowed owner membership and public schema ACL", () => {
+  assert.match(envelope, /PR63_EXISTING_OWNER_ADMIN_REQUIRED/);
+  assert.match(envelope, /GRANT ink_product_owner TO postgres WITH INHERIT TRUE/);
+  assert.match(envelope, /GRANT ink_product_owner TO postgres WITH SET TRUE/);
+  assert.match(envelope, /CREATE TEMP TABLE _pr63_self_membership/);
+  assert.match(envelope, /REVOKE ink_product_owner FROM postgres GRANTED BY CURRENT_USER/);
+  assert.match(envelope, /PR63_MEMBERSHIPS_NOT_RESTORED/);
+  assert.match(envelope, /PR63_PUBLIC_SCHEMA_ACL_NOT_RESTORED/);
+  assert.ok(envelope.indexOf("DO $restore_membership$") > envelope.lastIndexOf("ALTER FUNCTION"),
+    "final membership restoration follows both branches' owner changes");
+  assert.doesNotMatch(envelope, /^\s*(?:BEGIN|COMMIT);\s*$/gmi,
+    'CLI must retain the transaction until its own history INSERT');
   assert.match(migration, /REVOKE ALL ON FUNCTION ink_product\.advance_due_room_v1\(uuid\) FROM PUBLIC, anon, authenticated, service_role/);
 });
 
@@ -25,11 +31,11 @@ test("S5 PostgreSQL 17 runs owner-only DDL and final RPC ACLs under the correct 
   const referenceGrant = migration.indexOf("GRANT REFERENCES ON TABLE public.profiles TO ink_product_owner");
   const beginOwnerDdl = migration.indexOf("SET LOCAL ROLE ink_product_owner", schemasOwned);
   const firstOwnerFunction = migration.indexOf("CREATE FUNCTION ink_product.admission_order_v1");
-  const endOwnerDdl = migration.indexOf("RESET ROLE", firstOwnerFunction);
+  const endOwnerDdl = migration.indexOf("SET LOCAL ROLE postgres", firstOwnerFunction);
   const referenceRevoke = migration.indexOf("REVOKE REFERENCES ON TABLE public.profiles FROM ink_product_owner");
   const beginOwnerAcl = migration.indexOf("SET LOCAL ROLE ink_product_owner", referenceRevoke);
   const grantPublicRpc = migration.indexOf("TO authenticated;", beginOwnerAcl);
-  const endOwnerAcl = migration.indexOf("RESET ROLE", grantPublicRpc);
+  const endOwnerAcl = migration.indexOf("SET LOCAL ROLE postgres", grantPublicRpc);
   const membershipCleanup = migration.indexOf("DO $owner_membership_cleanup$");
   assert.ok(schemasOwned < referenceGrant && referenceGrant < beginOwnerDdl &&
     beginOwnerDdl < firstOwnerFunction && firstOwnerFunction < endOwnerDdl &&
@@ -41,12 +47,17 @@ test("S5 PostgreSQL 17 runs owner-only DDL and final RPC ACLs under the correct 
 });
 
 test("S5 reads authenticated JWT claims without the inaccessible managed Auth schema", () => {
+ for(const [branch,statements] of Object.entries(branches)){
+  const actor=s5ActorDefinition(statements).replace(/^\s*--[^\n]*$/gm,'');
+  assert.match(actor,/request\.jwt\.claim\.sub/,`${branch} current actor reads the JWT sub directly`);
+  assert.match(actor,/request\.jwt\.claims/);
+  assert.doesNotMatch(actor,/auth\.uid\(\)/,`${branch} current actor does not require managed Auth schema access`);
+ }
   assert.match(migration, /CREATE FUNCTION ink_product\.request_actor_v1\(\) RETURNS uuid[\s\S]*?request\.jwt\.claim\.sub/);
   assert.match(migration, /request\.jwt\.claims/);
   assert.match(migration, /ALTER FUNCTION ink_product\.request_actor_v1\(\) OWNER TO ink_product_owner/);
   assert.match(migration, /REVOKE ALL ON FUNCTION ink_product\.request_actor_v1\(\)\s+FROM PUBLIC, anon, authenticated, service_role/);
-  assert.doesNotMatch(migration.replace(/^\s*--.*$/gm, ""), /auth\.uid\(\)/);
-  assert.doesNotMatch(migration, /GRANT USAGE ON SCHEMA auth/);
+  assert.doesNotMatch(envelope, /GRANT USAGE ON SCHEMA auth/);
   assert.match(migration, /IF ink_product\.request_actor_v1\(\) IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED'/);
 });
 

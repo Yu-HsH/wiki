@@ -1,5 +1,5 @@
+-- CLI owns the migration transaction and history INSERT.
 -- Independent, opt-in duel rules. The v3 rooms and item RPCs remain intact.
-begin;
 
 create schema duel_v4;
 create schema duel_v4_events;
@@ -964,4 +964,3 @@ grant execute on function public.get_duel_v4_entry(),public.get_duel_v4_state(uu
   public.join_duel_v4_room(text),public.act_duel_v4(uuid,uuid,text,jsonb) to authenticated;
 
 notify pgrst,'reload schema';
-commit;

@@ -1,4 +1,4 @@
-begin;
+-- CLI owns the migration transaction and history INSERT.
 
 alter table duel_v4.search_documents add column link_sections jsonb
   check (link_sections is null or jsonb_typeof(link_sections)='object');
@@ -112,4 +112,3 @@ revoke all on function public.store_duel_v4_prepared_document(uuid,uuid,uuid,uui
 grant execute on function public.store_duel_v4_prepared_document(uuid,uuid,uuid,uuid,text,text[],jsonb) to service_role;
 
 notify pgrst,'reload schema';
-commit;

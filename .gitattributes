@@ -1,0 +1,6 @@
+# Preserve the exact bytes of the five PR #63 migrations verified by Supabase CLI.
+/supabase/migrations/20261120024414_group_items_s5.sql -text
+/supabase/migrations/20261120104117_duel_items_v4.sql -text
+/supabase/migrations/20261120113035_duel_v4_server_search.sql -text
+/supabase/migrations/20261120113647_duel_v4_reward_queue.sql -text
+/supabase/migrations/20261120114137_duel_v4_link_index.sql -text

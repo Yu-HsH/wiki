@@ -1,4 +1,4 @@
-begin;
+-- CLI owns the migration transaction and history INSERT.
 
 alter table duel_v4.members add column roulette_supply_weakened boolean not null default false;
 
@@ -322,4 +322,3 @@ revoke all on function public.resolve_duel_v4_reward(uuid,uuid,uuid,boolean,uuid
 grant execute on function public.resolve_duel_v4_reward(uuid,uuid,uuid,boolean,uuid,text) to authenticated;
 
 notify pgrst,'reload schema';
-commit;
