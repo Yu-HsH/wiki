@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "dateKst": "2026-11-23",
+  "basis": "6b336c10+approved five amendments",
+  "phase": "databases",
+  "stoppedOwnContainers": 2,
+  "originalContainers": 317,
+  "originalVolumes": 122,
+  "removedOriginalContainers": 0,
+  "removedOriginalVolumes": 0,
+  "originalArchiveUnchanged": true
+}

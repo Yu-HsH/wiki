@@ -1,0 +1,176 @@
+{
+  "dateKst": "2026-11-23",
+  "sourceHead": "6b336c10abafc2fe4a1c25e74e2f5fadd97792a4",
+  "temporaryLocalCommit": "eb0a54b20bb63aefaed544d42812a19739b9c0c7",
+  "remotePr": 63,
+  "remoteHead": "6b336c10abafc2fe4a1c25e74e2f5fadd97792a4",
+  "remoteDraft": true,
+  "configuredRemotes": 0,
+  "autocrlf": true,
+  "originalMigrationFilesUnchanged": 59,
+  "agentsAndCurrentUnchanged": true,
+  "commitFiles": [
+    ".gitattributes",
+    "supabase/migrations/20261120024414_group_items_s5.sql",
+    "supabase/migrations/20261120104117_duel_items_v4.sql",
+    "supabase/migrations/20261120113035_duel_v4_server_search.sql",
+    "supabase/migrations/20261120113647_duel_v4_reward_queue.sql",
+    "supabase/migrations/20261120114137_duel_v4_link_index.sql",
+    "supabase/tests/daily_current_snapshot_pairs_v1.sql",
+    "supabase/tests/duel_drain_recovery_v1.sql",
+    "tests/s5AuthorityClockDiagnostics.test.js",
+    "tests/s5ReleaseReadiness.test.js",
+    "tests/helpers/s5MigrationSource.js"
+  ],
+  "migrationFileHashes": [
+    {
+      "file": "supabase/migrations/20261120024414_group_items_s5.sql",
+      "manifestSha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb",
+      "worktreeSha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb",
+      "stagedSha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb",
+      "commitSha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb",
+      "checkoutSha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb"
+    },
+    {
+      "file": "supabase/migrations/20261120104117_duel_items_v4.sql",
+      "manifestSha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246",
+      "worktreeSha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246",
+      "stagedSha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246",
+      "commitSha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246",
+      "checkoutSha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246"
+    },
+    {
+      "file": "supabase/migrations/20261120113035_duel_v4_server_search.sql",
+      "manifestSha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed",
+      "worktreeSha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed",
+      "stagedSha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed",
+      "commitSha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed",
+      "checkoutSha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed"
+    },
+    {
+      "file": "supabase/migrations/20261120113647_duel_v4_reward_queue.sql",
+      "manifestSha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c",
+      "worktreeSha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c",
+      "stagedSha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c",
+      "commitSha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c",
+      "checkoutSha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c"
+    },
+    {
+      "file": "supabase/migrations/20261120114137_duel_v4_link_index.sql",
+      "manifestSha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce",
+      "worktreeSha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce",
+      "stagedSha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce",
+      "commitSha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce",
+      "checkoutSha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce"
+    }
+  ],
+  "cli": {
+    "dateKst": "2026-11-23",
+    "temporaryLocalCommit": "eb0a54b20bb63aefaed544d42812a19739b9c0c7",
+    "cliVersion": "2.114.0",
+    "existingFunctionPostconditions": 151,
+    "inputStatements": [
+      {
+        "version": "20261120024414",
+        "count": 1652,
+        "statementsSha256": "44737064fa46180c470766ab7f108fa8c22a24f130004e791b3bf47634bd8dc0"
+      },
+      {
+        "version": "20261120104117",
+        "count": 51,
+        "statementsSha256": "03810f0b85f8716b3bb85da407dce70f2287f414d04f84c2586485c0f5fb3a57"
+      },
+      {
+        "version": "20261120113035",
+        "count": 22,
+        "statementsSha256": "9480bc8b62ae1dc8fc8c7ca0470c6cef50916a058280432c023a84b3987f4f3b"
+      },
+      {
+        "version": "20261120113647",
+        "count": 31,
+        "statementsSha256": "3cfd6bfcae51d00b17445320a4204cfce5647581db4085ed778f034c1b3a537a"
+      },
+      {
+        "version": "20261120114137",
+        "count": 16,
+        "statementsSha256": "ef068ec601e97420265061d00a7482fe56104f060da17602a553dc1bedc41ccb"
+      }
+    ],
+    "results": [
+      {
+        "mode": "existing",
+        "historyBefore": 59,
+        "historyAfter": 64,
+        "priorHistoryUnchanged": true,
+        "membershipsUnchanged": true,
+        "statementsMatchNewAndPreviousCliHistory": true,
+        "existingSourceTablesPreserved": 182,
+        "localCliElapsedMs": 19536
+      },
+      {
+        "mode": "fresh",
+        "historyBefore": 59,
+        "historyAfter": 64,
+        "priorHistoryUnchanged": true,
+        "membershipsUnchanged": true,
+        "statementsMatchNewAndPreviousCliHistory": true,
+        "existingSourceTablesPreserved": null,
+        "localCliElapsedMs": 6525
+      }
+    ]
+  },
+  "targetedPgTap": [
+    {
+      "mode": "existing",
+      "file": "daily_current_snapshot_pairs_v1.sql",
+      "exitCode": 0,
+      "plan": 17,
+      "assertions": 17,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "mode": "existing",
+      "file": "duel_drain_recovery_v1.sql",
+      "exitCode": 0,
+      "plan": 32,
+      "assertions": 32,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "mode": "fresh",
+      "file": "group_items_s5.sql",
+      "exitCode": 0,
+      "plan": 1,
+      "assertions": 1,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "mode": "fresh",
+      "file": "duel_items_v4.sql",
+      "exitCode": 0,
+      "plan": 91,
+      "assertions": 91,
+      "failed": 0,
+      "status": "PASS"
+    }
+  ],
+  "preservation": {
+    "missingOriginalContainers": 0,
+    "missingOriginalVolumes": 0,
+    "originalArchiveUnchanged": true,
+    "rehearsalContainersRunning": 0
+  },
+  "javascript": {
+    "tests": 918,
+    "passed": 918,
+    "failed": 0
+  },
+  "build": {
+    "status": "PASS",
+    "exitCode": 0,
+    "knownUseClientWarning": true
+  }
+}

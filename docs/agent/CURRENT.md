@@ -1,3 +1,16 @@
+# 현재 상태 — PR #63 로컬 통합 검증
+
+갱신 2026-11-23 KST. 기준 커밋 `a662c30732cf229ba42f348b0eece97d3cf1f691`은 이 문서 커밋의 부모다. 브랜치 `codex/s5-item-overhaul-20261120`. 대조 기준 원격 Draft HEAD `6b336c10abafc2fe4a1c25e74e2f5fadd97792a4`, PR base `main` `5c0238fde555a2e151725b338e81f786de6721c4`. S5 C `C_DEFERRED_BY_USER`, `actualC=NOT_RUN`.
+
+- **로컬 코드 통합 PASS, 원격 push BLOCK, 운영 적용·출시 BLOCK.** Vercel의 PR 브랜치 Preview와 Production은 Supabase URL·anon key 범위를 공유하며 이 브랜치 전용 오버라이드가 확인되지 않았다. Preview에서 일반 앱 동작이 운영 DB에 영향을 줄 수 있다. 저장소의 PR Actions는 로컬 QA, 합성 Docker DB 검증으로 확인했다. [자동화 영향과 통합 파일](../ops/S5-PR63-GIT-BYTE-VERIFICATION-2026-11-23.md)
+- [코드] 첫 커밋에 정확한 11개 파일을 담았다. `.gitattributes`는 승인된 미적용 Migration 5개 경로만 줄바꿈 변환을 끈다. 기존 59개와 AGENTS.md는 동일하다. SQL의 작업·staged·커밋·새 checkout SHA가 승인 manifest와 일치했다. 새 제품 checkout에서 **npm 918/918**과 Vite 빌드가 통과했다. [SHA 매니페스트](../../server-proposals/pr63-cli-path-20261123/candidate-manifest.json)
+- [산출물] 같은 제품 tree의 CLI 재검증에서 기존 객체/신규 S5 59→64, S5 함수 지문 151/151, statements 1,772개, 핵심 pgTAP 4파일·141 단언 통과. 동일 SQL의 앞선 전체 pgTAP 36파일·1,682 단언과 Auth/브라우저 E2E, 원본 데이터 보존 결과를 이어받는다. 운영 59개 수치는 직전 읽기 전용 리허설 기준이다. [DB 리허설](../ops/S5-PR63-CLI-MIGRATION-REHEARSAL-2026-11-23.md)
+- 운영 Migration, Edge, main 병합, Production 배포는 미실행이다. 별도 출시 전 단계에 최신 백업 복원, 운영 쓰기 차단과 drain, RTO/RPO, Worker·Edge·모바일 실기기 검증이 남아 있다. [운영 절차](../ops/S5-PR63-CLI-MIGRATION-RUNBOOK-2026-11-23.md) · [출시 체크리스트](../ops/S5-PR63-RELEASE-CHECKLIST-2026-11-23.md)
+
+---
+
+## 이전 기록 — PR #63 초기 검토
+
 # 현재 상태 — S5 그룹 아이템전 Draft 검토
 
 갱신 2026-11-20 KST. 기준 커밋 `dc247aa57eed3328bbfea7cbfbbfe990d03cedf0`, 통합 기준 `origin/main` `5c0238fde555a2e151725b338e81f786de6721c4`. 브랜치 `codex/s5-item-overhaul-20261120`. S5 C `C_DEFERRED_BY_USER`, `actualC=NOT_RUN`.

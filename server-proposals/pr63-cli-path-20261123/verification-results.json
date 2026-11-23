@@ -1,0 +1,600 @@
+{
+  "dateKst": "2026-11-23",
+  "basis": "6b336c10+uncommitted worktree",
+  "results": {
+    "bootstrap-result.json": {
+      "status": "PASS",
+      "candidate": "6b336c10",
+      "dateKst": "2026-11-23",
+      "originalTables": 182,
+      "originalDataUnchanged": true,
+      "newContainer": "wiki-pr63-cli-path-20261123-db"
+    },
+    "path_upgrade_r5-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "mode": "upgrade",
+      "historyBefore": 59,
+      "historyAfter": 64,
+      "original59HistoryPreserved": true,
+      "membershipUnchanged": true,
+      "originalDataPreserved": true,
+      "tableCount": 182,
+      "cliRecordedVersions": [
+        "20261120024414",
+        "20261120104117",
+        "20261120113035",
+        "20261120113647",
+        "20261120114137"
+      ]
+    },
+    "path_fresh_r4-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "mode": "fresh",
+      "historyBefore": 59,
+      "historyAfter": 64,
+      "original59HistoryPreserved": true,
+      "membershipUnchanged": true,
+      "originalDataPreserved": true,
+      "tableCount": null,
+      "cliRecordedVersions": [
+        "20261120024414",
+        "20261120104117",
+        "20261120113035",
+        "20261120113647",
+        "20261120114137"
+      ]
+    },
+    "fresh-zero-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "customRolesInitially": 0,
+      "initialApplicationHistory": 0,
+      "history": 64,
+      "app_roles": 6,
+      "owner_set": false,
+      "owner_inherited": false
+    },
+    "fresh-upgrade-convergence.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "scope": "all application schemas public/private/ink_product*/duel_v4*",
+      "normalization": "equivalent NULL/default owner ACLs and ACL item order, CRLF/LF only in function definitions, physical dropped-column attnum gaps, exactly two reviewed CHECK deparse variants",
+      "differences": []
+    },
+    "path_expired-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "mode": "expired",
+      "historyBefore": 59,
+      "historyAfter": 64,
+      "original59HistoryPreserved": true,
+      "membershipUnchanged": true,
+      "originalDataPreserved": true,
+      "tableCount": 180,
+      "cliRecordedVersions": [
+        "20261120024414",
+        "20261120104117",
+        "20261120113035",
+        "20261120113647",
+        "20261120114137"
+      ]
+    },
+    "path_expired_all-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "originalTables": 179,
+      "expiredOriginallyEmptyPartitionsAbsent": 3,
+      "historyBefore": 59,
+      "historyAfter": 64,
+      "originalDataPreserved": true,
+      "membershipsUnchanged": true,
+      "clientElapsedMs": 13960,
+      "priorAttempt": "TCP gateway was stopped before connection; no SQL had run"
+    },
+    "cli-failure-retry-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "results": [
+        {
+          "test": "S5 CLI history INSERT failure",
+          "status": "PASS",
+          "ddlDataRolesAndHistoryAtomic": true,
+          "historyAfterFailure": 59,
+          "historyAfterRetry": 64
+        },
+        {
+          "test": "third pending file failure",
+          "status": "PASS",
+          "fiveFilesOneTransaction": false,
+          "historyAfterFailure": 61,
+          "failedFileDdlRolledBack": true,
+          "priorFilesCommitted": true,
+          "historyAfterRetry": 64,
+          "prior61RowsUnchanged": true,
+          "originalDataUnchanged": true
+        },
+        {
+          "test": "completed CLI re-run",
+          "status": "PASS",
+          "history": 64,
+          "dataUnchanged": true
+        }
+      ]
+    },
+    "guard-failure-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "results": [
+        {
+          "test": "acl",
+          "status": "PASS",
+          "expected": "BRIDGE_BASELINE_DRIFT",
+          "history": 59,
+          "atomicRejection": true
+        },
+        {
+          "test": "business_rls",
+          "status": "PASS",
+          "expected": "BRIDGE_BASELINE_DRIFT",
+          "history": 59,
+          "atomicRejection": true
+        },
+        {
+          "test": "unexpected",
+          "status": "PASS",
+          "expected": "BRIDGE_BASELINE_DRIFT",
+          "history": 59,
+          "atomicRejection": true
+        },
+        {
+          "test": "live_partition",
+          "status": "PASS",
+          "expected": "BRIDGE_NONEXPIRED_PARTITION_MISSING",
+          "history": 59,
+          "atomicRejection": true
+        },
+        {
+          "test": "partial",
+          "status": "PASS",
+          "expected": "PR63_UNSUPPORTED_OR_PARTIAL_S5_STATE",
+          "history": 59,
+          "atomicRejection": true
+        }
+      ]
+    },
+    "full-36-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "files": 36,
+      "assertions": 1682,
+      "original182DataUnchanged": true,
+      "historyBeforeAndAfter": 64,
+      "results": [
+        {
+          "file": "achievement_authority_filter_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 17,
+          "assertions": 17,
+          "failed": 0
+        },
+        {
+          "file": "achievement_triggers_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 128,
+          "assertions": 128,
+          "failed": 0
+        },
+        {
+          "file": "achievements_rewards_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 145,
+          "assertions": 145,
+          "failed": 0
+        },
+        {
+          "file": "badge_retirement_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 24,
+          "assertions": 24,
+          "failed": 0
+        },
+        {
+          "file": "c1_reward_tables_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 97,
+          "assertions": 97,
+          "failed": 0
+        },
+        {
+          "file": "c4_check_c3_grant_total_xp.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 30,
+          "assertions": 30,
+          "failed": 0
+        },
+        {
+          "file": "daily_current_snapshot_pairs_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 17,
+          "assertions": 17,
+          "failed": 0
+        },
+        {
+          "file": "duel_drain_recovery_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 32,
+          "assertions": 32,
+          "failed": 0
+        },
+        {
+          "file": "duel_item_authority_v3.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 157,
+          "assertions": 157,
+          "failed": 0
+        },
+        {
+          "file": "duel_items_v4.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 91,
+          "assertions": 91,
+          "failed": 0
+        },
+        {
+          "file": "duel_players_rls_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 17,
+          "assertions": 17,
+          "failed": 0
+        },
+        {
+          "file": "duel_players_view_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 27,
+          "assertions": 27,
+          "failed": 0
+        },
+        {
+          "file": "duel_qa_admission_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 33,
+          "assertions": 33,
+          "failed": 0
+        },
+        {
+          "file": "duel_random_teleport_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 17,
+          "assertions": 17,
+          "failed": 0
+        },
+        {
+          "file": "duel_release_controls_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 34,
+          "assertions": 34,
+          "failed": 0
+        },
+        {
+          "file": "duel_search_authority_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 23,
+          "assertions": 23,
+          "failed": 0
+        },
+        {
+          "file": "duel_v4_rewards_and_index.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 54,
+          "assertions": 54,
+          "failed": 0
+        },
+        {
+          "file": "duel_v4_search.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 27,
+          "assertions": 27,
+          "failed": 0
+        },
+        {
+          "file": "group_final_gaps_v13.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 33,
+          "assertions": 33,
+          "failed": 0
+        },
+        {
+          "file": "group_final_gaps_v13_hardening_preflight.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 1,
+          "assertions": 1,
+          "failed": 0
+        },
+        {
+          "file": "group_items_s5.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 1,
+          "assertions": 1,
+          "failed": 0
+        },
+        {
+          "file": "group_items_s5_events.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 13,
+          "assertions": 13,
+          "failed": 0
+        },
+        {
+          "file": "group_match_lifecycle_phase2a.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 2,
+          "assertions": 2,
+          "failed": 0
+        },
+        {
+          "file": "group_security_phase2c.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 49,
+          "assertions": 49,
+          "failed": 0
+        },
+        {
+          "file": "group_spectator_emoji_atomicity.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 22,
+          "assertions": 22,
+          "failed": 0
+        },
+        {
+          "file": "multiplayer_rematch_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 32,
+          "assertions": 32,
+          "failed": 0
+        },
+        {
+          "file": "public_room_discovery_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 15,
+          "assertions": 15,
+          "failed": 0
+        },
+        {
+          "file": "public_waiting_room_expiry_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 19,
+          "assertions": 19,
+          "failed": 0
+        },
+        {
+          "file": "room_emotes_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 22,
+          "assertions": 22,
+          "failed": 0
+        },
+        {
+          "file": "sec_finish_db_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 29,
+          "assertions": 29,
+          "failed": 0
+        },
+        {
+          "file": "security_privilege_cleanup_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 55,
+          "assertions": 55,
+          "failed": 0
+        },
+        {
+          "file": "server_authority_v2.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 129,
+          "assertions": 129,
+          "failed": 0
+        },
+        {
+          "file": "single_run_mode_xp_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 30,
+          "assertions": 30,
+          "failed": 0
+        },
+        {
+          "file": "wiki_snapshot_full_link_roundtrip_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 7,
+          "assertions": 7,
+          "failed": 0
+        },
+        {
+          "file": "xp_ledger_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 153,
+          "assertions": 153,
+          "failed": 0
+        },
+        {
+          "file": "xp_result_grants_v1.sql",
+          "status": "PASS",
+          "exit": 0,
+          "planned": 100,
+          "assertions": 100,
+          "failed": 0
+        }
+      ]
+    },
+    "final-security-proof.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "allExistingObjectOwnersEffectiveAclsAndTableRlsUnchanged": true,
+      "aclComparison": "exact privileges/grant options/grantors; equivalent NULL owner defaults and array order normalized",
+      "existingXpReplayRequests": 817,
+      "additionalXpGrants": 0,
+      "recipientRlsActors": 2,
+      "anonymousAndDirectWriteDenied": true
+    },
+    "final-production-readonly-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "readOnly": true,
+      "rolesUnchanged": true,
+      "membershipsUnchanged": true,
+      "historyUnchanged": true,
+      "historyCount": 59,
+      "catalogueExactlyUnchanged": true,
+      "catalogueRemoved": 0,
+      "catalogueAdded": 0
+    },
+    "history-content-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "original59Unchanged": true,
+      "onlyApprovedFiveMigrationVersionsChanged": true,
+      "manualRepairOrStamp": false,
+      "results": [
+        {
+          "file": "20261120024414_group_items_s5.sql",
+          "status": "PASS",
+          "version": "20261120024414",
+          "statementCount": 1652,
+          "sha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb"
+        },
+        {
+          "file": "20261120104117_duel_items_v4.sql",
+          "status": "PASS",
+          "version": "20261120104117",
+          "statementCount": 51,
+          "sha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246"
+        },
+        {
+          "file": "20261120113035_duel_v4_server_search.sql",
+          "status": "PASS",
+          "version": "20261120113035",
+          "statementCount": 22,
+          "sha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed"
+        },
+        {
+          "file": "20261120113647_duel_v4_reward_queue.sql",
+          "status": "PASS",
+          "version": "20261120113647",
+          "statementCount": 31,
+          "sha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c"
+        },
+        {
+          "file": "20261120114137_duel_v4_link_index.sql",
+          "status": "PASS",
+          "version": "20261120114137",
+          "statementCount": 16,
+          "sha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce"
+        }
+      ]
+    },
+    "completion-proof.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "allSixExistingApplicationRoleAttributesUnchanged": true,
+      "threeExpiredPartitionsCaseOriginal59HistoryRowsUnchanged": true,
+      "original59MigrationFilesUnchanged": true,
+      "browserReceipts": {
+        "status": "PASS",
+        "dateKst": "2026-11-23",
+        "basis": "6b336c10+approved five amendments",
+        "parryAccepted": true,
+        "protectionActive": true
+      }
+    },
+    "e2e-original-data-proof.json": {
+      "dateKst": "2026-11-23",
+      "candidate": "6b336c10+isolated test edits",
+      "status": "PASS",
+      "baselineTables": 182,
+      "presentOriginalTables": 179,
+      "managedEmptyExpiredPartitionsRemoved": [
+        "realtime.messages_2026_11_17",
+        "realtime.messages_2026_11_18",
+        "realtime.messages_2026_11_19"
+      ],
+      "physical182TablesInvariant": "BLOCK",
+      "originalRowsPreserved": true,
+      "applicationCatalogUnchanged": true,
+      "migrationHistoryRows": 59
+    },
+    "s5-items-e2e-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "scenarios": [
+        "duel-v4",
+        "S5-3-player",
+        "S5-ink-parry-protect"
+      ],
+      "authBrowserLogin": true,
+      "rpcMocked": false,
+      "externalWiki": "deterministic local fixture"
+    },
+    "base-e2e-result.json": {
+      "status": "PASS",
+      "dateKst": "2026-11-23",
+      "basis": "6b336c10+approved five amendments",
+      "scenarios": [
+        "base-duel",
+        "base-group-3"
+      ],
+      "authBrowserLogin": true,
+      "rpcMocked": false,
+      "externalWiki": "local deterministic fixture"
+    }
+  }
+}
