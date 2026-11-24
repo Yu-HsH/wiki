@@ -79,7 +79,7 @@ test("preview title anchor contains real controls, opens only on opt-in, and nev
   const { createElement } = await import("react");
   const { renderToStaticMarkup } = await import("react-dom/server");
   const { parseFragment } = await import("parse5");
-  const { StaticRouter } = await import("react-router-dom/server.js");
+  const { StaticRouter } = await import("react-router");
   const server = await createServer({ configFile: false, envFile: false, appType: "custom",
     server: { middlewareMode: true }, optimizeDeps: { noDiscovery: true, include: [] } });
   t.after(() => server.close());

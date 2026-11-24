@@ -263,7 +263,7 @@ select is(private.apply_achievement_value_v1(pg_temp.uid(2), 'explore_better_pat
 update public.achievement_definitions set active = false where achievement_id = 'duel_normal_matches';
 select is(private.apply_achievement_value_v1(pg_temp.uid(2), 'duel_normal_matches', 10, null, 'duel', pg_temp.src(3))->>'code',
           'ACHIEVEMENT_INACTIVE', 'inactive achievement does not progress');
-select is((select count(*)::int from public.user_achievement_progress where achievement_id = 'duel_normal_matches'), 0,
+select is((select count(*)::int from public.user_achievement_progress where user_id = pg_temp.uid(2) and achievement_id = 'duel_normal_matches'), 0,
           'inactive: no progress row written');
 update public.achievement_definitions set active = true, ends_at = now() - interval '1 minute',
                                           starts_at = now() - interval '1 day'

@@ -1,0 +1,69 @@
+name: S5 dependency audit inventory
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/s5-dependency-audit.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install lockfile dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Collect full and production-only npm advisories (read-only)
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > "$RUNNER_TEMP/audit-all.json"
+          echo "All dependency audit exit code: $?"
+          npm audit --omit=dev --json > "$RUNNER_TEMP/audit-production.json"
+          echo "Production-only audit exit code: $?"
+          set -e
+          test -s "$RUNNER_TEMP/audit-all.json"
+          test -s "$RUNNER_TEMP/audit-production.json"
+      - name: Summarize affected packages and fixes, not credentials
+        env:
+          AUDIT_FOLDER: ${{ runner.temp }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const root=process.env.AUDIT_FOLDER;
+          const lines=['## npm lockfile vulnerability inventory',''];
+          const reportsWithFindings=[];
+          for(const [label,file] of [['All dependencies','audit-all.json'],['Runtime dependencies (excluding dev)','audit-production.json']]){
+            const report=JSON.parse(fs.readFileSync(root+'/'+file,'utf8'));
+            if(!report.vulnerabilities || !report.metadata?.vulnerabilities){
+              throw Error(label+' npm audit did not return an advisory inventory: '+JSON.stringify(report.error||report).slice(0,500));
+            }
+            lines.push('### '+label,'',JSON.stringify(report.metadata.vulnerabilities),'');
+            console.log(label+' totals: '+JSON.stringify(report.metadata.vulnerabilities));
+            if (report.metadata.vulnerabilities.total>0) reportsWithFindings.push(label);
+            for(const [name,issue] of Object.entries(report.vulnerabilities).sort(([a],[b])=>a.localeCompare(b))){
+              const advisories=(issue.via||[]).filter(x=>typeof x==='object').map(x=>({title:x.title,url:x.url,severity:x.severity,range:x.range}));
+              const summary={name,severity:issue.severity,isDirect:issue.isDirect,range:issue.range,fixAvailable:issue.fixAvailable,advisories};
+              console.log('PACKAGE '+JSON.stringify(summary));
+              lines.push('- '+name+' | '+issue.severity+' | direct='+issue.isDirect+' | fix='+JSON.stringify(issue.fixAvailable));
+              for(const item of advisories) if(item.url?.startsWith('https://')) lines.push('  - '+item.url+' ('+item.severity+')');
+            }
+            lines.push('');
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+          if (reportsWithFindings.length) {
+            console.error('Security gate failed: '+reportsWithFindings.join(', '));
+            process.exitCode=1;
+          }
+          NODE

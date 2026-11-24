@@ -1,107 +1,125 @@
--- Run on the local database. All fixture changes are rolled back.
--- The current selector reads the materialized reachability populated by a privileged refresh.
-begin;
-create extension if not exists pgtap with schema extensions;
-select plan(11);
+-- Independent populated-cache fixture. Production tables and guards stay intact.
+BEGIN;
+CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
+SELECT no_plan();
+CREATE TEMP TABLE daily_fixture_witness AS
+ SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY id)::text,'[]')) AS digest
+ FROM public.daily_challenges t;
 
-create temporary table daily_pair_test_day as
-select (now() at time zone 'Asia/Seoul')::date as day;
+-- LIKE keeps CHECK/UNIQUE/NOT NULL/identity contracts. PostgreSQL LIKE does not
+-- copy FKs, so reproduce them with only the fixture dependency names rebound.
+DO $fixture$
+DECLARE table_name text; item record; definition text;
+ names text[]:=ARRAY['daily_challenge_pool','daily_challenges','daily_course_pairs_v2',
+                    'wiki_pages','wiki_page_snapshots','wiki_snapshot_links'];
+BEGIN
+ FOREACH table_name IN ARRAY names LOOP
+  EXECUTE format('CREATE TEMP TABLE %I (LIKE public.%I INCLUDING ALL)',table_name,table_name);
+  IF (SELECT relrowsecurity FROM pg_class WHERE oid=format('public.%I',table_name)::regclass) THEN
+   EXECUTE format('ALTER TABLE pg_temp.%I ENABLE ROW LEVEL SECURITY',table_name);
+  END IF;
+ END LOOP;
+ FOR item IN SELECT c.conrelid::regclass::text AS relation,c.conname,pg_get_constraintdef(c.oid) AS definition
+  FROM pg_constraint c WHERE c.contype='f' AND c.conrelid IN
+  (SELECT format('public.%I',n)::regclass FROM unnest(names)n) LOOP
+  definition:=item.definition;
+  FOREACH table_name IN ARRAY names LOOP
+   definition:=replace(definition,'REFERENCES '||table_name||'(','REFERENCES pg_temp.'||table_name||'(');
+   definition:=replace(definition,'REFERENCES public.'||table_name||'(','REFERENCES pg_temp.'||table_name||'(');
+  END LOOP;
+  EXECUTE format('ALTER TABLE pg_temp.%I ADD CONSTRAINT %I %s',
+   regexp_replace(item.relation,'^public\.',''),item.conname,definition);
+ END LOOP;
+ FOR item IN SELECT p.oid,n.nspname,p.proname,pg_get_functiondef(p.oid) AS definition
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE (n.nspname='private' AND p.proname IN('refresh_daily_course_pairs_v2','choose_daily_course_goal_first_v2'))
+     OR (n.nspname='public' AND p.proname='ensure_today_daily_challenge') LOOP
+  definition:=item.definition;
+  FOREACH table_name IN ARRAY names LOOP definition:=replace(definition,'public.'||table_name,'pg_temp.'||table_name); END LOOP;
+  definition:=replace(definition,'private.refresh_daily_course_pairs_v2','pg_temp.refresh_daily_course_pairs_v2');
+  definition:=replace(definition,'private.choose_daily_course_goal_first_v2','pg_temp.choose_daily_course_goal_first_v2');
+  definition:=replace(definition,'public.ensure_today_daily_challenge','pg_temp.ensure_today_daily_challenge');
+  EXECUTE definition;
+ END LOOP;
+END $fixture$;
 
-delete from public.daily_challenges
-where challenge_date >= (select day - 8 from daily_pair_test_day);
-update public.daily_challenge_pool set is_active = false where is_active;
-insert into public.daily_challenge_pool
-  (sort_order, target_title, start_title, hint, is_active, verified_path_titles, verified_at)
-values
-  (-20001, 'Daily QA source', null, 'word', true, null, null),
-  (-20002, 'Daily QA goal', null, 'word', true, null, null),
-  (-20003, 'Daily QA fallback goal', 'Daily QA fallback source', 'fallback', true,
-    array['Daily QA fallback source', 'Daily QA fallback goal'], now());
+INSERT INTO pg_temp.daily_challenge_pool(sort_order,target_title,hint,is_active)
+SELECT -30000-g,'R63 filler start '||g,'fixture',true FROM generate_series(1,100)g;
+INSERT INTO pg_temp.daily_challenge_pool(sort_order,target_title,hint,is_active,start_title,verified_path_titles,verified_at)
+VALUES(-31001,'R63 main','fixture',true,NULL,NULL,NULL),
+      (-31002,'R63 goal','fixture',true,NULL,NULL,NULL),
+      (-31003,'R63 fallback goal','fallback',true,'R63 fallback start',ARRAY['R63 fallback start','R63 fallback goal'],now());
+INSERT INTO pg_temp.wiki_pages(page_id,canonical_title)
+SELECT 'r63-filler-'||g,'R63 filler start '||g FROM generate_series(1,100)g;
+INSERT INTO pg_temp.wiki_pages(page_id,canonical_title) VALUES('r63-main','R63 main'),('r63-middle','R63 middle');
+INSERT INTO pg_temp.wiki_page_snapshots(page_id,revision_id,canonical_title_snapshot,fetched_at)
+SELECT 'r63-filler-'||g,'100','R63 filler start '||g,now() FROM generate_series(1,100)g;
+INSERT INTO pg_temp.wiki_page_snapshots(page_id,revision_id,canonical_title_snapshot,fetched_at)
+VALUES('r63-main','99','R63 main',now()),('r63-main','100','R63 main',now()-interval '1 day'),
+      ('r63-middle','99','R63 middle',now()),('r63-middle','100','R63 middle',now()-interval '1 day');
+INSERT INTO pg_temp.wiki_snapshot_links(snapshot_id,target_page_id,target_title_snapshot,ordinal)
+SELECT id,'r63-goal','R63 goal',0 FROM pg_temp.wiki_page_snapshots WHERE page_id LIKE 'r63-filler-%'
+UNION ALL SELECT id,'r63-middle','R63 middle',0 FROM pg_temp.wiki_page_snapshots WHERE page_id='r63-main' AND revision_id='100'
+UNION ALL SELECT id,'r63-goal','R63 goal',0 FROM pg_temp.wiki_page_snapshots WHERE page_id='r63-middle' AND revision_id='100';
 
-insert into public.wiki_pages (page_id, canonical_title)
-values ('daily-qa-source', 'Daily QA source'), ('daily-qa-middle', 'Daily QA middle');
-insert into public.wiki_page_snapshots (page_id, revision_id, canonical_title_snapshot, fetched_at)
-values
-  ('daily-qa-source', '99', 'Daily QA source', now()),
-  ('daily-qa-source', '100', 'Daily QA source', now() - interval '1 day'),
-  ('daily-qa-middle', '99', 'Daily QA middle', now() - interval '1 day'),
-  ('daily-qa-middle', '100', 'Daily QA middle', now());
-insert into public.wiki_snapshot_links
-  (snapshot_id, target_page_id, target_title_snapshot, ordinal)
-select s.id, 'daily-qa-middle', 'Daily QA middle', 0
-from public.wiki_page_snapshots s where s.page_id = 'daily-qa-source' and s.revision_id = '100'
-union all
-select s.id, 'daily-qa-goal', 'Daily QA goal', 0
-from public.wiki_page_snapshots s where s.page_id = 'daily-qa-middle' and s.revision_id = '100';
+SELECT cmp_ok((SELECT count(*) FROM pg_temp.wiki_page_snapshots),'>=',100::bigint,'populated-cache threshold is exercised');
+SELECT cmp_ok(pg_temp.refresh_daily_course_pairs_v2(),'>=',101,'at least 100 independent filler candidates plus main');
+SELECT ok(EXISTS(SELECT FROM pg_temp.daily_course_pairs_v2 WHERE start_title='R63 main' AND target_title='R63 goal'),
+ 'latest numeric source and intermediate revisions supply a directed course');
+SELECT is((SELECT target_title FROM pg_temp.ensure_today_daily_challenge()),'R63 goal','one eligible dynamic goal wins over fixed fallback');
+CREATE TEMP TABLE issued_fixture_course AS SELECT * FROM pg_temp.daily_challenges;
+SELECT is((SELECT start_title FROM pg_temp.ensure_today_daily_challenge()),(SELECT start_title FROM issued_fixture_course),'repeated call returns the same issued start');
+SELECT is((SELECT count(*) FROM pg_temp.daily_challenges),1::bigint,'only one daily fixture row is issued');
+DELETE FROM pg_temp.daily_challenges;
 
-insert into public.daily_challenges (challenge_date, start_title, target_title, hint)
-select day - 8, 'Daily QA source', 'Daily QA goal', 'previous' from daily_pair_test_day;
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA goal', 'latest numeric revisions supply a two-link course; eight days ago does not penalize it');
-select is((select start_title from public.ensure_today_daily_challenge()),
-  'Daily QA source', 'the next caller receives the same course');
-select is((select count(*)::integer from public.daily_challenges where challenge_date = (select day from daily_pair_test_day)),
-  1, 'a day has exactly one course');
-select is((select hint from public.daily_challenges where challenge_date = (select day - 8 from daily_pair_test_day)),
-  'previous', 'older course remains unchanged');
+SAVEPOINT newer_source;
+INSERT INTO pg_temp.wiki_page_snapshots(page_id,revision_id,canonical_title_snapshot) VALUES('r63-main','101','R63 main');
+SELECT cmp_ok(pg_temp.refresh_daily_course_pairs_v2(),'>=',100,'filler graph remains populated after a newer source without links');
+SELECT ok(NOT EXISTS(SELECT FROM pg_temp.daily_course_pairs_v2 WHERE start_title='R63 main'),'old source links cannot survive newer source');
+ROLLBACK TO newer_source;
 
-delete from public.daily_challenges where challenge_date = (select day from daily_pair_test_day);
-savepoint newer_source;
-insert into public.wiki_page_snapshots (page_id, revision_id, canonical_title_snapshot)
-values ('daily-qa-source', '101', 'Daily QA source');
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA fallback goal', 'an older start revision cannot supply a removed link');
-rollback to newer_source;
+SAVEPOINT newer_middle;
+INSERT INTO pg_temp.wiki_page_snapshots(page_id,revision_id,canonical_title_snapshot) VALUES('r63-middle','101','R63 middle');
+SELECT cmp_ok(pg_temp.refresh_daily_course_pairs_v2(),'>=',100,'filler graph survives newer intermediate');
+SELECT ok(NOT EXISTS(SELECT FROM pg_temp.daily_course_pairs_v2 WHERE start_title='R63 main'),'old intermediate links cannot survive newer intermediate');
+ROLLBACK TO newer_middle;
 
-savepoint newer_middle;
-insert into public.wiki_page_snapshots (page_id, revision_id, canonical_title_snapshot)
-values ('daily-qa-middle', '101', 'Daily QA middle');
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA fallback goal', 'an older intermediate revision cannot supply a removed link');
-rollback to newer_middle;
+SAVEPOINT stale_hint;
+UPDATE pg_temp.wiki_snapshot_links SET target_revision_id='99' WHERE target_page_id='r63-middle';
+SELECT pg_temp.refresh_daily_course_pairs_v2();
+SELECT ok(EXISTS(SELECT FROM pg_temp.daily_course_pairs_v2 WHERE start_title='R63 main'),'stale target revision hint cannot override current intermediate');
+ROLLBACK TO stale_hint;
 
-savepoint pinned_middle;
-update public.wiki_snapshot_links set target_revision_id = '99'
-where target_page_id = 'daily-qa-middle';
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA goal', 'a stale target revision hint does not override the latest intermediate snapshot');
-rollback to pinned_middle;
+SAVEPOINT inactive_goal;
+UPDATE pg_temp.daily_challenge_pool SET is_active=false WHERE target_title='R63 goal';
+SELECT throws_ok('SELECT pg_temp.refresh_daily_course_pairs_v2()','P0001','DAILY_V2_POPULATED_CACHE_TOO_FEW_PAIRS (0)',
+ 'populated-cache safety guard is preserved when an active goal disappears');
+ROLLBACK TO inactive_goal;
 
-savepoint inactive_goal;
-update public.daily_challenge_pool set is_active = false where sort_order = -20002;
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA fallback goal', 'a disabled pool word is ineligible');
-rollback to inactive_goal;
+SAVEPOINT expired_source;
+UPDATE pg_temp.wiki_page_snapshots SET fetched_at=now()-interval '46 days' WHERE page_id='r63-main' AND revision_id='100';
+SELECT pg_temp.refresh_daily_course_pairs_v2();
+SELECT ok(NOT EXISTS(SELECT FROM pg_temp.daily_course_pairs_v2 WHERE start_title='R63 main'),'expired source evidence is ineligible');
+ROLLBACK TO expired_source;
 
-savepoint expired_start;
-update public.wiki_page_snapshots set fetched_at = now() - interval '46 days'
-where page_id = 'daily-qa-source' and revision_id = '100';
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA fallback goal', 'expired source proof falls back to an audited course');
-rollback to expired_start;
+INSERT INTO pg_temp.daily_challenges(challenge_date,start_title,target_title,hint)
+SELECT (now() AT TIME ZONE 'Asia/Seoul')::date-7,'R63 main','R63 goal','prior fixture';
+INSERT INTO pg_temp.daily_challenge_pool(sort_order,target_title,hint,is_active) VALUES(-31004,'R63 alternate','fixture',true);
+INSERT INTO pg_temp.wiki_snapshot_links(snapshot_id,target_page_id,target_title_snapshot,ordinal)
+SELECT id,'r63-alt','R63 alternate',1 FROM pg_temp.wiki_page_snapshots WHERE page_id='r63-middle' AND revision_id='100';
+SELECT pg_temp.refresh_daily_course_pairs_v2();
+SELECT is((SELECT target_title FROM pg_temp.ensure_today_daily_challenge()),'R63 alternate','unused goal beats a goal from seven days ago');
+DELETE FROM pg_temp.daily_challenges WHERE challenge_date=(now() AT TIME ZONE 'Asia/Seoul')::date;
+UPDATE pg_temp.daily_challenge_pool SET is_active=false WHERE target_title='R63 alternate';
+SELECT pg_temp.refresh_daily_course_pairs_v2();
+SELECT is((SELECT target_title FROM pg_temp.ensure_today_daily_challenge()),'R63 goal','repeat is allowed when no unused dynamic goal exists');
 
-update public.daily_challenges set challenge_date = (select day - 7 from daily_pair_test_day)
-where hint = 'previous' and target_title = 'Daily QA goal';
-insert into public.daily_challenge_pool (sort_order, target_title, hint, is_active)
-values (-20004, 'Daily QA alternate goal', 'word', true);
-insert into public.wiki_snapshot_links (snapshot_id, target_page_id, target_title_snapshot, ordinal)
-select id, 'daily-qa-alt-goal', 'Daily QA alternate goal', 1
-from public.wiki_page_snapshots where page_id = 'daily-qa-middle' and revision_id = '100';
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA alternate goal', 'a goal used seven days ago loses to an unused reachable goal');
-
-delete from public.daily_challenges where challenge_date = (select day from daily_pair_test_day);
-update public.daily_challenge_pool set is_active = false where sort_order in (-20003, -20004);
-select private.refresh_daily_course_pairs_v2();
-select is((select target_title from public.ensure_today_daily_challenge()),
-  'Daily QA goal', 'a repeat is allowed when no unused course is available');
-
-select * from finish();
-rollback;
+-- Emergency selection is a distinct contract: do not bypass refresh safety by
+-- pretending that a populated but broken cache is an empty fresh database.
+DELETE FROM pg_temp.daily_course_pairs_v2;
+SELECT is((SELECT target_title FROM pg_temp.choose_daily_course_goal_first_v2((now() AT TIME ZONE 'Asia/Seoul')::date)),
+ 'R63 fallback goal','audited fixed course is the emergency chooser fallback');
+SELECT is((SELECT md5(coalesce(jsonb_agg(to_jsonb(t) ORDER BY id)::text,'[]')) FROM public.daily_challenges t),
+ (SELECT digest FROM daily_fixture_witness),'original daily rows were never deleted or updated');
+SELECT * FROM finish();
+ROLLBACK;

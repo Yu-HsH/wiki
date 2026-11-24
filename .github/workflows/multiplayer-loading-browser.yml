@@ -7,6 +7,7 @@ on:
       - 'pages/GroupGamePage.jsx'
       - 'components/PageLoadingOverlay.jsx'
       - 'scripts/verify-multiplayer-loading-browser-ci.mjs'
+      - 'scripts/open-pr63-ci-admission.psql'
       - '.github/workflows/multiplayer-loading-browser.yml'
   workflow_dispatch:
 
@@ -33,6 +34,10 @@ jobs:
         run: node --check scripts/verify-multiplayer-loading-browser-ci.mjs
       - name: Start disposable Supabase with only local migrations
         run: npx --no-install supabase start --yes --exclude vector
+      - name: Check the default admission gate and open it for local fixtures
+        run: |
+          docker exec -i --user postgres supabase_db_wiki-packet13-r2-clean158 \
+            psql -Xw -U postgres -d postgres -v pr63_ci_database=postgres < scripts/open-pr63-ci-admission.psql
       - name: Install Chromium
         run: npx --no-install playwright install --with-deps chromium
       - name: Run 1:1 and 3-player group loading browser QA

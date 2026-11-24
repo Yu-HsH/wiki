@@ -1,0 +1,40 @@
+{
+  "dateKst": "2026-11-23",
+  "basis": "6b336c10",
+  "userApprovedUnappliedFiveException": true,
+  "liveSourceBaselineHash": "7fdd063bf8ebc7c9f6402e78a60d7419",
+  "restoreBaselineHash": "c040fb5c232ddf51d7d6a3dfe75e5f5c",
+  "sourceCatalogueSha256": "218507857bc92247ac1b101717600a0f5dd1a98c4c0dbd21ce1fb62606fcc3bf",
+  "files": [
+    {
+      "file": "20261120024414_group_items_s5.sql",
+      "version": "20261120024414",
+      "originalSha256": "99963e8eb08b81232588c97c2a8c00c64b8e940937adfeb41e1de2dd858e61a8",
+      "sha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb"
+    },
+    {
+      "file": "20261120104117_duel_items_v4.sql",
+      "version": "20261120104117",
+      "originalSha256": "6a22b363d417a718397714377bd07e73a9def52278582957ad5ce323e2bc3374",
+      "sha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246"
+    },
+    {
+      "file": "20261120113035_duel_v4_server_search.sql",
+      "version": "20261120113035",
+      "originalSha256": "a1dd7b35b1331652621373d356dd70a4a2ad169e421a300136f3298be3003ad1",
+      "sha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed"
+    },
+    {
+      "file": "20261120113647_duel_v4_reward_queue.sql",
+      "version": "20261120113647",
+      "originalSha256": "eed5b3b20941c98e3419ac9b13188cfc8e1c097d8760f9244f4a5303ddb81013",
+      "sha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c"
+    },
+    {
+      "file": "20261120114137_duel_v4_link_index.sql",
+      "version": "20261120114137",
+      "originalSha256": "cb8f9e64071793c28eb2963ae9c5a31c40f973a39bafd1cb85ca682a5151df88",
+      "sha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce"
+    }
+  ]
+}

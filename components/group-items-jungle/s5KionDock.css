@@ -1,0 +1,31 @@
+/* Players: a normal row in the sticky item dock. No overlap with parry or
+   item selectors, even when the article is scrolled to the final link. */
+.group-items-jungle-dock .s5-kion-dock .wr-race-emotes {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  min-height: 50px;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 4px 10px;
+}
+.group-items-jungle-dock .s5-kion-dock .wr-race-emotes__reactions {
+  min-height: 42px;
+}
+.s5-kion-dock .wr-race-emotes__reaction .wr-kion-sticker {
+  --wr-kion-size: 42px !important;
+}
+.s5-kion-dock--spectator .wr-race-emotes {
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 760px) {
+  .group-items-jungle-dock .s5-kion-dock .wr-race-emotes {
+    padding: 3px 8px;
+    gap: 6px;
+  }
+  .s5-kion-dock--spectator .wr-race-emotes {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}

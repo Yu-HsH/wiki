@@ -37,6 +37,11 @@ try {
     assert.equal(await group.locator(".wr-race-emotes__reaction").count(), 6,
       "A six-person group may have six distinct visible reactions at once");
     const trigger = duel.getByRole("button", { name: /키온 보내기/ });
+    assert.equal(await trigger.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return target === element || element.contains(target);
+    }), true, `Duel Kion trigger is not covered by the group fixture at ${width}px`);
     await trigger.click();
     const panel = duel.locator(".wr-kion-picker__panel");
     await panel.waitFor({ state: "visible" });
@@ -64,6 +69,19 @@ try {
     assert.equal(await group.locator(".wr-kion-picker__panel").isVisible(), false);
     await group.getByRole("button", { name: /문서 링크 0/ }).click();
     await group.getByRole("button", { name: /문서 링크 1/ }).waitFor();
+
+    // A real Wikipedia article can be several screens tall. Sending and
+    // received stickers must stay in the viewport without scrolling back up.
+    await page.evaluate(() => {
+      document.querySelector("#duel .article").style.minHeight = "210vh";
+      window.scrollTo(0, 650);
+    });
+    await page.waitForFunction(() => window.scrollY >= 200);
+    for (const selector of ["#duel .wr-race-emotes", "#group .wr-race-emotes"]) {
+      const box = await page.locator(selector).boundingBox();
+      assert.ok(box && box.y >= -1 && box.y + box.height <= height + 1,
+        `Reaction dock stays visible at article scroll for ${selector} ${width}px: ${JSON.stringify(box)}`);
+    }
 
     await page.evaluate(() => document.querySelectorAll(".wr-race-emotes img")
       .forEach((image) => { image.loading = "eager"; }));

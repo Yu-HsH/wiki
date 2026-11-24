@@ -4,5 +4,10 @@
             "source": "/(.*)",
             "destination": "/index.html"
         }
-    ]
+    ],
+    "git": {
+        "deploymentEnabled": {
+            "codex/s5-item-overhaul-20261120": false
+        }
+    }
 }

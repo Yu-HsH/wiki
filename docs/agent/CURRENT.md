@@ -1,3 +1,38 @@
+# 현재 상태 — PR #63 C1 운영 적용 후
+
+갱신 2026-11-24 KST. 기준 커밋 `4d2752610b2e41c098d6c9617eabeda4bc230d02`은 이 문서 커밋의 부모다. 브랜치 `codex/s5-item-overhaul-20261120`.
+
+## PR #63 C1 운영 적용과 통합 대기 (2026-11-24 KST)
+
+- **운영 이력 64 확인.** 59→60→64와 PostgreSQL 17 격리 복원 검증 완료. Data API는 ON, 노출 스키마는 public / graphql_public이며 신규 입장 게이트는 닫혀 있다 (트리거 8개).
+- 운영 이력에 기록된 C1 문장 배열 5개를 격리 CLI 기준과 대조했다. 원격 Draft HEAD는 f8fb50626b246097c64e612430696fd8d1767a11이며 로컬 기준 커밋에서 S5와 v4 SQL 두 파일만 운영 바이트로 교체했다. 나머지 세 파일과 기존 59개는 동일하다.
+- 이력 64에서 실제 로그인, REST, 읽기 RPC, Realtime 구독·heartbeat 및 현재 Production 홈·로그인·가이드 렌더링을 확인했다. 영향 범위 로컬 테스트 44/44가 통과했다.
+- 기존 Production 프론트는 main 5c0238fde555a2e151725b338e81f786de6721c4다. 신규 duel-search-v4 Edge, PR 통합, Vercel 배포, 입장 개방은 차례로 승인 및 확인한다. S5 C는 별도 보류 상태다.
+
+## 이전 기록
+
+- **첫 push 안전장치 적용·재조회 PASS, push 승인 대기, 운영 적용·출시 BLOCK.** Vercel `wiki`의 Ignored Build Step은 Automatic에서 Only build production 동작으로 임시 변경했다. Production Branch `main`, 기존 Production 배포, Vercel Authentication의 보호 범위는 동일하다. PR 브랜치의 Git 자동 배포 차단은 `vercel.json`에 있으며 원격에는 아직 반영되지 않았다.
+- [산출물] 승인된 push 전 대상 HEAD와 보호 설정을 다시 확인한다. 해당 SHA의 GitHub PR checks가 끝나고 Vercel에 새 READY 또는 진행 중 Preview가 없으며 Production SHA가 그대로인 상태에서 임시 값의 원복을 검토한다. 배포가 생기지 않거나 사전 단계에서 취소된 경우가 예상 결과다. 기존 Preview는 보호를 유지한다.
+- [산출물] 이전 push BLOCK의 원인은 Preview·Production에서 Supabase 설정을 공유하는 상태였다. 기존 Preview에서는 여전히 운영 연결 가능성이 있다. [자동화 영향과 통합 파일](../ops/S5-PR63-GIT-BYTE-VERIFICATION-2026-11-23.md)
+- [코드] 첫 커밋에 정확한 11개 파일을 담았다. `.gitattributes`는 승인된 미적용 Migration 5개 경로만 줄바꿈 변환을 끈다. 기존 59개와 AGENTS.md는 동일하다. SQL의 작업·staged·커밋·새 checkout SHA가 승인 manifest와 일치했다. 새 제품 checkout에서 **npm 918/918**과 Vite 빌드가 통과했다. [SHA 매니페스트](../../server-proposals/pr63-cli-path-20261123/candidate-manifest.json)
+- [산출물] 같은 제품 tree의 CLI 재검증에서 기존 객체/신규 S5 59→64, S5 함수 지문 151/151, statements 1,772개, 핵심 pgTAP 4파일·141 단언 통과. 동일 SQL의 앞선 전체 pgTAP 36파일·1,682 단언과 Auth/브라우저 E2E, 원본 데이터 보존 결과를 이어받는다. 운영 59개 수치는 직전 읽기 전용 리허설 기준이다. [DB 리허설](../ops/S5-PR63-CLI-MIGRATION-REHEARSAL-2026-11-23.md)
+- 운영 Migration, Edge, main 병합, Production 배포는 미실행이다. 별도 출시 전 단계에 최신 백업 복원, 운영 쓰기 차단과 drain, RTO/RPO, Worker·Edge·모바일 실기기 검증이 남아 있다. [운영 절차](../ops/S5-PR63-CLI-MIGRATION-RUNBOOK-2026-11-23.md) · [출시 체크리스트](../ops/S5-PR63-RELEASE-CHECKLIST-2026-11-23.md)
+
+---
+
+## 이전 기록 — PR #63 초기 검토
+
+# 현재 상태 — S5 그룹 아이템전 Draft 검토
+
+갱신 2026-11-20 KST. 기준 커밋 `dc247aa57eed3328bbfea7cbfbbfe990d03cedf0`, 통합 기준 `origin/main` `5c0238fde555a2e151725b338e81f786de6721c4`. 브랜치 `codex/s5-item-overhaul-20261120`. S5 C `C_DEFERRED_BY_USER`, `actualC=NOT_RUN`.
+
+- [산출물] 11월 10일 r11 앱의 11월 11일 보존 소스 ZIP `9d3dc018bd51e00ebc50bdb83f82758c68ae86fbd7b15876d4b95cbf45d0c3d0` 및 매니페스트 586개 입력의 SHA-256을 확인했다. [코드] `components/group-items-jungle/`, `components/group-items-playtest/`, `public/group-items-final-s5/`에서 S5 카탈로그와 아이콘·효과·음향을 복구했다. `App.jsx`는 로컬 검토 빌드에 온라인 계정용 전용 경로를 추가했다.
+- [코드] `supabase/migrations/20261120024414_group_items_s5.sql`은 보급이 세 번으로 제한된 초기 후보에 필요한 r19 연속 보급·방/영수증 계약을 반영한다. r19의 제품 SQL 출처 SHA-256은 `4c045cabdf3f958557e1370fb158622c9c534c941aebf69f43b9dc8a83cd3fcc`다. 새 migration은 입장 정책과 코스 데이터 없이 시작하며 익명 실행 권한을 명시적으로 회수한다. Realtime 관리 스키마가 없는 로컬 DB에서는 폴링 경로가 남는다.
+- [산출물] 기준 `5c0238f` + 이식 작업 트리, 2026-11-20 KST. `npm test` 899/899, 기본 및 S5 검토 빌드 통과. 호스트 포트 없는 새 로컬 DB에서 기존 migration 59개와 신규 1개를 적용했다. `supabase/tests/group_items_s5.sql`에서 3인 생성·입장·시작, 시작 1개, 20초·25초 경계와 4회차까지의 보급, 두 칸 제한, 권한과 재접속을 확인했다. 별도 연결 3개의 동시 소비에서 같은 ID는 같은 영수증, 다른 ID는 소비 1회였다. 기존 재경기 32/32, 이모트 22/22, 1:1 아이템 157/157 통과.
+- **BLOCK** 브라우저 3인 실경기, 실기기 패링 입력, 자연 보급 Worker 장시간 실측, 냉간 Realtime의 첫 이벤트 전달, `AUTHORITY_TIME_REGRESSION`의 최초 발생 원인. 이 변경은 검토용이다.
+
+---
+
 # 현재 상태 — PR #62 Preview P0 싱글 이탈 확인 보정
 
 갱신 **2026-11-20 KST**. 제품 기준 **91034ec** (P0 수정) 및 **8059496** (P0 전용 CI 분리), 브랜치 `integrate/tutorial-items-group-20261119`, [Draft PR #62](https://github.com/Yu-HsH/wiki/pull/62), 운영 `main` 기준 `b7d59371e8a804f8ced8f8ae9c1da2a27fd68bd4`. API로 재구성한 원격 커밋 SHA는 해당 파일 트리의 로컬 커밋 SHA와 다를 수 있다.

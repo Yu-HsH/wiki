@@ -1,0 +1,335 @@
+import "./s5Next.css";
+import './phase2.css';
+import {Phase2Countdown} from './Phase2Panels.jsx';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../authContext.jsx";
+import { supabase } from "../../supabaseClient.js";
+import GroupItemsJungle from "./GroupItemsJungle.jsx";
+import { createPlaytestAudio } from "../group-items-playtest/playtestAudio.js";
+import { createGroupItemsContainerAdapters } from "./containerAdapters.js";
+import { sameGroupItemsScope } from "./authoritySession.js";
+import { PRODUCT_PROTOCOL, productBindingMatches, productId, readProductBinding, readProductRoom, readProductRoomAction } from "./productContract.js";
+import { createProductItemPresentation } from "./productPresentation.js";
+import { createProductInkAudio } from "./productInkAudio.js";
+import { createFinalAssetAudio } from "./finalAssetAudio.js";
+import { createFinalAssetPresentation } from "./finalAssetPresentation.js";
+import { FIXED_PRODUCT_WIKI_BINDING, readFixedProductWikiDocument } from "./productFixedWikiDocument.js";
+import { loadProductWikiDocument } from "./productWikiDocument.js";
+import S5KionDock from "./S5KionDock.jsx";
+
+const productPath = "/multiplayer/group-items";
+const entryChannel = import.meta.env.MODE === "s4-product-candidate" ? "review" : "production";
+const fallbackIntervalMs = 750;
+const heartbeatIntervalMs = 4500;
+const audioSetting = "group-items-product:ink-audio";
+const journal = {
+  list(key) { return JSON.parse(sessionStorage.getItem("group-items-product:"+key) ?? "[]"); },
+  add(key, id) { sessionStorage.setItem("group-items-product:"+key, JSON.stringify([...new Set([...journal.list(key), id])])); },
+  remove(key, id) { sessionStorage.setItem("group-items-product:"+key, JSON.stringify(journal.list(key).filter(value=>value!==id))); },
+};
+
+function makeRequestId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // Candidate Docker origins use internal HTTP. UUIDs still come from the browser CSPRNG.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, value => value.toString(16).padStart(2,"0")).join("");
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+async function readIdentity() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id || !session.access_token) throw new Error("AUTH_REQUIRED");
+  return { actorId: session.user.id, authenticationEpoch: session.user.last_sign_in_at ?? session.user.id, accessToken: session.access_token };
+}
+
+async function rpc(name, args, accessToken, signal) {
+  let query = supabase.rpc(name, args).setHeader("Authorization", "Bearer " + accessToken);
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+function useRoomActions(binding, actorId) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const inFlight = useRef(false);
+  async function act(operation, roomId, version, payload = {}) {
+    if (inFlight.current) return null;
+    inFlight.current = true;
+    setPending(true);
+    setError("");
+    const key = "group-items-product-room:" + JSON.stringify([actorId, binding.policyDigest, operation, roomId, version, payload]);
+    try {
+      const identity = await readIdentity();
+      if (identity.actorId !== actorId) throw new Error("AUTH_REQUIRED");
+      const requestId = sessionStorage.getItem(key) ?? makeRequestId();
+      sessionStorage.setItem(key, requestId);
+      const result = await rpc("act_group_items_product_room_v1", { p_operation: operation, p_room: roomId,
+        p_request: requestId, p_expected_version: version, p_binding: binding, p_payload: payload }, identity.accessToken);
+      const current = await readIdentity();
+      if (current.actorId !== actorId || current.authenticationEpoch !== identity.authenticationEpoch) throw new Error("AUTH_REQUIRED");
+      const receipt = readProductRoomAction(result,{ actorId, requestId, operation, binding, roomId });
+      sessionStorage.removeItem(key);
+      return receipt;
+    } catch (failure) {
+      if (failure.settled) sessionStorage.removeItem(key);
+      setError(failure.message ?? "PRODUCT_ROOM_UNAVAILABLE");
+      return null;
+    } finally {
+      inFlight.current = false;
+      setPending(false);
+    }
+  }
+  return { pending, error, act };
+}
+
+function ProductEntry({ binding, actorId }) {
+  const navigate = useNavigate();
+  const { pending, error, act } = useRoomActions(binding, actorId);
+  const [code, setCode] = useState("");
+  async function enter(operation, payload) {
+    const result = await act(operation, null, null, payload);
+    if (result) navigate(productPath+"/"+result.roomId);
+  }
+  return <main>
+    <h1>그룹 아이템전</h1>
+    <p>3~8명이 같은 문서를 출발해 목표 문서까지 경주합니다. 시작 시 아이템 1개를 받고, 20초 뒤 첫 보급부터 25초마다 새 아이템을 받습니다. 가방은 최대 2칸입니다.</p>
+    <button type="button" disabled={pending} onClick={()=>void enter("create", {})}>아이템 방 만들기</button>
+    <form onSubmit={event=>{event.preventDefault(); void enter("join", { roomCode:code.trim().toUpperCase() });}}>
+      <label>아이템 방 코드 <input value={code} onChange={event=>setCode(event.target.value)} required maxLength={16}/></label>
+      <button disabled={pending}>입장</button>
+    </form>
+    <button type="button" onClick={()=>navigate("/play")}>모드 선택으로 돌아가기</button>
+    {error && <p role="alert">{error}</p>}
+  </main>;
+}
+
+function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players }) {
+  const previewAudio = import.meta.env.VITE_GROUP_ITEMS_INK_PREVIEW === "1";
+  const fixedAudio = productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING);
+  const finalAssets = (import.meta.env.VITE_GROUP_ITEMS_FINAL_ASSETS === "1" ||
+    (import.meta.env.VITE_GROUP_ITEMS_FINAL_ASSETS !== "0" &&
+      (import.meta.env.MODE === "s4-product-candidate" || import.meta.env.VITE_GROUP_ITEMS_S5_ENTRY === "1"))) &&
+    binding.rulesVersion === "ink-s5-test-v1" && binding.catalogVersion === "ink-s5-test-v1" &&
+    binding.modePolicyVersion === "wikipedia-s5-test-v1";
+  const audioPreference = finalAssets ? "group-items:final-asset-audio" : audioSetting;
+  const volumePreference = "group-items:final-asset-volume";
+  const [audioEnabled, setAudioEnabled] = useState(()=>sessionStorage.getItem(audioPreference) === "on");
+  const [volume, setVolume] = useState(()=>Number(sessionStorage.getItem(volumePreference) ?? 65));
+  const audio = useRef(null);
+  useEffect(()=>{
+    const output = finalAssets ? createFinalAssetAudio(window) :
+      fixedAudio && !previewAudio ? createPlaytestAudio(window) : createProductInkAudio(window,{preview:previewAudio});
+    audio.current = output;
+    if (finalAssets) output.setVolume(Number(sessionStorage.getItem(volumePreference) ?? 65)/100);
+    if (sessionStorage.getItem(audioPreference) === "on") output.enable(true);
+    return ()=>{ audio.current = null; output.dispose(); };
+  },[fixedAudio,previewAudio,finalAssets,audioPreference]);
+  const itemPresentation = useMemo(()=>{
+    const base = createProductItemPresentation({
+      playInk: (pulse,view) => audio.current?.playPulse(pulse,view,{hidden:document.hidden}),
+    });
+    return finalAssets ? createFinalAssetPresentation(base,()=>audio.current) : base;
+  },[finalAssets]);
+  const room = useMemo(()=>({ mode:"group_items", protocol:PRODUCT_PROTOCOL, sessionId, binding }),[sessionId,binding]);
+  const scope = useMemo(()=>({ ...room, actorId, participantId, ownerEpoch }),[room,actorId,participantId,ownerEpoch]);
+  const adapters = useMemo(()=>createGroupItemsContainerAdapters({ scope, readIdentity,
+    async invoke({ operation, payload, accessToken, signal }) {
+      const bound = { p_room:roomId, p_session:sessionId, p_binding:binding };
+      if (operation === "state") return rpc("get_group_items_product_state_v1", bound, accessToken, signal);
+      if (operation === "act") return rpc("act_group_items_product_v1", { ...bound,
+        p_request:payload.requestId, p_operation:payload.operation, p_payload:payload.payload }, accessToken, signal);
+      if (operation === "receipt") return rpc("get_group_items_product_receipt_v1", { ...bound,
+        p_request:payload.requestId }, accessToken, signal);
+      if (operation !== "document") throw new Error("PRODUCT_OPERATION_UNSUPPORTED");
+      const documentSignal = AbortSignal.any([signal, AbortSignal.timeout(8000)]);
+      const document = await rpc("get_group_items_product_document_v1", { ...bound, p_frame:payload }, accessToken, documentSignal);
+      if (!sameGroupItemsScope(document?.scope, scope)) throw new Error("TRANSPORT_SCOPE_MISMATCH");
+      const body = await loadProductWikiDocument(payload, document.body, (identity, pinnedSignal)=>{
+        if (productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING)) return readFixedProductWikiDocument(identity,pinnedSignal);
+        return {
+          pageId:document.body.pageId, revisionId:document.body.revisionId, canonicalTitle:document.body.canonicalTitle,
+          snapshotId:document.body.wikiSnapshotId, documentHtml:document.body.documentHtml,
+        };
+      }, documentSignal);
+      return { scope:document.scope, body };
+    },
+  }),[scope,roomId,sessionId,binding]);
+  return <>
+    {(fixedAudio || previewAudio || finalAssets) && <div className={finalAssets ? "s5-final-audio" : undefined} style={finalAssets ? undefined : {display:"contents"}}><button type="button" aria-pressed={audioEnabled} onClick={()=>{
+      const enabled = !audioEnabled;
+      audio.current?.enable(enabled);
+      sessionStorage.setItem(audioPreference,enabled ? "on" : "off");
+      setAudioEnabled(enabled);
+    }}>{finalAssets ? "아이템 효과음" : "먹물 효과음"}</button>
+    {finalAssets && <label>효과음 볼륨 <input type="range" min="0" max="100" value={volume} onChange={event=>{
+      const next = Number(event.target.value);
+      audio.current?.setVolume(next/100);
+      sessionStorage.setItem(volumePreference,String(next));
+      setVolume(next);
+    }}/></label>}</div>}
+    <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
+      target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
+      kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>
+  </>;
+}
+
+
+function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
+  const navigate = useNavigate();
+  const [room, setRoom] = useState(null);
+  const [failure, setFailure] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [lastSync, setLastSync] = useState("initial");
+  const binding = room?.binding ?? defaultBinding;
+  const roomRef = useRef(null), reloadRef = useRef(null), itemListeners = useRef(new Set());
+  const liveRef = useRef(false);
+  const { pending, error, act } = useRoomActions(binding, actorId);
+  const subscribe = useCallback(listener=>{
+    itemListeners.current.add(listener);
+    listener(true, liveRef.current);
+    return ()=>itemListeners.current.delete(listener);
+  },[]);
+
+  useEffect(()=>{
+    const abort = new AbortController();
+    let reading = false, pendingSource = null;
+    async function load(source = "manual") {
+      if (abort.signal.aborted) return;
+      if (reading) { pendingSource = source; return; }
+      reading = true;
+      try {
+        const identity = await readIdentity();
+        if (identity.actorId !== actorId) throw new Error("AUTH_REQUIRED");
+        const knownBinding = roomRef.current?.binding ?? null;
+        const data = await rpc("get_group_items_product_room_v1", { p_room:roomId, p_binding:knownBinding }, identity.accessToken, abort.signal);
+        if (!abort.signal.aborted) {
+          const confirmedBinding = knownBinding ?? readProductBinding(data?.binding);
+          const next = readProductRoom(data, { roomId, actorId, binding:confirmedBinding }, roomRef.current);
+          roomRef.current = next;
+          setRoom(next);
+          setFailure("");
+          setLastSync(source);
+        }
+      } catch (error) {
+        if (!abort.signal.aborted) setFailure(error.message ?? "PRODUCT_ROOM_UNAVAILABLE");
+      } finally {
+        reading = false;
+        if (pendingSource) {
+          const nextSource = pendingSource;
+          pendingSource = null;
+          void load(nextSource);
+        }
+      }
+    }
+    function invalidate(source, recovering) {
+      if (abort.signal.aborted) return;
+      void load(source);
+      const canRead = liveRef.current || source === "polling";
+      for (const listener of itemListeners.current) listener(recovering, canRead);
+    }
+    const visibility = ()=>{ if (!document.hidden) invalidate("resume", true); };
+    reloadRef.current = load;
+    void load("initial");
+    const channel = supabase.channel("group-items-signals:"+roomId+":"+actorId)
+      .on("postgres_changes",{
+        event:"*",schema:"ink_product_events",table:"signals_v1",filter:"recipient_id=eq."+actorId,
+      },change=>{
+        if (change.new?.room_id===roomId && change.new?.recipient_id===actorId) invalidate("websocket",false);
+      })
+      .subscribe(status=>{
+        if (abort.signal.aborted) return;
+        liveRef.current = status === "SUBSCRIBED";
+        invalidate(liveRef.current ? "subscribed" : "polling", true);
+      });
+    const fallback = setInterval(()=>{
+      if (!liveRef.current && roomRef.current?.phase !== "finished") invalidate("polling", false);
+    }, fallbackIntervalMs);
+    const heartbeat = setInterval(()=>{
+      if (liveRef.current && roomRef.current?.phase !== "finished") invalidate("heartbeat", false);
+    }, heartbeatIntervalMs);
+    window.addEventListener("online",visibility);
+    document.addEventListener("visibilitychange",visibility);
+    return ()=>{
+      abort.abort();
+      clearInterval(fallback);
+      clearInterval(heartbeat);
+      liveRef.current = false;
+      reloadRef.current = null;
+      window.removeEventListener("online",visibility);
+      document.removeEventListener("visibilitychange",visibility);
+      void supabase.removeChannel(channel);
+    };
+  },[roomId,defaultBinding,actorId]);
+
+  async function command(operation) {
+    const result = await act(operation, roomId, room.version);
+    if (!result) return;
+    if (operation === "rematch") navigate(productPath+"/"+result.roomId);
+    else if (operation === "leave" && room.phase === "waiting") navigate(productPath);
+    else void reloadRef.current?.();
+  }
+
+  if (failure) return <main><p role="alert">{failure}</p><button type="button" onClick={()=>void reloadRef.current?.()}>다시 확인</button></main>;
+  if (!room) return <p role="status">아이템 방을 확인하는 중…</p>;
+  const labels = { ready:"준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기", rematch:"재경기" };
+  return <div data-product-group-phase={room.phase} data-product-sync={lastSync}
+    data-product-document-source={productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING) ? "fixed" : "wikipedia"}>
+    {room.phase === "waiting" && <section aria-label="아이템 그룹 대기실">
+      <h1>아이템 그룹 대기실</h1>
+      <p>모든 참가자가 준비하면 방장이 경기를 시작할 수 있어요. 최소 {room.minimumPlayers}명, 최대 {room.maximumPlayers}명입니다.</p>
+      {room.roomCode && <p>방 코드 <output aria-label="아이템 방 코드">{room.roomCode}</output> <button type="button" onClick={()=>{
+        void navigator.clipboard?.writeText(room.roomCode).then(()=>setCopied(true)).catch(()=>setCopied(false));
+      }}>코드 복사</button>{copied && <span role="status"> 복사 완료</span>}</p>}
+      <ul>{room.players.map(player=><li key={player.participantId}>{player.name} {player.ready ? "준비 완료" : "대기 중"}</li>)}</ul>
+    </section>}
+    {room.lifecycle && (room.phase2Policy && room.phase==='playing' ? <Phase2Countdown lifecycle={room.lifecycle} serverObservedAt={room.serverObservedAt}/> : <p aria-label="아이템전 경기 기한">최대 20분 · 3위 완주 후 최대 2분 유예{room.phase === "playing" && room.lifecycle.grace_ends_at && " · 유예 진행 중"}</p>)}
+
+    {room.phase === "playing" && (room.role === "player" ? <ProductMatch roomId={roomId} sessionId={room.sessionId}
+      participantId={room.participantId} ownerEpoch={room.ownerEpoch} actorId={actorId} binding={binding}
+      warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe} players={room.players}/> : <section aria-label="아이템 그룹 관전">
+      <h1>아이템 그룹 관전</h1><ul>{room.players.map(player=><li key={player.participantId}>{player.name} {player.currentTitle}</li>)}</ul>
+      <S5KionDock roomId={roomId} actorId={actorId} players={room.players} spectator/>
+    </section>)}
+    {room.phase === "finished" && <section aria-label="아이템 그룹 결과"><h1>아이템 그룹 결과</h1>
+      <ol>{[...room.results].sort((a,b)=>a.rank-b.rank).map(row=><li key={row.participantId}>
+        {row.status === "left" ? "기권/시간 초과" : row.rank+"위"} {row.name}{row.participantId === room.participantId && (row.xp === null ? " · XP 정산 대기" : ` · +${row.xp} XP`)}
+      </li>)}</ol>
+    </section>}
+    {room.actions.map(action=><button key={action} type="button" disabled={pending} onClick={()=>void command(action)}>{labels[action]}</button>)}
+    {error && <p role="alert">{error}</p>}
+  </div>;
+}
+
+export default function ProductGroupItemsRoute() {
+  const { roomId } = useParams();
+  const { user } = useAuth();
+  const [entry,setEntry]=useState(null);
+  const [entryError,setEntryError]=useState("");
+  const binding=entry?.binding ?? null;
+  useEffect(()=>{
+    if(roomId || !user?.id) return;
+    const abort=new AbortController();
+    void readIdentity().then(identity=>rpc("get_group_items_entry_v1",{
+      p_channel:entryChannel
+    },identity.accessToken,abort.signal)).then(policy=>{
+      if(!abort.signal.aborted) setEntry({...policy,binding:policy.available?readProductBinding(policy.binding):null});
+    }).catch(()=>{if(!abort.signal.aborted)setEntryError("아이템전 진입 정보를 확인할 수 없습니다.");});
+    return ()=>abort.abort();
+  },[roomId,user?.id]);
+  if (!supabase || !productId(user?.id) || (roomId && !productId(roomId))) return <p role="alert">아이템 그룹을 사용할 수 없습니다.</p>;
+  if (!roomId && (!entry || !binding || !entry.admissionEnabled)) return <main>
+    <h1>그룹 아이템전</h1>
+    <p role={entryError ? "alert" : "status"}>{entryError || (!entry
+      ? "아이템전 이용 가능 여부를 확인하는 중…"
+      : !entry.available ? "아이템전이 아직 열리지 않았습니다. 일반 그룹 레이스는 이용할 수 있습니다."
+      : !entry.admissionEnabled ? "아이템전 방 생성과 새 입장이 일시 중지되어 있습니다." : "아이템전 준비 상태를 확인하는 중…")}</p>
+  </main>;
+  const key = user.id + ":" + (roomId ?? "entry");
+  return roomId ? <ProductRoom key={key} roomId={roomId} binding={binding} actorId={user.id}/>
+    : <ProductEntry key={key} binding={binding} actorId={user.id}/>;
+}

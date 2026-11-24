@@ -1,0 +1,106 @@
+{
+  "dateKst": "2026-11-23",
+  "basis": "6b336c10abafc2fe4a1c25e74e2f5fadd97792a4",
+  "original59RawAndGitUnchanged": true,
+  "exactTestedFilesMatchHistory": true,
+  "result": [
+    {
+      "file": "20261120024414_group_items_s5.sql",
+      "version": "20261120024414",
+      "remoteGitBlobSha256": "9cc36d5e6dd4eeef1597fb67252ef89f91860e57959620809133885f393eba73",
+      "testedSha256": "30a6668a035e9786d5f6df79e2ec304472e474ae2e80d1d999619c89d4348ccb",
+      "lfNormalizedSha256": "544ec09f45abc5bcde651db2e02e3a8cece1e96e0eca5ada383ea9d88089b5d7",
+      "gitWouldNormalize": true,
+      "cliStatements": 1652,
+      "statementsChangedByLfNormalization": 944,
+      "change": "S5 fresh and guarded existing paths, transaction-local grants and cleanup"
+    },
+    {
+      "file": "20261120104117_duel_items_v4.sql",
+      "version": "20261120104117",
+      "remoteGitBlobSha256": "e9659fa4b58a7a9f242c55111e3ec3dbb1755d0ea9f5192d47a75503ae70c824",
+      "testedSha256": "bb23a8a239cb58f4a0968b96dfed254ff2a782ca73bcc55e6ba8e8d5da6a8246",
+      "lfNormalizedSha256": "92b4acc876b1bd91a341d3b4064f5db1ee47fba73d5930a2929a20efe3681d5d",
+      "gitWouldNormalize": true,
+      "cliStatements": 51,
+      "statementsChangedByLfNormalization": 37,
+      "change": "outer BEGIN/COMMIT removed, comment added; body otherwise identical"
+    },
+    {
+      "file": "20261120113035_duel_v4_server_search.sql",
+      "version": "20261120113035",
+      "remoteGitBlobSha256": "0c8438508beef7a65f45228ff3de5d9cc55c2781d56b431dc93b907ad66b69cf",
+      "testedSha256": "e70a149269007097e3c6f6f1d3736fa85bff3c218cde43a3a440eb473e249eed",
+      "lfNormalizedSha256": "1beed46aff6d822d9fa9c1f66566f18c47338348d70f8dbd24d817bbbc12664e",
+      "gitWouldNormalize": true,
+      "cliStatements": 22,
+      "statementsChangedByLfNormalization": 12,
+      "change": "outer BEGIN/COMMIT removed, comment added; body otherwise identical"
+    },
+    {
+      "file": "20261120113647_duel_v4_reward_queue.sql",
+      "version": "20261120113647",
+      "remoteGitBlobSha256": "c020f752b6b124ffa3f8cfd4ca2ace60e3172767536ab4157f1da03fc0d459c4",
+      "testedSha256": "8ec56d5bfb919a628ff6eb0db809bab6196b7dd2dfc717757832a38ed3cc269c",
+      "lfNormalizedSha256": "fdde8b0bbb9e4502925281875f3d98717ec8e24649bc3796c15a8d6056e7d82a",
+      "gitWouldNormalize": true,
+      "cliStatements": 31,
+      "statementsChangedByLfNormalization": 17,
+      "change": "outer BEGIN/COMMIT removed, comment added; body otherwise identical"
+    },
+    {
+      "file": "20261120114137_duel_v4_link_index.sql",
+      "version": "20261120114137",
+      "remoteGitBlobSha256": "dd2ce1f5be38f4173d878800828ab1debebadf2fe514ba22a52cebe2b7b080a9",
+      "testedSha256": "e4854ee647e083716fdf01d9bd09bd842742f94bf2de2d2941bb6ca3770242ce",
+      "lfNormalizedSha256": "c0c27e4ee93d06a4ed0577790b322797e577add366b15ffd443bc8c1490d4cd6",
+      "gitWouldNormalize": true,
+      "cliStatements": 16,
+      "statementsChangedByLfNormalization": 10,
+      "change": "outer BEGIN/COMMIT removed, comment added; body otherwise identical"
+    }
+  ],
+  "branchSummary": {
+    "fresh": {
+      "conditionalStatements": 1424,
+      "functionStatements": 162
+    },
+    "existing": {
+      "conditionalStatements": 208,
+      "functionStatements": 155
+    }
+  },
+  "security": {
+    "existing": {
+      "publicS5Rpcs": 10,
+      "publicS5DefinersWithEmptySearchPathAndAuthenticatedExecute": 10,
+      "authenticatedOnlyKionRpcs": 2,
+      "recipientSelectTables": [
+        "emotes_v1",
+        "signals_v1"
+      ],
+      "ownerOnlyRateLimitTableRls": false,
+      "rateLimitTablePublished": false
+    },
+    "fresh": {
+      "publicS5Rpcs": 10,
+      "publicS5DefinersWithEmptySearchPathAndAuthenticatedExecute": 10,
+      "authenticatedOnlyKionRpcs": 2,
+      "recipientSelectTables": [
+        "emotes_v1",
+        "signals_v1"
+      ],
+      "ownerOnlyRateLimitTableRls": false,
+      "rateLimitTablePublished": false
+    }
+  },
+  "functionAnchorCheck": {
+    "exactAnchorsMatch": 151,
+    "anchorsWithDifferentMd5AfterLfNormalization": 151
+  },
+  "legacyFunctionBodyPreserved": true,
+  "whitespaceFindings": [
+    "supabase/migrations/20261120024414_group_items_s5.sql:10948: trailing whitespace.",
+    "+  select"
+  ]
+}

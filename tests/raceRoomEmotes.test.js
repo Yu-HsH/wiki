@@ -6,6 +6,10 @@ import { getVisibleRaceEmotes, mergeRaceEmoteSnapshots } from "../utils/raceEmot
 const js = fs.readFileSync(new URL("../components/RaceRoomEmotes.jsx", import.meta.url), "utf8");
 const duel = fs.readFileSync(new URL("../pages/MultiplayerGamePage.jsx", import.meta.url), "utf8");
 const group = fs.readFileSync(new URL("../pages/GroupGamePage.jsx", import.meta.url), "utf8");
+const raceCss = fs.readFileSync(new URL("../components/RaceRoomEmotes.css", import.meta.url), "utf8");
+const spectatorCss = fs.readFileSync(new URL("../css/wikiRaceRace.css", import.meta.url), "utf8");
+const spectatorParts = fs.readFileSync(new URL("../components/wiki-race/race/GroupRaceParts.jsx", import.meta.url), "utf8");
+const visualCheck = fs.readFileSync(new URL("../scripts/verify-kion-race-ci.mjs", import.meta.url), "utf8");
 
 test("recent reactions stop at six seconds and remain hidden when muted", () => {
   const now = Date.parse("2026-11-10T09:00:10Z");
@@ -50,13 +54,25 @@ test("event source is room-scoped and legacy spectator RPC never changes", () =>
   assert.doesNotMatch(js, /\.insert\(/);
 });
 
-test("1:1 and group mount race strip without changing article or item handlers", () => {
+test("1:1 and group mount race reactions without changing article or item handlers", () => {
   assert.match(duel, /<RaceRoomEmotes roomId=\{roomId\} userId=\{user\?\.id\} players=\{players\} roomStatus=\{room\?\.status\} active=\{isPlaying\} \/>/);
   assert.match(group, /<RaceRoomEmotes roomId=\{roomId\} userId=\{user\?\.id\} players=\{players\} roomStatus=\{room\?\.status\} active=\{isGroupPlaying\} \/>/);
   assert.match(duel, /onLinkClick=\{handleMove\}/);
   assert.match(group, /onLinkClick=\{handleMove\}/);
   assert.match(duel, /onUseItem=\{handleUseItem\}/);
   assert.match(group, /<ReactionDock/); // finished spectator still owns legacy reactions
+});
+
+test("race and spectator reactions stay in viewport while articles scroll", () => {
+  assert.match(raceCss, /\.wr-race-emotes\s*\{[^}]*position:\s*fixed/s);
+  assert.match(spectatorCss, /\.wr-reaction-dock\s*\{[^}]*position:\s*fixed/s);
+  assert.match(raceCss, /safe-area-inset-bottom/);
+  assert.match(spectatorCss, /\.wr-reaction-dock__mobile-picker\s*\{\s*display:\s*block/s);
+  assert.match(spectatorParts, /wr-reaction-dock__latest/);
+  assert.match(group, /recent=\{visibleSpectatorEmojis\.filter/);
+  assert.doesNotMatch(group, /<ReactionDock\s+compact/);
+  assert.match(visualCheck, /window\.scrollTo\(0, 650\)/);
+  assert.match(visualCheck, /Reaction dock stays visible at article scroll/);
 });
 
 test("room switches cannot leak previous room reactions, even with same sender", () => {

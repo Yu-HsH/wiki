@@ -1,0 +1,80 @@
+<svg class="jack-art" viewBox="0 0 480 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="나무 상자를 열고 장난스러운 삐에로가 용수철을 타고 갑자기 튀어나오는 효과">
+<style>
+/* Animation from the approved V4 preview. */
+.jack-art {overflow:visible}
+.jack-flash,.jack-impact,.jack-stars,.jack-confetti,.jack-scream{opacity:0;transform-origin:50% 50%;transform-box:fill-box}
+.jack-spring,.jack-clown{opacity:0;transform-box:fill-box;transform-origin:center bottom}
+.jack-lid{transform-origin:15% 85%;transform-box:fill-box}
+.jack-chest{animation:jackWobble 3.4s both;transform-origin:center bottom;transform-box:fill-box}
+@keyframes jackWobble{0%,12%,29%,36%,100%{transform:rotate(0)}19%{transform:rotate(-8deg)}23%{transform:rotate(8deg)}26%{transform:rotate(-4deg)}37%{transform:translateY(15px) scale(.95,1.04)}43%{transform:translateY(0) scale(1)}}
+.jack-lid{animation:jackLid 3.4s both}
+@keyframes jackLid{0%,28%{transform:rotate(0)}33%{transform:rotate(9deg)}36%{transform:rotate(-97deg) translate(-30px,-9px)}42%,84%{transform:rotate(-114deg) translate(-38px,-10px)}90%,100%{transform:rotate(0)}}
+.jack-clown{animation:jackPop 3.4s both}
+@keyframes jackPop{0%,31%{opacity:0;transform:translateY(92px) scale(.12,.15)}34%{opacity:1;transform:translateY(85px) scale(.45,.4)}38%{opacity:1;transform:translateY(-76px) scale(1.42,1.55)}44%{opacity:1;transform:translateY(-46px) scale(1.08,.94)}49%{opacity:1;transform:translateY(-66px) scale(1.2,1.12)}57%,74%{opacity:1;transform:translateY(-53px) scale(1.12,1.06)}85%{opacity:1;transform:translateY(15px) scale(.75,.67)}90%,100%{opacity:0;transform:translateY(94px) scale(.2)}}
+.jack-spring{animation:jackSpring 3.4s both}
+@keyframes jackSpring{0%,31%{opacity:0;transform:translateY(52px) scaleY(.1)}38%{opacity:1;transform:translateY(-14px) scaleY(1.45)}46%{opacity:1;transform:translateY(9px) scaleY(.95)}54%,75%{opacity:1;transform:translateY(0) scaleY(1.15)}88%,100%{opacity:0;transform:translateY(49px) scaleY(.1)}}
+.jack-flash{animation:jackFlash 3.4s both}
+@keyframes jackFlash{0%,33%{opacity:0;transform:scale(.1)}38%{opacity:.95;transform:scale(1.2)}45%{opacity:.35;transform:scale(1.5)}58%,100%{opacity:0;transform:scale(1.8)}}
+.jack-impact{animation:jackImpact 3.4s both}
+@keyframes jackImpact{0%,34%{opacity:0;transform:scale(.25) rotate(-20deg)}38%{opacity:1;transform:scale(1.05) rotate(12deg)}49%{opacity:.22;transform:scale(1.36) rotate(23deg)}60%,100%{opacity:0;transform:scale(1.6)}}
+.jack-stars{animation:jackStars 3.4s both}
+@keyframes jackStars{0%,34%{opacity:0;transform:scale(.4)}39%,54%{opacity:1;transform:scale(1.04)}67%,100%{opacity:0;transform:scale(1.5) rotate(28deg)}}
+.jack-confetti{animation:jackConfetti 3.4s both}
+@keyframes jackConfetti{0%,35%{opacity:0;transform:scale(.2)}41%{opacity:1;transform:scale(1) rotate(10deg)}63%{opacity:1;transform:scale(1.4) rotate(40deg)}80%,100%{opacity:0;transform:scale(1.8) rotate(80deg)}}
+.jack-scream{animation:jackScream 3.4s both}
+@keyframes jackScream{0%,38%{opacity:0;transform:translateY(12px) scale(.5)}42%,67%{opacity:1;transform:translateY(0) scale(1.16)}77%,100%{opacity:0;transform:translateY(-9px) scale(1.3)}}
+@media (prefers-reduced-motion: reduce) {
+  svg * { animation:none !important; }
+  .jack-clown { opacity:1; transform:translateY(-53px) scale(1.12); }
+  .jack-spring, .jack-scream { opacity:1; }
+  .jack-lid { transform:rotate(-110deg) translate(-35px,-9px); }
+}
+</style>
+<defs>
+ <radialGradient id="jackBlast"><stop stop-color="#fff7bd"/><stop offset=".32" stop-color="#ffdb4d" stop-opacity=".93"/><stop offset=".73" stop-color="#f47452" stop-opacity=".55"/><stop offset="1" stop-color="#f47452" stop-opacity="0"/></radialGradient>
+ <linearGradient id="jackWood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffdc87"/><stop offset=".4" stop-color="#c77c45"/><stop offset="1" stop-color="#88503b"/></linearGradient>
+ <linearGradient id="jackFace" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffdf0"/><stop offset="1" stop-color="#dddcf0"/></linearGradient>
+ <linearGradient id="jackPurple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bb74e9"/><stop offset="1" stop-color="#6237b7"/></linearGradient>
+ <linearGradient id="jackRed" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff816d"/><stop offset="1" stop-color="#d63a51"/></linearGradient>
+ <filter id="jackGlow"><feGaussianBlur stdDeviation="5"/></filter>
+ <filter id="jackShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#432421" flood-opacity=".4"/></filter>
+</defs>
+<g class="jack-flash"><ellipse cx="240" cy="180" rx="210" ry="150" fill="url(#jackBlast)"/><g stroke="#ffe46b" stroke-width="7" stroke-linecap="round"><path d="M240 8v55M240 287v37M40 178l64 0M380 178h64M90 50l47 42M370 50l-47 42M87 294l50-50M386 292l-54-50"/></g></g>
+<g class="jack-impact"><path d="M230 24L255 86 290 23 296 95 373 47 340 121 446 97 371 160 450 192 351 203 412 284 314 244 297 321 258 254 211 330 185 256 110 312 143 228 38 248 111 187 25 142 135 132 94 55 188 101Z" fill="#fbd34d" stroke="#fff6cf" stroke-width="7" stroke-linejoin="round" opacity=".75"/></g>
+<g class="jack-stars" fill="#fff4a6"><path d="M87 115l9 21 22 9-22 9-9 20-9-20-22-9 22-9Z"/><path d="M393 93l8 17 18 8-18 8-8 17-9-17-18-8 18-8Z"/><path d="M390 233l7 14 14 7-14 7-7 14-7-14-14-7 14-7Z"/></g>
+<ellipse cx="242" cy="307" rx="127" ry="20" fill="#4a3026" opacity=".3"/>
+<g class="jack-spring" stroke="#765364" stroke-width="11" stroke-linejoin="round" stroke-linecap="round" fill="none" filter="url(#jackShadow)">
+ <path d="M238 256C178 249 292 239 238 226S184 207 238 197S292 178 238 168S184 149 238 137"/><path d="M238 256C178 249 292 239 238 226S184 207 238 197S292 178 238 168S184 149 238 137" stroke="#c5c3e1" stroke-width="6"/>
+</g>
+<g class="jack-clown" filter="url(#jackShadow)">
+<!-- bouncy arms -->
+<path d="M175 176Q143 175 117 153M306 176Q340 175 363 151" stroke="#9a4e76" stroke-width="13" stroke-linecap="round" fill="none"/>
+<g stroke="#85516b" stroke-width="3" fill="#fff9eb"><path d="M118 150q-23-12-23-27q4-8 13 4q-7-20 2-21q7 0 11 19q0-20 9-17q8 4 1 22q20-11 21-2q2 12-34 22Z"/><path d="M365 148q24-11 24-24q-4-11-13 3q7-20-2-21q-8 0-11 18q0-20-9-17q-8 4-1 22q-20-10-21-1q-3 12 33 20Z"/></g>
+<!-- ruffled collar -->
+<path d="M188 180L172 188 195 203 196 220 219 207 238 224 258 206 281 219 285 200 306 185 287 179Z" fill="#eb548a" stroke="#9b3967" stroke-width="4"/>
+<path d="M189 180L185 191 212 199 224 210 243 194 261 209 274 193 299 185" stroke="#ffd0df" stroke-width="5" fill="none"/>
+<!-- ears and face -->
+<circle cx="159" cy="137" r="20" fill="#ff9aac" stroke="#9b3967" stroke-width="4"/><circle cx="320" cy="137" r="20" fill="#ff9aac" stroke="#9b3967" stroke-width="4"/>
+<ellipse cx="240" cy="135" rx="89" ry="80" fill="url(#jackFace)" stroke="#68526d" stroke-width="6"/>
+<ellipse cx="193" cy="155" rx="17" ry="11" fill="#ffa6bd" opacity=".9"/><ellipse cx="288" cy="155" rx="17" ry="11" fill="#ffa6bd" opacity=".9"/>
+<!-- hat -->
+<path d="M164 96Q118 36 135 20Q163 34 205 69Q237 13 260 17Q278 45 277 69Q338 35 355 49Q355 76 321 102Z" fill="url(#jackPurple)" stroke="#5b3f7c" stroke-width="6" stroke-linejoin="round"/>
+<path d="M164 96Q118 36 135 20Q163 34 205 69L205 91Z" fill="url(#jackRed)"/><path d="M260 17Q278 45 277 69L259 86L218 82Z" fill="#f8bd4d"/>
+<circle cx="133" cy="20" r="13" fill="#ffd25c" stroke="#9e6534" stroke-width="4"/><circle cx="258" cy="15" r="13" fill="#ffd25c" stroke="#9e6534" stroke-width="4"/><circle cx="356" cy="48" r="13" fill="#ffd25c" stroke="#9e6534" stroke-width="4"/>
+<!-- playful crazy eyes -->
+<path d="M183 116Q201 91 216 119M266 120Q282 92 299 114" stroke="#46384e" stroke-width="7" fill="none" stroke-linecap="round"/>
+<ellipse cx="204" cy="127" rx="9" ry="14" fill="#342d43"/><ellipse cx="280" cy="127" rx="9" ry="14" fill="#342d43"/>
+<circle cx="201" cy="123" r="3" fill="white"/><circle cx="277" cy="123" r="3" fill="white"/>
+<path d="M178 124l-13-7M303 124l13-7" stroke="#9c59c1" stroke-width="4" stroke-linecap="round"/>
+<circle cx="242" cy="144" r="16" fill="#e54854" stroke="#fff1d6" stroke-width="4"/><ellipse cx="237" cy="140" rx="5" ry="4" fill="#ffbcc1"/>
+<!-- open scream grin -->
+<path d="M198 169Q240 202 285 165Q282 219 240 222Q205 218 198 169Z" fill="#672d50" stroke="#852e4e" stroke-width="4"/>
+<path d="M202 175Q242 195 282 174" stroke="#fff9d9" stroke-width="7" fill="none" stroke-linecap="round"/>
+<path d="M226 210Q236 194 253 214" stroke="#f47d9a" stroke-width="10" fill="none" stroke-linecap="round"/>
+</g>
+<!-- open top and front of chest -->
+<g class="jack-chest" filter="url(#jackShadow)"><path d="M151 231L239 247 328 231 319 306 240 320 162 306Z" fill="url(#jackWood)" stroke="#694534" stroke-width="7" stroke-linejoin="round"/><path d="M151 231L240 247 240 320 162 306Z" fill="#c3844c" opacity=".8"/><path d="M240 247L328 231 319 306 240 320Z" fill="#8b573d" opacity=".65"/><path d="M155 234L239 248 327 234" stroke="#ffe6a2" stroke-width="6" fill="none"/><path d="M232 252h16v61h-16Z" fill="#f5c85d"/><path d="M166 269l44 10M266 279l45-10" stroke="#eab771" stroke-width="5"/><path d="M240 258l8 13 15 2-11 11 2 15-14-7-14 7 2-15-11-11 15-2Z" fill="#ffe389" stroke="#9a5f38" stroke-width="3"/></g>
+<g class="jack-lid" filter="url(#jackShadow)"><path d="M142 217L239 234 340 218 328 196 240 178 156 196Z" fill="#d99750" stroke="#644532" stroke-width="7" stroke-linejoin="round"/><path d="M156 196L240 178 328 196 240 213Z" fill="#f5c77e" stroke="#644532" stroke-width="5"/><path d="M240 178v36" stroke="#a16b45" stroke-width="5"/><path d="M167 196l-8 18M314 193l10 20" stroke="#f8e0a1" stroke-width="6"/></g>
+<g class="jack-confetti"><path d="M81 86l22 18-13 11-15-22ZM389 43l17 21-16 6-10-19ZM75 221l19-6 8 17-20 8ZM398 230l17-14 8 20-16 7Z" fill="#ef6b70"/><circle cx="130" cy="55" r="7" fill="#ffe08f"/><circle cx="381" cy="173" r="8" fill="#b28ff0"/><path d="M329 45l-14 20M145 265l-9 16" stroke="#49c6ae" stroke-width="8"/></g>
+<g class="jack-scream"><path d="M351 84l21-31 13 25M407 113l30-20M395 147l35 2" stroke="#ef553e" stroke-width="10" stroke-linecap="round" fill="none"/><text x="399" y="83" fill="#f34c45" font-weight="1000" font-size="65" stroke="#fff4b3" stroke-width="4" paint-order="stroke" text-anchor="middle">!</text></g>
+</svg>

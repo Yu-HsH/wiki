@@ -1,4 +1,5 @@
-begin;
+BEGIN;
+SET LOCAL request.headers='{"x-wiki-duel-protocol":"search-authority-v1"}';
 create extension if not exists pgtap with schema extensions;
 select no_plan();
 select is((select count(*)::int from private.duel_recovery_approvals_v1),4,'exactly four fixed approvals installed');
@@ -10,15 +11,52 @@ select ok(not has_table_privilege('authenticated','private.duel_recovery_approva
 select ok(not has_table_privilege('service_role','private.duel_recovery_approvals_v1','UPDATE'),'service cannot enroll another room');
 select ok(not has_function_privilege('authenticated','private.duel_recovery_fingerprint_v1(uuid)','EXECUTE'),'member cannot inspect state hash');
 
+-- Real approval/receipt rows are immutable. Rebind only the four recovery
+-- storage relations into a rollback-scoped schema. CHECK/UNIQUE/NOT
+-- NULL and FK constraints remain; arbitrary new approval codes are not enabled.
+CREATE TEMP TABLE recovery_source_witness AS SELECT md5(jsonb_build_object(
+ 'approvals',(SELECT jsonb_agg(to_jsonb(t) ORDER BY case_id) FROM private.duel_recovery_approvals_v1 t),
+ 'receipts',(SELECT jsonb_agg(to_jsonb(t) ORDER BY room_id) FROM private.duel_recovery_receipts_v1 t),
+ 'requests',(SELECT jsonb_agg(to_jsonb(t) ORDER BY request_id) FROM private.duel_recovery_requests_v1 t),
+ 'control',(SELECT jsonb_agg(to_jsonb(t)) FROM private.duel_release_control_v1 t))::text) AS digest;
+CREATE SCHEMA pr63_recovery_fixture;
+REVOKE ALL ON SCHEMA pr63_recovery_fixture FROM PUBLIC,anon,authenticated,service_role;
+DO $fixture$
+DECLARE tab text; item record; definition text;
+ names text[]:=ARRAY['duel_recovery_approvals_v1','duel_recovery_receipts_v1','duel_recovery_requests_v1','duel_release_control_v1'];
+BEGIN
+ FOREACH tab IN ARRAY names LOOP EXECUTE format('CREATE TABLE pr63_recovery_fixture.%I (LIKE private.%I INCLUDING ALL)',tab,tab);
+  IF (SELECT relrowsecurity FROM pg_class WHERE oid=format('private.%I',tab)::regclass) THEN
+   EXECUTE format('ALTER TABLE pr63_recovery_fixture.%I ENABLE ROW LEVEL SECURITY',tab);
+  END IF;
+ END LOOP;
+ FOR item IN SELECT c.conrelid::regclass::text AS relation,c.conname,pg_get_constraintdef(c.oid) AS definition
+  FROM pg_constraint c WHERE c.contype='f' AND c.conrelid IN
+  (SELECT format('private.%I',n)::regclass FROM unnest(names)n) LOOP
+  definition:=item.definition;
+  FOREACH tab IN ARRAY names LOOP definition:=replace(definition,'REFERENCES private.'||tab||'(','REFERENCES pr63_recovery_fixture.'||tab||'('); END LOOP;
+  EXECUTE format('ALTER TABLE pr63_recovery_fixture.%I ADD CONSTRAINT %I %s',regexp_replace(item.relation,'^private\.',''),item.conname,definition);
+ END LOOP;
+ INSERT INTO pr63_recovery_fixture.duel_recovery_approvals_v1 SELECT * FROM private.duel_recovery_approvals_v1;
+ INSERT INTO pr63_recovery_fixture.duel_release_control_v1 SELECT * FROM private.duel_release_control_v1;
+ SELECT pg_get_functiondef('public.admin_recover_legacy_duel_v1(uuid,uuid,text,text)'::regprocedure) INTO definition;
+ FOREACH tab IN ARRAY names LOOP definition:=replace(definition,'private.'||tab,'pr63_recovery_fixture.'||tab); END LOOP;
+ definition:=replace(definition,'public.admin_recover_legacy_duel_v1','pg_temp.admin_recover_fixture_v1');
+ EXECUTE definition;
+ REVOKE ALL ON FUNCTION pg_temp.admin_recover_fixture_v1(uuid,uuid,text,text) FROM PUBLIC,anon,authenticated,service_role;
+END $fixture$;
+SELECT is((SELECT string_agg(pg_get_constraintdef(oid),';' ORDER BY pg_get_constraintdef(oid)) FROM pg_constraint WHERE conrelid='pr63_recovery_fixture.duel_recovery_approvals_v1'::regclass AND contype='c'),
+ (SELECT string_agg(pg_get_constraintdef(oid),';' ORDER BY pg_get_constraintdef(oid)) FROM pg_constraint WHERE conrelid='private.duel_recovery_approvals_v1'::regclass AND contype='c'),
+ 'fixture retains the exact original approval CHECK contracts');
 -- Synthetic substitutes exist only inside this rollback. The installed four
 -- production hashes above are never changed outside test transactions.
 insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 select ('67000000-0000-4000-8000-00000000000'||i)::uuid,'authenticated','authenticated','drain-'||i||'@local.test','{}','{}',now(),now() from generate_series(1,2)i;
 insert into public.profiles(id,username,nickname,synthetic_email)
 select ('67000000-0000-4000-8000-00000000000'||i)::uuid,'qa_drain_v1_'||i,'Drain QA','drain-'||i||'@local.test' from generate_series(1,2)i;
-create temp table recovery_cases(case_id text,id uuid,request_id uuid,fingerprint text,response jsonb);
-insert into recovery_cases select case_id,extensions.gen_random_uuid(),extensions.gen_random_uuid(),null,null from private.duel_recovery_approvals_v1;
-update private.duel_release_control_v1 set entry_open=true,required_protocol='';
+create temp table recovery_cases(fixture_case_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),case_id text UNIQUE,id uuid,request_id uuid,fingerprint text,response jsonb);
+insert into recovery_cases(case_id,id,request_id,fingerprint,response) select case_id,extensions.gen_random_uuid(),extensions.gen_random_uuid(),null,null from pr63_recovery_fixture.duel_recovery_approvals_v1;
+update pr63_recovery_fixture.duel_release_control_v1 set entry_open=true,required_protocol='';
 insert into public.game_rooms(id,room_code,host_user_id,mode,status,created_at,min_players,max_players)
 select id,substr(md5(id::text),1,6),'67000000-0000-4000-8000-000000000001','duel',
 case when case_id in('D01','D02') then 'starting' else 'playing' end,clock_timestamp()-interval '90 days',2,2 from recovery_cases;
@@ -27,15 +65,15 @@ select id,'67000000-0000-4000-8000-000000000001','host','Drain QA','playing',clo
 insert into public.room_players(room_id,user_id,role,nickname_snapshot,player_status,created_at,updated_at,last_seen_at)
 select id,'67000000-0000-4000-8000-000000000002','guest','Drain QA','playing',clock_timestamp()-interval '90 days',clock_timestamp()-interval '60 days',clock_timestamp()-interval '90 days' from recovery_cases where case_id in('D01','D02');
 update recovery_cases set fingerprint=private.duel_recovery_fingerprint_v1(id);
-update private.duel_recovery_approvals_v1 a set room_key=encode(sha256(convert_to(c.id::text,'UTF8')),'hex'),fingerprint=c.fingerprint,observed_at=clock_timestamp() from recovery_cases c where c.case_id=a.case_id;
+update pr63_recovery_fixture.duel_recovery_approvals_v1 a set room_key=encode(sha256(convert_to(c.id::text,'UTF8')),'hex'),fingerprint=c.fingerprint,observed_at=clock_timestamp() from recovery_cases c where c.case_id=a.case_id;
 -- Roll fixture mutations back inside a subtransaction, then record TAP outside
 -- it. Rolling back a SAVEPOINT containing TAP would also rewind its counter.
-create function pg_temp.recovery_probe(p_case text,p_probe text) returns text language plpgsql as $$
+create function pg_temp.recovery_probe(p_case uuid,p_probe text) returns text language plpgsql as $$
 declare c record; observed text;
 begin
- select * into strict c from pg_temp.recovery_cases where case_id=p_case;
+ select * into strict c from pg_temp.recovery_cases where fixture_case_id=p_case;
  begin
-  if p_probe='control' then delete from private.duel_release_control_v1;
+  if p_probe='control' then delete from pr63_recovery_fixture.duel_release_control_v1;
   elsif p_probe='heartbeat' then
    perform set_config('request.jwt.claim.sub','67000000-0000-4000-8000-000000000001',true);
    perform public.heartbeat_duel_v2(c.id);
@@ -46,35 +84,61 @@ begin
   elsif p_probe='settled' then insert into public.match_history(room_id,duration_seconds,result_status,result_reason) values(c.id,0,'cancelled','disconnect_cancelled');
   elsif p_probe='outcome' then update public.match_history set duration_seconds=1 where room_id=c.id;
   else raise exception 'UNKNOWN_TEST_PROBE'; end if;
-  perform public.admin_recover_legacy_duel_v1(c.id,c.request_id,c.fingerprint,'local test approval');
+  perform pg_temp.admin_recover_fixture_v1(c.id,c.request_id,c.fingerprint,'local test approval');
   observed:='UNEXPECTED_SUCCESS';raise sqlstate 'ZD088';
  exception when sqlstate 'ZD088' then null;when others then observed:=sqlerrm;end;
  return observed;
 end; $$;
-select throws_ok($q$select public.admin_recover_legacy_duel_v1(id,request_id,fingerprint,'local test approval') from recovery_cases where case_id='D01'$q$,'P0001','RECOVERY_GATE_MUST_BE_CLOSED','open gate blocks recovery');
-update private.duel_release_control_v1 set entry_open=false,search_enabled=false;
-select is(pg_temp.recovery_probe('D01','control'),'RECOVERY_GATE_REQUIRED','missing control row fails closed');
-select throws_ok($q$select public.admin_recover_legacy_duel_v1(extensions.gen_random_uuid(),extensions.gen_random_uuid(),repeat('a',64),'local test approval')$q$,'P0001','RECOVERY_NOT_APPROVED','unknown room rejected');
-select throws_ok($q$select public.admin_recover_legacy_duel_v1(id,request_id,repeat('a',64),'local test approval') from recovery_cases where case_id='D01'$q$,'P0001','RECOVERY_APPROVAL_MISMATCH','caller cannot replace approved fingerprint');
-select is(pg_temp.recovery_probe('D28','heartbeat'),'RECOVERY_RECENT_ACTIVITY','normal heartbeat protects returned participant');
-select is(pg_temp.recovery_probe('D01','event'),'RECOVERY_STATE_CHANGED','even old timestamp new event changes approved fingerprint');
-select is(pg_temp.recovery_probe('D01','roster'),'RECOVERY_ROSTER_CONDITION','changed roster rejected');
-select is(pg_temp.recovery_probe('D02','settled'),'RECOVERY_ALREADY_SETTLED','existing result is never overwritten');
+select throws_ok($q$select pg_temp.admin_recover_fixture_v1(id,request_id,fingerprint,'local test approval') from recovery_cases where case_id='D01'$q$,'P0001','RECOVERY_GATE_MUST_BE_CLOSED','open gate blocks recovery');
+update pr63_recovery_fixture.duel_release_control_v1 set entry_open=false,search_enabled=false;
+select is(pg_temp.recovery_probe((SELECT fixture_case_id FROM recovery_cases WHERE case_id='D01'),'control'),'RECOVERY_GATE_REQUIRED','missing control row fails closed');
+select throws_ok($q$select pg_temp.admin_recover_fixture_v1(extensions.gen_random_uuid(),extensions.gen_random_uuid(),repeat('a',64),'local test approval')$q$,'P0001','RECOVERY_NOT_APPROVED','unknown room rejected');
+select throws_ok($q$select pg_temp.admin_recover_fixture_v1(id,request_id,repeat('a',64),'local test approval') from recovery_cases where case_id='D01'$q$,'P0001','RECOVERY_APPROVAL_MISMATCH','caller cannot replace approved fingerprint');
+select is(pg_temp.recovery_probe((SELECT fixture_case_id FROM recovery_cases WHERE case_id='D28'),'heartbeat'),'RECOVERY_RECENT_ACTIVITY','normal heartbeat protects returned participant');
+select is(pg_temp.recovery_probe((SELECT fixture_case_id FROM recovery_cases WHERE case_id='D01'),'event'),'RECOVERY_STATE_CHANGED','even old timestamp new event changes approved fingerprint');
+select is(pg_temp.recovery_probe((SELECT fixture_case_id FROM recovery_cases WHERE case_id='D01'),'roster'),'RECOVERY_ROSTER_CONDITION','changed roster rejected');
+select is(pg_temp.recovery_probe((SELECT fixture_case_id FROM recovery_cases WHERE case_id='D02'),'settled'),'RECOVERY_ALREADY_SETTLED','existing result is never overwritten');
 create temp table ledger_before as select (select count(*) from public.xp_ledger) xp,(select count(*) from public.user_achievement_unlocks) unlocks;
-update recovery_cases set response=public.admin_recover_legacy_duel_v1(id,request_id,fingerprint,'local test approval');
+update recovery_cases set response=pg_temp.admin_recover_fixture_v1(id,request_id,fingerprint,'local test approval');
 select is((select count(*)::int from public.game_rooms where id in(select id from recovery_cases) and status='finished' and finished_reason='cancelled' and winner_user_id is null),4,'all four cancel without winner');
 select is((select count(*)::int from public.match_history where room_id in(select id from recovery_cases) and result_status='cancelled' and winner_user_id is null and loser_user_id is null),4,'one normal cancelled result per room');
 select is((select count(*) from public.xp_ledger),(select xp from ledger_before),'no XP rows');
 select is((select count(*) from public.user_achievement_unlocks),(select unlocks from ledger_before),'no achievement awards');
-select ok((select bool_and(response=public.admin_recover_legacy_duel_v1(id,request_id,fingerprint,'local test approval')) from recovery_cases),'same request returns exact stored response');
-select ok((select bool_and(response=public.admin_recover_legacy_duel_v1(id,extensions.gen_random_uuid(),fingerprint,'second audited retry')) from recovery_cases),'new request ID returns same outcome with audit');
-select is((select count(*)::int from private.duel_recovery_requests_v1 where room_id in(select id from recovery_cases)),8,'every distinct request audited');
-select throws_ok($q$select public.admin_recover_legacy_duel_v1(id,request_id,fingerprint,'different approval text') from recovery_cases where case_id='D01'$q$,'P0001','RECOVERY_REQUEST_CONFLICT','request ID payload conflict rejected');
-update private.duel_release_control_v1 set entry_open=true,search_enabled=true;
-select ok((select bool_and(response=public.admin_recover_legacy_duel_v1(id,request_id,fingerprint,'local test approval')) from recovery_cases),'completed receipt replay remains identical after reopening');
+select ok((select bool_and(response=pg_temp.admin_recover_fixture_v1(id,request_id,fingerprint,'local test approval')) from recovery_cases),'same request returns exact stored response');
+select ok((select bool_and(response=pg_temp.admin_recover_fixture_v1(id,extensions.gen_random_uuid(),fingerprint,'second audited retry')) from recovery_cases),'new request ID returns same outcome with audit');
+select is((select count(*)::int from pr63_recovery_fixture.duel_recovery_requests_v1 where room_id in(select id from recovery_cases)),8,'every distinct request audited');
+select throws_ok($q$select pg_temp.admin_recover_fixture_v1(id,request_id,fingerprint,'different approval text') from recovery_cases where case_id='D01'$q$,'P0001','RECOVERY_REQUEST_CONFLICT','request ID payload conflict rejected');
+update pr63_recovery_fixture.duel_release_control_v1 set entry_open=true,search_enabled=true;
+select ok((select bool_and(response=pg_temp.admin_recover_fixture_v1(id,request_id,fingerprint,'local test approval')) from recovery_cases),'completed receipt replay remains identical after reopening');
 select set_config('request.jwt.claim.sub','67000000-0000-4000-8000-000000000001',true);
 select lives_ok($q$select public.leave_duel_room_v2(id,extensions.gen_random_uuid()) from recovery_cases where case_id='D01'$q$,'normal participant finished-room leave remains allowed');
-select ok((select response=public.admin_recover_legacy_duel_v1(id,request_id,fingerprint,'local test approval') from recovery_cases where case_id='D01'),'normal finished request bookkeeping does not break recovery replay');
-select is(pg_temp.recovery_probe('D01','outcome'),'RECOVERY_RECEIPT_DRIFT','changed settlement is never silently accepted');
+select ok((select response=pg_temp.admin_recover_fixture_v1(id,request_id,fingerprint,'local test approval') from recovery_cases where case_id='D01'),'normal finished request bookkeeping does not break recovery replay');
+select is(pg_temp.recovery_probe((SELECT fixture_case_id FROM recovery_cases WHERE case_id='D01'),'outcome'),'RECOVERY_RECEIPT_DRIFT','changed settlement is never silently accepted');
+SELECT is((SELECT count(DISTINCT fixture_case_id) FROM recovery_cases),4::bigint,'each fixture has a new unique case UUID distinct from fixed approval codes');
+-- Probe actual historical receipt replay in a subtransaction; its audit append
+-- rolls back before the TAP assertion, preserving existing rows byte-for-byte.
+CREATE FUNCTION pg_temp.original_receipt_replay() RETURNS boolean LANGUAGE plpgsql AS $replay$
+DECLARE item record; reply jsonb; checked integer:=0;
+BEGIN
+ BEGIN
+  FOR item IN SELECT r.room_id,r.response,a.fingerprint FROM private.duel_recovery_receipts_v1 r
+   JOIN private.duel_recovery_approvals_v1 a ON a.case_id=r.case_id LOOP
+   reply:=public.admin_recover_legacy_duel_v1(item.room_id,gen_random_uuid(),item.fingerprint,'isolated original-receipt replay');
+   IF reply IS DISTINCT FROM item.response THEN RAISE EXCEPTION 'ORIGINAL_RECOVERY_REPLAY_CHANGED'; END IF;
+   checked:=checked+1;
+  END LOOP;
+  RAISE SQLSTATE 'P6363';
+ EXCEPTION WHEN SQLSTATE 'P6363' THEN NULL; END;
+ RETURN checked>0;
+END $replay$;
+SELECT ok(pg_temp.original_receipt_replay(),'original RPC replays existing receipts without another settlement')
+ WHERE EXISTS(SELECT FROM private.duel_recovery_receipts_v1);
+SELECT * FROM skip('fresh baseline has no historical receipt',1) WHERE NOT EXISTS(SELECT FROM private.duel_recovery_receipts_v1);
+SELECT is(md5(jsonb_build_object(
+ 'approvals',(SELECT jsonb_agg(to_jsonb(t) ORDER BY case_id) FROM private.duel_recovery_approvals_v1 t),
+ 'receipts',(SELECT jsonb_agg(to_jsonb(t) ORDER BY room_id) FROM private.duel_recovery_receipts_v1 t),
+ 'requests',(SELECT jsonb_agg(to_jsonb(t) ORDER BY request_id) FROM private.duel_recovery_requests_v1 t),
+ 'control',(SELECT jsonb_agg(to_jsonb(t)) FROM private.duel_release_control_v1 t))::text),
+ (SELECT digest FROM recovery_source_witness),'all original approvals, receipts, requests and release controls are unchanged');
 select * from finish();
 rollback;

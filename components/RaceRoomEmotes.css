@@ -1,9 +1,13 @@
-/* Race reactions are in document flow, never fixed on top of wiki links/items. */
+/* Keep sending and receiving visible while the article scrolls. Match the
+   spectator dock's lower-right location without obscuring the mobile sheet. */
 .wr-race-emotes {
   display: flex; align-items: center; gap: 9px;
-  position: relative; z-index: 35;
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 43; box-sizing: border-box;
+  width: min(510px, calc(100vw - 32px));
   min-height: 54px; padding: 5px 14px;
-  border-bottom: 1px solid var(--wr-divider, #D9E2D3);
+  border: 1px solid var(--wr-divider, #D9E2D3);
+  border-radius: 14px; box-shadow: 0 8px 24px rgba(36, 52, 48, .16);
   background: var(--wr-paper, #FAFBF7);
   color: var(--wr-ink, #243430);
 }
@@ -22,6 +26,7 @@
   border: 1px solid #D4E1D3; background: #EFF6EC;
 }
 .wr-race-emotes__reaction .wr-kion-bubble { max-width: 105px; }
+.wr-race-emotes__reaction .wr-kion-sticker { --wr-kion-size: 36px !important; }
 .wr-race-emotes__sender {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   max-width: 80px; font-size: 11px; font-weight: 700;
@@ -56,7 +61,11 @@
   font-size: 12px;
 }
 @media(max-width: 760px) {
-  .wr-race-emotes { gap: 6px; min-height: 50px; padding: 4px 9px; }
+  .wr-race-emotes {
+    right: 10px; bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 20px); gap: 6px; min-height: 50px; padding: 4px 9px;
+  }
+  .wr-race--duel .wr-race-emotes { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   .wr-race-emotes__title { font-size: 11px; }
   .wr-race-emotes__empty { display: none; }
   .wr-race-emotes__reactions { flex-basis: 80px; min-height: 38px; }
