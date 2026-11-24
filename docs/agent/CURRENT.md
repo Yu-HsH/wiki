@@ -1,6 +1,15 @@
-# 현재 상태 — PR #63 로컬 통합 검증
+# 현재 상태 — PR #63 C1 운영 적용 후
 
-갱신 2026-11-23 KST. 기준 커밋 `b670ff6af0573bef1b4a61115250710b233d07d7`은 이 문서 커밋의 부모다. 브랜치 `codex/s5-item-overhaul-20261120`. 대조 기준 원격 Draft HEAD `6b336c10abafc2fe4a1c25e74e2f5fadd97792a4`, PR base `main` `5c0238fde555a2e151725b338e81f786de6721c4`. S5 C `C_DEFERRED_BY_USER`, `actualC=NOT_RUN`.
+갱신 2026-11-24 KST. 기준 커밋 `4d2752610b2e41c098d6c9617eabeda4bc230d02`은 이 문서 커밋의 부모다. 브랜치 `codex/s5-item-overhaul-20261120`.
+
+## PR #63 C1 운영 적용과 통합 대기 (2026-11-24 KST)
+
+- **운영 이력 64 확인.** 59→60→64와 PostgreSQL 17 격리 복원 검증 완료. Data API는 ON, 노출 스키마는 public / graphql_public이며 신규 입장 게이트는 닫혀 있다 (트리거 8개).
+- 운영 이력에 기록된 C1 문장 배열 5개를 격리 CLI 기준과 대조했다. 원격 Draft HEAD는 f8fb50626b246097c64e612430696fd8d1767a11이며 로컬 기준 커밋에서 S5와 v4 SQL 두 파일만 운영 바이트로 교체했다. 나머지 세 파일과 기존 59개는 동일하다.
+- 이력 64에서 실제 로그인, REST, 읽기 RPC, Realtime 구독·heartbeat 및 현재 Production 홈·로그인·가이드 렌더링을 확인했다. 영향 범위 로컬 테스트 44/44가 통과했다.
+- 기존 Production 프론트는 main 5c0238fde555a2e151725b338e81f786de6721c4다. 신규 duel-search-v4 Edge, PR 통합, Vercel 배포, 입장 개방은 차례로 승인 및 확인한다. S5 C는 별도 보류 상태다.
+
+## 이전 기록
 
 - **첫 push 안전장치 적용·재조회 PASS, push 승인 대기, 운영 적용·출시 BLOCK.** Vercel `wiki`의 Ignored Build Step은 Automatic에서 Only build production 동작으로 임시 변경했다. Production Branch `main`, 기존 Production 배포, Vercel Authentication의 보호 범위는 동일하다. PR 브랜치의 Git 자동 배포 차단은 `vercel.json`에 있으며 원격에는 아직 반영되지 않았다.
 - [산출물] 승인된 push 전 대상 HEAD와 보호 설정을 다시 확인한다. 해당 SHA의 GitHub PR checks가 끝나고 Vercel에 새 READY 또는 진행 중 Preview가 없으며 Production SHA가 그대로인 상태에서 임시 값의 원복을 검토한다. 배포가 생기지 않거나 사전 단계에서 취소된 경우가 예상 결과다. 기존 Preview는 보호를 유지한다.
