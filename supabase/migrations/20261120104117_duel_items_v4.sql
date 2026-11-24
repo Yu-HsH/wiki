@@ -1,4 +1,5 @@
 -- CLI owns the migration transaction and history INSERT.
+
 -- Independent, opt-in duel rules. The v3 rooms and item RPCs remain intact.
 
 create schema duel_v4;
@@ -962,5 +963,24 @@ revoke all on function public.get_duel_v4_entry(),public.get_duel_v4_state(uuid)
   public.join_duel_v4_room(text),public.act_duel_v4(uuid,uuid,text,jsonb) from public, anon, authenticated, service_role;
 grant execute on function public.get_duel_v4_entry(),public.get_duel_v4_state(uuid),public.create_duel_v4_room(uuid),
   public.join_duel_v4_room(text),public.act_duel_v4(uuid,uuid,text,jsonb) to authenticated;
+
+
+-- PR63 B2 candidate: v4 admission triggers become visible in the same transaction
+-- that creates the v4 tables; no commit gap permits an admitted v4 room.
+DO $pr63_b2_v4_admission$
+BEGIN
+  IF to_regprocedure('private.pr63_drain_admission()') IS NULL OR
+     to_regclass('private.pr63_drain_gate') IS NULL THEN
+    RAISE EXCEPTION 'PR63_B2_MISSING_V4_FENCE';
+  END IF;
+  IF (SELECT entry_open FROM private.pr63_drain_gate WHERE singleton)
+      IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'PR63_B2_V4_GATE_OPEN';
+  END IF;
+  CREATE TRIGGER pr63_drain_admission BEFORE INSERT OR UPDATE OF started_at
+    ON duel_v4.rooms FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission();
+  CREATE TRIGGER pr63_drain_admission BEFORE INSERT
+    ON duel_v4.members FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission();
+END $pr63_b2_v4_admission$;
 
 notify pgrst,'reload schema';

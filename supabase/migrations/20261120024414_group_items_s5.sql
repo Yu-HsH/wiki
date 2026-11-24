@@ -2,6 +2,7 @@
 -- Existing 59 migrations are immutable. The CLI owns this file's transaction
 -- and history INSERT; do not add BEGIN/COMMIT or history repair/stamp here.
 SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+
 SET LOCAL lock_timeout='2s';
 SET LOCAL statement_timeout='180s';
 SET LOCAL search_path=public,extensions;
@@ -39,6 +40,119 @@ DO $pr63_mode$ BEGIN
   INSERT INTO pg_temp._pr63_install_mode VALUES('existing');
  ELSE RAISE EXCEPTION 'PR63_UNSUPPORTED_OR_PARTIAL_S5_STATE'; END IF;
 END $pr63_mode$;
+
+-- PR63 B2 candidate: EXCLUSIVE lock first; never hold gate row while acquiring these locks.
+-- Existing path requires a strictly closed, exact preinstalled gate.
+DO $pr63_b2_prepare$
+DECLARE
+  gate_open boolean;
+  actual_count integer;
+  function_body text;
+BEGIN
+  IF (SELECT mode FROM pg_temp._pr63_install_mode) = 'existing' THEN
+    IF to_regclass('private.pr63_drain_gate') IS NULL OR
+       to_regprocedure('private.pr63_drain_admission()') IS NULL THEN
+      RAISE EXCEPTION 'PR63_B2_CLOSED_GATE_REQUIRED' USING ERRCODE='55000';
+    END IF;
+    -- All targeted DML tables must be locked *before* reading the gate row.
+    -- NOWAIT is intentional; abort instead of deadlocking or holding a partial fence.
+    LOCK TABLE public.single_game_runs IN ACCESS EXCLUSIVE MODE NOWAIT;
+    LOCK TABLE private.single_start_allocations_v1 IN ACCESS EXCLUSIVE MODE NOWAIT;
+    LOCK TABLE public.game_rooms IN ACCESS EXCLUSIVE MODE NOWAIT;
+    LOCK TABLE public.room_players IN ACCESS EXCLUSIVE MODE NOWAIT;
+    EXECUTE 'SET LOCAL ROLE ink_product_owner';
+    LOCK TABLE ink_product.rooms IN ACCESS EXCLUSIVE MODE NOWAIT;
+    LOCK TABLE ink_product.members IN ACCESS EXCLUSIVE MODE NOWAIT;
+    EXECUTE 'SET LOCAL ROLE postgres';
+
+    SELECT entry_open INTO STRICT gate_open
+    FROM private.pr63_drain_gate WHERE singleton FOR UPDATE;
+    IF gate_open IS DISTINCT FROM false OR
+       (SELECT count(*) FROM private.pr63_drain_gate) <> 1 THEN
+      RAISE EXCEPTION 'PR63_B2_GATE_NOT_CLOSED' USING ERRCODE='55000';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+         WHERE n.nspname='private' AND c.relname='pr63_drain_gate'
+           AND c.relkind='r' AND c.relrowsecurity AND NOT c.relforcerowsecurity
+           AND pg_get_userbyid(c.relowner)='postgres'
+           AND c.relacl::text=acldefault('r',c.relowner)::text) THEN
+      RAISE EXCEPTION 'PR63_B2_GATE_OWNER_OR_RLS_CHANGED';
+    END IF;
+    SELECT p.prosrc INTO function_body
+      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname='private' AND p.proname='pr63_drain_admission'
+        AND p.pronargs=0 AND p.prorettype='trigger'::regtype
+        AND p.prosecdef AND p.proconfig=ARRAY['search_path=""']::text[]
+        AND pg_get_userbyid(p.proowner)='postgres'
+        AND (SELECT count(*) FROM aclexplode(p.proacl))=1
+        AND EXISTS (SELECT FROM aclexplode(p.proacl) a
+                    WHERE a.grantee=p.proowner AND a.grantor=p.proowner
+                      AND a.privilege_type='EXECUTE' AND NOT a.is_grantable);
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'PR63_B2_GATE_FUNCTION_METADATA_DRIFT' USING ERRCODE='55000';
+    END IF;
+    IF md5(function_body) IS DISTINCT FROM 'df6c127df15d9d86e99463bcde2e4d1a' THEN
+       RAISE EXCEPTION 'PR63_B2_GATE_FUNCTION_DRIFT';
+    END IF;
+    SELECT count(*) INTO actual_count FROM pg_trigger
+    WHERE tgname='pr63_drain_admission' AND NOT tgisinternal AND tgenabled='O'
+      AND tgtype=23  -- ROW BEFORE INSERT OR UPDATE (inspect tgattr separately)
+      AND tgqual IS NULL AND tgnargs=0 AND tgconstraint=0
+      AND tgoldtable IS NULL AND tgnewtable IS NULL
+      AND tgfoid='private.pr63_drain_admission()'::regprocedure
+      AND tgrelid IN (
+        'public.single_game_runs'::regclass,
+        'private.single_start_allocations_v1'::regclass,
+        'public.game_rooms'::regclass,
+        'public.room_players'::regclass,
+        'ink_product.rooms'::regclass,
+        'ink_product.members'::regclass);
+    IF actual_count <> 6 OR (SELECT count(*) FROM pg_trigger
+      WHERE tgname='pr63_drain_admission' AND NOT tgisinternal) <> 6 THEN
+      RAISE EXCEPTION 'PR63_B2_GATE_TRIGGER_DRIFT';
+    END IF;
+    -- Verify exactly the intended UPDATE OF column set, not merely the trigger name.
+    IF EXISTS (
+      WITH expected(rel, columns) AS (
+        VALUES
+          ('public.single_game_runs'::regclass, ARRAY['status']::text[]),
+          ('private.single_start_allocations_v1'::regclass, ARRAY['run_id']::text[]),
+          ('public.game_rooms'::regclass, ARRAY['mode','status']::text[]),
+          ('public.room_players'::regclass, ARRAY['is_ready','room_id']::text[]),
+          ('ink_product.rooms'::regclass, ARRAY['phase']::text[]),
+          ('ink_product.members'::regclass, ARRAY['ready','room_id','status']::text[])
+      )
+      SELECT 1 FROM expected e
+      LEFT JOIN pg_trigger t ON t.tgrelid=e.rel AND t.tgname='pr63_drain_admission'
+      WHERE (SELECT array_agg(a.attname::text ORDER BY a.attname::text COLLATE "C")
+             FROM pg_attribute a WHERE a.attrelid=e.rel AND a.attnum=ANY(t.tgattr))
+          IS DISTINCT FROM e.columns
+    ) THEN
+      RAISE EXCEPTION 'PR63_B2_GATE_UPDATE_COLUMNS_DRIFT';
+    END IF;
+    IF has_function_privilege('anon','private.pr63_drain_admission()','EXECUTE') OR
+       has_function_privilege('authenticated','private.pr63_drain_admission()','EXECUTE') OR
+       has_function_privilege('service_role','private.pr63_drain_admission()','EXECUTE') OR
+       has_table_privilege('anon','private.pr63_drain_gate','UPDATE') OR
+       has_table_privilege('authenticated','private.pr63_drain_gate','UPDATE') OR
+       has_table_privilege('service_role','private.pr63_drain_gate','UPDATE') THEN
+      RAISE EXCEPTION 'PR63_B2_GATE_ACL_DRIFT';
+    END IF;
+
+    -- S5 tables have owner ink_product_owner, not the postgres migration login.
+    EXECUTE 'SET LOCAL ROLE ink_product_owner';
+    DROP TRIGGER pr63_drain_admission ON ink_product.members;
+    DROP TRIGGER pr63_drain_admission ON ink_product.rooms;
+    EXECUTE 'SET LOCAL ROLE postgres';
+    DROP TRIGGER pr63_drain_admission ON public.room_players;
+    DROP TRIGGER pr63_drain_admission ON public.game_rooms;
+    DROP TRIGGER pr63_drain_admission ON private.single_start_allocations_v1;
+    DROP TRIGGER pr63_drain_admission ON public.single_game_runs;
+    DROP FUNCTION private.pr63_drain_admission();
+    DROP TABLE private.pr63_drain_gate;
+  END IF;
+END $pr63_b2_prepare$;
+
 -- New installs need the same public USAGE contract the existing owner already
 -- has. Preserve all prior grants; only this new schema-user grant is added.
 DO $fresh_public_usage$ BEGIN IF (SELECT mode FROM pg_temp._pr63_install_mode)='fresh' THEN GRANT USAGE ON SCHEMA public TO ink_product_owner; END IF; END $fresh_public_usage$;
@@ -18856,6 +18970,83 @@ DO $pr63_if_1631$ BEGIN IF (SELECT mode FROM pg_temp._pr63_install_mode)='existi
 END $verify$$pr63_stmt_1631$; END IF; END $pr63_if_1631$;
 DO $pr63_if_1632$ BEGIN IF (SELECT mode FROM pg_temp._pr63_install_mode)='existing' THEN EXECUTE $pr63_stmt_1632$NOTIFY pgrst,'reload schema'$pr63_stmt_1632$; END IF; END $pr63_if_1632$;
 SET LOCAL ROLE postgres;
+
+-- PR63 B2 candidate: install closed gate after S5 conservation checks and before role restore.
+DO $pr63_b2_reinstall$
+BEGIN
+  IF to_regclass('private.pr63_drain_gate') IS NOT NULL OR
+     to_regprocedure('private.pr63_drain_admission()') IS NOT NULL THEN
+    RAISE EXCEPTION 'PR63_B2_GATE_REINSTALL_COLLISION';
+  END IF;
+    EXECUTE $pr63_ddl$CREATE TABLE private.pr63_drain_gate (
+  singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+  entry_open boolean NOT NULL DEFAULT false
+)$pr63_ddl$;
+    EXECUTE $pr63_ddl$INSERT INTO private.pr63_drain_gate DEFAULT VALUES$pr63_ddl$;
+    EXECUTE $pr63_ddl$ALTER TABLE private.pr63_drain_gate ENABLE ROW LEVEL SECURITY$pr63_ddl$;
+    EXECUTE $pr63_ddl$REVOKE ALL ON private.pr63_drain_gate FROM PUBLIC, anon, authenticated, service_role$pr63_ddl$;
+    EXECUTE $pr63_ddl$ALTER TABLE private.pr63_drain_gate OWNER TO postgres$pr63_ddl$;
+    EXECUTE $pr63_ddl$CREATE FUNCTION private.pr63_drain_admission() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE
+  enters boolean;
+  gate_open boolean;
+BEGIN
+  CASE TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME
+  WHEN 'public.single_game_runs' THEN
+    -- Scheduled runs have passed the start boundary. Let them finish during drain.
+    IF TG_OP='INSERT' THEN enters:=true;
+    ELSE enters:=OLD.status='prepared' AND NEW.status IN ('scheduled','active'); END IF;
+  WHEN 'private.single_start_allocations_v1' THEN
+    -- A claimed allocation committed into a run after closure is a new run.
+    -- This may reject a previously claimed but uncommitted allocation.
+    IF TG_OP='INSERT' THEN enters:=true;
+    ELSE enters:=OLD.run_id IS DISTINCT FROM NEW.run_id AND NEW.run_id IS NOT NULL; END IF;
+  WHEN 'public.game_rooms' THEN
+    IF TG_OP='INSERT' THEN enters:=NEW.mode IN ('duel','group');
+    ELSE enters:=NEW.mode IN ('duel','group') AND
+      (OLD.mode IS DISTINCT FROM NEW.mode OR (OLD.status='waiting' AND NEW.status IN ('starting','playing'))); END IF;
+  WHEN 'public.room_players' THEN
+    IF TG_OP='INSERT' THEN enters:=true;
+    ELSE enters:=OLD.room_id IS DISTINCT FROM NEW.room_id OR
+      (NEW.is_ready IS TRUE AND OLD.is_ready IS DISTINCT FROM TRUE AND EXISTS (
+        SELECT FROM public.game_rooms r WHERE r.id=NEW.room_id AND r.mode='group' AND r.status='waiting')); END IF;
+  WHEN 'ink_product.rooms' THEN
+    IF TG_OP='INSERT' THEN enters:=true;
+    ELSE enters:=OLD.phase='waiting' AND NEW.phase='playing'; END IF;
+  WHEN 'ink_product.members' THEN
+    IF TG_OP='INSERT' THEN enters:=true;
+    ELSE enters:=OLD.room_id IS DISTINCT FROM NEW.room_id OR
+      (NEW.status='waiting' AND (OLD.status IS DISTINCT FROM NEW.status OR (NEW.ready IS TRUE AND OLD.ready IS DISTINCT FROM TRUE))); END IF;
+  WHEN 'duel_v4.rooms' THEN
+    IF TG_OP='INSERT' THEN enters:=true;
+    ELSE enters:=OLD.started_at IS NULL AND NEW.started_at IS NOT NULL; END IF;
+  WHEN 'duel_v4.members' THEN enters:=true;
+  ELSE RAISE EXCEPTION 'PR63_DRAIN_TRIGGER_TARGET';
+  END CASE;
+
+  -- Unknown (NULL) cases must not silently bypass the fence.
+  IF enters IS NULL THEN RAISE EXCEPTION 'PR63_DRAIN_AMBIGUOUS_TRANSITION' USING ERRCODE='55000'; END IF;
+  IF enters THEN
+    -- The close waits for already admitted writes to commit.
+    SELECT entry_open INTO STRICT gate_open FROM private.pr63_drain_gate WHERE singleton FOR SHARE;
+    IF NOT gate_open THEN RAISE EXCEPTION 'PR63_ENTRY_PAUSED' USING ERRCODE='55000'; END IF;
+  END IF;
+  RETURN NEW;
+END $$$pr63_ddl$;
+    EXECUTE $pr63_ddl$REVOKE ALL ON FUNCTION private.pr63_drain_admission() FROM PUBLIC, anon, authenticated, service_role$pr63_ddl$;
+    EXECUTE $pr63_ddl$ALTER FUNCTION private.pr63_drain_admission() OWNER TO postgres$pr63_ddl$;
+    EXECUTE $pr63_ddl$CREATE TRIGGER pr63_drain_admission BEFORE INSERT OR UPDATE OF status ON public.single_game_runs FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission()$pr63_ddl$;
+    EXECUTE $pr63_ddl$CREATE TRIGGER pr63_drain_admission BEFORE INSERT OR UPDATE OF run_id ON private.single_start_allocations_v1 FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission()$pr63_ddl$;
+    EXECUTE $pr63_ddl$CREATE TRIGGER pr63_drain_admission BEFORE INSERT OR UPDATE OF mode,status ON public.game_rooms FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission()$pr63_ddl$;
+    EXECUTE $pr63_ddl$CREATE TRIGGER pr63_drain_admission BEFORE INSERT OR UPDATE OF room_id,is_ready ON public.room_players FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission()$pr63_ddl$;
+    EXECUTE $pr63_ddl$CREATE TRIGGER pr63_drain_admission BEFORE INSERT OR UPDATE OF phase ON ink_product.rooms FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission()$pr63_ddl$;
+    EXECUTE $pr63_ddl$CREATE TRIGGER pr63_drain_admission BEFORE INSERT OR UPDATE OF status,ready,room_id ON ink_product.members FOR EACH ROW EXECUTE FUNCTION private.pr63_drain_admission()$pr63_ddl$;
+  IF (SELECT entry_open FROM private.pr63_drain_gate WHERE singleton)
+      IS DISTINCT FROM FALSE THEN
+    RAISE EXCEPTION 'PR63_B2_GATE_REOPENED';
+  END IF;
+END $pr63_b2_reinstall$;
 DO $restore_public_schema$ BEGIN
  IF NOT (SELECT had_create FROM pg_temp._pr63_public_schema_witness) THEN REVOKE CREATE ON SCHEMA public FROM ink_product_owner; END IF;
  IF (SELECT nspacl FROM pg_namespace WHERE nspname='public') IS DISTINCT FROM (SELECT nspacl FROM pg_temp._pr63_public_schema_witness) THEN RAISE EXCEPTION 'PR63_PUBLIC_SCHEMA_ACL_NOT_RESTORED'; END IF;
