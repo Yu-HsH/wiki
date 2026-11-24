@@ -1,0 +1,23 @@
+\set ON_ERROR_STOP on
+BEGIN;
+SELECT set_config('pr63_ci.expected_database', :'pr63_ci_database', true) AS expected_database \gset
+
+DO $fixtures$
+BEGIN
+  IF inet_server_addr() IS NOT NULL
+     OR current_user <> 'postgres'
+     OR current_database() <> current_setting('pr63_ci.expected_database') THEN
+    RAISE EXCEPTION 'Fixture setup requires the named local database socket';
+  END IF;
+
+  IF NOT EXISTS (SELECT FROM supabase_migrations.schema_migrations WHERE version = '20261120114137')
+     OR (SELECT count(*) FROM private.pr63_drain_gate WHERE singleton AND NOT entry_open) <> 1
+     OR (SELECT count(*) FROM pg_trigger
+         WHERE NOT tgisinternal AND tgname = 'pr63_drain_admission' AND tgenabled = 'O') <> 8 THEN
+    RAISE EXCEPTION 'Expected the migrated admission gate to start closed with eight triggers';
+  END IF;
+
+  UPDATE private.pr63_drain_gate SET entry_open = true WHERE singleton;
+END
+$fixtures$;
+COMMIT;

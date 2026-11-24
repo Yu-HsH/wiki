@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/s5-migration-rehearsal.yml'
       - 'scripts/verify-s5-migration-rehearsal-ci.mjs'
+      - 'scripts/open-pr63-ci-admission.psql'
       - 'supabase/migrations/*_group_items_s5.sql'
       - 'supabase/migrations/*_duel_items_v4.sql'
       - 'supabase/migrations/*_duel_v4_*.sql'
@@ -53,6 +54,10 @@ jobs:
         run: npx --no-install supabase migration up --local
       - name: Assert no loss or privilege regression in synthetic legacy rows
         run: node scripts/verify-s5-migration-rehearsal-ci.mjs verify
+      - name: Check the default admission gate and open it for local fixtures
+        run: |
+          docker exec -i --user postgres supabase_db_wiki-packet13-r2-clean158 \
+            psql -Xw -U postgres -d postgres -v pr63_ci_database=postgres < scripts/open-pr63-ci-admission.psql
       - name: Run all db regressions after upgrade
         run: npx --no-install supabase test db --local
       - name: Print migration list (no user data)
