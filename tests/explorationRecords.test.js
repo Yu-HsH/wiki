@@ -462,10 +462,13 @@ test("(3) 결과 저장 경로가 게스트를 가장 먼저 판정한다", asyn
 test("(3) 온라인 경로는 게스트에게 열리지 않는다", async () => {
   const playPageSource = await readProjectFile("pages/PlayPage.jsx");
 
-  assert.match(playPageSource, /aria-disabled=\{isGuest && mode\.id !== "solo"\}/);
+  assert.match(playPageSource, /const lockedForGuest = isGuest && mode\.id !== "solo"/);
+  assert.match(playPageSource, /const disabled = lockedForGuest \|\| lockedForPractice/);
+  assert.match(playPageSource, /aria-disabled=\{disabled\}/);
+  assert.match(playPageSource, /mode\.href && !disabled \? \(/);
   assert.match(
     playPageSource,
-    /else if \(!isGuest\) onMultiplayer\(mode\.id\);/
+    /else if \(!disabled\) onMultiplayer\(mode\.id\);/
   );
 });
 

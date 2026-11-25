@@ -351,7 +351,9 @@ export default function MainPage({ view = "home", tutorialSession = null, onStar
 
         {view === "play" ? (
           <PlayPage
+            key={user.id + ":" + practice}
             isGuest={user.isGuest}
+            practice={practice}
             onSingle={() => { if (practice) { tutorialSession.act(soloToken); return; } setKeyword(""); setShowKeywordModal(true); }}
             onMultiplayer={(mode) => { if (practice) return; if (mode === "group-items") { navigate("/multiplayer/group-items"); return; } navigate(`/multiplayer?mode=${mode}`); }}
           />

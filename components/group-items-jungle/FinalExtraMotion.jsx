@@ -98,7 +98,7 @@ function Thief({ scene }) {
   return <><i className="s5x-thief-streak"/>
     <span className="s5x-thief-item">{item??'—'}</span>
     {itemImage('thief',null,'s5x-thief-hand')}
-    <b className="s5x-outcome s5x-thief-result">{thiefMessages[scene.kind]}</b></>;
+    <b className="s5x-outcome s5x-thief-result">{scene.label ?? thiefMessages[scene.kind]}</b></>;
 }
 
 function Cannon({ arrived }) {

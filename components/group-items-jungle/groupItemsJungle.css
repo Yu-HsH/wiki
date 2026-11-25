@@ -1,7 +1,15 @@
 .group-items-jungle .wr-race-body { min-height: 0; }
 .group-items-jungle .gip-document > .wr-race-main { flex: 1; min-width: 0; overflow: auto; }
 .group-items-jungle-dock { flex: none; min-width: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
-.group-items-jungle-supply, .group-items-jungle-status, .group-items-jungle-receipt {
+[data-product-group-phase="playing"] .group-items-jungle .group-items-jungle-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 41;
+  background: #f6edda;
+  overflow-anchor: none;
+}
+.group-items-jungle-dock--spectator { margin-top: auto; }
+.group-items-jungle-supply, .group-items-jungle-status {
   display: block;
   margin: 0;
   padding: .2rem .6rem;
@@ -22,3 +30,40 @@
 .s5-panels input { min-width: 0; max-width: 100%; font-size: 1rem; }
 .s5-panels button, .s5-panels summary { min-height: 44px; }
 .s5-panels button { max-width: 100%; overflow-wrap: anywhere; }
+
+.product-item-camp { max-width: 78rem; margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
+.product-item-camp-panel, .product-item-race-roster { background: var(--wr-paper, #fffdf5); border: 1px solid var(--wr-divider, #c8bfa9);
+  border-radius: 12px; padding: 1rem; margin-block: .5rem; min-width: 0; overflow-wrap: anywhere; }
+.product-item-camp-panel form { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; margin-block: .75rem; }
+.product-item-camp-panel label { display: grid; min-width: 0; gap: .25rem; }
+.product-item-roster { display: grid; gap: .45rem; list-style: none; padding: 0; }
+.product-item-roster li { display: flex; flex-wrap: wrap; gap: .35rem .6rem; align-items: center; min-width: 0; overflow-wrap: anywhere; }
+.product-item-roster li > span { flex: 0 1 auto; }
+.product-item-mobile-roster { display: none; }
+.product-item-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.product-item-dock-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem .75rem;
+  padding-inline: .65rem; background: #f6edda; }
+.product-item-dock-controls details { min-width: 0; }
+.product-item-dock-controls summary { display: list-item; align-content: center; min-height: 44px; cursor: pointer; }
+.product-item-dock-controls .s5-final-audio { padding-inline: 0; }
+.product-item-race-course { display: contents; }
+.group-items-jungle .gip-document { min-width: 0; }
+[data-product-group-phase="playing"] .wr-race-hud > .s5-phase2-countdown { width: auto; min-width: 0; gap: .35rem; margin: 0; padding: .25rem .5rem; }
+[data-product-group-phase="finished"] .wr-srow { grid-template-columns: 44px minmax(0, 1fr) minmax(6rem, 9rem); }
+@media (max-width: 760px) {
+  [data-product-group-phase="playing"] .group-items-jungle .wr-race-hud {
+    display: grid; grid-template: "brand moves clock" auto "course course course" auto / max-content auto minmax(0, 1fr);
+  }
+  .group-items-jungle .wr-race-hud > .wr-hud-brand { grid-area: brand; padding-block: .4rem; }
+  .group-items-jungle .wr-race-hud > .wr-hud-stat { grid-area: moves; align-items: center; padding-block: .4rem; }
+  .group-items-jungle .wr-race-hud > [aria-label="아이템전 경기 기한"] { grid-area: clock; align-self: center; }
+  .group-items-jungle .wr-race-hud .wr-hud-stat-value { font-size: 1.1rem; }
+  .group-items-jungle .product-item-race-course { display: flex; grid-area: course; }
+  .product-item-race-course .wr-hud-doc { flex: 1; max-width: none; padding: .3rem .5rem; }
+  .product-item-race-course .wr-hud-doc .wr-hud-label { display: block; }
+  .product-item-race-course .wr-hud-arrow { align-self: center; }
+  .group-items-jungle .product-item-race-roster { display: none; }
+  .group-items-jungle .product-item-mobile-roster { display: block; padding: .4rem .75rem; background: var(--wr-paper, #fffdf5); }
+  [data-product-group-phase="finished"] .wr-srow { grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "rank name state"; }
+  .product-item-mobile-roster summary { cursor: pointer; min-height: 44px; align-content: center; }
+}
