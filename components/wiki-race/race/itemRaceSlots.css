@@ -1,0 +1,70 @@
+.item-race-slots {
+  display: flex;
+  flex: 0 0 auto;
+  gap: .45rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin-inline-start: auto;
+  padding: .35rem .5rem;
+  color: #283e32;
+}
+.item-race-slot-list { display: flex; gap: .25rem; }
+.item-race-slot-wrap { position: relative; }
+.item-race-slot {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 1px solid #9f8c68;
+  border-radius: 9px;
+  background: #fff9e9;
+  color: #283e32;
+}
+.item-race-slot:disabled { background: #ece5d5; color: #635940; }
+.item-race-slot[data-available="false"] img { opacity: .55; }
+.item-race-slot[aria-expanded="true"] { background: #f5dfaa; border-color: #6d5426; }
+.item-race-slot:focus-visible { outline: 2px solid #275f52; outline-offset: 2px; }
+.item-race-slot-number { position: absolute; left: 3px; top: 2px; font: 600 .65rem/1 system-ui; }
+.item-race-start {
+  position: fixed;
+  z-index: 38;
+  inset: 22% auto auto 50%;
+  transform: translateX(-50%);
+  padding: .3em .8em;
+  border: 1px solid #b0996d;
+  border-radius: 1em;
+  background: #fff8e6;
+  color: #204b3c;
+  font: 700 clamp(1.2rem, 4vw, 2.2rem)/1.2 var(--wr-font-heading, system-ui);
+  pointer-events: none;
+}
+.item-race-supply { display: grid; text-align: center; font-size: .68rem; white-space: nowrap; }
+.item-race-supply strong { font-size: .9rem; font-variant-numeric: tabular-nums; }
+.item-race-tooltip {
+  position: absolute;
+  z-index: 3;
+  inset-inline-end: -2rem;
+  top: 100%;
+  width: min(15rem, 70vw);
+  box-sizing: border-box;
+  display: grid;
+  gap: .3rem;
+  padding: .65rem;
+  border: 1px solid #b1996f;
+  border-radius: 8px;
+  background: #fffdf3;
+  box-shadow: 0 6px 16px #332c2633;
+  color: #283e32;
+  font-size: .8rem;
+  visibility: hidden;
+  pointer-events: none;
+}
+.item-race-slot:focus-visible + .item-race-tooltip { visibility: visible; }
+@media (hover: hover) {
+  .item-race-slot-wrap:hover .item-race-tooltip { visibility: visible; }
+}
+@media (max-width: 760px) {
+  .item-race-slots { padding-block: .15rem; padding-inline: .35rem; gap: .3rem; }
+}

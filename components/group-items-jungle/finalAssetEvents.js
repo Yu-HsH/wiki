@@ -68,11 +68,25 @@ export function finalResultSignal(result,participantId) {
     target && result.outcome==='blocked' || source && result.outcome==='reflection_blocked');
   if (result.itemId==='thunder') {
     if (hit) return signal('thunder-hit','thunder_judgment/hit');
-    return protectedResult ? signal('thunder-guard','thunder_judgment/guard') : null;
+    if (protectedResult) return signal('thunder-guard','thunder_judgment/guard');
   }
   if (hit && result.itemId==='weakening') return signal('weakening','weakening_curse/apply');
   if (hit && result.itemId==='censor') return signal('censor',null);
-  return protectedResult ? signal('shield-block','edit_protection/block') : null;
+  if (protectedResult) return signal('shield-block','edit_protection/block');
+  if (!source && !target) return null;
+  const outcome = {
+    hit: source ? '적중' : '피격',
+    blocked: '차단',
+    parried_blocked: '패링 차단',
+    reflected: source ? '반사당함' : '반사 성공',
+    reflection_blocked: '반사 공격 차단',
+    void_ineligible: '효과 불발',
+    no_censor_candidates: '효과 불발',
+  }[result.outcome];
+  if (outcome && (result.itemId!=='ink' || !hit)) {
+    return { kind:'item-outcome', itemId:result.itemId, label:outcome };
+  }
+  return null;
 }
 
 export function finalMovementSignal(move,self) {

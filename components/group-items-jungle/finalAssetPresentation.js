@@ -6,17 +6,26 @@ const cannonLaunchMs=800;
 const liveWindowMs=2500;
 
 export function createFinalAssetPresentation(fallback,getAudio,now=()=>performance.now()) {
-  let scene=null, movementId=null, cannonUntil=null, cannonPending=false, connected=false;
+  let scenes=[], movementId=null, cannonUntil=null, cannonPending=false, connected=false;
   let censors=[];
 
+  function currentScenes() {
+    scenes=scenes.filter(scene=>scene.until>now());
+    return scenes;
+  }
   function emit(key,signal) {
     if (!signal) return;
-    if (signal.kind) scene={ key,kind:signal.kind,itemId:signal.itemId,itemTier:signal.itemTier,label:signal.label,
-      until:now()+(sceneDuration[signal.kind]??1800) };
+    if (signal.kind) {
+      currentScenes();
+      scenes=[...scenes.filter(scene=>scene.key!==key), {
+        key,kind:signal.kind,itemId:signal.itemId,itemTier:signal.itemTier,label:signal.label,
+        until:now()+(sceneDuration[signal.kind]??1800),
+      }];
+    }
     if (signal.asset) getAudio()?.play(signal.asset);
   }
   function stop() {
-    scene=null;
+    scenes=[];
     cannonUntil=null;
     cannonPending=false;
     connected=false;
@@ -33,7 +42,8 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
     finalAssets:true,
     stop,
     playCue:emit,
-    currentScene:()=>scene,
+    currentScene:()=>currentScenes().at(-1) ?? null,
+    currentScenes,
     pending(operation,value) {
       if (operation==='cannon') cannonPending=value;
     },
@@ -50,7 +60,9 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
     },
     receipt(receipt,context) {
       if (connected && context.live && !context.retransmitted) {
-        const cue=finalReceiptSignal(receipt,context.warningItem);
+        const cue=finalReceiptSignal(receipt,context.warningItem) ??
+          (receipt.code==='ATTACK_ACCEPTED' && context.itemId
+            ? { kind:'item-outcome',itemId:context.itemId,label:'사용' } : null);
         if (cue?.kind==='correction') censors=censors.filter(row=>row.id!==receipt.closedEffectId);
         if (cue?.kind==='cannon-fire') {
           const id=receipt.movement?.moveId;
@@ -95,7 +107,7 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
       }
       const protection=state.presentation.projection?.protection;
       const shieldActive=Boolean(protection && protection.startsAt<=frame.now && frame.now<protection.expiresAt);
-      return { scene:scene && scene.until>now() ? scene : null, thunder:Boolean(stun), lost:Boolean(warning), shieldActive };
+      return { scenes:currentScenes(), thunder:Boolean(stun), lost:Boolean(warning), shieldActive };
     },
   };
 }

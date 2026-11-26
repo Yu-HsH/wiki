@@ -394,14 +394,17 @@ async function duelRound() {
   await host.getByRole("button",{name:"방 만들기"}).click();
   await host.waitForURL(/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/, {timeout:20000});
   const room=host.url().split("/").at(-1);
-  const code=await host.locator("[data-duel-v4-code]").innerText();
+  const code=await host.locator("[data-duel-v4-code] .wr-room-code-value").innerText();
   await guest.getByLabel("방 코드").fill(code);
   await guest.getByRole("button",{name:"입장"}).click();
   await guest.waitForURL(new RegExp("/multiplayer/duel-v4/"+room+"$"),{timeout:20000});
   log("duel v4 actual UI create and join with two distinct Auth users");
   // The normal client UI exercises both snapshot preparation and target/start commands.
-  await host.getByLabel("목표 문서").fill(goal.title);
-  await host.getByRole("button",{name:"목표 저장"}).click();
+  const search=host.getByRole("search",{name:"목표 문서 검색"});
+  await search.getByRole("textbox").fill(goal.title);
+  await search.getByRole("button",{name:"검색",exact:true}).click();
+  await host.getByRole("list",{name:"목표 문서 검색 결과"})
+    .getByRole("button",{name:goal.title,exact:true}).click();
   await waitFor(async()=>!(await host.getByRole("button",{name:"게임 시작"}).isEnabled())?false:true,
     "duel v4 target saved",55,350);
   await host.getByRole("button",{name:"게임 시작"}).click();

@@ -1,4 +1,5 @@
 import React, { useEffect,useLayoutEffect,useRef,useState } from 'react';
+import { createPortal } from 'react-dom';
 import { inkVisualOpacity } from '../group-items-playtest/effectPresentation.js';
 import { FINAL_ASSET_ROOT,finalInkPlacement,finalIconUrl } from './finalAssetEvents.js';
 import { FinalPriorityMotion } from './FinalPriorityMotion.jsx';
@@ -47,28 +48,38 @@ export function FinalInkVfx({pulse,frame}) {
 
 export function FinalItemMotion({value}) {
   if (!value) return null;
-  const {scene,shieldActive,thunder,lost}=value;
+  const {scenes=[],shieldActive,thunder,lost}=value;
+  const movement = scenes.filter(scene => scene.kind === 'lost-arrive').at(-1);
   return <div className="s5-final-motion" aria-hidden="true">
-    <FinalPriorityMotion scene={scene} shieldActive={shieldActive}/>
-    <FinalExtraMotion scene={scene} thunder={thunder} lost={lost}/>
+    <FinalPriorityMotion shieldActive={shieldActive}/>
+    <FinalExtraMotion scene={movement} thunder={thunder} lost={lost}/>
+    {scenes.filter(scene=>scene.kind!=='lost-arrive').map(scene=><React.Fragment key={scene.key}>
+      <FinalPriorityMotion scene={scene}/>
+      <FinalExtraMotion scene={scene}/>
+    </React.Fragment>)}
   </div>;
 }
 
-export function FinalAssetOverlay({value,pulse,frame}) {
-  const overlay=useRef(null);
+export function FinalAssetOverlay({value,pulse,frame,children}) {
+  const anchor=useRef(null);
   const [bounds,setBounds]=useState(null);
   useLayoutEffect(()=>{
-    const article=overlay.current.parentElement;
+    const article=anchor.current.parentElement;
     const shell=article.closest('.wr-race-shell');
     const header=shell?.querySelector('.wr-race-hud');
-    const dock=shell?.querySelector('[data-s5-sticky-dock]');
+    const dock=shell?.querySelector('[data-item-race-dock], [data-s5-sticky-dock]');
+    const viewport=window.visualViewport;
     let pending=null;
     function measure() {
       pending=null;
       const rect=article.getBoundingClientRect();
-      const left=Math.max(0,rect.left), top=Math.max(0,rect.top,header?.getBoundingClientRect().bottom??0);
-      const width=Math.max(0,Math.min(innerWidth,rect.right)-left);
-      const height=Math.max(0,Math.min(innerHeight,rect.bottom,dock?.getBoundingClientRect().top??innerHeight)-top);
+      const x=viewport?.offsetLeft??0, y=viewport?.offsetTop??0;
+      const right=x+(viewport?.width??window.innerWidth), bottom=y+(viewport?.height??window.innerHeight);
+      const left=Math.max(x,rect.left);
+      const top=Math.max(y,rect.top,header?.getBoundingClientRect().bottom??y);
+      const width=Math.max(0,Math.min(right,rect.right)-left);
+      const dockBounds=dock?.getBoundingClientRect();
+      const height=Math.max(0,Math.min(bottom,rect.bottom,dockBounds?.height ? dockBounds.top : bottom)-top);
       setBounds(previous=>previous?.left===left && previous.top===top && previous.width===width && previous.height===height
         ? previous : {left,top,width,height});
     }
@@ -81,18 +92,23 @@ export function FinalAssetOverlay({value,pulse,frame}) {
     if (dock) size?.observe(dock);
     window.addEventListener('scroll',queueMeasure,{passive:true,capture:true});
     window.addEventListener('resize',queueMeasure);
+    viewport?.addEventListener('resize',queueMeasure);
+    viewport?.addEventListener('scroll',queueMeasure);
     measure();
     return ()=>{
       if (pending!==null) cancelAnimationFrame(pending);
       size?.disconnect();
       window.removeEventListener('scroll',queueMeasure,true);
       window.removeEventListener('resize',queueMeasure);
+      viewport?.removeEventListener('resize',queueMeasure);
+      viewport?.removeEventListener('scroll',queueMeasure);
     };
   },[]);
-  return <div className="s5-final-viewport" ref={overlay} style={bounds??undefined}>
-    {bounds && <>
+  return <><span hidden ref={anchor}/>
+    {bounds && createPortal(<div className="s5-final-viewport" style={bounds}>
+      {children}
       <FinalInkVfx pulse={pulse} frame={frame}/>
       <FinalItemMotion value={value}/>
-    </>}
-  </div>;
+    </div>, document.body)}
+  </>;
 }

@@ -73,14 +73,15 @@ export function duelV4AttackFeedback(row, userId) {
   const protection = finalResultSignal(result, row.outcome === 'reflected_blocked' ? row.actor_id : row.target_id);
   switch (row.outcome) {
     case 'hit': return { tone: attacker ? 'hit' : 'danger', text: `${name} ${attacker ? '적중' : '피격'}`,
-      cue: attacker ? null : finalResultSignal(result, userId) };
+      cue: finalResultSignal(result, userId) };
     case 'blocked': return { tone: 'guard', text: `${name} ${attacker ? '차단됨 · 상대 편집보호' : '차단 성공 · 편집보호 소모'}`, cue: protection };
     case 'parried_blocked': return { tone: 'guard', text: `${name} ${attacker ? '차단됨 · 상대 패링' : '차단 성공 · 패링'}`, cue: parry('blocked') };
     case 'reflected': return { tone: 'reflect', text: `${name} ${attacker ? '반사당함 · 상대 패링' : '반사 성공 · 패링'}`, cue: parry('reflected') };
     case 'reflected_blocked': return { tone: 'guard', text: `${name} ${attacker ? '반사됨 · 편집보호로 차단' : '반사됨 · 상대 편집보호로 차단'}`,
       cue: attacker ? protection : parry('reflection_blocked') };
     case 'no_censor_candidates':
-    case 'void_ineligible': return { tone: 'fail', text: `${name} 효과 불발 · ${attacker ? '적중 조건 미충족' : '공격이 적용되지 않음'}` };
+    case 'void_ineligible': return { tone: 'fail', text: `${name} 효과 불발 · ${attacker ? '적중 조건 미충족' : '공격이 적용되지 않음'}`,
+      cue: finalResultSignal(result, userId) };
     default: return null;
   }
 }
@@ -107,6 +108,7 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
 
   return {
     scene: final.currentScene,
+    scenes: final.currentScenes,
     isLiveInk: id => liveInk.has(id),
     stop: final.stop,
     receipt(request, result, next) {
@@ -115,7 +117,8 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
       if (code === 'ATTACK_WARNING') {
         const pending = clock() - request.sentAt < V4_PARRY_WINDOW_MS;
         show(request.id, { tone: 'use', pendingItem: pending ? request.itemId : null,
-          text: `${itemName(request.itemId)} 사용${pending ? ' · 적중 판정 대기' : ''}` });
+          text: `${itemName(request.itemId)} 사용${pending ? ' · 적중 판정 대기' : ''}`,
+          cue: { kind:'item-outcome', itemId:request.itemId, label:'사용' } });
         return;
       }
       // Final parry cues come from attackResults for both clients, not from the defender's receipt.
@@ -132,6 +135,9 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
         cue = finalReceiptSignal({ receiptId: request.id, operation, code: sharedCode, ...fields,
           transferredItemId: received?.itemId, receivedTier: received?.tier });
         if (code === 'THIEF_EMPTY') cue = { ...cue, label: '훔치기 실패' };
+      }
+      if (!cue && code === 'ITEM_CHANCE_FAILED') {
+        cue = { kind:'item-outcome', itemId:request.itemId, label:'효과 불발' };
       }
       const arrived = next?.players.find(player => player.id === next.selfId);
       if (code === 'CANNON_LANDED' && arrived) pendingMovement = { after: clock() + 800, key: request.id,
@@ -188,6 +194,16 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
         if (row.item_id === 'lost_link' && row.outcome === 'reflected' && row.actor_id === userId && self) {
           pendingMovement = { after: clock() + 1800, key: row.id, progress: self.progressVersion, operation: 'lost_link' };
         }
+      }
+      for (const event of state.itemFeedback ?? []) {
+        const happenedAt = effectTime(event.expiresAt) - 30_000;
+        if (!claim(`item-feedback:${event.id}`) || recovered || happenedAt <= initialServerTime ||
+            now - happenedAt >= resultWindowMs) continue;
+        const cue = {
+          item_stolen: { kind:'thief-loss' },
+          trap_triggered: { kind:'item-outcome', itemId:'trap', label:'상자가 작동했어요' },
+        }[event.kind];
+        final.playCue(event.id, cue);
       }
       if (previousSelf?.progressVersion === self?.progressVersion &&
           !state.effects?.some(effect => effect.kind === 'censor' && effectTime(effect.expiresAt) > now)) {

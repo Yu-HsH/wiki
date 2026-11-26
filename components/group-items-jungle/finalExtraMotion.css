@@ -121,7 +121,15 @@
   filter: drop-shadow(0 2px 2px #302544); animation: s5x-roulette-pointer .12s 10 alternate;
 }
 .s5x-roulette-result { animation: s5x-result-in .21s 1.73s both; }
-[data-item-vfx="roulette-fail"] .s5x-roulette-result { background: #f8d8dc; border-color: #a76270; animation-delay: 1.52s; }
+.s5x-item-outcome {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  top: 18%;
+  animation: s5x-result-in .21s both;
+}
+.s5x-item-outcome img { width: 28px; height: 28px; object-fit: contain; }
+[data-item-vfx="roulette-fail"] .s5x-roulette-result { background: #f8d8dc; border-color: #a76270; }
 [data-item-vfx="roulette-boost"] .s5x-roulette-result { background: #f9ebaa; border-color: #b88b29; }
 @keyframes s5x-roulette-spin {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.65) rotate(0); }

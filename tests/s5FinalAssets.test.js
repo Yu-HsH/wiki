@@ -103,15 +103,15 @@ test('S5: F5/retransmission suppresses one-shots, a new live ink sequence uses o
   const newMove={...move,moveId:'m2'};
   const landed={...state,lastForcedMove:newMove};
   p.pending('cannon',true);
-  assert.equal(p.observe(landed,frame,true).scene,null);
+  assert.deepEqual(p.observe(landed,frame,true).scenes,[]);
   p.receipt(receipt('cannon','CANNON_RESOLVED',{success:true,movement:newMove}),{live:true});
   p.pending('cannon',false);
   p.observe(landed,frame,true);
   assert.equal(heard.at(-1),'dimension_cannon/fire');
   mono+=799;
-  assert.equal(p.observe(landed,frame,true).scene.kind,'cannon-fire');
+  assert.equal(p.observe(landed,frame,true).scenes.at(-1).kind,'cannon-fire');
   mono++;
-  assert.equal(p.observe(landed,frame,true).scene.kind,'cannon-arrive');
+  assert.equal(p.observe(landed,frame,true).scenes.at(-1).kind,'cannon-arrive');
   p.observe(landed,frame,true);
   assert.deepEqual(heard,['ink_blind/three_splashes','dimension_cannon/fire','dimension_cannon/arrive']);
 });
@@ -125,7 +125,7 @@ test('S5: recover a shield and a seal silently, release once at the server expir
   p.recover(state);
   assert.equal(p.observe(state,frame,true).shieldActive,true);
   assert.deepEqual(heard,[]);
-  assert.equal(p.observe(state,{...frame,now:1200},true).scene.kind,'censor-release');
+  assert.equal(p.observe(state,{...frame,now:1200},true).scenes.at(-1).kind,'censor-release');
   assert.equal(p.observe(state,{...frame,now:1300},true).shieldActive,false);
   assert.deepEqual(heard,['link_censor/release']);
 });

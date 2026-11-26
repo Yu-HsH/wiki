@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../authContext.jsx";
 import WikiViewer from "../components/group-items-jungle/S5WikiViewer.jsx";
 import { LinkList } from "../components/group-items-jungle/S5Panels.jsx";
-import { FinalInkVfx, FinalItemIcon, FinalItemMotion, preloadFinalInk } from "../components/group-items-jungle/FinalAssetVfx.jsx";
+import { FinalAssetOverlay, FinalItemIcon, preloadFinalInk } from "../components/group-items-jungle/FinalAssetVfx.jsx";
 import { createFinalAssetAudio } from "../components/group-items-jungle/finalAssetAudio.js";
 import { itemName, tierLabel } from "../components/group-items-jungle/s5UiContract.js";
 import { duelV4 } from "../services/duelV4Service.js";
@@ -14,7 +14,11 @@ import { audioManager } from "../services/audioManager.js";
 import { fetchDistinctRandomTitle, fetchPageData, formatDuration, normalizeTitle, sanitizeWikiDocumentHtml } from "../services/wikiService.js";
 import { ensureWikiSnapshot } from "../services/wikiSnapshotService.js";
 import useGameAudio from "../hooks/useGameAudio.js";
-import { CopyCodeButton, HostTag, LobbyHeader, MeTag, StatusMark } from "../components/wiki-race/LobbyParts.jsx";
+import { CopyCodeButton, LobbyHeader, LobbyIcon, LobbyShell } from "../components/wiki-race/LobbyParts.jsx";
+import { ItemRoomRoster } from "../components/wiki-race/ItemRoomLobby.jsx";
+import ItemDuelTarget from "../components/wiki-race/ItemDuelTarget.jsx";
+import ItemRaceSlots, { ItemRaceDescription } from "../components/wiki-race/race/ItemRaceSlots.jsx";
+import ItemRaceStart from "../components/wiki-race/race/ItemRaceStart.jsx";
 import { ConnectionDot, HudArrow, HudBrand, HudDoc, HudExit, HudStat, HudTimer, MobileRouteNotes, RaceFrame, RaceHold, RaceHud, RouteRail } from "../components/wiki-race/race/RaceParts.jsx";
 import { ResultActions, ResultCard, ResultOutcome, ResultRoute, ResultScreen, ResultStats, ResultXpRow } from "../components/wiki-race/result/ResultParts.jsx";
 import "./duelV4.css";
@@ -64,7 +68,8 @@ async function findSnapshot(title) {
   return ensureWikiSnapshot(page);
 }
 
-function Match({ roomId, userId }) {
+function Match({ roomId, user, logout }) {
+  const userId = user.id;
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [state, setState] = useState(null);
@@ -76,20 +81,25 @@ function Match({ roomId, userId }) {
   const [error, setError] = useState("");
   const [connectionError, setConnectionError] = useState("");
   const [documentError, setDocumentError] = useState("");
-  const [target, setTarget] = useState("");
+  const [targetSearching, setTargetSearching] = useState(false);
   const [selected, setSelected] = useState(null);
   const [trapLink, setTrapLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [retry, setRetry] = useState(null);
   const [clock, setClock] = useState(Date.now);
   const [notices, setNotices] = useState([]);
-  const [scene, setScene] = useState(null);
+  const [scenes, setScenes] = useState([]);
   const [liveInkId, setLiveInkId] = useState(null);
   const activeWork = useRef(false);
   const audio = useRef(null);
   const feedback = useRef(null);
   const mounted = useRef(false);
   const article = useRef(null);
+  const itemOpener = useRef(null);
+  const itemPanelClose = useRef(null);
+  const enteredFromLobby = useRef(false);
+  const lastSupply = useRef(null);
+  const itemPanelId = useId();
   const activeMatch = useRef(0);
   const sound = useSyncExternalStore(audioManager.subscribe, audioManager.getSnapshot, audioManager.getSnapshot);
 
@@ -113,6 +123,25 @@ function Match({ roomId, userId }) {
   const started = Boolean(state?.startedAt);
   const finished = Boolean(state?.finishedAt);
   const now = state ? Date.parse(state.serverTime) + Math.max(0, clock - state.receivedAt) : clock;
+  const waiting = Boolean(state && !state.startedAt);
+  useEffect(() => {
+    if (waiting) {
+      enteredFromLobby.current = true;
+      audioManager.prepare(["go", "itemReveal", "denied"]);
+    }
+  }, [waiting]);
+
+  useEffect(() => {
+    if (!state?.nextSupplyAt || !started || finished) return;
+    const previous = lastSupply.current;
+    lastSupply.current = { deadline: state.nextSupplyAt, inventory: state.inventory };
+    const supplied = previous && previous.deadline !== state.nextSupplyAt &&
+      Math.abs(Date.parse(state.serverTime) - Date.parse(previous.deadline)) < 2000 &&
+      state.inventory.some(item => !previous.inventory.some(old => old.id === item.id));
+    const initial = !previous && enteredFromLobby.current && state.inventory.length > 0 &&
+      Date.parse(state.serverTime) - Date.parse(state.startedAt) < 1400;
+    if (supplied || initial) void audioManager.play("itemReveal", { key: `duel-item-supply:${roomId}:${state.nextSupplyAt}` });
+  }, [state, started, finished, roomId]);
   useGameAudio({ identity: "duel-v4:" + roomId + ":" + userId, route: pathname,
     playing: started && !finished, connection: connectionError ? "lost" : null, ended: finished });
   const warning = state?.warnings.find((row) => effectTime(row.dueAt) > now);
@@ -138,6 +167,15 @@ function Match({ roomId, userId }) {
   useEffect(() => {
     setTrapLink("");
   }, [opponent?.progressVersion, selected]);
+
+  useEffect(() => {
+    if (selected) itemPanelClose.current?.focus();
+  }, [selected]);
+
+  function closeItem() {
+    setSelected(null);
+    itemOpener.current?.focus();
+  }
 
   useEffect(() => {
     mounted.current = true;
@@ -172,7 +210,7 @@ function Match({ roomId, userId }) {
   useEffect(() => {
     if (!state) return;
     feedback.current.observe(state, now, userId);
-    setScene(feedback.current.scene());
+    setScenes(feedback.current.scenes());
     setLiveInkId(feedback.current.isLiveInk(ink?.id) ? ink.id : null);
   }, [state, now, userId, ink?.id]);
 
@@ -253,17 +291,18 @@ function Match({ roomId, userId }) {
       const needsState = result.code === "THIEF_STOLEN" || result.code === "CANNON_LANDED";
       if (!needsState) {
         feedback.current.receipt(request, result);
-        setScene(feedback.current.scene());
+        setScenes(feedback.current.scenes());
       }
       if (result.ok) {
-        if (operation === "item") setSelected(null);
+        if (operation === "item" && item?.itemId !== "parry") closeItem();
         if (result.roomId) navigate("/multiplayer/duel-v4/" + result.roomId);
       }
       const next = await refresh();
       if (needsState && mounted.current) {
         feedback.current.receipt(request, result, next);
-        setScene(feedback.current.scene());
+        setScenes(feedback.current.scenes());
       }
+      return result.ok;
     } catch (cause) {
       setRetry(request && !cause.code ? request : null);
       setError(explanation(cause.message));
@@ -317,7 +356,11 @@ function Match({ roomId, userId }) {
   const elapsed = started ? Math.max(0, Math.floor(((finished ? Date.parse(state.finishedAt) : now) - Date.parse(state.startedAt)) / 1000)) : 0;
   if (finished) {
     const won = state.winnerId === userId;
-    const detail = { normal_finish: "목표 문서에 도착했습니다.", forfeit: "기권으로 경기가 종료되었습니다.", cancelled: "경기가 취소되었습니다." }[state.finishReason];
+    const detail = {
+      normal_finish: won ? "목표 문서에 먼저 도착했습니다." : "상대가 목표 문서에 먼저 도착했습니다.",
+      forfeit: won ? "상대가 기권했습니다." : "기권으로 경기가 종료되었습니다.",
+      cancelled: "경기가 취소되었습니다.",
+    }[state.finishReason];
     return <ResultScreen mode="duel" tone={won ? "win" : state.winnerId ? "lose" : "neutral"}
       titleId="duel-v4-result" resultKey={roomId + ":" + state.finishedAt} testId="duel-v4-result">
       <ResultCard label="경기 결과">
@@ -335,42 +378,49 @@ function Match({ roomId, userId }) {
       </ResultCard>
     </ResultScreen>;
   }
-  if (!started) return <main className="wr-page wr65-field wr-room wr-room--duel duel-v4-lobby">
-    <LobbyHeader kicker="ITEM RACE · 1:1" title="1:1 아이템전" onLeave={() => navigate("/play")} leaveLabel="모드 선택">
-      <span data-duel-v4-code><CopyCodeButton code={state.code} /></span>
-    </LobbyHeader>
-    {notice}
-    {MODE_FOLLOWUP_ENABLED && me && <S5KionDock key={feedbackScope} mode="duel"
-      roomId={roomId} actorId={userId} players={state.players} label="대기방 키온 감정표현" />}
-    <section className="duel-v4-camp" aria-label="대기실 참가자와 목표">
-      <ul className="duel-v4-seats" aria-label="참가자">
-        {[me, opponent].map((player, index) => <li key={index}>
-          <strong>{player?.name || "참가자 대기 중"}</strong>
-          {player?.id === state.hostId && <HostTag />}
-          {player?.id === userId && <MeTag />}
-          <StatusMark tone={player ? "ready" : "pending"}>{player ? "입장 완료" : "대기 중"}</StatusMark>
-        </li>)}
-      </ul>
-      <p>목표 문서 · <strong>{state.target?.title || "선택 대기"}</strong></p>
-      {state.hostId === userId ? <>
-        <form onSubmit={(event) => {
-          event.preventDefault();
-          void run("target", async () => ({ snapshotId: (await findSnapshot(target)).snapshotId }));
-        }}>
-          <label>목표 문서 <input value={target} onChange={(event) => setTarget(event.target.value)} required /></label>
-          <button className="wr-btn wr-btn--neutral" disabled={busy}>목표 저장</button>
-        </form>
-        <button className="wr-btn wr-btn--primary" disabled={busy || !opponent || !state.target} onClick={() => run("start", async () => {
-          const title = await fetchDistinctRandomTitle(new Set([normalizeTitle(state.target.title)]));
-          return { snapshotId: (await findSnapshot(title)).snapshotId };
-        })}>게임 시작</button>
-      </> : <p>방장이 목표를 선택하고 시작합니다.</p>}
-    </section>
-  </main>;
+  if (!started) {
+    const isHost = state.hostId === userId;
+    const ready = Boolean(opponent && state.target);
+    const players = state.players.map(player => ({
+      key: player.id, userId: player.id, name: player.name, host: player.id === state.hostId,
+    })).sort((a, b) => Number(b.host) - Number(a.host));
+    return <LobbyShell user={user} mode="duel" onNavigate={navigate} onLogout={async () => {
+      await logout();
+      navigate("/");
+    }}>
+      <LobbyHeader kicker="1:1 대전 준비" title="1:1 아이템전" onLeave={() => navigate("/play")} leaveLabel="플레이로 돌아가기">
+        <span className="wr-head-code" data-duel-v4-code><span>방 코드</span><CopyCodeButton code={state.code} compact /></span>
+      </LobbyHeader>
+      {notice}
+      <ItemRoomRoster mode="duel" players={players} user={user} maxPlayers={2} emotes={MODE_FOLLOWUP_ENABLED && me &&
+        <S5KionDock key={feedbackScope} mode="duel" roomId={roomId} actorId={userId}
+          players={state.players} label="대기방 키온 감정표현" />} />
+      <ItemDuelTarget title={state.target?.title} isHost={isHost} busy={busy} onSearchBusy={setTargetSearching}
+        onSelect={title => run("target", async () => ({ snapshotId: (await findSnapshot(title)).snapshotId }))} />
+      <div className="wr-lobby-actions">
+        <span className="wr-lobby-count">{players.length} / 2</span>
+        <p id="item-duel-start-status" className="wr-lobby-status" role="status">
+          <LobbyIcon name={ready ? "check" : "pending"} />
+          {!opponent ? "상대의 입장을 기다리는 중" : !state.target ? "공통 목표를 선택해 주세요" : isHost ? "경기를 시작할 수 있어요" : "방장이 시작하기를 기다리는 중"}
+        </p>
+        {isHost && <button type="button" className="wr-btn wr-btn--primary wr-btn--lg" disabled={busy || targetSearching || !ready}
+          aria-describedby="item-duel-start-status" onClick={() => void run("start", async () => {
+            const title = await fetchDistinctRandomTitle(new Set([normalizeTitle(state.target.title)]));
+            return { snapshotId: (await findSnapshot(title)).snapshotId };
+          })}>게임 시작</button>}
+      </div>
+    </LobbyShell>;
+  }
 
   const ownPath = me?.path?.map(page => page.title) ?? [];
+  const slots = [1, 2].map(slot => {
+    const item = state.inventory.find(row => row.slot === slot);
+    return item && { key: item.id, itemId: item.itemId, tier: item.tier,
+      available: !busy && !sealed && (item.itemId !== "parry" || Boolean(warning)) };
+  });
   return <div className="duel-v4" data-duel-v4-version={state.version}>
     <RaceFrame mode="duel" strip label="1:1 아이템 경기">
+      <ItemRaceStart matchKey={roomId} startedAt={state.startedAt} now={now} enteredFromLobby={enteredFromLobby.current} />
       <RaceHud>
         <HudBrand mode="1:1 아이템전" />
         <div className="wr-duel-hud-course">
@@ -381,6 +431,9 @@ function Match({ roomId, userId }) {
         <HudStat label="이동" value={(me?.moves ?? 0) + "회"} />
         <HudTimer label="경과" seconds={elapsed} />
         <HudExit label="기권" onClick={() => run("forfeit", async () => ({}))} disabled={busy} />
+        <ItemRaceSlots items={slots} selected={selected} expanded={Boolean(chosen)} panelId={itemPanelId} duel
+          supplySeconds={state.nextSupplyAt ? secondsLeft(state.nextSupplyAt, now) : null}
+          select={(item, event) => { itemOpener.current = event.currentTarget; setSelected(item.key); }} />
       </RaceHud>
       <div className="wr-race-strip" role="group" aria-label="상대 상태">
         <strong>{opponent?.name || "상대"}</strong>
@@ -429,9 +482,8 @@ function Match({ roomId, userId }) {
           links={documentReady ? document?.links : []} authorizedSearchQuery={highlightedQuery}
           isLoading={!documentReady && !documentError} readOnly={busy || !documentReady || stunned} onLinkClick={navigateLink}
           censoredTitles={state.censoredTitles} showTargetBrief={false} />
-        {ink && <FinalInkVfx pulse={pulse} frame={frame} />}
-        <FinalItemMotion value={{ shieldActive: protectedByShield, thunder, lost: warning?.itemId === "lost_link",
-          scene: scene?.until > clock ? scene : null }} />
+        <FinalAssetOverlay pulse={pulse} frame={frame} value={{ shieldActive: protectedByShield, thunder,
+          lost: warning?.itemId === "lost_link", scenes }} />
       </section>
       </div>
       {linkIndex && <LinkList key={linkIndex.id} index={linkIndex} disabled={busy || stunned} onLink={navigateLink} />}
@@ -448,10 +500,11 @@ function Match({ roomId, userId }) {
       </section>}
         {bookmark && bookmark.page.snapshotId !== current?.snapshotId &&
         <button onClick={() => run("bookmark", async () => ({}))} disabled={busy}>책갈피로 돌아가기</button>}
-      <footer className="duel-v4-dock" aria-label="아이템 도크">
-        {chosen && <aside className="duel-v4-sheet" aria-label="아이템 사용">
-          <strong>{itemName(chosen.itemId)} {tierLabel(chosen.tier)}</strong>
-          <button onClick={() => setSelected(null)}>닫기</button>
+      <footer className="duel-v4-dock" data-item-race-dock aria-label="아이템 대응"
+        onKeyDown={event => { if (chosen && event.key === "Escape") closeItem(); }}>
+        {chosen && <aside className="duel-v4-sheet" id={itemPanelId} aria-label="아이템 사용">
+          <div className="duel-v4-item-details"><ItemRaceDescription itemId={chosen.itemId} tier={chosen.tier} /></div>
+          <button type="button" ref={itemPanelClose} onClick={closeItem}>닫기</button>
           {chosen.itemId === "trap" && <label>설치할 링크
             <select value={trapLink} onChange={(event) => setTrapLink(event.target.value)}>
               <option value="">링크 선택</option>
@@ -471,16 +524,6 @@ function Match({ roomId, userId }) {
           </div>
           {parry && <button className="duel-v4-parry" onClick={() => useItem(parry, warning.id)} disabled={busy || sealed}>패링</button>}
         </div>}
-        <div className="duel-v4-slots">
-          {[1, 2].map((slot) => {
-            const item = state.inventory.find((row) => row.slot === slot);
-            return <button key={slot} type="button" disabled={!item || busy} onClick={() => setSelected(item.id)} data-duel-v4-item={item?.itemId}>
-              {item && <FinalItemIcon item={{ ...item, effectiveTier: item.tier }} />}
-              {item ? itemName(item.itemId) + (tierLabel(item.tier) ? " " + tierLabel(item.tier) : "") : "빈 슬롯"}
-            </button>;
-          })}
-          {state.nextSupplyAt && <span>보급 {secondsLeft(state.nextSupplyAt, now)}초</span>}
-        </div>
       </footer>
     </RaceFrame>
   </div>;
@@ -488,7 +531,7 @@ function Match({ roomId, userId }) {
 
 export default function DuelV4Page() {
   const { roomId } = useParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   if (!user) return null;
-  return roomId ? <Match key={roomId} roomId={roomId} userId={user.id} /> : <Navigate replace to="/multiplayer?mode=duel&items=1" />;
+  return roomId ? <Match key={roomId} roomId={roomId} user={user} logout={logout} /> : <Navigate replace to="/multiplayer?mode=duel&items=1" />;
 }

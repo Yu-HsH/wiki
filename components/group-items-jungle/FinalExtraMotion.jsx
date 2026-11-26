@@ -127,13 +127,16 @@ function ExtraScene({ scene }) {
     case 'bookmark-return': case 'undo': return <><i className="s5x-bookmark-leaf"/><b className="s5x-back-arrow">↶</b></>;
     case 'search': return <i className="s5x-search-radar"/>;
     case 'links': return <><i className="s5x-link-spark"/><div className="s5x-link-gather"><i>↗</i><i>↗</i><i>↗</i></div></>;
+    case 'item-outcome': return <span className="s5x-outcome s5x-item-outcome">
+      {itemImage(scene.itemId)}{scene.label}
+    </span>;
     default: return null;
   }
 }
 
 const extraKinds=new Set([
   ...Object.keys(rouletteMessages),...Object.keys(thiefMessages),'thunder-hit','thunder-self','thunder-guard',
-  'cannon-fire','cannon-arrive','enhancement','weakening','bookmark-save','bookmark-return','undo','search','links',
+  'cannon-fire','cannon-arrive','enhancement','weakening','bookmark-save','bookmark-return','undo','search','links','item-outcome',
 ]);
 
 export function FinalExtraMotion({ scene,thunder=false,lost=false }) {
