@@ -64,7 +64,7 @@ export function LobbyHeader({ kicker, title, children, onLeave, leaveLabel = "ë°
       <h1 id="wr-lobby-title">{title}</h1>
     </div>
     {children && <div className="wr-lobby-head-meta">{children}</div>}
-    <button type="button" className="wr-btn wr-btn--neutral wr-btn--sm" onClick={onLeave}><LobbyIcon name="leave" />{leaveLabel}</button>
+    {onLeave && <button type="button" className="wr-btn wr-btn--neutral wr-btn--sm" onClick={onLeave}><LobbyIcon name="leave" />{leaveLabel}</button>}
   </div>;
 }
 

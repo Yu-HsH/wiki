@@ -10,6 +10,8 @@ const migration = branches.fresh.join(';\n');
 const app = source("App.jsx");
 const play = source("pages/PlayPage.jsx");
 const route = source("components/group-items-jungle/ProductGroupItemsRoute.jsx");
+const entry = source("services/itemModeEntryService.js");
+const multiplayer = source("pages/MultiplayerPage.jsx");
 
 test("S5 CLI transaction restores borrowed owner membership and public schema ACL", () => {
   assert.match(envelope, /PR63_EXISTING_OWNER_ADMIN_REQUIRED/);
@@ -82,10 +84,13 @@ test("S5 active-player reads wake only their own due room after member authoriza
 
 test("S5 entry stays behind build and server admission gates", () => {
   assert.match(app, /VITE_GROUP_ITEMS_S5_ENTRY === "1"/);
-  assert.match(play, /VITE_GROUP_ITEMS_S5_ENTRY === "1"/);
-  assert.match(play, /id: "group-items"/);
-  assert.match(route, /MODE === "s4-product-candidate" \? "review" : "production"/);
-  assert.match(route, /!entry\.admissionEnabled/);
+  assert.doesNotMatch(play, /id: "group-items"/);
+  assert.match(route, /mode=group&items=1/);
+  assert.match(entry, /VITE_GROUP_ITEMS_S5_ENTRY === "1"/);
+  assert.match(entry, /MODE === "s4-product-candidate" \? "review" : "production"/);
+  assert.match(entry, /entry\.admissionEnabled !== true/);
+  assert.match(entry, /if \(!entry\.available\) throw new Error\("ITEM_ENTRY_CLOSED"\)/);
+  assert.match(multiplayer, /disabled=\{pending \|\| itemBlocked\}/);
   assert.match(migration, /SELECT FROM ink_product\.entry_policy_v1 WHERE binding=p_binding AND admission_enabled/);
   assert.match(migration, /VALUES \(true, false, 0\)/);
   assert.doesNotMatch(migration, /INSERT INTO ink_product\.entry_policy_v1 VALUES \('production'/);

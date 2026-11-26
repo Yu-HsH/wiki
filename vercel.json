@@ -8,7 +8,8 @@
     "git": {
         "deploymentEnabled": {
             "codex/s5-item-overhaul-20261120": false,
-            "codex/wiki-ade-integration-candidate": false
+            "codex/wiki-ade-integration-candidate": false,
+            "codex/wiki-final-entry-polish-20261126": false
         }
     }
 }

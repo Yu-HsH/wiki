@@ -89,7 +89,7 @@ export default function AchievementsPage() {
 
       {status === "loading" && <p className="dashboard-muted ach-status" aria-busy="true">업적을 불러오는 중…</p>}
       {status === "error" && <div className="dashboard-muted ach-status" role="alert">업적을 불러오지 못했습니다. <button type="button" className="app-btn app-btn-ghost" onClick={() => setAttempt(value => value + 1)}>업적 다시 불러오기</button></div>}
-      {status === "ready" && ownedStatus === "error" && <div className="ach-status" role="alert">보유 목록을 확인하지 못했습니다. 견본의 보유 여부는 확인 불가로 표시합니다. <button type="button" className="app-btn app-btn-ghost" onClick={() => setOwnedAttempt(value => value + 1)}>보유 목록 다시 확인</button></div>}
+      {status === "ready" && ownedStatus === "error" && <div className="ach-status" role="alert">지금은 보유 목록을 확인할 수 없어요. 보상의 모습은 계속 미리 볼 수 있습니다. <button type="button" className="app-btn app-btn-ghost" onClick={() => setOwnedAttempt(value => value + 1)}>보유 목록 다시 확인</button></div>}
 
       {status === "ready" && screen && (
         <><section className="album-cover" aria-label="공개 일반 업적 수집 현황">

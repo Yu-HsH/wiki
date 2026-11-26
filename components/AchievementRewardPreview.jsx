@@ -16,15 +16,17 @@ export default function AchievementRewardPreview({ reward, ownedIds = null, acqu
   const state = rewardPresentation(reward, { ownedIds, acquired, equippedId });
   const color = reward.kind === "path_color" ? pathColor(reward) : null;
   const finish = reward.kind === "finish_effect" ? finishTier(reward) : null;
-  // Titles are text rewards; a null assetRef is normal. Frames/backgrounds have existing fallbacks.
-  const cardSpecimen = slot && (reward.kind !== "profile_icon" || reward.assetRef);
+  const cardPreview = slot && <ProfileCard card={{ nickname: "탐험가", [slot.cardKey]: reward }}
+    size={reward.kind === "frame" ? "lg" : "md"} density="full" />;
   return <div className="album-reward" data-support={state.support}>
     <div className="album-reward-label"><small>{REWARD_KIND_LABELS[reward.kind] || "보상"}</small><strong>{reward.displayName}</strong></div>
-    {cardSpecimen && <div className="album-reward-specimen" aria-label={`${reward.displayName} 견본 · 장착 상태가 아닙니다`}>
-      <ProfileCard card={{ nickname: "보상 견본", [slot.cardKey]: reward }} size="md" density="full" />
+    {cardPreview && <div className="album-reward-specimen" role="group" aria-label={`${reward.displayName} 미리보기`}>
+      {reward.kind === "frame"
+        ? <RewardArtSwatch kind="frame" reward={reward} className="reward-art-swatch--frame">{cardPreview}</RewardArtSwatch>
+        : cardPreview}
     </div>}
-    {color && <span className="preward-swatch" style={{ borderColor: color }} aria-label="경로 색상 견본" />}
-    {reward.kind === "finish_effect" && <RewardArtSwatch kind="finish_effect" reward={reward}>{finish && <span className={`preward-preview preward-preview--${finish}`} aria-label="완주 효과 단계 견본">✦</span>}</RewardArtSwatch>}
+    {color && <span className="preward-swatch" style={{ borderColor: color }} aria-label="경로 색상 미리보기" />}
+    {reward.kind === "finish_effect" && <RewardArtSwatch kind="finish_effect" reward={reward}>{finish && <span className={`preward-preview preward-preview--${finish}`} aria-label="완주 효과 단계 미리보기">✦</span>}</RewardArtSwatch>}
     <small className="album-ownership">{state.acquisition}</small>
     <small>{state.equipment}</small>
     <small className="album-support">{state.description}</small>
@@ -113,7 +115,7 @@ export function RewardEditorView({
             </>}
             <span className="preward-tag">{saving ? "요청 중 · 서버 확인 대기" : selected ? "장착 중" : preview ? "연습용 선택" : "보유 · 선택하여 장착"}</span>
           </button>{!preview && <button type="button" className="preward-inspect" disabled={Boolean(pending)}
-            aria-label={`${reward.displayName} 장착 전 견본`} onClick={event => { specimenTrigger.current = event.currentTarget; setSpecimenId(reward.rewardId); }}>먼저 보기</button>}</div>;
+            aria-label={`${reward.displayName} 장착 전 미리보기`} onClick={event => { specimenTrigger.current = event.currentTarget; setSpecimenId(reward.rewardId); }}>먼저 보기</button>}</div>;
         })}
         {row.slot === "background" && <p className="preward-guide">{rewardPresentation({ kind: "background" }).description}</p>}
         {locked.length > 0 && <div className="preward-goals"><p className="wr-kicker">다음 수집 목표 · 미보유</p>{locked.map((reward, i) => <div key={`${reward.rewardId}-${i}`} className="preward-locked">
@@ -129,7 +131,7 @@ export function RewardEditorView({
 
   return <details className="preward" open>
     <summary className="preward-summary">수집 보상 · 프로필 꾸미기</summary>
-    <p className="preward-guide">{preview ? "연습용 견본입니다. 실제 보유·장착·업적 기록은 바뀌지 않습니다." : "보유한 보상을 선택하면 장착을 요청합니다. 서버 확인 전에는 현재 장착 상태가 유지됩니다."}</p>
+    <p className="preward-guide">{preview ? "연습용 미리보기입니다. 실제 보유·장착·업적 기록은 바뀌지 않습니다." : "보유한 보상을 선택해 장착하세요. 저장되면 프로필에서 바로 확인할 수 있어요."}</p>
     {!preview && <p className="preward-guide"><Link to="/achievements">발견 도감에서 다음 보상 살펴보기 →</Link></p>}
     {!preview && !loading && <section className="preward-browser" aria-label="보유 꾸미기 찾기">
       <div className="preward-browser-head"><strong>내 꾸미기 골라보기</strong><span>아이콘부터 경기 표현까지, 보유한 꾸미기를 찾아요.</span></div>
@@ -150,12 +152,12 @@ export function RewardEditorView({
       {(collectionQuery || collectionKind !== "all" || collectionStatus !== "all") && <button type="button" className="preward-search-reset" disabled={Boolean(pending)}
         onClick={() => { setCollectionQuery(""); setCollectionKind("all"); setCollectionStatus("all"); setSpecimenId(null); }}>찾기 조건 초기화</button>}
     </section>}
-    {specimen && <section ref={specimenRef} tabIndex={-1} className="preward-tryon" aria-label="장착 전 꾸미기 견본">
-      <header><div><small>장착 전 견본 · 현재 프로필은 그대로</small><h3>{specimen.displayName}</h3></div><button type="button" className="preward-specimen-close"
-        onClick={() => { setSpecimenId(null); specimenTrigger.current?.focus(); }}>견본 닫기</button></header>
+    {specimen && <section ref={specimenRef} tabIndex={-1} className="preward-tryon" aria-label="장착 전 꾸미기 미리보기">
+      <header><div><small>장착 전 미리보기 · 현재 프로필은 그대로</small><h3>{specimen.displayName}</h3></div><button type="button" className="preward-specimen-close"
+        onClick={() => { setSpecimenId(null); specimenTrigger.current?.focus(); }}>미리보기 닫기</button></header>
       <RewardTryOn card={card} reward={specimen} previewCardWidth={previewCardWidth} />
       <p>{rewardPresentation(specimen, { ownedIds, equippedId: allRows.find(row => row.slot === specimen.kind)?.current?.rewardId }).description}</p>
-      <small>이 견본은 장착을 요청하지 않습니다. 마음에 들면 목록에서 해당 보상을 선택해 장착해 주세요.</small>
+      <small>목록에서 해당 보상을 선택하면 실제 프로필에 장착할 수 있어요.</small>
     </section>}
     {loading ? <p className="preward-muted" role="status">보유 보상을 불러오는 중…</p> : <>
       <ul className="preward-rows">{visibleCardRows.map(renderRow)}</ul>
@@ -190,8 +192,8 @@ function RewardTryOn({ card, reward, previewCardWidth }) {
   }
   if (reward.kind === "finish_effect") return <div className="preward-finish-specimen"><FinishEffect effect={reward} /><span>실제 완주 효과 표시 · 싱글 / 1:1 승자</span></div>;
   const color = reward.kind === "path_color" ? pathColor(reward) : null;
-  if (color) return <div className="preward-path-specimen" aria-label="싱글 결과 경로 색상 견본" style={{ "--preward-path": color }}><span>출발</span><i aria-hidden="true" /><span>경유</span><i aria-hidden="true" /><span>목표</span></div>;
-  return <p>현재 이 효과의 견본은 지원하지 않습니다.</p>;
+  if (color) return <div className="preward-path-specimen" aria-label="싱글 결과 경로 색상 미리보기" style={{ "--preward-path": color }}><span>출발</span><i aria-hidden="true" /><span>경유</span><i aria-hidden="true" /><span>목표</span></div>;
+  return <p>이 보상은 목록에서 획득 기록을 확인할 수 있어요.</p>;
 }
 
 export function AchievementCard({ card, ownedIds, earnedRefs = [] }) {
@@ -248,8 +250,8 @@ export function AchievementCard({ card, ownedIds, earnedRefs = [] }) {
           {card.steps.map(step => <li key={step.tier} className={step.unlocked ? "ach-step ach-step--done" : "ach-step"}>{step.label}</li>)}
         </ol>}
         {card.earned.length > 0 && <ul className="ach-earned" aria-label="획득한 보상">{card.earned.map(tier => <li key={tier.tier}>단계 {tier.tier} · {tier.unlockedAt ? new Date(tier.unlockedAt).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" }) : "획득일 확인 필요"} · +{tier.xp} XP{tier.rewards.length > 0 && ` · ${tier.rewards.join(" · ")}`}</li>)}</ul>}
-        {earnedRefs.length > 0 && <div className="album-reward-details" aria-label="획득한 보상 견본">{earnedRefs.map(reward => <AchievementRewardPreview key={reward.rewardId} reward={reward} ownedIds={ownedIds} acquired />)}</div>}
-        {card.nextRewardRefs.length > 0 && <div className="album-reward-details" aria-label="공개 다음 보상 견본">
+        {earnedRefs.length > 0 && <div className="album-reward-details" aria-label="획득한 보상 미리보기">{earnedRefs.map(reward => <AchievementRewardPreview key={reward.rewardId} reward={reward} ownedIds={ownedIds} acquired />)}</div>}
+        {card.nextRewardRefs.length > 0 && <div className="album-reward-details" aria-label="공개 다음 보상 미리보기">
           {card.nextRewardRefs.map(reward => <AchievementRewardPreview key={reward.rewardId} reward={reward} ownedIds={ownedIds} />)}
         </div>}
       </div>}
@@ -285,7 +287,7 @@ export function SingleAchievementCardView({ item, preview = false }) {
       {item.rewards.length > 0 && <div className="ach-reveal-rewards">
         <strong>이번 해금 보상</strong>
         <ul className="wr-single-reward-chips">{item.rewards.map((reward, index) => <li key={index}>{reward}</li>)}</ul>
-        {item.rewardRefs?.length > 0 && <details className="wr-earned-rewards"><summary>보상 견본과 장착 위치 보기</summary>
+        {item.rewardRefs?.length > 0 && <details className="wr-earned-rewards"><summary>보상 미리보기과 장착 위치 보기</summary>
           {item.rewardRefs.map(reward => <AchievementRewardPreview key={reward.rewardId} reward={reward} ownedIds={null} acquired />)}
         </details>}
         {!preview && <Link className="wr-reward-profile-link" to="/profile">프로필에서 보유·장착 확인 →</Link>}
@@ -313,7 +315,7 @@ export function ResultAchievementCards({ items, total, tone, presentation, reduc
         {item.condition && <div className="ach-reveal-condition">{item.condition}</div>}
         {item.rewards.length > 0 && <div className="ach-reveal-rewards">
           <strong>이번 해금 보상</strong><div>{item.rewards.join(" · ")}</div>
-          {item.rewardRefs?.length > 0 && <details className="wr-earned-rewards"><summary>보상 견본과 장착 위치 보기</summary>
+          {item.rewardRefs?.length > 0 && <details className="wr-earned-rewards"><summary>보상 미리보기과 장착 위치 보기</summary>
             {item.rewardRefs.map(reward => <AchievementRewardPreview key={reward.rewardId} reward={reward} ownedIds={null} acquired />)}
           </details>}
           {!preview && <Link className="wr-reward-profile-link" to="/profile">프로필에서 보유·장착 확인 →</Link>}

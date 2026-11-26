@@ -42,7 +42,10 @@
 .wr65-entry .mp-mode-card .wr-kicker { margin: 0; font-size: 11px; }
 .wr65-entry .mp-mode-card strong { font-size: 23px; }
 .wr65-entry .mp-mode-card > span:last-child { font-size: 13px; line-height: 1.5; }
-.wr65-entry-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 22px; align-items: start; }
+.wr65-entry-layout { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "actions"; gap: 22px; align-items: start; }
+.wr65-entry-layout:has(> .mp-public-board) { grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); grid-template-areas: "board actions"; }
+.wr65-entry-layout > .mp-public-board { grid-area: board; }
+.wr65-entry-layout > .mp-mode-panel { grid-area: actions; }
 .wr65-entry-layout > * { min-width: 0; }
 /* Outrank the shared .wr-entry rule, regardless of lazy CSS import order. */
 .wr-entry.wr65-entry .mp-mode-panel { display: flex; flex-direction: column; gap: 16px; animation: none; }
@@ -95,7 +98,7 @@
 .wr65-entry .wr65-font-credit { margin: 0; padding-top: 8px; color: #68644d; font-size: 11px; }
 .wr65-entry .wr65-font-credit a { display: inline-flex; align-items: center; min-height: 32px; }
 @media (max-width: 1023px) {
-  .wr65-entry-layout { grid-template-columns: minmax(0, 1fr); }
+  .wr65-entry-layout:has(> .mp-public-board) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "actions" "board"; }
   .wr-entry.wr65-entry .mp-mode-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
@@ -248,3 +251,26 @@
   .wr-room--duel .wr-duel-center { flex-direction: row; padding: 2px 0; }
   .wr-room--duel .wr65-duel-vs { font-size: 22px; }
 }
+
+.mp-item-admission {
+  display: grid;
+  gap: .45rem;
+  padding: .85rem 1rem;
+  border: 1px solid #ccc0a6;
+  border-radius: .5rem;
+  background: #fffaf0;
+  color: #263b2f;
+}
+.mp-item-admission strong { color: inherit; }
+.mp-item-admission p { color: inherit; margin: 0; line-height: 1.55; overflow-wrap: anywhere; }
+.mp-item-admission button { justify-self: start; margin-top: .25rem; }
+
+.mp-help-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--app-line);
+}
+.mp-help-header h2 { font-size: 1.25rem; }
+.mp-help-content { max-height: 60dvh; overflow: auto; padding-inline-end: .5rem; }

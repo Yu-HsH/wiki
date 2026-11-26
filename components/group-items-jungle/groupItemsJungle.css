@@ -33,11 +33,12 @@
 
 .product-item-camp { max-width: 78rem; margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
 .product-item-camp-panel, .product-item-race-roster { background: var(--wr-paper, #fffdf5); border: 1px solid var(--wr-divider, #c8bfa9);
-  border-radius: 12px; padding: 1rem; margin-block: .5rem; min-width: 0; overflow-wrap: anywhere; }
-.product-item-camp-panel form { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; margin-block: .75rem; }
-.product-item-camp-panel label { display: grid; min-width: 0; gap: .25rem; }
+  border-radius: 12px; padding: clamp(1rem, 3vw, 1.5rem); margin-block: .75rem;
+  min-width: 0; overflow-wrap: anywhere; color: #283e32; }
+.product-item-camp-panel h2, .product-item-camp-panel p { color: inherit; }
 .product-item-roster { display: grid; gap: .45rem; list-style: none; padding: 0; }
-.product-item-roster li { display: flex; flex-wrap: wrap; gap: .35rem .6rem; align-items: center; min-width: 0; overflow-wrap: anywhere; }
+.product-item-roster li { display: flex; flex-wrap: wrap; gap: .35rem .6rem; align-items: center; min-width: 0; overflow-wrap: anywhere;
+  padding: .65rem .8rem; background: #f2eddf; border-radius: .4rem; }
 .product-item-roster li > span { flex: 0 1 auto; }
 .product-item-mobile-roster { display: none; }
 .product-item-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
