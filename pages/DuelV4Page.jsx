@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../authContext.jsx";
 import WikiViewer from "../components/group-items-jungle/S5WikiViewer.jsx";
 import { LinkList } from "../components/group-items-jungle/S5Panels.jsx";
@@ -20,7 +20,7 @@ import { ResultActions, ResultCard, ResultOutcome, ResultRoute, ResultScreen, Re
 import "./duelV4.css";
 
 const messages = {
-  DUEL_V4_ENTRY_CLOSED: "이 검토 게임의 입장 권한이 필요합니다.",
+  DUEL_V4_ENTRY_CLOSED: "지금은 1:1 아이템전에 새로 입장할 수 없어요.",
   DUEL_V4_MEMBER_REQUIRED: "이 방의 참가자만 경기 상태를 열 수 있습니다.",
   DUEL_V4_ROOM_NOT_AVAILABLE: "방 코드를 확인해주세요.",
   PARRY_WINDOW_CLOSED: "패링 시간이 지났습니다.",
@@ -486,53 +486,9 @@ function Match({ roomId, userId }) {
   </div>;
 }
 
-function Entry() {
-  const navigate = useNavigate();
-  const [access, setAccess] = useState(null);
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const createId = useRef(null);
-  useEffect(() => {
-    let active = true;
-    duelV4.entry().then(({ available }) => { if (active) setAccess(available); })
-      .catch((cause) => { if (active) setError(explanation(cause.message)); });
-    return () => { active = false; };
-  }, []);
-
-  async function enter(create) {
-    setBusy(true);
-    setError("");
-    try {
-      if (create) createId.current ??= crypto.randomUUID();
-      const roomId = create ? await duelV4.create(createId.current) : await duelV4.join(code);
-      navigate("/multiplayer/duel-v4/" + roomId);
-    } catch (cause) {
-      setError(explanation(cause.message));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return <main className="wr-page wr65-field wr-room wr-room--duel duel-v4-lobby">
-    <LobbyHeader kicker="ITEM RACE · 1:1" title="1:1 아이템전" onLeave={() => navigate("/play")} leaveLabel="모드 선택" />
-    <section className="duel-v4-camp" aria-label="방 만들기와 코드 입장">
-    {error && <p role="alert">{error}</p>}
-    {access === false && <p>{explanation("DUEL_V4_ENTRY_CLOSED")}</p>}
-    {access === null && !error && <p role="status">입장 권한 확인 중…</p>}
-    {access && <>
-      <button disabled={busy} onClick={() => enter(true)}>방 만들기</button>
-      <form onSubmit={(event) => { event.preventDefault(); void enter(false); }}>
-        <label>방 코드 <input required value={code} onChange={(event) => setCode(event.target.value)} /></label>
-        <button disabled={busy}>입장</button>
-      </form>
-    </>}
-    </section>
-  </main>;
-}
-
 export default function DuelV4Page() {
   const { roomId } = useParams();
   const { user } = useAuth();
   if (!user) return null;
-  return roomId ? <Match key={roomId} roomId={roomId} userId={user.id} /> : <Entry />;
+  return roomId ? <Match key={roomId} roomId={roomId} userId={user.id} /> : <Navigate replace to="/multiplayer?mode=duel&items=1" />;
 }

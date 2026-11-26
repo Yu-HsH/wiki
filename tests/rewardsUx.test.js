@@ -10,10 +10,11 @@ test("acquisition from result and inventory ownership remain distinct", () => {
   assert.match(rewardPresentation(ref("title"), { ownedIds: new Set() }).acquisition, /미보유/);
   assert.match(rewardPresentation(ref("title"), { ownedIds: new Set(["fixture"]) }).acquisition, /보유 확인/);
 });
-test("title without an image is supported; missing icon and background art are disclosed", () => {
+test("titles and backgrounds explain where players equip them", () => {
   assert.equal(rewardPresentation(ref("title")).support, "supported");
   assert.equal(rewardPresentation(ref("profile_icon")).support, "limited");
-  assert.match(rewardPresentation(ref("background")).description, /공통 배경.*전용.*미지원/);
+  assert.match(rewardPresentation(ref("title")).description, /프로필 카드.*대표 칭호/);
+  assert.match(rewardPresentation(ref("background")).description, /프로필 카드 배경/);
   assert.equal(rewardPresentation(ref("background")).equipSupported, true);
 });
 test("collection-only and future kinds do not claim equipment or live effects", () => {
@@ -25,8 +26,8 @@ test("collection-only and future kinds do not claim equipment or live effects", 
   }
 });
 test("match expressions disclose the implemented modes rather than promising every game", () => {
-  assert.match(rewardPresentation(ref("finish_effect")).description, /싱글.*1:1.*그룹.*미지원/);
-  assert.match(rewardPresentation(ref("path_color")).description, /싱글 결과.*1:1·그룹.*미지원/);
+  assert.match(rewardPresentation(ref("finish_effect")).description, /싱글.*1:1 대전에서 승리/);
+  assert.match(rewardPresentation(ref("path_color")).description, /싱글 결과.*탐험 경로/);
 });
 test("retired equipment stays visible without permitting new equipment", () => {
   const reward = ref("frame", { retired: true });

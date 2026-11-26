@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const sql = readFileSync(new URL("../supabase/migrations/20261030032252_public_room_discovery_v1.sql", import.meta.url), "utf8");
 const cleanup = readFileSync(new URL("../supabase/migrations/20261030044026_public_room_visibility_hardening_v1.sql", import.meta.url), "utf8");
 const page = readFileSync(new URL("../pages/MultiplayerPage.jsx", import.meta.url), "utf8");
+const entry = readFileSync(new URL("../services/multiplayerEntryService.js", import.meta.url), "utf8");
 const duel = readFileSync(new URL("../services/multiplayerService.js", import.meta.url), "utf8");
 const group = readFileSync(new URL("../services/groupMultiplayerService.js", import.meta.url), "utf8");
 const api = readFileSync(new URL("../services/publicRoomService.js", import.meta.url), "utf8");
@@ -65,10 +66,12 @@ test("private code lookup and public join use authenticated, narrow RPCs", () =>
   assert.match(group, /p_mode: "group"/);
 });
 test("entry supports both modes, preserves room-code join and lists public rooms", () => {
-  assert.match(page, /joinDuelRoomByCode\(code\)/);
-  assert.match(page, /findGroupRoomByCode\(code\)/);
-  assert.match(page, /joinGroupRoom\(room\.id\)/);
-  assert.match(page, /handleJoinPublicRoom/);
+  assert.match(page, /joinMultiplayerByCode\(roomCode, selectedMode, actorId\)/);
+  assert.match(entry, /joinDuelRoomByCode\(code\)/);
+  assert.match(entry, /findLegacyRoom\(code, mode\)/);
+  assert.match(entry, /joinGroupRoom\(roomId\)/);
+  assert.match(page, /joinPublicRoom\(room\.room_id\)/);
+  assert.match(page, /createRoom\(actorId, \{ useItems: false, isPublic \}\)/);
   assert.match(page, /isPublic, setIsPublic/);
   assert.match(page, /room\.mode === "group"/);
   assert.match(api, /list_public_waiting_rooms_v1/);

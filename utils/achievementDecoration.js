@@ -1,5 +1,3 @@
-import { resolveRewardArt } from "./rewardArt.js";
-
 // UI decoration only. Never map reward IDs/assetRefs or unrevealed hidden categories here.
 const ROOT = "/assets/wiki-race/achievement-decoration";
 const CATEGORY_ART = Object.freeze({
@@ -29,20 +27,14 @@ export function rewardPresentation(reward, { ownedIds = null, acquired = false, 
   const card = ["profile_icon", "title", "frame", "background"].includes(kind);
   const match = ["finish_effect", "path_color"].includes(kind);
   const equipSupported = card || match;
-  let description = "현재 효과 미지원 · 보유 기록만 표시합니다.";
+  let description = "획득한 보상은 수집 목록에서 확인할 수 있어요.";
   let support = "unsupported";
-  if (kind === "title") { description = "프로필 카드에 표시하는 텍스트 칭호입니다. 이미지가 없어도 정상입니다."; support = "supported"; }
-  if (kind === "profile_icon") { description = reward.assetRef ? "프로필 아이콘으로 표시됩니다. 이미지 실패 시 기존 기본 표시를 사용합니다." : "전용 이미지 미지원 · 기본 프로필 표시를 사용합니다."; support = reward.assetRef ? "supported" : "limited"; }
-  if (kind === "frame") { description = "기존 프레임 단계 견본입니다. 같은 단계의 보상은 같은 모습이며 토큰이 없으면 기본 링으로 표시됩니다."; support = "supported"; }
-  if (kind === "background") { description = "공통 배경 스타일만 적용됩니다. 보상별 전용 배경 아트는 현재 미지원입니다."; support = "limited"; }
-  if (kind === "finish_effect") { description = "싱글 완주·1:1 승자 화면에 적용됩니다. 견본은 효과 단계 표시이며 그룹 적용은 미지원입니다."; support = "limited"; }
-  if (kind === "path_color") { description = "싱글 결과 경로에 적용됩니다. 1:1·그룹 경로 적용은 미지원입니다."; support = "limited"; }
-  if (kind === "path_effect") description = "현재 효과 미지원 · 경로 효과를 장착하거나 재생하는 화면이 없습니다.";
-  if (kind === "spectator_emoji") description = "현재 효과 미지원 · 이 업적 보상을 관전 리액션으로 보내는 기능은 연결되지 않았습니다.";
-  if (resolveRewardArt(kind, reward)) {
-    const placement = kind === "finish_effect" ? "싱글 완주·1:1 승자 화면의 정적 아트 견본입니다. 그룹 적용은 미지원입니다." : "등록된 정적 아트 견본입니다.";
-    description = placement + " 불러오지 못하면 기존 이미지나 기본 표시를 사용합니다.";
-  }
+  if (kind === "title") { description = "장착하면 프로필 카드에 대표 칭호로 표시돼요."; support = "supported"; }
+  if (kind === "profile_icon") { description = "획득 후 프로필에서 대표 아이콘으로 선택할 수 있어요."; support = reward.assetRef ? "supported" : "limited"; }
+  if (kind === "frame") { description = "장착하면 프로필 아이콘과 랭킹의 내 아이콘을 둘러싸요."; support = "supported"; }
+  if (kind === "background") { description = "프로필 카드 배경으로 사용할 수 있어요."; support = "limited"; }
+  if (kind === "finish_effect") { description = "장착한 효과는 싱글을 완주하거나 1:1 대전에서 승리할 때 나타나요."; support = "limited"; }
+  if (kind === "path_color") { description = "장착하면 싱글 결과에 표시되는 탐험 경로의 색이 바뀌어요."; support = "limited"; }
   return {
     support, equipSupported,
     acquisition: acquired ? `획득 확인 · ${owned === true ? "보유 확인" : "보유 목록 별도 확인"}`

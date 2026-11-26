@@ -2,14 +2,15 @@ import "./s5Next.css";
 import './phase2.css';
 import {Phase2Countdown} from './Phase2Panels.jsx';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../authContext.jsx";
 import { supabase } from "../../supabaseClient.js";
+import { actGroupItemsRoom, itemModeRpc as rpc, makeRequestId, readIdentity } from "../../services/itemModeEntryService.js";
 import GroupItemsJungle from "./GroupItemsJungle.jsx";
 import { createPlaytestAudio } from "../group-items-playtest/playtestAudio.js";
 import { createGroupItemsContainerAdapters } from "./containerAdapters.js";
 import { sameGroupItemsScope } from "./authoritySession.js";
-import { PRODUCT_PROTOCOL, productBindingMatches, productId, readProductBinding, readProductRoom, readProductRoomAction } from "./productContract.js";
+import { PRODUCT_PROTOCOL, productBindingMatches, productId, readProductBinding, readProductRoom } from "./productContract.js";
 import { createProductItemPresentation } from "./productPresentation.js";
 import { createProductInkAudio } from "./productInkAudio.js";
 import { createFinalAssetAudio } from "./finalAssetAudio.js";
@@ -18,13 +19,12 @@ import { FIXED_PRODUCT_WIKI_BINDING, readFixedProductWikiDocument } from "./prod
 import { loadProductWikiDocument } from "./productWikiDocument.js";
 import S5KionDock, { MODE_FOLLOWUP_ENABLED } from "./S5KionDock.jsx";
 import S5SpectatorDocument from "./S5SpectatorDocument.jsx";
-import { CopyCodeButton, LobbyHeader, MeTag, StatusMark } from "../wiki-race/LobbyParts.jsx";
+import { CopyCodeButton, LobbyHeader, LobbyShell, MeTag, StatusMark } from "../wiki-race/LobbyParts.jsx";
 import { HudBrand, HudDoc, RaceFrame, RaceHold, RaceHud } from "../wiki-race/race/RaceParts.jsx";
 import { GroupStandings, ResultActions, ResultCard, ResultOutcome, ResultScreen, ResultXpRow } from "../wiki-race/result/ResultParts.jsx";
 import "./groupItemsJungle.css";
 
 const productPath = "/multiplayer/group-items";
-const entryChannel = import.meta.env.MODE === "s4-product-candidate" ? "review" : "production";
 const fallbackIntervalMs = 750;
 const heartbeatIntervalMs = 4500;
 const audioSetting = "group-items-product:ink-audio";
@@ -33,30 +33,6 @@ const journal = {
   add(key, id) { sessionStorage.setItem("group-items-product:"+key, JSON.stringify([...new Set([...journal.list(key), id])])); },
   remove(key, id) { sessionStorage.setItem("group-items-product:"+key, JSON.stringify(journal.list(key).filter(value=>value!==id))); },
 };
-
-function makeRequestId() {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  // Candidate Docker origins use internal HTTP. UUIDs still come from the browser CSPRNG.
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, value => value.toString(16).padStart(2,"0")).join("");
-  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
-}
-
-async function readIdentity() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user?.id || !session.access_token) throw new Error("AUTH_REQUIRED");
-  return { actorId: session.user.id, authenticationEpoch: session.user.last_sign_in_at ?? session.user.id, accessToken: session.access_token };
-}
-
-async function rpc(name, args, accessToken, signal) {
-  let query = supabase.rpc(name, args).setHeader("Authorization", "Bearer " + accessToken);
-  if (signal) query = query.abortSignal(signal);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data;
-}
 
 function useRoomActions(binding, actorId) {
   const [pending, setPending] = useState(false);
@@ -67,21 +43,9 @@ function useRoomActions(binding, actorId) {
     inFlight.current = true;
     setPending(true);
     setError("");
-    const key = "group-items-product-room:" + JSON.stringify([actorId, binding.policyDigest, operation, roomId, version, payload]);
     try {
-      const identity = await readIdentity();
-      if (identity.actorId !== actorId) throw new Error("AUTH_REQUIRED");
-      const requestId = sessionStorage.getItem(key) ?? makeRequestId();
-      sessionStorage.setItem(key, requestId);
-      const result = await rpc("act_group_items_product_room_v1", { p_operation: operation, p_room: roomId,
-        p_request: requestId, p_expected_version: version, p_binding: binding, p_payload: payload }, identity.accessToken);
-      const current = await readIdentity();
-      if (current.actorId !== actorId || current.authenticationEpoch !== identity.authenticationEpoch) throw new Error("AUTH_REQUIRED");
-      const receipt = readProductRoomAction(result,{ actorId, requestId, operation, binding, roomId });
-      sessionStorage.removeItem(key);
-      return receipt;
+      return await actGroupItemsRoom(binding, actorId, operation, roomId, version, payload);
     } catch (failure) {
-      if (failure.settled) sessionStorage.removeItem(key);
       setError(failure.message ?? "PRODUCT_ROOM_UNAVAILABLE");
       return null;
     } finally {
@@ -90,28 +54,6 @@ function useRoomActions(binding, actorId) {
     }
   }
   return { pending, error, act };
-}
-
-function ProductEntry({ binding, actorId }) {
-  const navigate = useNavigate();
-  const { pending, error, act } = useRoomActions(binding, actorId);
-  const [code, setCode] = useState("");
-  async function enter(operation, payload) {
-    const result = await act(operation, null, null, payload);
-    if (result) navigate(productPath+"/"+result.roomId);
-  }
-  return <main className="wr-page wr65-field wr-room wr-room--group product-item-camp">
-    <LobbyHeader kicker="ITEM RACE · GROUP" title="그룹 아이템전" onLeave={()=>navigate("/play")} leaveLabel="모드 선택" />
-    <div className="product-item-camp-panel">
-    <p>3~8명이 같은 문서를 출발해 목표 문서까지 경주합니다. 시작 시 아이템 1개를 받고, 20초 뒤 첫 보급부터 25초마다 새 아이템을 받습니다. 가방은 최대 2칸입니다.</p>
-    <button type="button" disabled={pending} onClick={()=>void enter("create", {})}>아이템 방 만들기</button>
-    <form onSubmit={event=>{event.preventDefault(); void enter("join", { roomCode:code.trim().toUpperCase() });}}>
-      <label>아이템 방 코드 <input value={code} onChange={event=>setCode(event.target.value)} required maxLength={16}/></label>
-      <button disabled={pending}>입장</button>
-    </form>
-    {error && <p role="alert">아이템 방 요청을 완료하지 못했어요. 방 코드와 연결을 확인해 주세요.</p>}
-    </div>
-  </main>;
 }
 
 function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, matchClock, roomActions }) {
@@ -185,12 +127,13 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
 }
 
 
-function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
+function ProductRoom({ roomId, user, logout }) {
   const navigate = useNavigate();
+  const actorId = user.id;
   const [room, setRoom] = useState(null);
   const [failure, setFailure] = useState("");
   const [lastSync, setLastSync] = useState("initial");
-  const binding = room?.binding ?? defaultBinding;
+  const binding = room?.binding ?? null;
   const roomRef = useRef(null), reloadRef = useRef(null), itemListeners = useRef(new Set());
   const liveRef = useRef(false);
   const { pending, error, act } = useRoomActions(binding, actorId);
@@ -269,14 +212,17 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
       document.removeEventListener("visibilitychange",visibility);
       void supabase.removeChannel(channel);
     };
-  },[roomId,defaultBinding,actorId]);
+  },[roomId,actorId]);
 
-  async function command(operation) {
+  async function command(operation, destination = productPath) {
     const result = await act(operation, roomId, room.version);
-    if (!result) return;
+    if (!result) return false;
     if (operation === "rematch") navigate(productPath+"/"+result.roomId);
-    else if (operation === "leave" && room.phase === "waiting") navigate(productPath);
+    else if (operation === "leave" && room.phase === "waiting") {
+      if (destination) navigate(destination);
+    }
     else void reloadRef.current?.();
+    return true;
   }
 
   if (failure || !room) return <RaceFrame mode="group" label="그룹 아이템전">
@@ -328,7 +274,14 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
       </ResultCard>
     </ResultScreen>;
   } else {
-    content = <main className="wr-page wr65-field wr-room wr-room--group product-item-camp" aria-label="아이템 그룹 대기실">
+    const leaveLobby = room.actions.includes("leave");
+    content = <LobbyShell user={user} mode="group"
+      onNavigate={leaveLobby ? destination => void command("leave", destination) : undefined}
+      onLogout={async () => {
+        if (leaveLobby && !(await command("leave", null))) return;
+        await logout();
+        navigate("/");
+      }}>
       <LobbyHeader kicker="ITEM RACE · GROUP" title="그룹 아이템전 대기실">
         {room.roomCode && <CopyCodeButton code={room.roomCode} />}
       </LobbyHeader>
@@ -345,7 +298,7 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
           players={room.players} label="대기방 키온 감정표현" />}
         <div className="product-item-actions">{actions}</div>{actionError}
       </section>
-    </main>;
+    </LobbyShell>;
   }
   return <div data-product-group-phase={room.phase} data-product-sync={lastSync}
     data-product-document-source={productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING) ? "fixed" : "wikipedia"}>{content}</div>;
@@ -353,29 +306,11 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
 
 export default function ProductGroupItemsRoute() {
   const { roomId } = useParams();
-  const { user } = useAuth();
-  const [entry,setEntry]=useState(null);
-  const [entryError,setEntryError]=useState("");
-  const binding=entry?.binding ?? null;
-  useEffect(()=>{
-    if(roomId || !user?.id) return;
-    const abort=new AbortController();
-    void readIdentity().then(identity=>rpc("get_group_items_entry_v1",{
-      p_channel:entryChannel
-    },identity.accessToken,abort.signal)).then(policy=>{
-      if(!abort.signal.aborted) setEntry({...policy,binding:policy.available?readProductBinding(policy.binding):null});
-    }).catch(()=>{if(!abort.signal.aborted)setEntryError("아이템전 진입 정보를 확인할 수 없습니다.");});
-    return ()=>abort.abort();
-  },[roomId,user?.id]);
-  if (!supabase || !productId(user?.id) || (roomId && !productId(roomId))) return <p role="alert">아이템 그룹을 사용할 수 없습니다.</p>;
-  if (!roomId && (!entry || !binding || !entry.admissionEnabled)) return <main className="wr-page wr65-field wr-room wr-room--group product-item-camp">
-    <h1>그룹 아이템전</h1>
-    <p role={entryError ? "alert" : "status"}>{entryError || (!entry
-      ? "아이템전 이용 가능 여부를 확인하는 중…"
-      : !entry.available ? "아이템전이 아직 열리지 않았습니다. 일반 그룹 레이스는 이용할 수 있습니다."
-      : !entry.admissionEnabled ? "아이템전 방 생성과 새 입장이 일시 중지되어 있습니다." : "아이템전 준비 상태를 확인하는 중…")}</p>
-  </main>;
-  const key = user.id + ":" + (roomId ?? "entry");
-  return roomId ? <ProductRoom key={key} roomId={roomId} binding={binding} actorId={user.id}/>
-    : <ProductEntry key={key} binding={binding} actorId={user.id}/>;
+  const { user, logout } = useAuth();
+  if (!supabase || !productId(user?.id) || (roomId && !productId(roomId))) {
+    return <RaceFrame mode="group" label="그룹 아이템전"><RaceHold title="아이템 방을 열 수 없어요." /></RaceFrame>;
+  }
+  return roomId
+    ? <ProductRoom key={user.id + ":" + roomId} roomId={roomId} user={user} logout={logout} />
+    : <Navigate replace to="/multiplayer?mode=group&items=1" />;
 }
