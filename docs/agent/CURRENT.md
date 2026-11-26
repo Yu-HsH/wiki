@@ -1,4 +1,15 @@
-# 현재 상태 — PR #63 C1 운영 적용 후
+# 현재 상태 — Wiki Race 최종 출시 후보
+
+갱신 2026-11-26 KST. 기준 커밋 `fbab3b7f1fb7b900cb3480db346f4970c6aa1218`은 승인된 제품 통합 커밋이며 이 문서 커밋의 부모입니다. 브랜치 `codex/wiki-ade-integration-candidate`.
+
+- [코드] A·D·E·C·B의 승인 범위를 통합했습니다. 모드 일반 공개, 구형 5슬롯 신규 생성 제한, 운영 Migration 적용 및 Production 배포는 승인 대기입니다.
+- [산출물] 원격 `main`과 Vercel Production은 `434ff836`입니다. 운영 Supabase 64개 이력과 신규 3개 미적용을 2026-11-26 KST에 읽기 전용 확인했습니다. `daily_receipts`와 `minute_cleanup`은 비활성이고 각 완료 이력은 0건입니다. v4는 허용 목록, S5는 비활성 `review`만 확인했습니다.
+- [산출물] `650ee70` 위 미커밋 후보의 2026-11-25~26 KST 검증을 이어받았습니다. 격리 64→66→67, 신규 정리 pgTAP 5/5, 최종 변경 범위 72/72, B·C 브라우저 5/5, 기본·E 활성 빌드. 전체 운영 리허설은 별도로 반복하지 않았습니다.
+- [문서] [최종 운영 적용·복구·공개 절차](../ops/WIKI-RACE-FINAL-RELEASE-2026-11-26.md) · [Migration 67개 SHA](../ops/WIKI-RACE-FINAL-MIGRATIONS-2026-11-26.json)
+
+---
+
+## 이전 기록 — PR #63 C1 운영 적용 후
 
 갱신 2026-11-24 KST. 기준 커밋 `4d2752610b2e41c098d6c9617eabeda4bc230d02`은 이 문서 커밋의 부모다. 브랜치 `codex/s5-item-overhaul-20261120`.
 
