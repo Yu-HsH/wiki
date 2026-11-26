@@ -4,6 +4,7 @@ import { inkVisualOpacity } from '../group-items-playtest/effectPresentation.js'
 import { FINAL_ASSET_ROOT,finalInkPlacement,finalIconUrl } from './finalAssetEvents.js';
 import { FinalPriorityMotion } from './FinalPriorityMotion.jsx';
 import { FinalExtraMotion } from './FinalExtraMotion.jsx';
+import FinalAttackMotion from './FinalAttackMotion.jsx';
 import './finalAssetVfx.css';
 
 const inkPng=[1,2,3].map(i=>FINAL_ASSET_ROOT+`vfx/ink/ink_jungle_${i}.png`);
@@ -56,6 +57,7 @@ export function FinalItemMotion({value}) {
     {scenes.filter(scene=>scene.kind!=='lost-arrive').map(scene=><React.Fragment key={scene.key}>
       <FinalPriorityMotion scene={scene}/>
       <FinalExtraMotion scene={scene}/>
+      {scene.kind.startsWith('attack-') && <FinalAttackMotion scene={scene}/>}
     </React.Fragment>)}
   </div>;
 }
@@ -104,7 +106,8 @@ export function FinalAssetOverlay({value,pulse,frame,children}) {
       viewport?.removeEventListener('scroll',queueMeasure);
     };
   },[]);
-  return <><span hidden ref={anchor}/>
+  const documentMotion = value?.scenes?.map(scene=>scene.kind).join(' ');
+  return <><span hidden ref={anchor} data-item-document-motion={documentMotion || undefined}/>
     {bounds && createPortal(<div className="s5-final-viewport" style={bounds}>
       {children}
       <FinalInkVfx pulse={pulse} frame={frame}/>

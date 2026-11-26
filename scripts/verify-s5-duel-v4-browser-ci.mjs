@@ -177,14 +177,32 @@ async function actor(user, width=390) {
 async function navigate(actor, relative) {
   await actor.page.goto(url + relative, {waitUntil:"domcontentloaded",timeout:60000});
 }
-async function s5Action(user, operation, roomId, payload={}) {
-  const room = roomId ? await rpc(user,"get_group_items_product_room_v1",{p_room:roomId,p_binding:null}) : null;
-  const result = await rpc(user,"act_group_items_product_room_v1",{p_operation:operation,p_room:roomId??null,
-    p_request:randomUUID(),p_expected_version:room?.version??null,p_binding:binding,p_payload:payload});
-  assert.equal(result.ok,true,`${operation}: ${JSON.stringify(result)}`);
-  return result;
+async function createItemRoom(actor, mode) {
+  const segment = mode === "duel" ? "duel-v4" : "group-items";
+  await navigate(actor,"/multiplayer?mode="+mode);
+  await actor.page.getByRole("checkbox",{name:"아이템전으로 진행"}).check({timeout:20000});
+  await actor.page.getByRole("button",{name:"방 생성",exact:true}).click();
+  await actor.page.waitForURL(new RegExp("/multiplayer/"+segment+"/[a-f0-9-]{36}$"),{timeout:20000});
+  const code = actor.page.locator(".wr-room-code-value");
+  await code.waitFor({state:"visible",timeout:20000});
+  return { code:(await code.innerText()).trim(), roomId:actor.page.url().split("/").at(-1) };
 }
-
+async function joinItemRoom(actor, mode, room, code) {
+  const segment = mode === "duel" ? "duel-v4" : "group-items";
+  await navigate(actor,"/multiplayer?mode="+mode);
+  await actor.page.getByRole("textbox",{name:"방 코드"}).fill(code);
+  await actor.page.getByRole("button",{name:"참가",exact:true}).click();
+  await actor.page.waitForURL("**/multiplayer/"+segment+"/"+room,{timeout:20000});
+}
+async function readyGroup(room,members,agents) {
+  for(let i=0;i<members.length;i++){
+    const page=agents[i].page;
+    await page.getByRole("button",{name:"준비",exact:true}).click({timeout:20000});
+    await waitFor(()=>sql("select ready from ink_product.members where room_id="+quote(room)+
+      " and actor_id="+quote(members[i].id))==="t",
+      `S5 player ${i+1} ready acknowledged`,75,300);
+  }
+}
 async function verifyS5FinishAndRematch(count, room, members, agents) {
   const link = a=>a.page.locator('article.article-content a[data-wiki-title="목표"]');
   // Every player must reach the seeded goal through the actual article click,
@@ -243,25 +261,8 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   assert.equal(next.phase,"waiting");
   assert.equal(next.players.length,1,"S5 rematch starts with host, no implicit member rejoin");
   assert.equal(sql("select previous_room_id from ink_product.rooms where id="+quote(nextRoom)),room);
-  const code=next.roomCode;
-  for(let i=1;i<count;i++){
-    const p=agents[i].page;
-    await p.goto(url+"/multiplayer/group-items",{waitUntil:"domcontentloaded"});
-    await p.getByLabel("아이템 방 코드").fill(code);
-    await p.getByRole("button",{name:"입장",exact:true}).click();
-    await p.waitForURL(new RegExp("/multiplayer/group-items/"+nextRoom+"$"),{timeout:20000});
-  }
-  // Room-ready commands use expected_version. Each prior ready increments that
-  // version, so refresh each real browser before the next player clicks ready.
-  for(let i=0;i<count;i++){
-    const page=agents[i].page;
-    await page.reload({waitUntil:"domcontentloaded"});
-    await page.getByRole("button",{name:"준비",exact:true}).waitFor({state:"visible",timeout:20000});
-    await page.getByRole("button",{name:"준비",exact:true}).click();
-    await waitFor(()=>sql("select ready from ink_product.members where room_id="+quote(nextRoom)+
-      " and actor_id="+quote(members[i].id))==="t",
-      `S5 ${count} rematch player ${i+1} ready acknowledged`,75,300);
-  }
+  for(const guest of agents.slice(1)) await joinItemRoom(guest,"group",nextRoom,next.roomCode);
+  await readyGroup(nextRoom,members,agents);
   assert.equal(Number(sql("select count(*) from ink_product.members where room_id="+quote(nextRoom)+
     " and status='waiting' and ready")),count);
   await host.reload({waitUntil:"domcontentloaded"});
@@ -337,18 +338,15 @@ async function verifyS5LatencyBrowser() {
 
 async function groupRound(count) {
   const members=users.slice(0,count);
-  const created=await s5Action(members[0],"create",null);
-  const room=created.roomId;
-  const code=sql("select code from ink_product.rooms where id="+quote(room));
-  for(const user of members.slice(1)) await s5Action(user,"join",null,{roomCode:code});
-  for(const user of members) await s5Action(user,"ready",room);
-  await s5Action(members[0],"start",room);
-  const session=sql("select session_id from ink_product.rooms where id="+quote(room));
   const agents=[];
   for(let i=0;i<count;i++) {
     const a=await actor(members[i],i===0?390:1280); agents.push(a);
-    await navigate(a,"/multiplayer/group-items/"+room);
   }
+  const {roomId:room,code}=await createItemRoom(agents[0],"group");
+  for(const guest of agents.slice(1)) await joinItemRoom(guest,"group",room,code);
+  await readyGroup(room,members,agents);
+  await agents[0].page.getByRole("button",{name:"경기 시작",exact:true}).click({timeout:20000});
+  const session=await waitFor(()=>sql("select session_id from ink_product.rooms where id="+quote(room)), "S5 initialized room");
   for(const a of agents) {
     await a.page.locator('[data-product-group-phase="playing"]').waitFor({state:"visible",timeout:40000});
     await a.page.getByRole("button",{name:"키온 보내기"}).waitFor({state:"visible",timeout:40000});
@@ -389,15 +387,10 @@ async function duelRound() {
   sql("insert into duel_v4.admission(user_id,expires_at) values "+
     members.map(u=>`(${quote(u.id)},clock_timestamp()+interval '1 hour')`).join(",")+";");
   const agents=[];
-  for(let i=0;i<2;i++){const a=await actor(members[i],390); agents.push(a); await navigate(a,"/multiplayer/duel-v4");}
+  for(let i=0;i<2;i++) agents.push(await actor(members[i],390));
   const host=agents[0].page, guest=agents[1].page;
-  await host.getByRole("button",{name:"방 만들기"}).click();
-  await host.waitForURL(/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/, {timeout:20000});
-  const room=host.url().split("/").at(-1);
-  const code=await host.locator("[data-duel-v4-code] .wr-room-code-value").innerText();
-  await guest.getByLabel("방 코드").fill(code);
-  await guest.getByRole("button",{name:"입장"}).click();
-  await guest.waitForURL(new RegExp("/multiplayer/duel-v4/"+room+"$"),{timeout:20000});
+  const {roomId:room,code}=await createItemRoom(agents[0],"duel");
+  await joinItemRoom(agents[1],"duel",room,code);
   log("duel v4 actual UI create and join with two distinct Auth users");
   // The normal client UI exercises both snapshot preparation and target/start commands.
   const search=host.getByRole("search",{name:"목표 문서 검색"});

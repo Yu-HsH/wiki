@@ -3,7 +3,7 @@ import { finalIconUrl } from './finalAssetEvents.js';
 import './finalExtraMotion.css';
 
 const rouletteMessages={
-  'roulette-win':'성공! 아이템 지급',
+  'roulette-win':'성공 · 보상 확인',
   'roulette-fail':'실패! 약화 페널티',
   'roulette-boost':'강화 성공! 특별 효과',
 };
@@ -88,9 +88,11 @@ function LostSign({ arrived, eventKey }) {
   </div>;
 }
 
-function Roulette({ kind }) {
+function Roulette({ scene }) {
   return <><i className="s5x-roulette-wheel"/><i className="s5x-roulette-pointer"/>
-    <b className="s5x-outcome s5x-roulette-result">{rouletteMessages[kind]}</b></>;
+    <i className="s5x-roulette-settle"/>
+    <b className="s5x-outcome s5x-roulette-result">{scene.kind==='roulette-boost' && scene.label
+      ? '강화 성공 · '+scene.label : scene.label ?? rouletteMessages[scene.kind]}</b></>;
 }
 
 function Thief({ scene }) {
@@ -101,10 +103,13 @@ function Thief({ scene }) {
     <b className="s5x-outcome s5x-thief-result">{scene.label ?? thiefMessages[scene.kind]}</b></>;
 }
 
-function Cannon({ arrived }) {
+function Cannon({ phase }) {
+  const arrived=phase!=='cannon-fire';
   return <>
     <div className="s5x-cannon-portal"/>
-    {arrived ? <><i className="s5x-cannon-land-burst"/><b className="s5x-outcome s5x-cannon-status">도착!</b></> :
+    {arrived ? <><i className="s5x-cannon-land-burst"/><b className="s5x-outcome s5x-cannon-status">
+      {phase==='cannon-return' ? '발사 실패 · 시작 문서' : '도착!'}
+    </b></> :
       <>{itemImage('cannon',null,'s5x-cannon-gun')}<i className="s5x-cannon-muzzle"/><i className="s5x-cannon-orb"/></>}
   </>;
 }
@@ -117,26 +122,23 @@ function Modifier({ weak }) {
 
 function ExtraScene({ scene }) {
   const kind=scene.kind;
-  if (Object.hasOwn(rouletteMessages,kind)) return <Roulette kind={kind}/>;
+  if (Object.hasOwn(rouletteMessages,kind)) return <Roulette scene={scene}/>;
   if (Object.hasOwn(thiefMessages,kind)) return <Thief scene={scene}/>;
   switch (kind) {
     case 'thunder-hit': case 'thunder-self': case 'thunder-guard': return <ThunderStrike kind={kind}/>;
-    case 'cannon-fire': case 'cannon-arrive': return <Cannon arrived={kind==='cannon-arrive'}/>;
+    case 'cannon-fire': case 'cannon-arrive': case 'cannon-return': return <Cannon phase={kind}/>;
     case 'enhancement': case 'weakening': return <Modifier weak={kind==='weakening'}/>;
     case 'bookmark-save': return <><i className="s5x-bookmark-pin"/><i className="s5x-bookmark-ribbon">★</i></>;
     case 'bookmark-return': case 'undo': return <><i className="s5x-bookmark-leaf"/><b className="s5x-back-arrow">↶</b></>;
     case 'search': return <i className="s5x-search-radar"/>;
     case 'links': return <><i className="s5x-link-spark"/><div className="s5x-link-gather"><i>↗</i><i>↗</i><i>↗</i></div></>;
-    case 'item-outcome': return <span className="s5x-outcome s5x-item-outcome">
-      {itemImage(scene.itemId)}{scene.label}
-    </span>;
     default: return null;
   }
 }
 
 const extraKinds=new Set([
   ...Object.keys(rouletteMessages),...Object.keys(thiefMessages),'thunder-hit','thunder-self','thunder-guard',
-  'cannon-fire','cannon-arrive','enhancement','weakening','bookmark-save','bookmark-return','undo','search','links','item-outcome',
+  'cannon-fire','cannon-arrive','cannon-return','enhancement','weakening','bookmark-save','bookmark-return','undo','search','links',
 ]);
 
 export function FinalExtraMotion({ scene,thunder=false,lost=false }) {

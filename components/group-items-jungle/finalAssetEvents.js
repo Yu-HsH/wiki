@@ -1,4 +1,6 @@
-export const FINAL_ASSET_ROOT='/group-items-final-s5/';
+import { itemName } from './s5UiContract.js';
+
+export const FINAL_ASSET_ROOT=(import.meta.env?.BASE_URL ?? '/')+'group-items-final-s5/';
 const iconNames=Object.freeze({
   ink:'ink_blind',censor:'link_censor',trap:'surprise_box',lost_link:'lost_way',bookmark:'path_bookmark',
   undo:'rollback',search:'document_find',link_index:'links_only',parry:'reverse_link_parry',
@@ -14,6 +16,12 @@ export function finalIconUrl(itemId,tier) {
 }
 
 const signal=(kind,asset)=>({kind,asset});
+
+export function attackMotion(itemId, phase, direction, label) {
+  if (!itemName(itemId)) return null;
+  const asset=phase==='launch' ? 'shared/launch' : phase==='fail' ? 'shared/miss' : undefined;
+  return {kind:'attack-'+phase,itemId,direction,label:`${itemName(itemId)} · ${label}`,asset};
+}
 
 export function finalReceiptSignal(receipt,warningItem) {
   if (!receipt?.receiptId) return null;
@@ -32,8 +40,9 @@ export function finalReceiptSignal(receipt,warningItem) {
     case 'trap_install': return code==='TRAP_INSTALLED' && receipt.trapId ? signal('trap-install',null) : null;
     case 'normal_link':
       if (code==='TRAP_STOPPED' || (code==='MOVED' && receipt.trapOutcome==='arrival' && receipt.stunEventSeq))
-        return signal('trap-hit','surprise_box/hit');
-      return code==='MOVED' && receipt.trapOutcome==='blocked' ? signal('trap-reveal','surprise_box/reveal') : null;
+        return {...signal('trap-hit','surprise_box/hit'),label:'깜짝상자 발동'};
+      return code==='MOVED' && receipt.trapOutcome==='blocked'
+        ? {...signal('trap-reveal','surprise_box/reveal'),label:'편집보호로 상자 차단'} : null;
     case 'bookmark_install': return code==='BOOKMARK_INSTALLED' ? signal('bookmark-save','path_bookmark/save') : null;
     case 'bookmark_return': return code==='MOVED' && receipt.moveId ? signal('bookmark-return','path_bookmark/return') : null;
     case 'undo': return code==='MOVED' && receipt.moveId ? signal('undo','rollback/use') : null;
@@ -48,13 +57,16 @@ export function finalReceiptSignal(receipt,warningItem) {
     case 'thief':
       if (code==='THIEF_NO_TRANSFERABLE_GRANT') return signal('thief-empty','thief_hand/empty');
       return code==='THIEF_RESOLVED' && typeof success==='boolean'
-        ? {...signal(success?'thief-steal':'thief-loss',success?'thief_hand/steal':'thief_hand/empty'),
-          itemId:receipt.transferredItemId,itemTier:receipt.receivedTier} : null;
+        ? {...signal(success?'thief-steal':'thief-empty',success?'thief_hand/steal':'thief_hand/empty'),
+          itemId:receipt.transferredItemId,itemTier:receipt.receivedTier,label:success ? undefined : '탈취 실패'} : null;
     case 'roulette':
       if (code!=='ROULETTE_RESOLVED' || typeof success!=='boolean') return null;
-      return success
-        ? (receipt.automaticChild || receipt.automaticChildren?.length) ? signal('roulette-boost','chaos_roulette/boost') : signal('roulette-win','chaos_roulette/win')
-        : signal('roulette-fail','chaos_roulette/fail');
+      if (!success) return signal('roulette-fail','chaos_roulette/fail');
+      return {
+        ...((receipt.automaticChild || receipt.automaticChildren?.length)
+          ? signal('roulette-boost','chaos_roulette/boost') : signal('roulette-win','chaos_roulette/win')),
+        label:receipt.delivery==='held' ? '아이템 획득 · 보상 확인' : receipt.delivery==='offered' ? '보상함에 도착' : '보상 확인',
+      };
     case 'cannon': return code==='CANNON_RESOLVED' && typeof success==='boolean' ? signal('cannon-fire','dimension_cannon/fire') : null;
     default: return null;
   }
@@ -83,8 +95,13 @@ export function finalResultSignal(result,participantId) {
     void_ineligible: '효과 불발',
     no_censor_candidates: '효과 불발',
   }[result.outcome];
-  if (outcome && (result.itemId!=='ink' || !hit)) {
-    return { kind:'item-outcome', itemId:result.itemId, label:outcome };
+  if (outcome && !(result.itemId==='ink' && target && result.outcome==='hit')) {
+    const cue=attackMotion(result.itemId,result.outcome==='hit'?'hit':
+      ['void_ineligible','no_censor_candidates'].includes(result.outcome)?'fail':'defend',
+      source && result.outcome!=='reflected' ? 'outbound' : 'incoming',outcome);
+    if (cue && source && result.outcome==='blocked' && result.defenseKind==='protection')
+      return {...cue,asset:'edit_protection/block'};
+    return cue;
   }
   return null;
 }

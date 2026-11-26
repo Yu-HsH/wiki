@@ -1,7 +1,13 @@
 import { FINAL_ASSET_ROOT } from './finalAssetEvents.js';
+import { AUDIO_ASSETS } from '../../services/audioAssets.js';
 
 const selectedAudioRoot=FINAL_ASSET_ROOT+'audio/selected/';
 const inkUrl=selectedAudioRoot+'ink_blind/three_splashes.wav';
+const publicUrl=path=>(import.meta.env?.BASE_URL ?? '/')+path.slice(1);
+const sharedAssets={
+  'shared/launch':publicUrl(AUDIO_ASSETS.navigate.url),
+  'shared/miss':publicUrl(AUDIO_ASSETS.denied.url),
+};
 
 // Browser output only. A recovery can resume an active loop, never a historical one-shot.
 export function createFinalAssetAudio(host,{stunLoopUrl=null}={}) {
@@ -59,7 +65,7 @@ export function createFinalAssetAudio(host,{stunLoopUrl=null}={}) {
     play(asset) {
       if (typeof asset!=='string' || !/^[a-z_]+\/[a-z_]+$/.test(asset)
         || ['link_censor/apply','thief_hand/laugh_layer','thunder_judgment/stun_loop'].includes(asset)) return;
-      voice(selectedAudioRoot+asset+'.wav');
+      voice(sharedAssets[asset] ?? selectedAudioRoot+asset+'.wav');
     },
     stun(effectId) {
       if (activeLoop?.id===effectId && !muted()) return;

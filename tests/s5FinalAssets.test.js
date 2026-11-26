@@ -50,7 +50,7 @@ test('S5: live receipt cues split confirmed branches and retain accepted failure
   assert.equal(cue('thunder','THUNDER_SELF_PENALTY').asset,'thunder_judgment/self');
   assert.equal(cue('thief','THIEF_NO_TRANSFERABLE_GRANT').asset,'thief_hand/empty');
   assert.equal(cue('thief','THIEF_RESOLVED',{success:true}).asset,'thief_hand/steal');
-  assert.equal(cue('thief','THIEF_RESOLVED',{success:false}).kind,'thief-loss');
+  assert.equal(cue('thief','THIEF_RESOLVED',{success:false}).kind,'thief-empty');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:false}).asset,'chaos_roulette/fail');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:true}).asset,'chaos_roulette/win');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:true,automaticChild:{id:'child'}}).asset,'chaos_roulette/boost');

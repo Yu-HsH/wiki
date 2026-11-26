@@ -1,0 +1,63 @@
+.s5-attack-motion {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+}
+.s5-attack-motion svg {
+  width: min(52%, 260px);
+  max-height: 48%;
+  overflow: visible;
+  color: var(--s5-attack-color);
+  filter: drop-shadow(0 3px 4px #392a354a);
+}
+.s5-attack-motion span {
+  padding: .2em .6em;
+  border-radius: 999px;
+  background: #fff7df;
+  border: 1px solid currentColor;
+  color: #554333;
+  font-size: clamp(.75rem, 2vw, 1.05rem);
+  animation: s5-attack-label 1.25s both;
+}
+.s5-attack-flight { transform-origin: center; animation: s5-attack-launch .56s ease-in both; }
+.s5-attack-motion[data-direction="incoming"] svg { scale: -1 1; }
+.s5-attack-projectile { fill: currentColor; stroke: #fff4d0; stroke-width: 4; stroke-linejoin: round; }
+.s5-attack-trail, .s5-attack-ray { fill: none; stroke: currentColor; stroke-width: 4; stroke-linecap: round; }
+.s5-attack-ring { fill: #fff4cf75; stroke: currentColor; stroke-width: 4; }
+.s5-attack-impact { opacity: 0; }
+.s5-attack-ray { transform-origin: center; }
+.s5-attack-deflect { display: none; fill: none; stroke: #32836c; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.s5-attack-motion[data-item-vfx="attack-warning"] { align-content: start; padding-top: min(5%, 1rem); }
+.s5-attack-motion[data-item-vfx="attack-warning"] .s5-attack-flight { animation: s5-attack-warning .7s ease-out both; }
+.s5-attack-motion[data-item-vfx="attack-hit"] .s5-attack-impact { animation: s5-attack-burst .75s .24s both; }
+.s5-attack-motion[data-item-vfx="attack-hit"] .s5-attack-ray { animation: s5-attack-rays .75s .24s both; }
+.s5-attack-motion[data-item-vfx="attack-fail"] .s5-attack-flight { animation: s5-attack-fizzle .82s both; }
+.s5-attack-motion[data-item-vfx="attack-defend"] { align-content: start; padding-top: min(6%, 1.5rem); }
+.s5-attack-motion[data-item-vfx="attack-defend"] .s5-attack-flight { animation: s5-attack-fizzle .6s both; }
+.s5-attack-motion[data-item-vfx="attack-defend"] .s5-attack-deflect { display: block; animation: s5-attack-label .82s .12s both; }
+@keyframes s5-attack-launch {
+  0% { transform: translateX(-45%) scale(.3); opacity: 0; }
+  30% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { transform: translateX(55%) scale(.55); opacity: 0; }
+}
+@keyframes s5-attack-warning {
+  0% { transform: translateX(-55%) scale(.55); opacity: 0; }
+  35%, 68% { transform: translateX(0); opacity: .92; }
+  100% { opacity: 0; }
+}
+@keyframes s5-attack-burst { 0% { opacity: .95; } 70% { opacity: .8; } 100% { opacity: 0; } }
+@keyframes s5-attack-rays { from { scale: .3; } to { scale: 1.65; opacity: 0; } }
+@keyframes s5-attack-fizzle {
+  0% { transform: translateX(-55%) scale(.3); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: translateY(25%) scale(.3) rotate(-30deg); opacity: 0; }
+}
+@keyframes s5-attack-label { 0%, 100% { opacity: 0; } 16%, 75% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .s5-attack-motion *, .s5-attack-motion svg { animation: none !important; }
+  .s5-attack-motion .s5-attack-trail, .s5-attack-motion .s5-attack-ray { display: none; }
+}

@@ -19,6 +19,7 @@ import { ItemRoomRoster } from "../components/wiki-race/ItemRoomLobby.jsx";
 import ItemDuelTarget from "../components/wiki-race/ItemDuelTarget.jsx";
 import ItemRaceSlots, { ItemRaceDescription } from "../components/wiki-race/race/ItemRaceSlots.jsx";
 import ItemRaceStart from "../components/wiki-race/race/ItemRaceStart.jsx";
+import useItemSupplyArrival from "../hooks/useItemSupplyArrival.js";
 import { ConnectionDot, HudArrow, HudBrand, HudDoc, HudExit, HudStat, HudTimer, MobileRouteNotes, RaceFrame, RaceHold, RaceHud, RouteRail } from "../components/wiki-race/race/RaceParts.jsx";
 import { ResultActions, ResultCard, ResultOutcome, ResultRoute, ResultScreen, ResultStats, ResultXpRow } from "../components/wiki-race/result/ResultParts.jsx";
 import "./duelV4.css";
@@ -98,7 +99,6 @@ function Match({ roomId, user, logout }) {
   const itemOpener = useRef(null);
   const itemPanelClose = useRef(null);
   const enteredFromLobby = useRef(false);
-  const lastSupply = useRef(null);
   const itemPanelId = useId();
   const activeMatch = useRef(0);
   const sound = useSyncExternalStore(audioManager.subscribe, audioManager.getSnapshot, audioManager.getSnapshot);
@@ -131,17 +131,17 @@ function Match({ roomId, user, logout }) {
     }
   }, [waiting]);
 
-  useEffect(() => {
-    if (!state?.nextSupplyAt || !started || finished) return;
-    const previous = lastSupply.current;
-    lastSupply.current = { deadline: state.nextSupplyAt, inventory: state.inventory };
-    const supplied = previous && previous.deadline !== state.nextSupplyAt &&
-      Math.abs(Date.parse(state.serverTime) - Date.parse(previous.deadline)) < 2000 &&
-      state.inventory.some(item => !previous.inventory.some(old => old.id === item.id));
-    const initial = !previous && enteredFromLobby.current && state.inventory.length > 0 &&
-      Date.parse(state.serverTime) - Date.parse(state.startedAt) < 1400;
-    if (supplied || initial) void audioManager.play("itemReveal", { key: `duel-item-supply:${roomId}:${state.nextSupplyAt}` });
-  }, [state, started, finished, roomId]);
+  const nextSupplyMs = Date.parse(state?.nextSupplyAt);
+  const startedMs = Date.parse(state?.startedAt);
+  const supplyRound = (nextSupplyMs - startedMs - 20_000) / 25_000;
+  const initialSupply = supplyRound === 0;
+  const suppliedGrant = useItemSupplyArrival(state && {
+    round:Number.isSafeInteger(supplyRound) && supplyRound >= 0 ? String(supplyRound) : null, initialRound:initialSupply,
+    dueAt:initialSupply ? startedMs : nextSupplyMs-25_000,
+    observedAt:Date.parse(state.serverTime), revision:Number(state.version),
+    inventory:state.inventory.map(item=>item.id), live:started && !finished && (initialSupply || !activeWork.current) && !connectionError,
+    sideEffects:JSON.stringify([state.attackResults,state.reward?.id,state.itemFeedback]),
+  },roomId,enteredFromLobby.current);
   useGameAudio({ identity: "duel-v4:" + roomId + ":" + userId, route: pathname,
     playing: started && !finished, connection: connectionError ? "lost" : null, ended: finished });
   const warning = state?.warnings.find((row) => effectTime(row.dueAt) > now);
@@ -288,7 +288,7 @@ function Match({ roomId, user, logout }) {
       if (!result.ok || result.code === "ITEM_CHANCE_FAILED") {
         setError(explanation(result.code));
       }
-      const needsState = result.code === "THIEF_STOLEN" || result.code === "CANNON_LANDED";
+      const needsState = ["THIEF_STOLEN","CANNON_LANDED","CANNON_RETURNED"].includes(result.code);
       if (!needsState) {
         feedback.current.receipt(request, result);
         setScenes(feedback.current.scenes());
@@ -431,7 +431,7 @@ function Match({ roomId, user, logout }) {
         <HudStat label="이동" value={(me?.moves ?? 0) + "회"} />
         <HudTimer label="경과" seconds={elapsed} />
         <HudExit label="기권" onClick={() => run("forfeit", async () => ({}))} disabled={busy} />
-        <ItemRaceSlots items={slots} selected={selected} expanded={Boolean(chosen)} panelId={itemPanelId} duel
+        <ItemRaceSlots items={slots} selected={selected} expanded={Boolean(chosen)} panelId={itemPanelId} duel suppliedGrant={suppliedGrant}
           supplySeconds={state.nextSupplyAt ? secondsLeft(state.nextSupplyAt, now) : null}
           select={(item, event) => { itemOpener.current = event.currentTarget; setSelected(item.key); }} />
       </RaceHud>
@@ -458,7 +458,8 @@ function Match({ roomId, user, logout }) {
       </ul>}
       <div className="wr-race-body">
         <aside className="wr-race-side"><RouteRail path={ownPath} currentTitle={current?.title} /></aside>
-      <section className="wr-race-main duel-v4-document" ref={article}>
+      <div className="duel-v4-document" data-s5-priority-vfx>
+      <section className="wr-race-main" ref={article}>
         {stunned && <p role="status">{messages.STUNNED}</p>}
         {search && <section aria-label="문서 내 검색">
           {searchError ? <button onClick={() => setSearchAttempt((attempt) => attempt + 1)}>검색 본문 다시 불러오기</button>
@@ -482,9 +483,10 @@ function Match({ roomId, user, logout }) {
           links={documentReady ? document?.links : []} authorizedSearchQuery={highlightedQuery}
           isLoading={!documentReady && !documentError} readOnly={busy || !documentReady || stunned} onLinkClick={navigateLink}
           censoredTitles={state.censoredTitles} showTargetBrief={false} />
+      </section>
         <FinalAssetOverlay pulse={pulse} frame={frame} value={{ shieldActive: protectedByShield, thunder,
           lost: warning?.itemId === "lost_link", scenes }} />
-      </section>
+      </div>
       </div>
       {linkIndex && <LinkList key={linkIndex.id} index={linkIndex} disabled={busy || stunned} onLink={navigateLink} />}
       {state.rouletteSupplyWeakened && <p role="status">다음에 실제로 받는 보급 아이템이 약화됩니다.</p>}
@@ -503,7 +505,7 @@ function Match({ roomId, user, logout }) {
       <footer className="duel-v4-dock" data-item-race-dock aria-label="아이템 대응"
         onKeyDown={event => { if (chosen && event.key === "Escape") closeItem(); }}>
         {chosen && <aside className="duel-v4-sheet" id={itemPanelId} aria-label="아이템 사용">
-          <div className="duel-v4-item-details"><ItemRaceDescription itemId={chosen.itemId} tier={chosen.tier} /></div>
+          <div className="duel-v4-item-details"><ItemRaceDescription itemId={chosen.itemId} tier={chosen.tier} mode="duel" /></div>
           <button type="button" ref={itemPanelClose} onClick={closeItem}>닫기</button>
           {chosen.itemId === "trap" && <label>설치할 링크
             <select value={trapLink} onChange={(event) => setTrapLink(event.target.value)}>

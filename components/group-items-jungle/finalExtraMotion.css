@@ -121,14 +121,20 @@
   filter: drop-shadow(0 2px 2px #302544); animation: s5x-roulette-pointer .12s 10 alternate;
 }
 .s5x-roulette-result { animation: s5x-result-in .21s 1.73s both; }
-.s5x-item-outcome {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  top: 18%;
-  animation: s5x-result-in .21s both;
+.s5x-roulette-settle {
+  position: absolute;
+  width: min(32vw, 180px);
+  aspect-ratio: 1;
+  left: 50%;
+  top: var(--s5x-y);
+  translate: -50% -50%;
+  border: 4px solid #f5d17f;
+  border-radius: 50%;
+  animation: s5x-roulette-confirm .6s 1.55s both;
 }
-.s5x-item-outcome img { width: 28px; height: 28px; object-fit: contain; }
+[data-item-vfx="roulette-fail"] .s5x-roulette-settle { border-color: #b77791; border-style: dashed; }
+[data-item-vfx="roulette-boost"] .s5x-roulette-settle { border-color: #a9efd5; }
+@keyframes s5x-roulette-confirm { from { scale: .75; opacity: 0; } 22% { opacity: .92; } to { scale: 1.65; opacity: 0; } }
 [data-item-vfx="roulette-fail"] .s5x-roulette-result { background: #f8d8dc; border-color: #a76270; }
 [data-item-vfx="roulette-boost"] .s5x-roulette-result { background: #f9ebaa; border-color: #b88b29; }
 @keyframes s5x-roulette-spin {
@@ -170,6 +176,13 @@
   100% { opacity: 0; transform: translate(80%, -75%) rotate(24deg) scale(.78); }
 }
 @keyframes s5x-thief-streak { 0%, 100% { opacity: 0; } 38% { opacity: 1; } }
+[data-item-vfx="thief-loss"] .s5x-thief-hand { scale: -1 1; }
+[data-item-vfx="thief-loss"] .s5x-thief-item { animation: s5x-thief-loss 1.28s both; }
+@keyframes s5x-thief-loss {
+  0%, 24% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  48% { transform: translate(-50%, -80%) rotate(-16deg); opacity: .95; }
+  85%, 100% { transform: translate(110%, -105%) scale(.2) rotate(27deg); opacity: 0; }
+}
 
 .s5x-cannon-gun {
   position: absolute; left: 8%; top: calc(var(--s5x-y) + 15px); width: min(170px, 37%); aspect-ratio: 1;
@@ -212,9 +225,11 @@
 @keyframes s5x-cannon-orb { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.55); } 12% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; left: 74%; top: var(--s5x-y); transform: translate(-50%, -50%) scale(.25); } }
 @keyframes s5x-cannon-arrive { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.1); } 31% { opacity: 1; transform: translate(-50%, -50%) scale(1.23); } 65% { opacity: .9; transform: translate(-50%, -50%) scale(.8); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(.02); } }
 
-.gip-document:has(.s5x-effect:is([data-item-vfx="thunder-hit"],[data-item-vfx="thunder-self"])) > .wr-race-main { animation: s5x-thunder-jolt .36s .43s both; }
-.gip-document:has(.s5x-effect[data-item-vfx="cannon-fire"]) > .wr-race-main { animation: s5x-fire-jolt .42s .585s both; }
-.gip-document:has(.s5x-effect[data-item-vfx="cannon-arrive"]) > .wr-race-main { animation: s5x-land-jolt .43s .2s both; }
+[data-s5-priority-vfx]:has(> :is([data-item-document-motion~="thunder-hit"],[data-item-document-motion~="thunder-self"])) { --s5-document-thunder:s5x-thunder-jolt .36s .43s both; }
+[data-s5-priority-vfx]:has(> [data-item-document-motion~="cannon-fire"]) { --s5-document-fire:s5x-fire-jolt .42s .585s both; }
+[data-s5-priority-vfx]:has(> [data-item-document-motion~="cannon-arrive"]) { --s5-document-land:s5x-land-jolt .43s .2s both; }
+[data-item-vfx="cannon-return"] .s5x-cannon-portal { filter: hue-rotate(55deg); }
+[data-item-vfx="cannon-return"] .s5x-cannon-status { background: #f9dfd2; border-color: #af6857; }
 @keyframes s5x-thunder-jolt { 13% { transform: translate(-5px, 2px); } 27% { transform: translate(6px, -3px); } 44% { transform: translate(-4px, -2px); } 63% { transform: translate(3px, 2px); } }
 @keyframes s5x-fire-jolt { 15% { transform: translate(-9px, 3px); } 30% { transform: translate(6px, -3px); } 50% { transform: translate(-4px, 2px); } 68% { transform: translate(2px, -1px); } }
 @keyframes s5x-land-jolt { 15% { transform: translateY(7px); } 31% { transform: translate(-5px, -4px); } 49% { transform: translate(4px, 3px); } 75% { transform: translate(-2px, -1px); } }
@@ -279,9 +294,9 @@
 @keyframes s5x-link-in { from { opacity: 0; transform: var(--s5x-link-from) scale(.62); } 75%, to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .s5x-effect *, .s5x-effect *::after, .s5x-current path,
-  .gip-document:has(.s5x-effect) > .wr-race-main { animation: none !important; }
+  .s5x-effect *, .s5x-effect *::after, .s5x-current path { animation: none !important; }
   .s5x-sign-streak, .s5x-sign-impact, .s5x-cannon-orb, .s5x-cannon-muzzle, .s5x-bookmark-leaf, .s5x-modifier-beam, .s5x-modifier-sparks { display: none; }
   .s5x-cloud, .s5x-thunder-ring, .s5x-cannon-land-burst { opacity: .45; }
   .s5x-thief-streak { opacity: .35; }
+  .s5x-roulette-settle { display: none; }
 }

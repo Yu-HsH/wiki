@@ -13,7 +13,7 @@ import { isProductS4Scope } from "./productContract.js";
 import { preloadProductInkArt, ProductInkVfx, ProductItemMotion } from "./ProductItemVfx.jsx";
 import { FinalAssetOverlay, preloadFinalInk } from "./FinalAssetVfx.jsx";
 import ItemRaceStart from "../wiki-race/race/ItemRaceStart.jsx";
-import { audioManager } from "../../services/audioManager.js";
+import useItemSupplyArrival from "../../hooks/useItemSupplyArrival.js";
 import { nextProductInkPulseDelay, productCueDuration } from "./productPresentation.js";
 import "../../css/wikiRaceGroupItemsPlaytest.css";
 import "./groupItemsJungle.css";
@@ -53,7 +53,6 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   const [trapChoices, setTrapChoices] = useState(null);
   const [s5Pending,setS5Pending] = useState(false);
   const [itemToolbar, setItemToolbar] = useState(null);
-  const lastSupply = useRef(null);
   const active = useRef(null);
 
   const finalAssets = s5 && itemPresentation?.finalAssets;
@@ -69,15 +68,13 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   const endAt = Math.min(deadlineAt, lifecycle?.grace_ends_at ? Date.parse(lifecycle.grace_ends_at) : Infinity);
   const supplySeconds = Number.isFinite(supplyAt) && view && supplyAt < endAt
     ? Math.max(0, Math.ceil((supplyAt - view.now) / 1000)) : null;
-  useEffect(() => {
-    if (!finalAssets || !supply) return;
-    const previous = lastSupply.current;
-    lastSupply.current = supply.lastClosedRound;
-    if (previous !== supply.lastClosedRound && supply.outcome === "granted" &&
-        (previous !== null || enteredFromLobby) && Math.abs(view.now - Date.parse(supply.logicalDueAt)) < 2000) {
-      void audioManager.play("itemReveal", { key: `group-item-supply:${scope.sessionId}:${supply.lastClosedRound}` });
-    }
-  }, [finalAssets, supply, view?.now, enteredFromLobby, scope.sessionId]);
+  const suppliedGrant = useItemSupplyArrival(finalAssets && view && {
+    round:supply?.lastClosedRound, initialRound:supply?.lastClosedRound==='0',
+    outcome:supply?.outcome, grantId:supply?.lastClosedRound===supply?.round ? supply?.grantId : null,
+    observedAt:view.now, dueAt:Date.parse(supply?.logicalDueAt), revision:Number(view.view.inventoryVersion),
+    inventory:view.view.inventory.filter(Boolean).map(item=>item.grantId),
+    live:!disconnected && !view.view.viewer.readOnly,
+  },scope.sessionId,enteredFromLobby);
 
   useEffect(() => {
     const session = createGroupItemsSession({ scope, transport, journal, makeRequestId });
@@ -387,7 +384,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           {view.sealed && <span> · 천둥으로 아이템이 봉인됐어요</span>}
         </div>}
         <PlaytestItemsHud view={frame} numberSlots={s5} visible={Boolean(frame) && !readOnly} enhancedFeedback running warningWindowMs={warningWindowMs}
-          toolbar={finalAssets ? itemToolbar : null} supplySeconds={supplySeconds}
+          toolbar={finalAssets ? itemToolbar : null} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant}
           onParry={warning=>run("parry",{ childId:warning.childId })} onReturn={rightId=>run("bookmark_return",{ rightId })}
           onUse={input=>run(input.action,input)}/>
         {s5 && frame && !readOnly && <S5Panels state={view.s5} inventory={frame.inventory.filter(Boolean)} now={view.now} slots={frame.inventory.filter(slot=>!slot).length}

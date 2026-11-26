@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import ItemRaceSlots, { ItemRaceDescription } from "../wiki-race/race/ItemRaceSlots.jsx";
 
 /** Small presenter only: availability, effect outcomes and deadlines come from C. */
-export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onReturn,enhancedFeedback=false,running=false,warningWindowMs,numberSlots=false,toolbar,supplySeconds}){
+export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onReturn,enhancedFeedback=false,running=false,warningWindowMs,numberSlots=false,toolbar,supplySeconds,suppliedGrant}){
  const id=useId(),panel=useRef(null),toggle=useRef(null),opener=useRef(null);
  const [open,setOpen]=useState(false),[grantId,setGrantId]=useState(null),[targetIds,setTargetIds]=useState([]);
  const selected=view?.inventory?.find(item=>item&&item.grantId===grantId);
@@ -36,7 +36,7 @@ export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onRetu
  return <section className="gip-hud" aria-label="아이템 도구" onKeyDown={event=>{if(open&&event.key==="Escape"){event.preventDefault();close();}}}>
   {toolbar && !readOnly && createPortal(<ItemRaceSlots items={productSlots} selected={grantId}
     select={(item,event)=>startSelection(slots.find(slot=>slot?.grantId===item.key),event)}
-    expanded={open} panelId={id} supplySeconds={supplySeconds}/>, toolbar)}
+    expanded={open} panelId={id} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant}/>, toolbar)}
   {open&&!readOnly&&<div className="gip-panel" id={id} ref={panel}>
    <div className="gip-panel-head"><strong>{selected?.label||"도구와 대상"}</strong><button type="button" onClick={close} aria-label="도구 선택 닫기">닫기 ×</button></div>
    {toolbar && selected && <p className="gip-item-details"><ItemRaceDescription itemId={selected.itemId} tier={selected.effectiveTier}/></p>}

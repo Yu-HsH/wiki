@@ -1,4 +1,4 @@
-import { finalMovementSignal, finalReceiptSignal, finalResultSignal } from '../components/group-items-jungle/finalAssetEvents.js';
+import { attackMotion, finalMovementSignal, finalReceiptSignal, finalResultSignal } from '../components/group-items-jungle/finalAssetEvents.js';
 import { createFinalAssetPresentation } from '../components/group-items-jungle/finalAssetPresentation.js';
 import { itemName } from '../components/group-items-jungle/s5UiContract.js';
 
@@ -69,12 +69,17 @@ export function duelV4AttackFeedback(row, userId) {
     outcome: row.outcome === 'reflected_blocked' ? 'reflection_blocked' : row.outcome,
     defenseKind: ['blocked', 'reflected_blocked'].includes(row.outcome) ? 'protection' : null,
   };
-  const parry = outcome => finalReceiptSignal({ receiptId: row.id, operation: 'parry', code: 'PARRY_ACCEPTED', outcome }, row.item_id);
+  const parry = outcome => ({
+    ...finalReceiptSignal({ receiptId: row.id, operation: 'parry', code: 'PARRY_ACCEPTED', outcome }, row.item_id),
+    direction:attacker?'from-opponent':'from-self',
+    label:outcome==='reflected' ? attacker?'반사당함':'반사 성공' : attacker?'상대가 차단':'패링 차단',
+  });
   const protection = finalResultSignal(result, row.outcome === 'reflected_blocked' ? row.actor_id : row.target_id);
   switch (row.outcome) {
     case 'hit': return { tone: attacker ? 'hit' : 'danger', text: `${name} ${attacker ? '적중' : '피격'}`,
       cue: finalResultSignal(result, userId) };
-    case 'blocked': return { tone: 'guard', text: `${name} ${attacker ? '차단됨 · 상대 편집보호' : '차단 성공 · 편집보호 소모'}`, cue: protection };
+    case 'blocked': return { tone: 'guard', text: `${name} ${attacker ? '차단됨 · 상대 편집보호' : '차단 성공 · 편집보호 소모'}`,
+      cue: attacker ? finalResultSignal(result, userId) : protection };
     case 'parried_blocked': return { tone: 'guard', text: `${name} ${attacker ? '차단됨 · 상대 패링' : '차단 성공 · 패링'}`, cue: parry('blocked') };
     case 'reflected': return { tone: 'reflect', text: `${name} ${attacker ? '반사당함 · 상대 패링' : '반사 성공 · 패링'}`, cue: parry('reflected') };
     case 'reflected_blocked': return { tone: 'guard', text: `${name} ${attacker ? '반사됨 · 편집보호로 차단' : '반사됨 · 상대 편집보호로 차단'}`,
@@ -118,12 +123,13 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
         const pending = clock() - request.sentAt < V4_PARRY_WINDOW_MS;
         show(request.id, { tone: 'use', pendingItem: pending ? request.itemId : null,
           text: `${itemName(request.itemId)} 사용${pending ? ' · 적중 판정 대기' : ''}`,
-          cue: { kind:'item-outcome', itemId:request.itemId, label:'사용' } });
+          cue: attackMotion(request.itemId,'launch','outbound','발사') });
         return;
       }
       // Final parry cues come from attackResults for both clients, not from the defender's receipt.
       if (code === 'PARRY_TARGET_CHANGED') {
-        show(request.id, { tone: 'fail', text: '패링 효과 불발 · 반사 대상이 바뀌었거나 적용할 수 없습니다.' });
+        show(request.id, { tone: 'fail', text: '패링 효과 불발 · 반사 대상이 바뀌었거나 적용할 수 없습니다.',
+          cue:attackMotion('parry','fail','outbound','반사 불발') });
         return;
       }
       const mapped = code === 'ITEM_CHANCE_FAILED' && request.itemId === 'correction'
@@ -137,11 +143,13 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
         if (code === 'THIEF_EMPTY') cue = { ...cue, label: '훔치기 실패' };
       }
       if (!cue && code === 'ITEM_CHANCE_FAILED') {
-        cue = { kind:'item-outcome', itemId:request.itemId, label:'효과 불발' };
+        cue = attackMotion(request.itemId,'fail','outbound','효과 불발');
       }
       const arrived = next?.players.find(player => player.id === next.selfId);
-      if (code === 'CANNON_LANDED' && arrived) pendingMovement = { after: clock() + 800, key: request.id,
-        progress: arrived.progressVersion, operation: 'cannon' };
+      if (['CANNON_LANDED','CANNON_RETURNED'].includes(code) && arrived) pendingMovement = {
+        after:clock()+800,key:request.id,progress:arrived.progressVersion,
+        operation:'cannon',returned:code==='CANNON_RETURNED',
+      };
       show(request.id, { cue, text: receiptMessages[code], tone: failedReceipts.has(code) ? 'fail' : 'use' });
     },
     observe(state, now, userId) {
@@ -165,14 +173,19 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
       };
       const previousSelf = previousState?.players.find(player => player.id === userId);
       if (pendingMovement && clock() >= pendingMovement.after) {
-        if (pendingMovement.progress === self?.progressVersion) playMovement(`${pendingMovement.key}:arrival`, pendingMovement.operation);
+        if (pendingMovement.progress === self?.progressVersion) {
+          const key=`${pendingMovement.key}:arrival`;
+          if (pendingMovement.returned) final.playCue(key,{kind:'cannon-return',asset:'shared/miss'});
+          else playMovement(key,pendingMovement.operation);
+        }
         pendingMovement = null;
       }
 
       const effects = activeV4Effects(state.effects, now);
       for (const warning of state.warnings ?? []) {
-        if (claim(`warning:${warning.id}`) && !recovered && warning.itemId === 'lost_link' && effectTime(warning.dueAt) > now) {
-          final.playCue(warning.id, { asset: 'lost_way/activate' });
+        if (claim(`warning:${warning.id}`) && !recovered && effectTime(warning.dueAt) > now) {
+          const cue=attackMotion(warning.itemId,'warning','incoming','공격 접근');
+          if (cue) final.playCue(`warning:${warning.id}`,warning.itemId==='lost_link' ? {...cue,asset:'lost_way/activate'} : cue);
         }
       }
       for (const effect of effects) {
@@ -180,6 +193,10 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
             effectTime(effect.startsAt) > initialServerTime && now - effectTime(effect.startsAt) < 900) {
           liveInk.add(effect.id);
           final.playPulse({ type: 'ink_pulse', pulseIndex: 0 });
+        }
+        if (effect.kind==='cannon_stun' && claim(`cannon-effect:${effect.id}`) && !recovered &&
+            effectTime(effect.startsAt)>initialServerTime && now-effectTime(effect.startsAt)<900) {
+          final.playCue(effect.id,attackMotion('cannon','hit','incoming','착지 충격'));
         }
       }
       for (const row of state.attackResults ?? []) {
@@ -199,9 +216,10 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
         const happenedAt = effectTime(event.expiresAt) - 30_000;
         if (!claim(`item-feedback:${event.id}`) || recovered || happenedAt <= initialServerTime ||
             now - happenedAt >= resultWindowMs) continue;
+        const stolen=event.kind==='item_stolen' && previousState?.inventory.find(item=>`item-stolen:${item.id}`===event.id);
         const cue = {
-          item_stolen: { kind:'thief-loss' },
-          trap_triggered: { kind:'item-outcome', itemId:'trap', label:'상자가 작동했어요' },
+          item_stolen: { kind:'thief-loss',itemId:stolen?.itemId,itemTier:stolen?.tier },
+          trap_triggered: { kind:'trap-reveal',label:'설치한 상자 발동' },
         }[event.kind];
         final.playCue(event.id, cue);
       }
