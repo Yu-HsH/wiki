@@ -51,9 +51,14 @@
 .s5-parry-glints,.s5-parry-mark { animation:s5-parry-glint 1.8s both }
 .s5-final-priority[data-direction="from-opponent"] .s5-priority-art { scale:-1 1 }
 .s5-final-priority-label {
-  position:absolute; left:50%; top:70%; transform:translate(-50%,-50%);
+  position:absolute; left:50%; top:min(70%, calc(100cqh - 17px)); transform:translate(-50%,-50%);
   border:1px solid #8c7651; border-radius:999px; background:#fff7df; color:#3b4538;
   padding:.24em .65em; white-space:nowrap; font-size:clamp(.75rem,2vw,1.05rem);
+}
+.s5-final-motion:has(.s5x-roulette-wheel) .s5-final-priority-label {
+  top: .25rem;
+  transform: translateX(-50%);
+  z-index: 3;
 }
 
 /* Only the article viewport shakes. HUD, parry controls, and input hit areas outside it stay put. */

@@ -53,6 +53,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   const [trapChoices, setTrapChoices] = useState(null);
   const [s5Pending,setS5Pending] = useState(false);
   const [itemToolbar, setItemToolbar] = useState(null);
+  const [warningToolbar, setWarningToolbar] = useState(null);
   const active = useRef(null);
 
   const finalAssets = s5 && itemPresentation?.finalAssets;
@@ -374,6 +375,8 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         </div>
       </div>
       <div className="group-items-jungle-dock" data-s5-sticky-dock={finalAssets ? true : undefined} data-item-race-dock>
+        {finalAssets && <div className="s5-dock-warnings" ref={setWarningToolbar}/>}
+        <div className="s5-dock-content">
         {kionDock}
         {frame && !readOnly && <div className="group-items-jungle-supply" role="status">
           {view.supply ? `보급 ${view.supply.lastClosedRound} · ${view.supply.outcome === "granted" ? "받음" : "가방이 가득 차 건너뜀"}` : "보급 기록 없음"}
@@ -384,7 +387,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           {view.sealed && <span> · 천둥으로 아이템이 봉인됐어요</span>}
         </div>}
         <PlaytestItemsHud view={frame} numberSlots={s5} visible={Boolean(frame) && !readOnly} enhancedFeedback running warningWindowMs={warningWindowMs}
-          toolbar={finalAssets ? itemToolbar : null} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant}
+          toolbar={finalAssets ? itemToolbar : null} warningToolbar={warningToolbar} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant}
           onParry={warning=>run("parry",{ childId:warning.childId })} onReturn={rightId=>run("bookmark_return",{ rightId })}
           onUse={input=>run(input.action,input)}/>
         {s5 && frame && !readOnly && <S5Panels state={view.s5} inventory={frame.inventory.filter(Boolean)} now={view.now} slots={frame.inventory.filter(slot=>!slot).length}
@@ -411,6 +414,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           {roomActions && <div className="product-item-actions">{roomActions}</div>}
         </div>}
         {frame?.viewer.readOnly && <p role="status">경기가 종료됐어요.</p>}
+        </div>
       </div>
     </RaceFrame>
   </div>;
