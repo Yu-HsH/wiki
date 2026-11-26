@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../authContext";
-import { LOBBY_PATH } from "../utils/appRoutes";
+import { postLoginTutorialPath } from "../utils/tutorialIntegration.js";
 
 /* ── Zod 유효성 검사 스키마 ── */
 // 로그인 시: 아이디(2자+), 비밀번호(6자+) 필수
@@ -115,6 +115,8 @@ function getFriendlyAuthError(error, mode) {
 
 export default function LoginPage({ isEmbedded = false, initialMode = "signin" }) {
   const navigate = useNavigate();
+  const { search } = useLocation();
+  const destination = postLoginTutorialPath(search);
   const { loginWithUsername, signUpWithUsername, demoLogin, isSupabaseConfigured, loginAsGuest } = useAuth();
   const [mode, setMode] = useState(initialMode === "signup" ? "signup" : "signin");
   const [pending, setPending] = useState(false);
@@ -146,7 +148,7 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
         const parsed = demoSchema.safeParse(values);
         if (!parsed.success) { applyZodErrors(parsed, setError); return; }
         await demoLogin({ displayName: parsed.data.nickname });
-        navigate(LOBBY_PATH);
+        navigate(destination);
         return;
       }
 
@@ -155,7 +157,7 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
         const parsed = signinSchema.safeParse(values);
         if (!parsed.success) { applyZodErrors(parsed, setError); return; }
         await loginWithUsername({ username: parsed.data.username, password: parsed.data.password });
-        navigate(LOBBY_PATH);
+        navigate(destination);
         return;
       }
 
@@ -167,7 +169,7 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
         password: parsed.data.password,
         nickname: parsed.data.nickname,
       });
-      navigate(LOBBY_PATH);
+      navigate(destination);
     } catch (error) {
       if (import.meta.env.DEV) {
         const lowerMessage = (error?.message || "").toLowerCase();
@@ -294,7 +296,7 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
                 try {
                   setSubmitError("");
                   await loginAsGuest();
-                  navigate(LOBBY_PATH);
+                  navigate(destination);
                 } catch (error) {
                   console.error("Guest login error:", error);
                   setSubmitError("게스트 로그인에 실패했습니다. 다시 시도해주세요.");

@@ -18,10 +18,19 @@ import "./groupItemsJungle.css";
 import "./s5HeadScoped.css";
 import S5Panels from './S5Panels.jsx';
 import { isS5Scope } from './s5UiContract.js';
+import useGameAudio from '../../hooks/useGameAudio.js';
+
+const commandFailureMessage = "아이템 경기 요청을 완료하지 못했어요. 연결과 경기 상태를 확인해 주세요.";
+const commandRejectionMessages = {
+  STALE_INVENTORY: "가방이 갱신됐어요. 사용할 아이템을 다시 선택해 주세요.",
+  STALE_PROGRESS: "현재 문서가 갱신됐어요. 이동할 링크를 다시 선택해 주세요.",
+  LINK_CENSORED: "검열이 풀리면 이 링크로 이동할 수 있어요.",
+  PARRY_WINDOW_CLOSED: "패링 시간이 지났어요.",
+};
 
 const isScopeFailure = error => ["AUTH_REQUIRED","TRANSPORT_SCOPE_MISMATCH","RECEIPT_SCOPE_MISMATCH"].includes(error?.message);
 
-function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock }) {
+function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, gameAudioRoute, audioControls }) {
   const product = isProductS4Scope(scope);
   const s5 = isS5Scope(scope);
   const [view, setView] = useState(null);
@@ -220,14 +229,19 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     if (panelCommand) setS5Pending(true);
     if (operation === "trap_options") setTrapChoices(null);
     const warningItem = operation === "parry" ? entry.session.snapshot()?.warnings?.find(warning=>warning.childId===input.childId)?.itemId : null;
+    setFailure("");
     itemPresentation?.pending?.(operation,true);
     entry.session.dispatch(operation,input).then(receipt=>{
       if (active.current !== entry) return;
       if (receipt) setLastReceipt(receipt);
+      let cue = null;
       if (itemPresentation && receipt && !seenReceipts.current.has(receipt.receiptId)) {
         seenReceipts.current.add(receipt.receiptId);
-        const cue = itemPresentation.receipt(receipt,{live:!finalAssets || !entry.session.snapshot()?.terminal,warningItem,retransmitted:entry.session.isRetransmission(receipt)});
+        cue = itemPresentation.receipt(receipt,{live:!finalAssets || !entry.session.snapshot()?.terminal,warningItem,retransmitted:entry.session.isRetransmission(receipt)});
         if (cue) setLiveCue(cue);
+      }
+      if (receipt?.ok === false && !cue) {
+        setFailure(receipt.code);
       }
       if (operation === "trap_install" && receipt) setTrapChoices(null);
       if (operation === "trap_options" && receipt?.code === "TRAP_OPTIONS") {
@@ -247,6 +261,18 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
 
   const frame = view?.view;
   const readOnly = disconnected || (frame?.viewer.readOnly ?? true);
+  useGameAudio({ identity: "s5:" + scope.sessionId + ":" + scope.actorId, route: gameAudioRoute,
+    playing: Boolean(gameAudioRoute && !readOnly), ended: Boolean(frame?.viewer.readOnly),
+    connection: gameAudioRoute && disconnected ? "lost" : null });
+  const roster = players.length > 0 && <section aria-label="참가자와 현재 문서">
+    <h2>참가자</h2>
+    <ul className="product-item-roster">
+      {players.map(player => <li key={player.participantId}>
+        <strong>{player.name}{player.participantId === scope.participantId ? " · 나" : ""}</strong>
+        {player.currentTitle && <span>{player.currentTitle}</span>}
+      </li>)}
+    </ul>
+  </section>;
   const censoredPages = new Set(view?.censoredPages ?? []);
   const verifiedSearchQuery = search?.expiresAt > view?.now && search.lastResult?.count > 0 && article
     ? search.lastResult.query : null;
@@ -262,9 +288,17 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   };
   return <div className="group-items-jungle">
     <RaceFrame mode="group" label="그룹 아이템 경기">
-      <RaceHud><HudBrand mode="아이템 그룹"/><HudDoc label="현재 문서" title={article?.title ?? pageId}/>
-        <HudArrow/><HudDoc kind="goal" label="목표 문서" title={target?.title}/><HudStat label="이동" value={frame?.moveCount ?? 0}/></RaceHud>
-      <div className="wr-race-body">
+      <RaceHud>
+        <HudBrand mode="그룹 아이템전"/>
+        <div className="product-item-race-course">
+          <HudDoc label="현재 문서" title={article?.title}/>
+          <HudArrow/><HudDoc kind="goal" label="목표 문서" title={target?.title}/>
+        </div>
+        <HudStat label="이동" value={view?.self?.moveCount ?? "–"}/>{matchClock}
+      </RaceHud>
+      {roster && <details className="product-item-mobile-roster"><summary>참가자 {players.length}명</summary>{roster}</details>}
+      <div className={roster ? "wr-race-body" : "wr-race-body is-wide"}>
+        {roster && <aside className="wr-race-side product-item-race-roster">{roster}</aside>}
         <div className="gip-document" data-product-vfx={product && !finalAssets} data-s5-priority-vfx={finalAssets ? true : undefined}>
           <main className="wr-race-main" aria-label="문서 읽기 영역">
             <WikiViewer target={target} currentTitle={article?.title ?? ""} currentSummary="" currentDocumentHtml={article?.html ?? ""}
@@ -313,13 +347,18 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           {trapChoices.options.length===0 && <p role="status">설치할 수 있는 링크가 없어요.</p>}
           <button type="button" onClick={()=>setTrapChoices(null)}>취소</button>
         </div>}
-        {lastReceipt && <output className="group-items-jungle-receipt" aria-label="원본 요청 결과">{lastReceipt.code}</output>}
         {!itemPresentation && lastReceipt?.code==="TRAP_INSTALLED" && <p role="status">깜짝상자를 설치했어요.</p>}
         {[...(view?.cues ?? []), ...(liveCue ? [liveCue] : [])].map(cue=><React.Fragment key={cue.key}>
-          {itemPresentation.renderCue?.(cue) ?? <p role="status" data-item-cue={cue.kind}>{cue.message}</p>}
+          {itemPresentation?.renderCue?.(cue) ?? <p role="status" data-item-cue={cue.kind}>{cue.message}</p>}
         </React.Fragment>)}
         {disconnected && <button type="button" onClick={()=>void active.current?.refresh(true)}>아이템 상태 다시 확인</button>}
-        {failure && <p className="group-items-jungle-status" role="status">{failure}</p>}
+        {failure && <p className="group-items-jungle-status" role="status">
+          {Object.hasOwn(commandRejectionMessages, failure) ? commandRejectionMessages[failure] : commandFailureMessage}
+        </p>}
+        {(audioControls || roomActions) && <div className="product-item-dock-controls">
+          {audioControls && <details><summary>아이템 소리 설정</summary>{audioControls}</details>}
+          {roomActions && <div className="product-item-actions">{roomActions}</div>}
+        </div>}
         {frame?.viewer.readOnly && <p role="status">경기가 종료됐어요.</p>}
       </div>
     </RaceFrame>

@@ -1,0 +1,6 @@
+.s5-spectator-document__body {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.s5-spectator-document__body img { max-width: 100%; height: auto; }
+.s5-spectator-document__body table { display: block; max-width: 100%; overflow-x: auto; }

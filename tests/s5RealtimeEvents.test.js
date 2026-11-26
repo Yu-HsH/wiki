@@ -39,7 +39,8 @@ test("S5 emits recipient-scoped Postgres Changes without realtime.messages write
   assert.doesNotMatch(sql, /PERFORM realtime\.send\s*\(/);
   assert.doesNotMatch(sql, /GRANT INSERT\s*\([^)]*\)\s*ON realtime\.messages/i);
   assert.match(route, /postgres_changes[\s\S]*?signals_v1/);
-  assert.match(dock, /postgres_changes[\s\S]*?emotes_v1/);
+  assert.match(dock, /race:\s*\{schema:"ink_product_events",\s*table:"emotes_v1"/);
+  assert.match(dock, /postgres_changes[\s\S]*?schema:transport\.schema,\s*table:transport\.table,\s*filter:"recipient_id=eq\."\+actorId/);
   assert.match(route, /kionDock=\{<S5KionDock/);
   assert.match(route, /<S5KionDock roomId=\{roomId\} actorId=\{actorId\} players=\{room\.players\} spectator\/>/);
 });

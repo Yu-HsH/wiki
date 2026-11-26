@@ -1,0 +1,128 @@
+\set ON_ERROR_STOP on
+BEGIN;
+DO $$
+BEGIN
+  IF inet_server_addr() IS NOT NULL OR current_user <> 'postgres'
+     OR NOT EXISTS (SELECT FROM supabase_migrations.schema_migrations WHERE version = '20261126043359')
+  THEN RAISE EXCEPTION 'ISOLATED_DATABASE_ONLY'; END IF;
+END
+$$;
+
+DO $$
+DECLARE
+  actors uuid[] := ARRAY[gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid()];
+  v4_room uuid;
+  s5_room uuid;
+  start_doc uuid := gen_random_uuid();
+  goal_doc uuid := gen_random_uuid();
+  s5_session uuid;
+  room_code text;
+  room_version text;
+  binding jsonb;
+  reply jsonb;
+  frame jsonb;
+BEGIN
+  FOR i IN 1..4 LOOP
+    INSERT INTO auth.users(id, aud, role, email, raw_app_meta_data, raw_user_meta_data, is_anonymous)
+    VALUES (actors[i], 'authenticated', 'authenticated', actors[i] || '@example.invalid', '{}', '{}', i = 4);
+    INSERT INTO public.profiles(id, username, nickname, synthetic_email)
+    VALUES (actors[i], 'item_' || substr(actors[i]::text, 1, 8), 'Item release fixture', actors[i] || '@example.invalid');
+  END LOOP;
+  INSERT INTO public.wiki_pages(page_id, canonical_title)
+    VALUES ('9900101', 'Release Start'), ('9900102', 'Release Goal');
+  INSERT INTO public.wiki_page_snapshots(id, page_id, revision_id, canonical_title_snapshot)
+    VALUES (start_doc, '9900101', '9900301', 'Release Start'), (goal_doc, '9900102', '9900302', 'Release Goal');
+  ASSERT NOT EXISTS (SELECT FROM duel_v4.admission WHERE user_id = ANY(actors)), 'No v4 allowlist fixtures';
+  ASSERT NOT EXISTS (SELECT FROM ink_product.review_actors_v1 WHERE actor_id = ANY(actors)), 'No S5 review actors';
+  ASSERT NOT (SELECT admission_enabled FROM ink_product.entry_policy_v1 WHERE channel = 'review'), 'Review stays closed';
+
+  PERFORM set_config('request.jwt.claim.sub', actors[1]::text, true);
+  SET LOCAL ROLE authenticated;
+  ASSERT public.get_duel_v4_entry()->>'available' = 'true', 'ordinary v4 entry';
+  v4_room := public.create_duel_v4_room(gen_random_uuid());
+  room_code := public.get_duel_v4_state(v4_room)->>'code';
+  PERFORM set_config('request.jwt.claim.sub', actors[4]::text, true);
+  ASSERT public.get_duel_v4_entry()->>'available' = 'false', 'anonymous account with a profile denied';
+  BEGIN
+    PERFORM public.join_duel_v4_room(room_code);
+    RAISE EXCEPTION 'expected v4 anonymous join rejection';
+  EXCEPTION WHEN insufficient_privilege THEN
+    ASSERT SQLERRM = 'DUEL_V4_ENTRY_CLOSED', SQLERRM;
+  END;
+  PERFORM set_config('request.jwt.claim.sub', actors[2]::text, true);
+  ASSERT public.join_duel_v4_room(room_code) = v4_room, 'ordinary v4 join';
+  PERFORM set_config('request.jwt.claim.sub', actors[1]::text, true);
+  reply := public.act_duel_v4(v4_room, gen_random_uuid(), 'target', jsonb_build_object('snapshotId', goal_doc));
+  ASSERT reply->>'code' = 'TARGET_SAVED', reply::text;
+  reply := public.act_duel_v4(v4_room, gen_random_uuid(), 'start', jsonb_build_object('snapshotId', start_doc));
+  ASSERT reply->>'code' = 'STARTED', reply::text;
+
+  reply := public.get_group_items_entry_v1('production');
+  ASSERT reply->>'admissionEnabled' = 'true', reply::text;
+  binding := reply->'binding';
+  reply := public.act_group_items_product_room_v1('create', NULL, gen_random_uuid(), NULL, binding, '{}');
+  ASSERT reply->>'ok' = 'true', reply::text;
+  s5_room := (reply->>'roomId')::uuid;
+  room_code := public.get_group_items_product_room_v1(s5_room, NULL)->>'roomCode';
+  ASSERT room_code ~ '^[0-9A-F]{12}$', 'S5 room projects a valid join code';
+  PERFORM set_config('request.jwt.claim.sub', actors[4]::text, true);
+  BEGIN
+    PERFORM public.act_group_items_product_room_v1('join', NULL, gen_random_uuid(), NULL, binding,
+      jsonb_build_object('roomCode', room_code));
+    RAISE EXCEPTION 'expected S5 anonymous join rejection';
+  EXCEPTION WHEN insufficient_privilege THEN
+    ASSERT SQLERRM = 'S5_MEMBER_REQUIRED', SQLERRM;
+  END;
+
+  FOR i IN 1..3 LOOP
+    PERFORM set_config('request.jwt.claim.sub', actors[i]::text, true);
+    IF i > 1 THEN
+      reply := public.act_group_items_product_room_v1('join', NULL, gen_random_uuid(), NULL, binding,
+        jsonb_build_object('roomCode', room_code));
+      ASSERT reply->>'ok' = 'true', reply::text;
+    END IF;
+    room_version := public.get_group_items_product_room_v1(s5_room, NULL)->>'version';
+    reply := public.act_group_items_product_room_v1('ready', s5_room, gen_random_uuid(), room_version, binding, '{}');
+    ASSERT reply->>'ok' = 'true', reply::text;
+  END LOOP;
+  PERFORM set_config('request.jwt.claim.sub', actors[1]::text, true);
+  room_version := public.get_group_items_product_room_v1(s5_room, NULL)->>'version';
+  reply := public.act_group_items_product_room_v1('start', s5_room, gen_random_uuid(), room_version, binding, '{}');
+  ASSERT reply->>'ok' = 'true', reply::text;
+  RESET ROLE;
+  SELECT session_id INTO STRICT s5_session FROM ink_product.rooms WHERE id = s5_room;
+  SELECT jsonb_build_object('pageId', s.page_id, 'revisionId', s.revision_id, 'snapshotId', s.id,
+    'progressVersion', m.progress_version::text) INTO STRICT frame
+  FROM ink_product.members m JOIN ink_product.wiki_snapshots s ON m.snapshot_id = s.id
+  WHERE m.room_id = s5_room AND m.actor_id = actors[1];
+  SET LOCAL ROLE authenticated;
+  reply := public.get_group_items_product_document_v1(s5_room, s5_session, binding, frame)->'body';
+  ASSERT reply->>'pageId' = '147707' AND reply->>'revisionId' = '41730071'
+    AND encode(sha256(convert_to(reply->>'documentHtml', 'UTF8')), 'hex')
+      = 'd6e795793637188fd03bddd2405b3bafe9d51492c12699481530b8f73db96c7a'
+    AND reply->'links' @> '[{"pageId":"81619"}]'::jsonb, 'real Production course document and click target';
+  RESET ROLE;
+
+  UPDATE duel_v4.public_entry_v1 SET enabled = false WHERE singleton;
+  INSERT INTO duel_v4.admission(user_id, expires_at) VALUES (actors[2], clock_timestamp() + interval '1 hour');
+  SET LOCAL ROLE authenticated;
+  ASSERT public.get_duel_v4_entry()->>'available' = 'false', 'closed v4 entry rejects ordinary new rooms';
+  ASSERT public.get_duel_v4_state(v4_room) IS NOT NULL, 'closed v4 entry preserves an existing room';
+  PERFORM set_config('request.jwt.claim.sub', actors[2]::text, true);
+  ASSERT public.get_duel_v4_entry()->>'available' = 'true', 'unexpired review allowlist still works';
+  RESET ROLE;
+END
+$$;
+
+DO $$
+BEGIN
+  ASSERT NOT has_table_privilege('authenticated', 'duel_v4.public_entry_v1', 'UPDATE'), 'v4 release switch is private';
+  ASSERT NOT has_function_privilege('authenticated', 'ink_product.run_maintenance_v1(text,uuid,integer)', 'EXECUTE'), 'scheduler stays private';
+  ASSERT NOT has_table_privilege('authenticated', 'ink_product.lobby_kion_cleanup_runs_v1', 'SELECT'), 'cleanup evidence stays private';
+  ASSERT EXISTS (SELECT FROM pg_constraint WHERE conname = 'duel_item_grants_slot_index_check'
+    AND pg_get_constraintdef(oid) LIKE '%<= 4%'), 'legacy five slots preserved';
+END
+$$;
+
+ROLLBACK;
+\echo Ordinary v4 create/join/start, ordinary S5 create/join/ready/start, real S5 document, anonymous rejection and legacy constraints verified.

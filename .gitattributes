@@ -4,3 +4,4 @@
 /supabase/migrations/20261120113035_duel_v4_server_search.sql -text
 /supabase/migrations/20261120113647_duel_v4_reward_queue.sql -text
 /supabase/migrations/20261120114137_duel_v4_link_index.sql -text
+/supabase/migrations/20261126043359_public_item_mode_launch_contract.sql -text

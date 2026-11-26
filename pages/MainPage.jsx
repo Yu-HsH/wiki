@@ -72,7 +72,7 @@ function getDailyChallenge() {
   return DAILY_POOL[seed % DAILY_POOL.length];
 }
 
-export default function MainPage({ view = "home", tutorialSession = null, onStartTutorial, onStartGrowth }) {
+export default function MainPage({ view = "home", tutorialSession = null, onStartTutorial, onStartGrowth, tutorialOffer }) {
   const practice = tutorialSession?.mode === "practice";
   const homeToken = tutorialSession?.token("home.play");
   const soloToken = tutorialSession?.token("play.solo");
@@ -327,6 +327,7 @@ export default function MainPage({ view = "home", tutorialSession = null, onStar
   return (
     <WikiRaceShell user={user} level={headerLevel} onLogout={practice ? tutorialSession.exit : handleLogout} view={view} practice={practice}
       onNavigate={practice ? tutorialSession.navigate : undefined}>
+        {!practice && tutorialOffer}
         {!practice && onStartTutorial && <div className="wr-tutorial-entry" aria-label="키온 연습 시작">
           <button type="button" className="app-btn app-btn-ghost" onClick={() => onStartTutorial("intro-core")}>처음이라면 게임 방법 연습</button>
           {onStartGrowth && <button type="button" className="app-btn app-btn-ghost" onClick={onStartGrowth}>보상·프로필 연습</button>}
@@ -351,7 +352,9 @@ export default function MainPage({ view = "home", tutorialSession = null, onStar
 
         {view === "play" ? (
           <PlayPage
+            key={user.id + ":" + practice}
             isGuest={user.isGuest}
+            practice={practice}
             onSingle={() => { if (practice) { tutorialSession.act(soloToken); return; } setKeyword(""); setShowKeywordModal(true); }}
             onMultiplayer={(mode) => { if (practice) return; if (mode === "group-items") { navigate("/multiplayer/group-items"); return; } navigate(`/multiplayer?mode=${mode}`); }}
           />

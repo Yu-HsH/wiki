@@ -91,8 +91,8 @@ export function ResultScene({ reached = false, celebration = "none", destination
 }
 
 /** Stitched double-frame card — RESULT only (Freeze ResultCard). */
-export function ResultCard({ children }) {
-  return <section className="wr-result-card wr-rcard">{children}</section>;
+export function ResultCard({ children, label }) {
+  return <section className="wr-result-card wr-rcard" aria-label={label}>{children}</section>;
 }
 
 /** Outcome row: kicker ▸ heading ▸ meta ▸ pill, optional explanation. */
@@ -163,7 +163,7 @@ export function ResultActions({ children }) {
  * Final standings 1–8 (server order). Rows come from `buildGroupStandingRows`.
  * Status is text + icon — never colour alone.
  */
-export function GroupStandings({ rows = [], finishedCount = 0, retiredCount = 0, course = null }) {
+export function GroupStandings({ rows = [], finishedCount = 0, retiredCount = 0, course = null, showMetrics = true }) {
   return <section className="wr-result-row wr-standings" aria-labelledby="wr-standings-title">
     <div className="wr-standings-head">
       <h2 id="wr-standings-title" className="wr-hud-label">FINAL STANDINGS · 최종 순위</h2>
@@ -171,7 +171,7 @@ export function GroupStandings({ rows = [], finishedCount = 0, retiredCount = 0,
       <small>완주 {finishedCount} · 리타이어 {retiredCount}</small>
     </div>
     <div className="wr-srow wr-srow--head" aria-hidden="true">
-      <span>순위</span><span>탐험가</span><span>시간</span><span>이동</span><span>상태</span>
+      <span>순위</span><span>탐험가</span>{showMetrics && <><span>시간</span><span>이동</span></>}<span>상태</span>
     </div>
     <ol className="wr-standings-list">
       {rows.map((row, index) => <li key={row.key} style={{ "--scene-order": index }} className={`wr-srow ${row.isMe ? "is-me" : ""} ${row.retired ? "is-retired" : ""} ${row.isWinner ? "is-winner" : ""}`} aria-current={row.isMe ? "true" : undefined}>
@@ -179,8 +179,10 @@ export function GroupStandings({ rows = [], finishedCount = 0, retiredCount = 0,
           ? <><span aria-hidden="true">–</span><span className="wr-sr-only">순위 없음</span></>
           : <>{row.rank}<span className="wr-sr-only">위</span></>}</span>
         <span className="wr-srow-name"><span className="wr-srow-nick">{row.name}</span>{row.isMe && <Pill tone="blue" filled>나</Pill>}</span>
-        <span className="wr-srow-time">{row.time === "–" ? <><span aria-hidden="true">–</span><span className="wr-sr-only">완주 시간 없음</span></> : row.time}</span>
-        <span className="wr-srow-moves">{row.moves}</span>
+        {showMetrics && <>
+          <span className="wr-srow-time">{row.time === "–" ? <><span aria-hidden="true">–</span><span className="wr-sr-only">완주 시간 없음</span></> : row.time}</span>
+          <span className="wr-srow-moves">{row.moves}</span>
+        </>}
         <span className="wr-srow-state">
           <RaceIcon name={row.retired ? "current" : "check"} size={12} />
           <span>{row.status}</span>

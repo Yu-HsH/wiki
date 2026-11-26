@@ -23,6 +23,15 @@ export function getBrowserGuestIdentity(storage, createId = () => globalThis.cry
   return Object.freeze({ kind: 'guest', id });
 }
 
+export function hasCompletedGuestTutorial(storage, repository, module) {
+  let id;
+  try { id = storage?.getItem(PREFIX + 'browser-guest'); } catch { /* memory-only */ }
+  if (typeof id !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(id)) id = tabGuestId;
+  if (!id) return false;
+  const scope = tutorialScope({ kind: 'guest', id });
+  return Boolean(repository.load(scope, module).completedVersion);
+}
+
 export function freshProgress(module) {
   return { schema: SCHEMA, moduleId: module.id, version: module.version, status: 'unseen', stepId: module.steps[0].id,
     completedVersion: null, dismissedVersion: null, offeredVersion: null, skippedChapters: [], updatedAt: null, ...(module.initialPracticeState ? { practice: module.initialPracticeState() } : {}) };

@@ -2,7 +2,7 @@ import "./s5Next.css";
 import './phase2.css';
 import {Phase2Countdown} from './Phase2Panels.jsx';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../authContext.jsx";
 import { supabase } from "../../supabaseClient.js";
 import GroupItemsJungle from "./GroupItemsJungle.jsx";
@@ -16,7 +16,12 @@ import { createFinalAssetAudio } from "./finalAssetAudio.js";
 import { createFinalAssetPresentation } from "./finalAssetPresentation.js";
 import { FIXED_PRODUCT_WIKI_BINDING, readFixedProductWikiDocument } from "./productFixedWikiDocument.js";
 import { loadProductWikiDocument } from "./productWikiDocument.js";
-import S5KionDock from "./S5KionDock.jsx";
+import S5KionDock, { MODE_FOLLOWUP_ENABLED } from "./S5KionDock.jsx";
+import S5SpectatorDocument from "./S5SpectatorDocument.jsx";
+import { CopyCodeButton, LobbyHeader, MeTag, StatusMark } from "../wiki-race/LobbyParts.jsx";
+import { HudBrand, HudDoc, RaceFrame, RaceHold, RaceHud } from "../wiki-race/race/RaceParts.jsx";
+import { GroupStandings, ResultActions, ResultCard, ResultOutcome, ResultScreen, ResultXpRow } from "../wiki-race/result/ResultParts.jsx";
+import "./groupItemsJungle.css";
 
 const productPath = "/multiplayer/group-items";
 const entryChannel = import.meta.env.MODE === "s4-product-candidate" ? "review" : "production";
@@ -95,20 +100,22 @@ function ProductEntry({ binding, actorId }) {
     const result = await act(operation, null, null, payload);
     if (result) navigate(productPath+"/"+result.roomId);
   }
-  return <main>
-    <h1>그룹 아이템전</h1>
+  return <main className="wr-page wr65-field wr-room wr-room--group product-item-camp">
+    <LobbyHeader kicker="ITEM RACE · GROUP" title="그룹 아이템전" onLeave={()=>navigate("/play")} leaveLabel="모드 선택" />
+    <div className="product-item-camp-panel">
     <p>3~8명이 같은 문서를 출발해 목표 문서까지 경주합니다. 시작 시 아이템 1개를 받고, 20초 뒤 첫 보급부터 25초마다 새 아이템을 받습니다. 가방은 최대 2칸입니다.</p>
     <button type="button" disabled={pending} onClick={()=>void enter("create", {})}>아이템 방 만들기</button>
     <form onSubmit={event=>{event.preventDefault(); void enter("join", { roomCode:code.trim().toUpperCase() });}}>
       <label>아이템 방 코드 <input value={code} onChange={event=>setCode(event.target.value)} required maxLength={16}/></label>
       <button disabled={pending}>입장</button>
     </form>
-    <button type="button" onClick={()=>navigate("/play")}>모드 선택으로 돌아가기</button>
-    {error && <p role="alert">{error}</p>}
+    {error && <p role="alert">아이템 방 요청을 완료하지 못했어요. 방 코드와 연결을 확인해 주세요.</p>}
+    </div>
   </main>;
 }
 
-function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players }) {
+function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, matchClock, roomActions }) {
+  const { pathname } = useLocation();
   const previewAudio = import.meta.env.VITE_GROUP_ITEMS_INK_PREVIEW === "1";
   const fixedAudio = productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING);
   const finalAssets = (import.meta.env.VITE_GROUP_ITEMS_FINAL_ASSETS === "1" ||
@@ -159,8 +166,7 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       return { scope:document.scope, body };
     },
   }),[scope,roomId,sessionId,binding]);
-  return <>
-    {(fixedAudio || previewAudio || finalAssets) && <div className={finalAssets ? "s5-final-audio" : undefined} style={finalAssets ? undefined : {display:"contents"}}><button type="button" aria-pressed={audioEnabled} onClick={()=>{
+  const audioControls = (fixedAudio || previewAudio || finalAssets) && <div className={finalAssets ? "s5-final-audio" : undefined}><button type="button" aria-pressed={audioEnabled} onClick={()=>{
       const enabled = !audioEnabled;
       audio.current?.enable(enabled);
       sessionStorage.setItem(audioPreference,enabled ? "on" : "off");
@@ -171,11 +177,11 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       audio.current?.setVolume(next/100);
       sessionStorage.setItem(volumePreference,String(next));
       setVolume(next);
-    }}/></label>}</div>}
-    <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
+    }}/></label>}</div>;
+  return <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
       target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
-      kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>
-  </>;
+      players={players} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
+      kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>;
 }
 
 
@@ -183,7 +189,6 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
   const [failure, setFailure] = useState("");
-  const [copied, setCopied] = useState(false);
   const [lastSync, setLastSync] = useState("initial");
   const binding = room?.binding ?? defaultBinding;
   const roomRef = useRef(null), reloadRef = useRef(null), itemListeners = useRef(new Set());
@@ -274,35 +279,76 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
     else void reloadRef.current?.();
   }
 
-  if (failure) return <main><p role="alert">{failure}</p><button type="button" onClick={()=>void reloadRef.current?.()}>다시 확인</button></main>;
-  if (!room) return <p role="status">아이템 방을 확인하는 중…</p>;
-  const labels = { ready:"준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기", rematch:"재경기" };
-  return <div data-product-group-phase={room.phase} data-product-sync={lastSync}
-    data-product-document-source={productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING) ? "fixed" : "wikipedia"}>
-    {room.phase === "waiting" && <section aria-label="아이템 그룹 대기실">
-      <h1>아이템 그룹 대기실</h1>
-      <p>모든 참가자가 준비하면 방장이 경기를 시작할 수 있어요. 최소 {room.minimumPlayers}명, 최대 {room.maximumPlayers}명입니다.</p>
-      {room.roomCode && <p>방 코드 <output aria-label="아이템 방 코드">{room.roomCode}</output> <button type="button" onClick={()=>{
-        void navigator.clipboard?.writeText(room.roomCode).then(()=>setCopied(true)).catch(()=>setCopied(false));
-      }}>코드 복사</button>{copied && <span role="status"> 복사 완료</span>}</p>}
-      <ul>{room.players.map(player=><li key={player.participantId}>{player.name} {player.ready ? "준비 완료" : "대기 중"}</li>)}</ul>
-    </section>}
-    {room.lifecycle && (room.phase2Policy && room.phase==='playing' ? <Phase2Countdown lifecycle={room.lifecycle} serverObservedAt={room.serverObservedAt}/> : <p aria-label="아이템전 경기 기한">최대 20분 · 3위 완주 후 최대 2분 유예{room.phase === "playing" && room.lifecycle.grace_ends_at && " · 유예 진행 중"}</p>)}
-
-    {room.phase === "playing" && (room.role === "player" ? <ProductMatch roomId={roomId} sessionId={room.sessionId}
+  if (failure || !room) return <RaceFrame mode="group" label="그룹 아이템전">
+    <RaceHold title={failure ? "아이템 방을 불러오지 못했어요." : "아이템 방을 확인하는 중…"}
+      actions={failure && <button type="button" className="wr-race-btn" onClick={()=>void reloadRef.current?.()}>다시 확인</button>} />
+  </RaceFrame>;
+  const labels = { ready: "준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기", rematch:"재경기" };
+  const actions = room.actions.map(action => <button key={action} className="wr-race-btn" type="button" disabled={pending} onClick={()=>void command(action)}>{labels[action]}</button>);
+  const actionError = error && <p role="alert">요청을 완료하지 못했어요. 방 상태를 다시 확인해 주세요.</p>;
+  const matchClock = room.lifecycle && (room.phase2Policy
+    ? <Phase2Countdown lifecycle={room.lifecycle} serverObservedAt={room.serverObservedAt}/>
+    : <p aria-label="아이템전 경기 기한">최대 20분 · 3위 완주 후 최대 2분 유예{room.lifecycle.grace_ends_at && " · 유예 진행 중"}</p>);
+  let content;
+  if (room.phase === "playing" && room.role === "player") {
+    content = <ProductMatch roomId={roomId} sessionId={room.sessionId}
       participantId={room.participantId} ownerEpoch={room.ownerEpoch} actorId={actorId} binding={binding}
-      warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe} players={room.players}/> : <section aria-label="아이템 그룹 관전">
-      <h1>아이템 그룹 관전</h1><ul>{room.players.map(player=><li key={player.participantId}>{player.name} {player.currentTitle}</li>)}</ul>
-      <S5KionDock roomId={roomId} actorId={actorId} players={room.players} spectator/>
-    </section>)}
-    {room.phase === "finished" && <section aria-label="아이템 그룹 결과"><h1>아이템 그룹 결과</h1>
-      <ol>{[...room.results].sort((a,b)=>a.rank-b.rank).map(row=><li key={row.participantId}>
-        {row.status === "left" ? "기권/시간 초과" : row.rank+"위"} {row.name}{row.participantId === room.participantId && (row.xp === null ? " · XP 정산 대기" : ` · +${row.xp} XP`)}
-      </li>)}</ol>
-    </section>}
-    {room.actions.map(action=><button key={action} type="button" disabled={pending} onClick={()=>void command(action)}>{labels[action]}</button>)}
-    {error && <p role="alert">{error}</p>}
-  </div>;
+      warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe} players={room.players}
+      matchClock={matchClock} roomActions={<>{actions}{actionError}</>}/>;
+  } else if (room.phase === "playing") {
+    content = <RaceFrame mode="group" label="아이템 그룹 관전">
+      <RaceHud><HudBrand mode="그룹 아이템전" sub="관전" /><HudDoc kind="goal" label="목표 문서" title={room.target?.title} />{matchClock}</RaceHud>
+      <section className="product-item-camp-panel" aria-labelledby="s5-spectator-title">
+        <h1 id="s5-spectator-title">그룹 아이템전 관전</h1>
+        <ul className="product-item-roster" aria-label="참가자와 현재 문서">
+          {room.players.map(player => <li key={player.participantId}><strong>{player.name}</strong><span>{player.currentTitle || "현재 문서 정보 없음"}</span></li>)}
+        </ul>
+      </section>
+      {MODE_FOLLOWUP_ENABLED && <S5SpectatorDocument room={room} actorId={actorId}
+        readIdentity={readIdentity} rpc={rpc} />}
+      <div className="group-items-jungle-dock group-items-jungle-dock--spectator">
+        <S5KionDock roomId={roomId} actorId={actorId} players={room.players} spectator/>
+        {actionError}
+      </div>
+    </RaceFrame>;
+  } else if (room.phase === "finished") {
+    const standings = [...room.results].sort((a,b)=>a.rank-b.rank).map(row => ({
+      key: row.participantId, rank: row.rank, name: row.name,
+      isMe: row.participantId === room.participantId, isWinner: row.rank === 1 && row.status === "finished",
+      retired: row.status === "left", status: row.status === "left" ? "기권/시간 초과" : row.status === "finished" ? "완주" : "경기 종료",
+    }));
+    const selfResult = room.results.find(row => row.participantId === room.participantId);
+    content = <ResultScreen mode="group" tone="neutral" titleId="s5-final-result" resultKey={roomId} testId="s5-final-result">
+      <ResultCard label="아이템 그룹 결과">
+        <ResultOutcome kicker="그룹 아이템전" title="최종 경기 결과" titleId="s5-final-result" />
+        {selfResult && <ResultXpRow><strong>{selfResult.xp === null ? "XP 정산 대기" : "+" + selfResult.xp + " XP"}</strong></ResultXpRow>}
+        <GroupStandings rows={standings} showMetrics={false} finishedCount={room.results.filter(row => row.status === "finished").length} retiredCount={standings.filter(row => row.retired).length} />
+        {actionError}
+        <ResultActions><Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>{actions}</ResultActions>
+      </ResultCard>
+    </ResultScreen>;
+  } else {
+    content = <main className="wr-page wr65-field wr-room wr-room--group product-item-camp" aria-label="아이템 그룹 대기실">
+      <LobbyHeader kicker="ITEM RACE · GROUP" title="그룹 아이템전 대기실">
+        {room.roomCode && <CopyCodeButton code={room.roomCode} />}
+      </LobbyHeader>
+      <section className="product-item-camp-panel" aria-label="참가 인원과 준비 상태">
+        <h2>참가자 {room.players.length} / {room.maximumPlayers}명</h2>
+        <p>최소 {room.minimumPlayers}명이 참여하고 모두 준비하면 방장이 시작할 수 있어요.</p>
+        <ul className="product-item-roster">
+          {room.players.map(player => <li key={player.participantId}>
+            <strong>{player.name}</strong>{player.participantId === room.participantId && <MeTag />}
+            <StatusMark tone={player.ready ? "ready" : "pending"}>{player.ready ? "준비 완료" : "대기 중"}</StatusMark>
+          </li>)}
+        </ul>
+        {MODE_FOLLOWUP_ENABLED && <S5KionDock mode="lobby" roomId={roomId} actorId={actorId}
+          players={room.players} label="대기방 키온 감정표현" />}
+        <div className="product-item-actions">{actions}</div>{actionError}
+      </section>
+    </main>;
+  }
+  return <div data-product-group-phase={room.phase} data-product-sync={lastSync}
+    data-product-document-source={productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING) ? "fixed" : "wikipedia"}>{content}</div>;
 }
 
 export default function ProductGroupItemsRoute() {
@@ -322,7 +368,7 @@ export default function ProductGroupItemsRoute() {
     return ()=>abort.abort();
   },[roomId,user?.id]);
   if (!supabase || !productId(user?.id) || (roomId && !productId(roomId))) return <p role="alert">아이템 그룹을 사용할 수 없습니다.</p>;
-  if (!roomId && (!entry || !binding || !entry.admissionEnabled)) return <main>
+  if (!roomId && (!entry || !binding || !entry.admissionEnabled)) return <main className="wr-page wr65-field wr-room wr-room--group product-item-camp">
     <h1>그룹 아이템전</h1>
     <p role={entryError ? "alert" : "status"}>{entryError || (!entry
       ? "아이템전 이용 가능 여부를 확인하는 중…"

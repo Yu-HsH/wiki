@@ -1,0 +1,192 @@
+\set ON_ERROR_STOP on
+-- Run the named action only on a separately verified connection.
+-- release_target: isolated or ctdpyrmitljgrcgfvndn
+-- release_action: stage, start_jobs, open_modes, close_modes
+BEGIN;
+SELECT set_config('wiki_launch.target', :'release_target', true),
+       set_config('wiki_launch.action', :'release_action', true);
+SET LOCAL lock_timeout = '5s';
+
+DO $guard$
+BEGIN
+  IF current_user <> 'postgres' OR current_database() <> 'postgres'
+     OR current_setting('wiki_launch.target') NOT IN ('isolated', 'ctdpyrmitljgrcgfvndn')
+     OR current_setting('wiki_launch.action') NOT IN ('stage', 'start_jobs', 'open_modes', 'close_modes')
+     OR (current_setting('wiki_launch.target') = 'isolated' AND inet_server_addr() IS NOT NULL)
+     OR (current_setting('wiki_launch.target') <> 'isolated' AND inet_server_addr() IS NULL)
+     OR (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 68
+     OR NOT EXISTS (SELECT FROM supabase_migrations.schema_migrations WHERE version = '20261126043359')
+  THEN RAISE EXCEPTION 'RELEASE_TARGET_OR_VERSION_MISMATCH'; END IF;
+END
+$guard$;
+
+SELECT current_setting('wiki_launch.action') = 'stage' AS stage,
+       current_setting('wiki_launch.action') = 'start_jobs' AS start_jobs,
+       current_setting('wiki_launch.action') = 'open_modes' AS open_modes
+\gset
+
+CREATE TEMP TABLE launch_owner_restore ON COMMIT DROP AS
+SELECT inherit_option, set_option FROM pg_auth_members
+WHERE roleid = 'ink_product_owner'::regrole AND member = 'postgres'::regrole
+  AND grantor = 'postgres'::regrole;
+GRANT ink_product_owner TO postgres WITH INHERIT TRUE;
+GRANT ink_product_owner TO postgres WITH SET TRUE;
+
+\if :stage
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+DO $schedule$
+DECLARE job_id bigint;
+BEGIN
+  IF current_setting('cron.timezone') NOT IN ('GMT', 'UTC')
+     OR current_setting('cron.database_name') <> current_database()
+     OR NOT current_setting('cron.log_run')::boolean
+     OR EXISTS (SELECT FROM cron.job WHERE jobname IN ('wiki-s5-minute-cleanup', 'wiki-s5-daily-receipts'))
+     OR EXISTS (SELECT FROM ink_product.maintenance_jobs_v1 WHERE enabled)
+     OR EXISTS (SELECT FROM duel_v4.public_entry_v1 WHERE enabled)
+  THEN RAISE EXCEPTION 'RELEASE_SCHEDULE_PRECONDITION'; END IF;
+
+  job_id := cron.schedule('wiki-s5-minute-cleanup', '* * * * *',
+    $cmd$SELECT ink_product.run_maintenance_v1('minute_cleanup', gen_random_uuid(), 50)$cmd$);
+  PERFORM cron.alter_job(job_id, active := false);
+  -- The existing next_due_at gate executes daily on UTC midnight. Polling also
+  -- gives partial batches and transient failures a bounded retry delay.
+  job_id := cron.schedule('wiki-s5-daily-receipts', '*/5 * * * *',
+    $cmd$SELECT ink_product.run_maintenance_v1('daily_receipts', gen_random_uuid(), 50)$cmd$);
+  PERFORM cron.alter_job(job_id, active := false);
+END
+$schedule$;
+
+SET LOCAL ROLE ink_product_owner;
+DO $course$
+DECLARE original ink_product.entry_policy_v1;
+        source ink_product.policies;
+        production jsonb;
+        matched integer;
+BEGIN
+  SELECT * INTO STRICT original FROM ink_product.entry_policy_v1 WHERE channel = 'review' AND NOT admission_enabled;
+  IF original.binding->>'policyDigest' <> 'ebde015c94f38cf9db0ef77abc852b67a1511410c6aa9fcd5218ee17fa70bd0b'
+     OR EXISTS (SELECT FROM ink_product.entry_policy_v1 WHERE channel = 'production')
+  THEN RAISE EXCEPTION 'S5_SOURCE_POLICY_MISMATCH'; END IF;
+  SELECT * INTO STRICT source FROM ink_product.policies WHERE binding = original.binding;
+
+  SELECT count(*) INTO matched
+  FROM ink_product.wiki_course_pages c
+  JOIN ink_product.wiki_snapshots s ON s.id = c.snapshot_id AND c.page_id = s.page_id
+  JOIN ink_product.wiki_documents d USING (snapshot_id)
+  JOIN (VALUES
+    ('147707', '41730071', 'd6e795793637188fd03bddd2405b3bafe9d51492c12699481530b8f73db96c7a'),
+    ('8783', '42725227', '40bdaaf925f572583c6718b4014cabf0510518c49004cd04f26942e3f8a88cb9'),
+    ('81619', '42724058', '5be5e484cc1bc6d7a5025313c8eff862c3246eeb6fa7a58960dc1494a7317e52'),
+    ('696', '42751389', 'f37b63943885ebca770987193c66d2c2a3aa4aa7fd7f82f23ca5f7456d12a66f'),
+    ('8554', '42692514', 'a8614a1c2194cc5331280d79740a431575216cc2fe2e73ec1a2d02d4668b22d8'),
+    ('3759', '42386356', 'e8f6df3ecfac5e54337928d465e1dc9b93d7ae2bddfe2e5298ac3092d0e594ca')
+  ) expected(page_id, revision_id, document_digest)
+    ON (s.page_id, s.revision_id, d.document_digest) = (expected.page_id, expected.revision_id, expected.document_digest)
+  WHERE c.binding = original.binding;
+  IF matched <> 6 OR (SELECT count(*) FROM ink_product.wiki_course_pages WHERE binding = original.binding) <> 6
+     OR NOT EXISTS (SELECT FROM ink_product.wiki_snapshots WHERE id = source.start_snapshot_id AND page_id = '147707' AND revision_id = '41730071')
+     OR NOT EXISTS (SELECT FROM ink_product.wiki_snapshots WHERE id = source.goal_snapshot_id AND page_id = '8783' AND revision_id = '42725227')
+     OR EXISTS (
+       SELECT FROM (VALUES ('147707','81619'), ('81619','8783'), ('81619','8554'), ('8554','8783')) edges(src, dst)
+       WHERE NOT EXISTS (
+         SELECT FROM ink_product.wiki_course_pages c JOIN ink_product.wiki_links l USING (snapshot_id)
+         WHERE c.binding = original.binding AND c.page_id = edges.src AND l.page_id = edges.dst
+       )
+     )
+  THEN RAISE EXCEPTION 'S5_WIKIPEDIA_BINDING_MISMATCH'; END IF;
+
+  production := original.binding || jsonb_build_object(
+    'policyDigest', encode(sha256(convert_to('wiki-s5-production-v1:' || (original.binding->>'policyDigest'), 'UTF8')), 'hex')
+  );
+  INSERT INTO ink_product.policies VALUES
+    (production, source.minimum_players, source.maximum_players, source.warning_window_ms, source.start_snapshot_id, source.goal_snapshot_id);
+  INSERT INTO ink_product.wiki_course_pages SELECT production, page_id, snapshot_id
+    FROM ink_product.wiki_course_pages WHERE binding = original.binding;
+  INSERT INTO ink_product.s5_phase1_policies_v1 SELECT production, contract
+    FROM ink_product.s5_phase1_policies_v1 WHERE binding = original.binding;
+  IF NOT FOUND THEN RAISE EXCEPTION 'S5_PHASE_1_REQUIRED'; END IF;
+  INSERT INTO ink_product.s5_phase2_policies_v1 SELECT production FROM ink_product.s5_phase2_policies_v1 WHERE binding = original.binding;
+  IF NOT FOUND THEN RAISE EXCEPTION 'S5_PHASE_2_REQUIRED'; END IF;
+  INSERT INTO ink_product.s5_phase3_policies_v1 SELECT production FROM ink_product.s5_phase3_policies_v1 WHERE binding = original.binding;
+  IF NOT FOUND THEN RAISE EXCEPTION 'S5_PHASE_3_REQUIRED'; END IF;
+  INSERT INTO ink_product.s5_phase4_policies_v1 SELECT production FROM ink_product.s5_phase4_policies_v1 WHERE binding = original.binding;
+  IF NOT FOUND THEN RAISE EXCEPTION 'S5_PHASE_4_REQUIRED'; END IF;
+  INSERT INTO ink_product.s5_phase5_policies_v1 SELECT production FROM ink_product.s5_phase5_policies_v1 WHERE binding = original.binding;
+  IF NOT FOUND THEN RAISE EXCEPTION 'S5_PHASE_5_REQUIRED'; END IF;
+  INSERT INTO ink_product.entry_policy_v1 (channel, binding, lifecycle_contract)
+    VALUES ('production', production, original.lifecycle_contract);
+
+  INSERT INTO ink_product.maintenance_jobs_v1 (job, enabled, next_due_at)
+  VALUES ('minute_cleanup', false, clock_timestamp()), ('daily_receipts', false, clock_timestamp())
+  ON CONFLICT (job) DO NOTHING;
+END
+$course$;
+RESET ROLE;
+\elif :start_jobs
+DO $jobs$
+BEGIN
+  IF (SELECT count(*) FROM cron.job WHERE username = 'postgres' AND database = current_database()
+      AND NOT active AND jobname IN ('wiki-s5-minute-cleanup', 'wiki-s5-daily-receipts')) <> 2
+     OR (SELECT count(*) FROM ink_product.entry_policy_v1 WHERE channel = 'production' AND NOT admission_enabled) <> 1
+  THEN RAISE EXCEPTION 'RELEASE_JOBS_NOT_STAGED'; END IF;
+  PERFORM cron.alter_job(jobid, active := true)
+  FROM cron.job WHERE jobname IN ('wiki-s5-minute-cleanup', 'wiki-s5-daily-receipts') AND username = 'postgres';
+END
+$jobs$;
+SET LOCAL ROLE ink_product_owner;
+UPDATE ink_product.maintenance_jobs_v1 SET enabled = true, next_due_at = clock_timestamp()
+  WHERE job IN ('minute_cleanup', 'daily_receipts') AND NOT enabled;
+RESET ROLE;
+\elif :open_modes
+DO $launch$
+BEGIN
+  IF NOT (SELECT entry_open FROM private.pr63_drain_gate WHERE singleton)
+     OR (SELECT count(*) FROM cron.job WHERE username = 'postgres' AND database = current_database()
+       AND active AND jobname IN ('wiki-s5-minute-cleanup', 'wiki-s5-daily-receipts')
+       AND EXISTS (
+         SELECT FROM (
+           SELECT r.status, r.end_time FROM cron.job_run_details r WHERE r.jobid = cron.job.jobid
+           ORDER BY r.runid DESC LIMIT 1
+         ) latest WHERE latest.status = 'succeeded' AND latest.end_time > now() - interval '10 minutes'
+       )) <> 2
+     OR (SELECT count(*) FROM ink_product.maintenance_jobs_v1 j WHERE enabled
+       AND consecutive_errors = 0
+       AND ((j.job = 'minute_cleanup' AND last_completed_at > now() - interval '10 minutes')
+         OR (j.job = 'daily_receipts' AND last_completed_at > now() - interval '24 hours' AND j.next_due_at > now()))
+       AND 'success' = (SELECT r.status FROM ink_product.maintenance_runs_v1 r WHERE r.job = j.job
+         ORDER BY r.completed_at DESC LIMIT 1)) <> 2
+     OR NOT EXISTS (SELECT FROM ink_product.maintenance_jobs_v1 j
+       JOIN private.v4_kion_cleanup_runs_v1 v ON v.completed_at = j.last_completed_at
+       JOIN ink_product.lobby_kion_cleanup_runs_v1 s ON s.completed_at = j.last_completed_at
+       WHERE j.job = 'daily_receipts' AND v.error_state IS NULL AND s.error_state IS NULL
+       AND v.deleted_rows < 2000 AND s.deleted_rows < 2000)
+     OR (SELECT count(*) FROM ink_product.entry_policy_v1 WHERE channel = 'production' AND NOT admission_enabled) <> 1
+  THEN RAISE EXCEPTION 'RELEASE_ENTRY_PRECONDITION'; END IF;
+END
+$launch$;
+UPDATE duel_v4.public_entry_v1 SET enabled = true WHERE singleton;
+SET LOCAL ROLE ink_product_owner;
+UPDATE ink_product.entry_policy_v1 SET admission_enabled = true, revision = revision + 1
+  WHERE channel = 'production' AND NOT admission_enabled;
+RESET ROLE;
+\else
+UPDATE duel_v4.public_entry_v1 SET enabled = false WHERE singleton;
+SET LOCAL ROLE ink_product_owner;
+UPDATE ink_product.entry_policy_v1 SET admission_enabled = false, revision = revision + 1
+  WHERE channel = 'production' AND admission_enabled;
+RESET ROLE;
+\endif
+
+DO $restore$
+DECLARE before_grant record;
+BEGIN
+  SELECT * INTO before_grant FROM pg_temp.launch_owner_restore;
+  IF FOUND THEN
+    EXECUTE format('GRANT ink_product_owner TO postgres WITH INHERIT %s', before_grant.inherit_option);
+    EXECUTE format('GRANT ink_product_owner TO postgres WITH SET %s', before_grant.set_option);
+  ELSE
+    REVOKE ink_product_owner FROM postgres GRANTED BY CURRENT_USER;
+  END IF;
+END
+$restore$;
+COMMIT;

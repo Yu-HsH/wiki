@@ -1,5 +1,8 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTutorialApp } from "../components/TutorialAppHost.jsx";
+import { TUTORIAL_LOGIN_PATH, tutorialLoginPath } from "../utils/tutorialIntegration.js";
+import { guidedPracticeModules } from "../tutorial/modules/guidedPractice.js";
 
 const NAV_ITEMS = [
     { path: "/about", label: "서비스 소개" },
@@ -36,7 +39,7 @@ const PAGES = {
         eyebrow: "Guide",
         title: "처음 시작하는 플레이어를 위한 전략 가이드",
         description:
-            "처음이라면 로그인 화면에서 게스트로 들어간 뒤 로비의 ‘처음이라면 게임 방법 연습’을 눌러 보세요. 시작 문서에서 본문 링크를 따라 목표 문서에 도착하는 과정을 기록이나 보상에 영향 없이 연습할 수 있습니다.",
+            "키온과 함께 시작 문서에서 목표 문서까지 링크를 따라가 보세요. 이전에 멈춘 연습을 이어가거나 처음부터 다시 할 수 있어요. 연습은 실제 기록이나 보상에 반영되지 않아요.",
         sections: [
             {
                 title: "1. 시작 문서의 성격을 먼저 파악하기",
@@ -56,7 +59,7 @@ const PAGES = {
             {
                 title: "4. 아이템 모드 활용법",
                 body:
-                    "아이템은 아이템전을 선택한 1:1 대전에서만 사용합니다. 링크 목록으로 현재 문서의 이동 후보를 살피거나, 방어 아이템으로 상대의 공격에 대응할 수 있습니다. 항목별 효과는 1:1 대기실의 아이템 안내에서 확인하세요.",
+                    "PLAY에서 입장 가능한 아이템전을 확인한 뒤, 대기실의 아이템 안내를 읽어 보세요. 링크 후보를 살피거나 공격에 대응하는 아이템의 효과는 모드마다 다를 수 있습니다.",
             },
             {
                 title: "5. 기록을 개선하는 복기 방법",
@@ -125,6 +128,7 @@ const PAGES = {
 
 export default function PublicContentPage() {
     const location = useLocation();
+    const tutorial = useTutorialApp();
     const page = PAGES[location.pathname] || PAGES["/about"];
 
     return (
@@ -148,6 +152,29 @@ export default function PublicContentPage() {
                 <p className="public-eyebrow">{page.eyebrow}</p>
                 <h1>{page.title}</h1>
                 <p className="public-lead">{page.description}</p>
+                {location.pathname === "/guide" && tutorial?.ready && (
+                    <div className="wr-tutorial-entry">
+                        {tutorial.canStart
+                            ? <button type="button" className="app-btn app-btn-primary" onClick={() => tutorial.start()}>키온과 게임 방법 연습</button>
+                            : <Link to={TUTORIAL_LOGIN_PATH} className="app-btn app-btn-primary">키온과 게임 방법 연습</Link>}
+                    </div>
+                )}
+
+                {location.pathname === "/guide" && tutorial?.ready && (
+                    <section className="public-section wr-tutorial-guide-courses" aria-labelledby="guide-courses-title">
+                        <h2 id="guide-courses-title">모드를 골라 연습하기</h2>
+                        <p>예시를 직접 눌러 보는 모의 연습이에요. 실제 모드 입장 조건은 PLAY에서 확인할 수 있어요.</p>
+                        <ul className="wr-tutorial-entry">
+                            {guidedPracticeModules.map(course => (
+                                <li key={course.id}>
+                                    {tutorial.canStart
+                                        ? <button type="button" className="app-btn app-btn-ghost" onClick={() => tutorial.start(course.id)}>{course.label}</button>
+                                        : <Link className="app-btn app-btn-ghost" to={tutorialLoginPath(course.id)}>{course.label}</Link>}
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
 
                 <div className="public-section-list">
                     {page.sections.map((section) => (

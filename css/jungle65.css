@@ -320,6 +320,28 @@
 .wr-page.wr-play .wr-mode-desc { min-height: 0; margin: 0; font-size: 14px; line-height: 1.6; color: #46543c; word-break: keep-all; text-wrap: pretty; }
 .wr-page.wr-play .wr-mode-tags { list-style: none; padding: 0; margin: 14px 0 6px; gap: 5px; }
 .wr-page.wr-play .wr-mode-tags li { padding: 2px 8px; border: 1px solid #c4cbb4; border-radius: 5px; color: #46543c; background: #eaf0df; font-size: 12px; line-height: 1.5; }
+.wr-page.wr-play .wr-mode-admission {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-left: 3px solid #917451;
+  border-radius: 5px;
+  background: #eee6d1;
+  color: #4b3924;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.wr-page.wr-play .wr-mode-admission[data-status="open"] {
+  border-color: #577754;
+  background: #e5ecd8;
+  color: #2b4a2c;
+}
+.wr-page.wr-play .wr-mode-admission strong { font-weight: 750; }
 .wr-page.wr-play .wr-mode-details { margin: 6px 0 12px; color: var(--wr-ink-2); }
 .wr-page.wr-play .wr-mode-details summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #b2bca1; border-radius: 6px; background: #edf0e3; color: #344b36; font-size: 13px; font-weight: 650; line-height: 1.5; list-style: none; cursor: pointer; }
 .wr-page.wr-play .wr-mode-details summary::-webkit-details-marker { display: none; }

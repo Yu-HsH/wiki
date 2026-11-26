@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../authContext";
 import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import { getScopedMultiplayerMode, resolveMultiplayerMode } from "../utils/multiplayerModeSelection.js";
+import { legacyDuelItemsSelectable } from "../utils/legacyDuelCreation.js";
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog";
 import {
   createRoom,
@@ -23,6 +24,8 @@ import {
   DUEL_SLOT_COUNT,
   getDuelItemsByRole,
 } from "../data/duelItems";
+
+const selectLegacyItems = legacyDuelItemsSelectable(import.meta.env);
 
 /**
  * 안내 문구의 아이템 목록은 **카탈로그에서 만든다.**
@@ -142,12 +145,11 @@ export default function MultiplayerPage() {
       setPending(true);
       setSubmitError("");
 
-      const room = await createRoom(user.id, {
-        useItems, isPublic,
-      });
+      const createWithItems = selectLegacyItems && useItems;
+      const room = await createRoom(user.id, { useItems: createWithItems, isPublic });
 
       navigate(`/multiplayer/room/${room.id}`, {
-        state: { useItems },
+        state: { useItems: createWithItems },
       });
     } catch (error) {
       setSubmitError(
@@ -248,7 +250,7 @@ export default function MultiplayerPage() {
           </button>
         </div>}
         <div className="wr-entry-rules" role="note">
-          {!selectedMode ? "먼저 1:1 또는 단체모드를 선택하세요." : selectedMode === "duel" ? "방장이 목표를 확정합니다. 두 명이 입장하면 방장이 시작하며, 출발 문서는 시작 시 정해집니다. 아이템 사용 여부는 방 생성 시 선택합니다." : "3–8명 · 20분 · 아이템 없음. 각자 후보를 제출하고 READY. 전원 준비·서로 다른 후보 2개 이상일 때 방장이 시작합니다."}
+          {!selectedMode ? "먼저 1:1 또는 단체모드를 선택하세요." : selectedMode === "duel" ? "방장이 목표를 확정합니다. 두 명이 입장하면 방장이 시작하며, 출발 문서는 시작 시 정해집니다. " + (selectLegacyItems ? "아이템 사용 여부는 방 생성 시 선택합니다." : "새 방은 아이템 없이 시작합니다.") : "3–8명 · 20분 · 아이템 없음. 각자 후보를 제출하고 READY. 전원 준비·서로 다른 후보 2개 이상일 때 방장이 시작합니다."}
         </div>
 
         <div className="wr65-entry-layout">
@@ -333,14 +335,14 @@ export default function MultiplayerPage() {
                 방장이 되어 목표 문서를 정하고 상대에게 방 코드를 공유하세요.
               </p>
 
-              <label className="mp-option">
+              {selectLegacyItems && <label className="mp-option">
                 <input
                   type="checkbox"
                   checked={useItems}
                   onChange={(e) => setUseItems(e.target.checked)}
                 />
                 아이템 사용 · 시작 시 {DUEL_SLOT_COUNT}칸
-              </label>
+              </label>}
 
               <label className="mp-option">
                 <input type="checkbox" checked={isPublic}

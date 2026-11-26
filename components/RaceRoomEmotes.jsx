@@ -21,6 +21,7 @@ function deniedMessage(code) {
 
 /** Presentation-only race strip: no movement or item controls are intercepted. */
 export function RaceRoomEmotesView({
+  label = "경기 중 키온 감정표현",
   visible = [],
   namesByUserId = new Map(),
   connected = false,
@@ -32,7 +33,7 @@ export function RaceRoomEmotesView({
   onSend = () => {},
 }) {
   return (
-    <section className="wr-race-emotes" aria-label="경기 중 키온 감정표현">
+    <section className="wr-race-emotes" aria-label={label}>
       <span className="wr-race-emotes__title">키온</span>
       <div className="wr-race-emotes__reactions" aria-label="참가자 감정표현" aria-live="off">
         {!hidden && visible.length > 0

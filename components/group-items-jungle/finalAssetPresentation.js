@@ -11,7 +11,8 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
 
   function emit(key,signal) {
     if (!signal) return;
-    scene={ key,kind:signal.kind,itemId:signal.itemId,itemTier:signal.itemTier,until:now()+(sceneDuration[signal.kind]??1800) };
+    if (signal.kind) scene={ key,kind:signal.kind,itemId:signal.itemId,itemTier:signal.itemTier,label:signal.label,
+      until:now()+(sceneDuration[signal.kind]??1800) };
     if (signal.asset) getAudio()?.play(signal.asset);
   }
   function stop() {
@@ -31,6 +32,8 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
     ...fallback,
     finalAssets:true,
     stop,
+    playCue:emit,
+    currentScene:()=>scene,
     pending(operation,value) {
       if (operation==='cannon') cannonPending=value;
     },

@@ -29,3 +29,11 @@
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Inline lobby and v4 reactions never cover navigation or item controls. */
+.s5-kion-dock--inline .wr-race-emotes {
+  position: relative;
+  inset: auto;
+  width: min(510px, 100%);
+  margin-block: 8px;
+}
