@@ -14,7 +14,8 @@ const advance = (session, action, previewAction) => transitionTutorial(growthBas
 const equip = { type: 'equip', slot: 'title', rewardId: practiceTitle.rewardId };
 
 test('성장은 독립 module/version이며 기존 intro 완료 저장을 다시 시작시키지 않는다', () => {
-  assert.deepEqual(tutorialRegistry.list().map(module => module.id), ['intro-core', 'growth-basics']);
+  assert.equal(tutorialRegistry.get('intro-core').id, introCore.id);
+  assert.equal(tutorialRegistry.get('growth-basics').id, growthBasics.id);
   const repo = createProgressRepository(memory());
   repo.save('guest:test', introCore, { ...freshProgress(introCore), status: 'completed', completedVersion: 1 });
   repo.save('guest:test', growthBasics, active('GR03').progress);

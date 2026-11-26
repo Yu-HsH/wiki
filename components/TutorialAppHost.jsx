@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../authContext.jsx';
 import { ProfileCardReadContext } from '../hooks/useOwnProfileCard.js';
@@ -6,8 +6,10 @@ import { TutorialProvider, useTutorial } from './tutorial/TutorialProvider.jsx';
 import TutorialOverlay from './tutorial/TutorialOverlay.jsx';
 import TutorialLauncher from './tutorial/TutorialLauncher.jsx';
 import AchievementRewardPreview, { ProfileRewardEditorPreview, AchievementAlbumPreview, ResultAchievementsPreview } from './AchievementRewardPreview.jsx';
-import { tutorialRegistry } from '../tutorial/modules/introCore.js';
-import { createProgressRepository, getBrowserGuestIdentity } from '../tutorial/core/progress.js';
+import { GUIDED_PRACTICE_ROUTE } from '../tutorial/modules/guidedPractice.js';
+import { introCore, tutorialRegistry } from '../tutorial/modules/introCore.js';
+import { createProgressRepository, getBrowserGuestIdentity, hasCompletedGuestTutorial, shouldOfferTutorial, tutorialScope } from '../tutorial/core/progress.js';
+import { createTutorialSession, transitionTutorial } from '../tutorial/core/engine.js';
 import { requestedTutorial, practiceHref, isRealMatchPath, isPracticeNavigation } from '../utils/tutorialIntegration.js';
 
 const AppTutorialContext = createContext(null);
@@ -15,15 +17,17 @@ const getStorage = () => { try { return globalThis.localStorage; } catch { retur
 export const useTutorialApp = () => useContext(AppTutorialContext);
 
 export default function TutorialAppHost({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, tutorialSignupUserId } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const repository = useMemo(() => createProgressRepository(getStorage()), []);
   const identity = useMemo(() => {
     if (!user) return null;
     return user.isGuest ? getBrowserGuestIdentity(getStorage())
-      : { kind: 'member', id: user.id, firstLoginEligibility: 'unknown' };
-  }, [user?.id, user?.isGuest]);
+      : { kind: 'member', id: user.id, firstLoginEligibility: user.id === tutorialSignupUserId ? 'new-confirmed' : 'unknown' };
+  }, [user?.id, user?.isGuest, tutorialSignupUserId]);
+  const guestContinuityCompleted = identity?.firstLoginEligibility === 'new-confirmed'
+    && hasCompletedGuestTutorial(getStorage(), repository, introCore);
   const requested = requestedTutorial(location.search, tutorialRegistry);
   const realMatchActive = isRealMatchPath(location.pathname);
   const practice = Boolean(!loading && identity && requested && !realMatchActive);
@@ -31,13 +35,47 @@ export default function TutorialAppHost({ children }) {
     const module = tutorialRegistry.get(moduleId);
     if (!loading && identity && module && !realMatchActive) navigate(practiceHref(module.steps[0].route, module.id));
   };
-  const normal = { practice: false, start, startGrowth: () => start('growth-basics') };
+  const offer = !loading && identity && !requested && location.pathname === '/lobby'
+    ? <FirstVisitTutorialOffer key={tutorialScope(identity) + ':' + identity.firstLoginEligibility}
+      identity={identity} repository={repository} guestContinuityCompleted={guestContinuityCompleted} start={start} />
+    : null;
+  const normal = { practice: false, ready: !loading, canStart: Boolean(identity), offer, start, startGrowth: () => start('growth-basics') };
   if (!practice) return <AppTutorialContext.Provider value={normal}>{children}</AppTutorialContext.Provider>;
   return <TutorialProvider module={requested} identity={identity} repository={repository}
     route={location.pathname} onRequestRoute={path => navigate(practiceHref(path, requested.id))}
-    stableScreen={!loading} realMatchActive={realMatchActive}>
+    stableScreen={!loading} realMatchActive={realMatchActive} guestContinuityCompleted={guestContinuityCompleted}>
     <PracticeHost module={requested} start={start} navigate={navigate}>{children}</PracticeHost>
   </TutorialProvider>;
+}
+
+function FirstVisitTutorialOffer({ identity, repository, guestContinuityCompleted, start }) {
+  const scope = tutorialScope(identity);
+  const [session, setSession] = useState(() => {
+    const progress = repository.load(scope, introCore);
+    const eligible = shouldOfferTutorial({ module: introCore, progress, identity,
+      stableScreen: true, guestContinuityCompleted });
+    return eligible ? transitionTutorial(introCore, createTutorialSession(introCore, progress), { type: 'offer' }) : null;
+  });
+  useEffect(() => {
+    if (session?.progress.status === 'offered') repository.save(scope, introCore, session.progress);
+  }, [repository, scope, session]);
+  if (session?.progress.status !== 'offered') return null;
+  const choose = type => {
+    const next = transitionTutorial(introCore, session, { type });
+    repository.save(scope, introCore, next.progress);
+    setSession(next);
+  };
+  return <section className="wr-tutorial-app-controls wr-tutorial-first-offer" aria-label="키온의 첫 탐험 제안">
+    <p>키온과 함께 첫 탐험을 연습해 볼까요?</p>
+    <div className="wr-tutorial-app-buttons">
+      <button type="button" className="app-btn app-btn-primary" onClick={() => {
+        repository.save(scope, introCore, session.progress);
+        start();
+      }}>연습 열기</button>
+      <button type="button" className="app-btn app-btn-ghost" onClick={() => choose('pause')}>나중에</button>
+      <button type="button" className="app-btn app-btn-ghost" onClick={() => choose('dismiss')}>다시 보지 않기</button>
+    </div>
+  </section>;
 }
 
 function PracticeHost({ module, start, navigate, children }) {
@@ -62,6 +100,7 @@ function PracticeHost({ module, start, navigate, children }) {
       <TutorialLauncher />
       <div className="wr-tutorial-app-buttons">
         <button type="button" className="app-btn app-btn-ghost" onClick={exit}>연습 종료 · HOME으로</button>
+        {module.steps[0].route === GUIDED_PRACTICE_ROUTE && <button type="button" className="app-btn app-btn-ghost" onClick={() => { tutorial.control('pause'); navigate('/guide'); }}>다른 연습 고르기</button>}
         {module.id !== 'growth-basics' && tutorialRegistry.get('growth-basics')
           && <button type="button" className="app-btn app-btn-ghost" onClick={() => start('growth-basics')}>보상·프로필 연습</button>}
       </div>

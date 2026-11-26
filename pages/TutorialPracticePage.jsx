@@ -1,4 +1,6 @@
 import React, { useMemo } from 'react';
+import GuidedPracticeSurface from '../components/tutorial/GuidedPracticeSurface.jsx';
+import { GUIDED_PRACTICE_ROUTE } from '../tutorial/modules/guidedPractice.js';
 import GrowthPracticeSurface from '../components/tutorial/GrowthPracticeSurface.jsx';
 import WikiViewer from '../components/WikiViewer.jsx';
 import { RaceHud, HudBrand, HudDoc, HudStat, HudTimer, RouteChain } from '../components/wiki-race/race/RaceParts.jsx';
@@ -8,7 +10,9 @@ import { useTutorial } from '../components/tutorial/TutorialProvider.jsx';
 
 export default function TutorialPracticePage({ renderGrowth } = {}) {
   const { module } = useTutorial();
-  return module.id === 'growth-basics' ? <GrowthPracticeSurface renderGrowth={renderGrowth} /> : <SoloPracticePage />;
+  if (module.id === 'growth-basics') return <GrowthPracticeSurface renderGrowth={renderGrowth} />;
+  if (module.steps[0].route === GUIDED_PRACTICE_ROUTE) return <GuidedPracticeSurface />;
+  return <SoloPracticePage />;
 }
 
 function SoloPracticePage() {

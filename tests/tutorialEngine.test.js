@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createTutorialRegistry, getTutorialContext, TUTORIAL_DIM_OPACITY } from '../tutorial/core/registry.js';
 import { createTutorialSession, transitionTutorial, tutorialActionToken } from '../tutorial/core/engine.js';
 import { introCore } from '../tutorial/modules/introCore.js';
-import { createProgressRepository, freshProgress, restoreProgress, shouldOfferTutorial, tutorialScope, getBrowserGuestIdentity } from '../tutorial/core/progress.js';
+import { createProgressRepository, freshProgress, restoreProgress, shouldOfferTutorial, tutorialScope, getBrowserGuestIdentity, hasCompletedGuestTutorial } from '../tutorial/core/progress.js';
 import { createPracticeAdapter } from '../tutorial/adapters/practiceAdapter.js';
 import { placeTutorial, overlaps, viewportBounds } from '../tutorial/core/placement.js';
 import { readFile, readdir } from 'node:fs/promises';
@@ -86,6 +86,22 @@ test('기존/unknown 회원을 신규로 추측하지 않고 인증안정/경기
   assert.equal(shouldOfferTutorial(guest), true);
   for (const override of [{ stableScreen: false }, { realMatchActive: true }, { guestContinuityCompleted: true }, { progress: { ...options.progress, status: 'paused' } }]) assert.equal(shouldOfferTutorial({ ...guest, ...override }), false);
 });
+test('같은 브라우저에서 완료한 게스트는 신규 회원 자동 제안만 막고 회원 진행은 분리한다', () => {
+  const storage = memory();
+  const repository = createProgressRepository(storage);
+  const guest = getBrowserGuestIdentity(storage, () => 'returning-guest');
+  const member = {kind: 'member', id: 'signed-up', firstLoginEligibility: 'new-confirmed'};
+  const memberProgress = repository.load(tutorialScope(member), introCore);
+  const options = {module: introCore, progress: memberProgress, identity: member, stableScreen: true};
+  assert.equal(hasCompletedGuestTutorial(storage, repository, introCore), false);
+  assert.equal(shouldOfferTutorial(options), true);
+  repository.save(tutorialScope(guest), introCore, apply(activeAt('F01'), 'next').progress);
+  const guestContinuityCompleted = hasCompletedGuestTutorial(storage, createProgressRepository(storage), introCore);
+  assert.equal(guestContinuityCompleted, true);
+  assert.equal(shouldOfferTutorial({...options, guestContinuityCompleted}), false);
+  assert.equal(repository.load(tutorialScope(member), introCore).status, 'unseen');
+});
+
 test('core 완료는 버전 증가로 재강제하지 않고 업데이트 공지는 해당 모듈/버전만 제어한다', () => {
   const progress = { ...freshProgress(introCore), status: 'completed', completedVersion: 1 };
   const options = { module: { ...introCore, version: 2 }, progress, stableScreen: true, identity: { kind: 'guest' } };

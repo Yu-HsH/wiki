@@ -7,6 +7,8 @@ import { FinalInkVfx, FinalItemIcon, FinalItemMotion, preloadFinalInk } from "..
 import { createFinalAssetAudio } from "../components/group-items-jungle/finalAssetAudio.js";
 import { itemName, tierLabel } from "../components/group-items-jungle/s5UiContract.js";
 import { duelV4 } from "../services/duelV4Service.js";
+import DuelV4ItemFeedback from "../components/DuelV4ItemFeedback.jsx";
+import S5KionDock, { MODE_FOLLOWUP_ENABLED } from "../components/group-items-jungle/S5KionDock.jsx";
 import { activeV4Effects, appendDuelV4Notice, createDuelV4Presentation, effectLabels, effectTime, V4_PARRY_WINDOW_MS } from "../services/duelV4Presentation.js";
 import { audioManager } from "../services/audioManager.js";
 import { fetchDistinctRandomTitle, fetchPageData, formatDuration, normalizeTitle, sanitizeWikiDocumentHtml } from "../services/wikiService.js";
@@ -304,7 +306,10 @@ function Match({ roomId, userId }) {
     marks[activeMatch.current].scrollIntoView({ block: "center" });
   }
 
+  const feedbackScope = roomId + ":" + userId;
   const notice = <div className="duel-v4-messages" aria-live="polite">
+    {MODE_FOLLOWUP_ENABLED && <DuelV4ItemFeedback key={feedbackScope} scope={feedbackScope}
+      events={state.itemFeedback} now={now} />}
     {(error || connectionError) && <p>{error || connectionError}</p>}
     {retry && <button type="button" className="wr-race-btn" onClick={() => run(retry.operation, null, retry)} disabled={busy}>같은 요청 재시도</button>}
     {documentError && <p>{documentError}</p>}
@@ -335,6 +340,8 @@ function Match({ roomId, userId }) {
       <span data-duel-v4-code><CopyCodeButton code={state.code} /></span>
     </LobbyHeader>
     {notice}
+    {MODE_FOLLOWUP_ENABLED && me && <S5KionDock key={feedbackScope} mode="duel"
+      roomId={roomId} actorId={userId} players={state.players} label="대기방 키온 감정표현" />}
     <section className="duel-v4-camp" aria-label="대기실 참가자와 목표">
       <ul className="duel-v4-seats" aria-label="참가자">
         {[me, opponent].map((player, index) => <li key={index}>
@@ -382,6 +389,8 @@ function Match({ roomId, userId }) {
         {connectionError && <ConnectionDot ok={false} label="경기 연결 확인 필요" />}
       </div>
       {notice}
+      {MODE_FOLLOWUP_ENABLED && me && <S5KionDock key={feedbackScope} mode="duel"
+        roomId={roomId} actorId={userId} players={state.players} label="경기 중 키온 감정표현" />}
       <MobileRouteNotes path={ownPath} />
       <div className="duel-v4-feedback" aria-live="polite" aria-relevant="additions text">
         {notices.filter(notice => notice.until > clock).map(notice =>

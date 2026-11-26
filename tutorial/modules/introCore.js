@@ -1,9 +1,10 @@
 import { growthBasics } from './growthBasics.js';
+import { guidedPracticeModules } from './guidedPractice.js';
 import { createTutorialRegistry } from '../core/registry.js';
 const PRACTICE = '/tutorial/practice/solo';
 const step = (id, chapter, route, anchor, mode, actor, dialogue, next, scene = 'apple') => ({ id, chapter, route, anchor, mode, actor, dialogue, next, scene });
 
-// A0 has a small executable lesson. Growth/online lessons wait for their pure presenters.
+// The base lesson keeps its own checkpoints as new courses are registered.
 export const introCore = {
   id: 'intro-core', version: 1, requiredForFirstRun: true, autoOffer: 'first-eligible-visit', migrations: {},
   steps: [
@@ -26,4 +27,4 @@ export const introCore = {
     step('F01', 'final', PRACTICE, null, 'observe', 'wave', '기본 조작 연습을 마쳤어요. 필요하실 때 가이드에서 다시 시작하실 수 있어요.', undefined, 'result'),
   ],
 };
-export const tutorialRegistry = createTutorialRegistry([introCore, growthBasics]);
+export const tutorialRegistry = createTutorialRegistry([introCore, growthBasics, ...guidedPracticeModules]);

@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import { duelV4 } from "../services/duelV4Service.js";
 import { supabase } from "../supabaseClient.js";
 import { readProductBinding } from "../components/group-items-jungle/productContract.js";
+import { legacyDuelItemsSelectable } from "../utils/legacyDuelCreation.js";
 
 const s5EntryEnabled = import.meta.env.MODE === "s4-product-candidate" || import.meta.env.VITE_GROUP_ITEMS_S5_ENTRY === "1";
 const duelV4EntryEnabled = import.meta.env.VITE_DUEL_ITEMS_V4_ENTRY === "1";
+const selectLegacyItems = legacyDuelItemsSelectable(import.meta.env);
 const modes = [
   { id: "solo", kicker: "혼자 · SOLO", title: "싱글 탐험", tagline: "나만의 페이스로 링크의 숲을 돌파하세요.", description: "시작 문서에서 목표 문서까지, 가장 빠른 길을 개척하세요.", course: "랜덤 코스 또는 직접 고른 목표. 오늘의 탐험은 모두에게 같은 출발·목표입니다.", next: "탐험 시작에서 목표를 고르거나, 아래 오늘의 탐험에 도전하세요.", tags: ["혼자 집중", "기록 도전", "오늘의 탐험"], action: "탐험 시작" },
-  { id: "duel", kicker: "2인 · DUEL", title: "1:1 대전", tagline: "같은 출발선, 같은 목표. 승자는 단 한 명.", description: "라이벌보다 먼저 도착하세요. 한 번의 링크 선택이 승부를 가릅니다.", course: "방장이 공통 목표를 확정하고, 출발 문서는 경기 시작 시 정해집니다.", next: "방 생성 또는 코드 참가 → 방장 목표 확정 → 두 명 입장 후 시작.", tags: ["정면 승부", "실시간 대결", "아이템전 선택"], action: "대전 시작" },
+  { id: "duel", kicker: "2인 · DUEL", title: "1:1 대전", tagline: "같은 출발선, 같은 목표. 승자는 단 한 명.", description: "라이벌보다 먼저 도착하세요. 한 번의 링크 선택이 승부를 가릅니다.", course: "방장이 공통 목표를 확정하고, 출발 문서는 경기 시작 시 정해집니다.", next: "방 생성 또는 코드 참가 → 방장 목표 확정 → 두 명 입장 후 시작.", items: selectLegacyItems ? "방 생성 시 아이템전 선택. 실제 역할별 아이템은 로비의 규칙 · 아이템 안내에서 확인하세요." : "새 방은 아이템 없이 시작합니다. 아이템을 쓰는 경기는 1:1 아이템전에서 시작하세요.", tags: ["정면 승부", "실시간 대결", ...(selectLegacyItems ? ["아이템전 선택"] : [])], action: "대전 시작" },
   { id: "group", kicker: "3–8인 · GROUP", title: "그룹 레이스", tagline: "여러 탐험가와 함께 목표를 향해 질주하세요.", description: "같은 코스, 치열한 순위 경쟁. 가장 먼저 링크의 길을 개척하세요.", course: "각자 제출한 후보 중 서로 다른 두 문서가 출발·목표로 정해집니다.", next: "후보 선택 → 전원 READY → 방장 시작. 20분 · 아이템 없음.", tags: ["다인 경쟁", "순위 레이스", "함께 질주"], action: "그룹 로비 입장" },
   ...(duelV4EntryEnabled ? [{ id: "duel-v4", kicker: "2인 · ITEM RACE", title: "1:1 아이템전", tagline: "두 명이 같은 문서에서 출발해 목표까지 경주합니다.", description: "경기 중 받은 아이템으로 상대를 견제하고 공격을 막습니다.", course: "방장이 공통 목표를 확정합니다. 두 참가자는 같은 출발 문서에서 시작합니다.", next: "방 생성 또는 코드 참가 → 방장 목표 확정 → 경기 시작.", items: "경기 중 획득한 아이템은 하단 슬롯에서 사용합니다.", tags: ["정면 승부", "공격과 방어"], action: "아이템전 입장", href: "/multiplayer/duel-v4" }] : []),
   ...(s5EntryEnabled ? [{ id: "group-items", kicker: "3–8인 · ITEM RACE", title: "그룹 아이템전", tagline: "3–8명이 같은 문서에서 출발해 목표까지 경주합니다.", description: "경기 중 받은 아이템으로 견제하며 순위를 겨룹니다.", course: "같은 출발·목표를 공유합니다. 서버가 시작 아이템 1개와 이후 보급을 결정합니다.", next: "방 생성 또는 코드 참가 → 전원 준비 → 경기 시작.", items: "서버 지급 · 첫 20초 후 보급 · 이후 25초 간격 · 최대 2칸.", tags: ["랜덤 아이템", "20초 첫 보급", "최대 2개 보유"], action: "아이템전 입장" }] : []),
@@ -99,7 +101,7 @@ export default function PlayPage({ isGuest, practice = false, onSingle, onMultip
             <summary>자세히 보기<span className="wr-visually-hidden"> · {mode.title} 규칙</span></summary>
             <p className="wr-mode-brief"><strong>출발과 목표</strong>{mode.course}</p>
             <p className="wr-mode-brief"><strong>준비 순서</strong>{mode.next}</p>
-            <p className="wr-mode-brief"><strong>아이템 안내</strong>{mode.id === "solo" ? "아이템 없음 · 문서 링크만으로 탐험합니다." : mode.id === "duel" ? "방 생성 시 아이템전 선택. 실제 역할별 아이템은 로비의 규칙 · 아이템 안내에서 확인하세요." : mode.items ?? "아이템 없이 문서 속 링크로 경쟁합니다."}</p>
+            <p className="wr-mode-brief"><strong>아이템 안내</strong>{mode.id === "solo" ? "아이템 없음 · 문서 링크만으로 탐험합니다." : mode.items ?? "아이템 없이 문서 속 링크로 경쟁합니다."}</p>
           </details>
           {mode.href && !disabled ? (
             <Link to={mode.href} className="wr-mode-action" aria-label={actionLabel} aria-describedby={statusId}>

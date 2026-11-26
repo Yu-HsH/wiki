@@ -57,3 +57,49 @@
 .wr-tutorial-bubble.is-overview .wr-tutorial-progress { margin-top:8px; }
 .wr-tutorial-bubble.is-overview .wr-tutorial-actions { margin-top:8px; }
 .wr-tutorial-bubble.is-overview .wr-tutorial-secondary { margin-top:4px; }
+
+.wr-tutorial-kion.wr-tutorial-kion--bust {
+  display: grid;
+  align-items: end;
+  flex-basis: 128px;
+  height: 118px;
+  margin: -6px 0 0;
+}
+.wr-tutorial-bubble.is-overview .wr-tutorial-kion--bust {
+  flex-basis: 108px;
+  height: 99px;
+  margin-top: -4px;
+}
+.wr-tutorial-kion-art {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  animation: wr-kion-enter 240ms ease-out;
+}
+.wr-tutorial-kion-art img {
+  object-position: center bottom;
+  transform-origin: 50% 92%;
+  animation: wr-kion-breathe 3.6s ease-in-out 240ms infinite;
+}
+.wr-tutorial-kion[data-pose="cheer"] .wr-tutorial-kion-art img {
+  animation: wr-kion-cheer 520ms ease-out, wr-kion-breathe 3.6s ease-in-out 520ms infinite;
+}
+@keyframes wr-kion-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes wr-kion-breathe {
+  50% { transform: scaleY(1.018); }
+}
+@keyframes wr-kion-cheer {
+  35% { transform: translateY(-4px) scale(1.025); }
+  70% { transform: translateY(-1px); }
+}
+@media (max-width: 600px) {
+  .wr-tutorial-kion.wr-tutorial-kion--bust { flex-basis: 88px; height: 85px; }
+  .wr-tutorial-bubble.is-overview .wr-tutorial-kion--bust { flex-basis: 80px; height: 77px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wr-tutorial-kion-art, .wr-tutorial-kion-art img,
+  .wr-tutorial-kion[data-pose="cheer"] .wr-tutorial-kion-art img { animation: none; }
+}

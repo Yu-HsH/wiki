@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveRewardArt, DEFAULT_REWARD_ART_KEY } from "../utils/rewardArt.js";
@@ -8,9 +9,20 @@ const svg = Object.freeze({ src: "/assets/wiki-race/rewards/a001/v1.svg", width:
 const reward = (kind, assetRef) => Object.freeze({ kind, assetRef, rewardId: "fixture-visible", displayName: "검증용 보상" });
 const map = (kind, key, art = svg) => ({ [kind]: { [key]: art } });
 
-test("unconfigured delivered-art manifest preserves all existing renderers", () => {
-  for (const [kind, ref] of [["profile_icon","/profile-icons/book.svg"],["frame","frame:special"],["background",null],["finish_effect","finish:tier-3"]]) {
-    assert.deepEqual(REWARD_ART_MANIFEST[kind], {});
+test("registered art uses distinct local SVGs and unrelated rewards still fall back", () => {
+  const sources = new Set();
+  for (const [kind, registrations] of Object.entries(REWARD_ART_MANIFEST)) {
+    for (const [ref, art] of Object.entries(registrations)) {
+      assert.deepEqual(resolveRewardArt(kind, reward(kind, ref)), art);
+      assert.ok(!sources.has(art.src), "distinct asset references use distinct files");
+      sources.add(art.src);
+      const source = readFileSync(new URL("../public" + art.src, import.meta.url), "utf8");
+      assert.match(source, /<svg\b[^>]*viewBox="0 0 64 64"/);
+    }
+  }
+  assert.equal(sources.size, 10);
+  for (const [kind, ref] of [["profile_icon", "/profile-icons/book.svg"], ["background", null],
+    ["finish_effect", "finish:tier-3"], ["title", ""]]) {
     assert.equal(resolveRewardArt(kind, reward(kind, ref)), null);
   }
 });

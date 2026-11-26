@@ -16,7 +16,8 @@ import { createFinalAssetAudio } from "./finalAssetAudio.js";
 import { createFinalAssetPresentation } from "./finalAssetPresentation.js";
 import { FIXED_PRODUCT_WIKI_BINDING, readFixedProductWikiDocument } from "./productFixedWikiDocument.js";
 import { loadProductWikiDocument } from "./productWikiDocument.js";
-import S5KionDock from "./S5KionDock.jsx";
+import S5KionDock, { MODE_FOLLOWUP_ENABLED } from "./S5KionDock.jsx";
+import S5SpectatorDocument from "./S5SpectatorDocument.jsx";
 import { CopyCodeButton, LobbyHeader, MeTag, StatusMark } from "../wiki-race/LobbyParts.jsx";
 import { HudBrand, HudDoc, RaceFrame, RaceHold, RaceHud } from "../wiki-race/race/RaceParts.jsx";
 import { GroupStandings, ResultActions, ResultCard, ResultOutcome, ResultScreen, ResultXpRow } from "../wiki-race/result/ResultParts.jsx";
@@ -303,6 +304,8 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
           {room.players.map(player => <li key={player.participantId}><strong>{player.name}</strong><span>{player.currentTitle || "현재 문서 정보 없음"}</span></li>)}
         </ul>
       </section>
+      {MODE_FOLLOWUP_ENABLED && <S5SpectatorDocument room={room} actorId={actorId}
+        readIdentity={readIdentity} rpc={rpc} />}
       <div className="group-items-jungle-dock group-items-jungle-dock--spectator">
         <S5KionDock roomId={roomId} actorId={actorId} players={room.players} spectator/>
         {actionError}
@@ -338,6 +341,8 @@ function ProductRoom({ roomId, binding: defaultBinding, actorId }) {
             <StatusMark tone={player.ready ? "ready" : "pending"}>{player.ready ? "준비 완료" : "대기 중"}</StatusMark>
           </li>)}
         </ul>
+        {MODE_FOLLOWUP_ENABLED && <S5KionDock mode="lobby" roomId={roomId} actorId={actorId}
+          players={room.players} label="대기방 키온 감정표현" />}
         <div className="product-item-actions">{actions}</div>{actionError}
       </section>
     </main>;

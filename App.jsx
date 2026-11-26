@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import AudioControls from "./components/AudioControls.jsx";
 import TutorialAppHost, { TutorialBlockedRoute, useTutorialApp } from "./components/TutorialAppHost.jsx";
 import TutorialPracticePage from "./pages/TutorialPracticePage.jsx";
-import { PRACTICE_ROUTES } from "./utils/tutorialIntegration.js";
+import { GUIDED_PRACTICE_ROUTE, findGuidedPracticeModule } from "./tutorial/modules/guidedPractice.js";
+import { PRACTICE_ROUTES, postLoginTutorialPath, tutorialLoginPath } from "./utils/tutorialIntegration.js";
 import {
   createBrowserRouter,
   Navigate,
@@ -89,8 +90,9 @@ function OnlineRoute({ children }) {
 
 function LoginRoute() {
   const { user, loading } = useAuth();
+  const { search } = useLocation();
   if (loading) return null;
-  if (user) return <Navigate to={LOBBY_PATH} replace />;
+  if (user) return <Navigate to={postLoginTutorialPath(search)} replace />;
   return <LoginPage />;
 }
 
@@ -114,7 +116,7 @@ function LobbyRoute({ view = "home" }) {
   return (
     <MainPage key={user.id + (tutorial?.practice ? ":practice" : ":live")} view={view}
       tutorialSession={tutorial?.capability} onStartTutorial={tutorial?.start}
-      onStartGrowth={tutorial?.startGrowth} />
+      onStartGrowth={tutorial?.startGrowth} tutorialOffer={tutorial?.offer} />
   );
 }
 
@@ -265,6 +267,7 @@ function AppRoutes() {
       <Route path="/play" element={<LobbyRoute view="play" />} />
       <Route path="/tutorial/practice/solo" element={<TutorialPracticeRoute />} />
       <Route path="/tutorial/practice/growth" element={<TutorialPracticeRoute />} />
+      <Route path={GUIDED_PRACTICE_ROUTE} element={<TutorialPracticeRoute guided />} />
 
       <Route
         path="/game"
@@ -338,12 +341,15 @@ function AppRoutes() {
   );
 }
 
-function TutorialPracticeRoute() {
+function TutorialPracticeRoute({ guided = false }) {
   const { user, loading } = useAuth();
   const tutorial = useTutorialApp();
+  const location = useLocation();
+  const course = guided ? findGuidedPracticeModule(new URLSearchParams(location.search).get("practice")) : null;
   const access = getLobbyAccess({ loading, user });
   if (access === "loading") return <p role="status">세션 확인 중...</p>;
-  if (access === "login") return <Navigate to={LOGIN_PATH} replace />;
+  if (guided && !course) return <Navigate to="/guide" replace />;
+  if (access === "login") return <Navigate to={course ? tutorialLoginPath(course.id) : LOGIN_PATH} replace />;
   if (!tutorial?.practice) return <Navigate to="/lobby?practice=intro-core" replace />;
   return (
     <div className="wr-page wr65-field wr-tutorial-app-practice">

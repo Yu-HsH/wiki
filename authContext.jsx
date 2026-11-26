@@ -6,6 +6,7 @@ import {
 } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 import { resolveAuthUserWithGuestFallback } from "./utils/localAuthSession";
+import { confirmedTutorialSignupId } from "./utils/tutorialIntegration.js";
 
 // 로컬 스토리지에 유저 정보를 저장하기 위한 키 (데모/게스트 모드용)
 const LOCAL_USER_KEY = "wiki_game_local_user";
@@ -147,6 +148,7 @@ function clearLocalUser() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tutorialSignupUserId, setTutorialSignupUserId] = useState(null);
 
   useEffect(() => {
     let unsubscribed = false;
@@ -181,6 +183,7 @@ export function AuthProvider({ children }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       const authenticatedUser = mapSupabaseUser(session?.user || null);
+      setTutorialSignupUserId(id => id === authenticatedUser?.id ? id : null);
       if (authenticatedUser) clearLocalUser();
       setUser(
         resolveAuthUserWithGuestFallback(authenticatedUser, readLocalUser())
@@ -227,7 +230,9 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password });
     if (error) throw error;
     clearLocalUser();
+    setTutorialSignupUserId(null);
     setUser(mapSupabaseUser(data.user));
+    return data.session?.user?.id ?? null;
   };
 
   const signUp = async ({ email, password, displayName }) => {
@@ -261,7 +266,8 @@ export function AuthProvider({ children }) {
     if (fnData?.error) throw new Error(fnData.error);
 
     // 가입 성공 후 즉시 로그인을 수행하여 세션을 활성화합니다.
-    await loginWithUsername({ username, password });
+    const sessionId = await loginWithUsername({ username, password });
+    setTutorialSignupUserId(confirmedTutorialSignupId(fnData?.user?.id, sessionId));
   };
 
   /**
@@ -280,6 +286,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    setTutorialSignupUserId(null);
     if (isSupabaseConfigured) {
       clearLocalUser();
       await supabase.auth.signOut();
@@ -307,6 +314,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       loading,
+      tutorialSignupUserId,
       isSupabaseConfigured,
       login,
       loginWithUsername,
@@ -316,7 +324,7 @@ export function AuthProvider({ children }) {
       logout,
       loginAsGuest,
     }),
-    [loading, user]
+    [loading, user, tutorialSignupUserId]
   );
 
   return (

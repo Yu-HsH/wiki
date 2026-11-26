@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requestedTutorial, practiceHref, isRealMatchPath, isPracticeNavigation } from '../utils/tutorialIntegration.js';
+import { requestedTutorial, practiceHref, isRealMatchPath, isPracticeNavigation, confirmedTutorialSignupId, postLoginTutorialPath, TUTORIAL_LOGIN_PATH } from '../utils/tutorialIntegration.js';
 
 const modules = new Map([['intro-core', { id: 'intro-core' }], ['growth-basics', { id: 'growth-basics' }]]);
 const registry = { get: id => modules.get(id) || null };
@@ -34,6 +34,21 @@ test('practice route requests preserve only safe local training paths and encode
 });
 
 test('real single, duel and group game routes are excluded without classifying waiting rooms as games', () => {
-  for (const path of ['/game', '/multiplayer/game/room-1', '/multiplayer/group/game/room-1']) assert.equal(isRealMatchPath(path), true);
+  for (const path of ['/game', '/game/', '/multiplayer/game/room-1', '/multiplayer/group/game/room-1', '/multiplayer/duel-v4', '/multiplayer/duel-v4/room-1', '/multiplayer/group-items', '/multiplayer/group-items/room-1', '/MULTIPLAYER/DUEL-V4/room-2']) assert.equal(isRealMatchPath(path), true);
   for (const path of ['/lobby', '/play', '/tutorial/practice/solo', '/multiplayer/room/room-1', '/multiplayer/group/room/room-1']) assert.equal(isRealMatchPath(path), false);
+});
+
+test('the guide preserves the local intro launcher and rejects unsupported login targets', () => {
+  assert.equal(TUTORIAL_LOGIN_PATH, '/login?tutorial=intro-core');
+  assert.equal(postLoginTutorialPath('?tutorial=intro-core'), '/lobby?practice=intro-core');
+  for (const search of ['', '?next=https://example.invalid', '?tutorial=growth-basics', '?tutorial=/game']) {
+    assert.equal(postLoginTutorialPath(search), '/lobby');
+  }
+});
+
+test('a first member offer requires the newly created and authenticated session IDs to match', () => {
+  assert.equal(confirmedTutorialSignupId('new-user', 'new-user'), 'new-user');
+  assert.equal(confirmedTutorialSignupId('new-user', 'other-user'), null);
+  assert.equal(confirmedTutorialSignupId('new-user', null), null);
+  assert.equal(confirmedTutorialSignupId('', ''), null);
 });
