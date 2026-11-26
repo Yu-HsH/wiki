@@ -35,6 +35,13 @@ export function readProductRoom(body, { roomId, actorId, binding }, previous = n
   const allowed = body.phase === "waiting" && body.role === "player" ? ["ready", "start", "leave"]
     : body.phase === "playing" && body.role === "player" ? ["leave"] : body.phase === "finished" ? ["rematch"] : [];
   assert(Array.isArray(options) && options.every(action => allowed.includes(action)), "INVALID_PRODUCT_ROOM_ACTIONS");
+  if (body.followupActions != null) assert(Array.isArray(body.followupActions) &&
+    body.followupActions.every(action => body.phase==="waiting" && body.role==="player" &&
+      ["candidate","unready","start_scheduled"].includes(action)), "INVALID_PRODUCT_ROOM_ACTIONS");
+  if (body.courseCandidates != null) assert(Array.isArray(body.courseCandidates) &&
+    body.courseCandidates.every(row => productId(row?.snapshotId) && typeof row.title==="string"), "INVALID_PRODUCT_CANDIDATES");
+  if (body.scheduledStartAt != null) assert(Number.isFinite(Date.parse(body.scheduledStartAt)) &&
+    Number.isFinite(Date.parse(body.serverObservedAt)), "INVALID_PRODUCT_START");
   if (body.phase === "waiting") assert(body.sessionId === null && body.role === "player", "INVALID_PRODUCT_WAITING_ROOM");
   else assert(isProductS4Scope(body), "INVALID_PRODUCT_SESSION");
   if (body.phase === "playing" && body.role === "player") {

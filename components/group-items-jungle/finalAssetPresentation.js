@@ -11,6 +11,8 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
   let scenes=[], movementId=null, cannonUntil=null, cannonPending=false, connected=false;
   let cannonImpact=null;
   let censors=[];
+  let feedbackAnchor=null;
+  const receivedFeedback=new Set();
 
   function currentScenes() {
     scenes=scenes.filter(scene=>scene.until>now());
@@ -34,6 +36,7 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
     cannonImpact=null;
     connected=false;
     censors=[];
+    feedbackAnchor=null;
     getAudio()?.stop();
   }
   function censorState(state,at) {
@@ -91,6 +94,18 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
         return null;
       }
       connected=true;
+      feedbackAnchor ??= state.presentation.serverObservedAt;
+      for (const event of state.itemFeedback ?? []) {
+        if (receivedFeedback.has(event.id)) continue;
+        receivedFeedback.add(event.id);
+        const at=Date.parse(event.at);
+        if (at<=feedbackAnchor || frame.now-at>=6000) continue;
+        const cue=event.kind==='item_stolen'
+          ? {kind:'thief-loss',itemId:event.itemId,itemTier:event.tier,asset:'thief_hand/empty',label:'아이템을 빼앗겼어요'}
+          : {kind:'trap-reveal',asset:'surprise_box/reveal',
+            label:event.outcome==='blocked'?'설치한 상자 · 편집보호로 차단':'설치한 상자 발동'};
+        emit(`recipient:${event.id}`,cue);
+      }
       const stun=state.itemEffects?.find(row=>row.kind==='stun' && row.source==='thunder' &&
         row.startsAt<=frame.now && frame.now<row.expiresAt);
       getAudio()?.stun(stun?.effectId);

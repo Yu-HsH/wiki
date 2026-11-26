@@ -23,6 +23,7 @@ import { CopyCodeButton, LobbyHeader, LobbyIcon, LobbyShell } from "../wiki-race
 import { ItemRoomRoster } from "../wiki-race/ItemRoomLobby.jsx";
 import { audioManager } from "../../services/audioManager.js";
 import { HudBrand, HudDoc, RaceFrame, RaceHold, RaceHud } from "../wiki-race/race/RaceParts.jsx";
+import ScheduledItemCountdown from "../wiki-race/race/ScheduledItemCountdown.jsx";
 import { GroupStandings, ResultActions, ResultCard, ResultOutcome, ResultScreen, ResultXpRow } from "../wiki-race/result/ResultParts.jsx";
 import "./groupItemsJungle.css";
 
@@ -40,19 +41,19 @@ function useRoomActions(binding, actorId) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
-  async function act(operation, roomId, version, getLatestRoom) {
+  async function act(operation, roomId, version, getLatestRoom, payload) {
     if (inFlight.current) return null;
     inFlight.current = true;
     setPending(true);
     setError("");
     try {
       try {
-        return await actGroupItemsRoom(binding, actorId, operation, roomId, version);
+        return await actGroupItemsRoom(binding, actorId, operation, roomId, version, payload);
       } catch (failure) {
         if (failure.message !== "PRODUCT_ROOM_STALE" || !failure.settled) throw failure;
         const latest = await getLatestRoom();
-        if (latest.version === version || !latest.actions.includes(operation)) throw failure;
-        return await actGroupItemsRoom(binding, actorId, operation, roomId, latest.version);
+        if (latest.version === version || ![...latest.actions,...(latest.followupActions ?? [])].includes(operation)) throw failure;
+        return await actGroupItemsRoom(binding, actorId, operation, roomId, latest.version, payload);
       }
     } catch (failure) {
       setError(failure.message ?? "PRODUCT_ROOM_UNAVAILABLE");
@@ -175,7 +176,7 @@ function ProductRoom({ roomId, user, logout }) {
           const next = readProductRoom(data, { roomId, actorId, binding:confirmedBinding }, roomRef.current);
           if (next.phase === "waiting" && !enteredFromLobby.current) {
             enteredFromLobby.current = true;
-            audioManager.prepare(["go", "itemReveal", "denied"]);
+            audioManager.prepare(["tick", "go", "itemReveal", "denied"]);
           }
           roomRef.current = next;
           setRoom(next);
@@ -214,7 +215,10 @@ function ProductRoom({ roomId, user, logout }) {
         invalidate(liveRef.current ? "subscribed" : "polling", true);
       });
     const fallback = setInterval(()=>{
-      if (!liveRef.current && roomRef.current?.phase !== "finished") invalidate("polling", false);
+      const current = roomRef.current;
+      if (current?.phase === "waiting") {
+        if (!current.scheduledStartAt) void load("lobby-poll");
+      } else if (!liveRef.current && current?.phase !== "finished") invalidate("polling", false);
     }, fallbackIntervalMs);
     const heartbeat = setInterval(()=>{
       if (liveRef.current && roomRef.current?.phase !== "finished") invalidate("heartbeat", false);
@@ -233,13 +237,13 @@ function ProductRoom({ roomId, user, logout }) {
     };
   },[roomId,actorId]);
 
-  async function command(operation, destination = productPath) {
+  async function command(operation, destination = productPath, payload) {
     const result = await act(operation, roomId, room.version, async () => {
       const identity = await readIdentity();
       if (identity.actorId !== actorId) throw new Error("AUTH_REQUIRED");
       const data = await rpc("get_group_items_product_room_v1", { p_room:roomId, p_binding:binding }, identity.accessToken);
       return readProductRoom(data, { roomId, actorId, binding }, roomRef.current);
-    });
+    }, payload);
     if (!result) {
       void reloadRef.current?.();
       return false;
@@ -258,7 +262,9 @@ function ProductRoom({ roomId, user, logout }) {
   </RaceFrame>;
   const labels = { ready: "준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기", rematch:"재경기" };
   const actions = room.actions.map(action => <button key={action} className="wr-race-btn" type="button" disabled={pending} onClick={()=>void command(action)}>{labels[action]}</button>);
-  const actionError = error && <p role="alert">요청을 완료하지 못했어요. 방 상태를 다시 확인해 주세요.</p>;
+  const actionError = error && <p role="alert">{error === "PRODUCT_CANDIDATE_PAIR_REQUIRED"
+    ? "서로 이동할 수 있는 다른 문서 후보가 두 개 필요해요."
+    : "요청을 완료하지 못했어요. 방 상태를 다시 확인해 주세요."}</p>;
   const matchClock = room.lifecycle && (room.phase2Policy
     ? <Phase2Countdown lifecycle={room.lifecycle} serverObservedAt={room.serverObservedAt}/>
     : <p aria-label="아이템전 경기 기한">최대 20분 · 3위 완주 후 최대 2분 유예{room.lifecycle.grace_ends_at && " · 유예 진행 중"}</p>);
@@ -301,15 +307,21 @@ function ProductRoom({ roomId, user, logout }) {
         <ResultActions><Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>{actions}</ResultActions>
       </ResultCard>
     </ResultScreen>;
+  } else if (room.scheduledStartAt) {
+    content = <ScheduledItemCountdown roomId={roomId} startsAt={room.scheduledStartAt}
+      serverObservedAt={room.serverObservedAt} startTitle={room.startDocument?.title} targetTitle={room.target?.title}
+      onBoundary={() => void reloadRef.current?.("scheduled-start")}/>;
   } else {
     const leaveLobby = room.actions.includes("leave");
-    const ready = room.players.find(player => player.participantId === room.participantId)?.ready;
+    const self = room.players.find(player => player.participantId === room.participantId);
+    const ready = self?.ready;
     const start = room.actions.includes("start");
+    const followup = room.followupActions ?? [];
     const readyCount = room.players.filter(player => player.ready).length;
     const roster = room.players.map(player => ({
-      key: player.participantId, name: player.name, ready: player.ready,
-      userId: player.participantId === room.participantId ? actorId : null,
-      host: start && player.participantId === room.participantId,
+      key: player.participantId, name: player.nickname || player.name, ready: player.ready,
+      userId: player.participantId === room.participantId ? actorId : productId(player.profileId) ? player.profileId : null,
+      host: player.host ?? (start && player.participantId === room.participantId),
     }));
     content = <LobbyShell user={user} mode="group"
       onNavigate={leaveLobby ? destination => void command("leave", destination) : undefined}
@@ -329,6 +341,8 @@ function ProductRoom({ roomId, user, logout }) {
           <p className={`wr65-camp-state ${ready ? "is-ready" : ""}`} role="status">{ready ? "준비 완료 · READY" : "코스를 확인하고 준비를 눌러 주세요"}</p>
           {room.actions.includes("ready") && !ready && <button type="button" className="wr-btn wr-btn--primary wr-btn--block"
             disabled={pending} onClick={() => void command("ready")}>준비</button>}
+          {ready && followup.includes("unready") && <button type="button" className="wr-btn wr-btn--block"
+            disabled={pending} onClick={() => void command("unready")}>준비 취소</button>}
         </aside>
         <div className="wr-group-main">
           <ItemRoomRoster mode="group" players={roster} user={user} maxPlayers={room.maximumPlayers}
@@ -336,11 +350,19 @@ function ProductRoom({ roomId, user, logout }) {
               players={room.players} label="대기방 키온 감정표현" />} />
           <section className="wr-course" aria-labelledby="s5-course-title">
             <div className="wr-course-head"><h2 id="s5-course-title" className="wr-section-label">공통 코스</h2></div>
-            <div className="wr-course-route"><span className="wr-route-chip">서버 지정 출발 문서</span>
+            <div className="wr-course-route"><span className="wr-route-chip">{room.startDocument?.title || "서버 지정 출발 문서"}</span>
               <span aria-hidden="true">→</span>
               <strong className="wr-route-chip wr-route-chip--target"><LobbyIcon name="flag" />{room.target?.title || "서버 지정 목표 문서"}</strong>
             </div>
-            <p className="wr-course-note">전원이 서버가 지정한 같은 코스로 경기합니다.</p>
+            {followup.includes("candidate") && room.courseCandidates?.length > 0 ? <>
+              <label htmlFor="s5-course-candidate">목표 후보</label>
+              <select id="s5-course-candidate" value={self?.candidateId ?? ""} disabled={pending}
+                onChange={event => void command("candidate", undefined, { snapshotId: event.target.value || null })}>
+                <option value="">후보 없음</option>
+                {room.courseCandidates.map(candidate => <option key={candidate.snapshotId} value={candidate.snapshotId}>{candidate.title}</option>)}
+              </select>
+              <p className="wr-course-note">제출한 후보 중 연결된 두 문서를 출발과 목표로 추첨합니다. 후보가 없으면 공통 코스로 출발합니다.</p>
+            </> : <p className="wr-course-note">전원이 서버가 지정한 같은 코스로 경기합니다.</p>}
           </section>
         </div>
       </div>
@@ -352,7 +374,8 @@ function ProductRoom({ roomId, user, logout }) {
               ? `참가자 준비 대기 · ${readyCount} / ${room.players.length}` : "방장이 시작하기를 기다리는 중"}
         </p>
         {start && <button className="wr-btn wr-btn--primary wr-btn--lg wr-start-btn" type="button"
-          disabled={pending} aria-describedby="s5-start-status" onClick={() => void command("start")}>경기 시작</button>}
+          disabled={pending} aria-describedby="s5-start-status"
+          onClick={() => void command(followup.includes("start_scheduled") ? "start_scheduled" : "start")}>경기 시작</button>}
       </div>
     </LobbyShell>;
   }
