@@ -4,6 +4,7 @@
 .s5x-effect img { object-fit: contain; }
 .s5x-outcome {
   position: absolute; left: 50%; top: min(calc(100cqh - 26px), calc(var(--s5x-y) + clamp(44px, 19vw, 112px)));
+  box-sizing: border-box;
   transform: translate(-50%, -50%); width:max-content; max-width:calc(100% - 16px); text-align:center; border: 2px solid #bc9259;
   border-radius: 14px; background: #fff2d1; color: #3f3039; padding: .45rem .75rem; font-size: clamp(.8rem, 3vw, 1rem);
   box-shadow: 0 5px 12px #211b315c;

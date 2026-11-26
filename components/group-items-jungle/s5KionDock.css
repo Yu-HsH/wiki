@@ -30,6 +30,22 @@
   }
 }
 
+@media (max-width: 600px) {
+  [data-s5-sticky-dock] .s5-dock-content .wr-race-emotes:has(.wr-kion-picker__panel) {
+    flex-wrap: wrap;
+  }
+  [data-s5-sticky-dock] .s5-dock-content .wr-race-emotes__actions:has(.wr-kion-picker__panel) {
+    flex: 1 0 100%;
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+  [data-s5-sticky-dock] .s5-dock-content .wr-kion-picker__panel {
+    position: static;
+    width: min(274px, calc(100vw - 72px));
+    margin-top: 4px;
+  }
+}
+
 /* Inline lobby and v4 reactions never cover navigation or item controls. */
 .s5-kion-dock--inline .wr-race-emotes {
   position: relative;
