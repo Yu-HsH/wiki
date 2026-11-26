@@ -1,6 +1,11 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(5);
+select plan(7);
+
+create function pg_temp.fail_v4_kion_delete() returns trigger language plpgsql as $$
+begin
+  raise exception 'isolated Kion cleanup failure' using errcode='P9001';
+end$$;
 
 select ok(not has_function_privilege('authenticated','private.purge_terminal_v4_kion_requests_v1()','EXECUTE')
   and not has_function_privilege('authenticated','ink_product.purge_terminal_lobby_kion_requests_v1()','EXECUTE'),
@@ -24,6 +29,7 @@ declare
     'rulesVersion','ink-s5-test-v1','catalogVersion','ink-s5-test-v1','modePolicyVersion','wikipedia-s5-test-v1',
     'policyDigest',repeat('9',64));
   reply jsonb;
+  checkpoint timestamptz;
 begin
   insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data)
   values(actor,'authenticated','authenticated',actor::text||'@example.invalid','{}','{}');
@@ -100,11 +106,35 @@ begin
   assert exists(select from duel_v4.kion_requests where room_id=v4_live), 'active v4 request retained';
   assert exists(select from duel_v4_events.kion_v1 where room_id=v4_live and sent_at < now()-interval '30 days'),
     'active v4 retry emits no new reaction even after the display window';
+
+  select last_completed_at into checkpoint from ink_product.maintenance_jobs_v1 where job='daily_receipts';
+  assert exists(select from private.v4_kion_cleanup_runs_v1 where completed_at=checkpoint
+    and deleted_rows=1 and error_state is null), 'v4 recorded one actual deletion';
+  assert exists(select from ink_product.lobby_kion_cleanup_runs_v1 where completed_at=checkpoint
+    and deleted_rows=1 and error_state is null), 'S5 recorded one actual deletion';
+
+  insert into duel_v4.kion_requests(room_id,sender_id,request_id,event_id,emote_id,sent_at)
+  values(v4_old,actor,request,gen_random_uuid(),'hello',now()-interval '40 days');
+  create trigger isolated_cleanup_error before delete on duel_v4.kion_requests
+    for each row execute function pg_temp.fail_v4_kion_delete();
+  set local role ink_product_owner;
+  update ink_product.maintenance_jobs_v1 set next_due_at=clock_timestamp()-interval '1 second' where job='daily_receipts';
+  reset role;
+  reply:=ink_product.run_maintenance_v1('daily_receipts',gen_random_uuid(),1);
+  assert reply->>'status'='success', 'Kion deletion failure does not abort receipt maintenance';
+  select last_completed_at into checkpoint from ink_product.maintenance_jobs_v1 where job='daily_receipts';
+  assert exists(select from private.v4_kion_cleanup_runs_v1 where completed_at=checkpoint
+    and deleted_rows is null and error_state='P9001'), 'v4 failure is recorded separately';
+  assert exists(select from ink_product.lobby_kion_cleanup_runs_v1 where completed_at=checkpoint
+    and deleted_rows=0 and error_state is null), 'S5 zero-row success is recorded independently';
+  assert exists(select from duel_v4.kion_requests where room_id=v4_old), 'failed deletion leaves its row intact';
 end$$;
 
 select pass('existing daily maintenance drives retention, while minute maintenance leaves request rows alone');
 select pass('only terminal request rows older than 30 days are deleted for both modes');
 select pass('active retries still deduplicate after their display windows and terminal replays stay denied');
 select pass('v4 and S5 room state survives retention');
+select pass('both cleanup stages record the actual nonzero deletion count');
+select pass('a failed deletion records its SQLSTATE, while the other stage records a zero-row success');
 select * from finish();
 rollback;

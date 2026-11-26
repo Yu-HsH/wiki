@@ -1,0 +1,36 @@
+\set ON_ERROR_STOP on
+BEGIN READ ONLY;
+SET LOCAL timezone = 'Asia/Seoul';
+
+SELECT jobname, schedule, username, database, active
+FROM cron.job WHERE jobname IN ('wiki-s5-minute-cleanup', 'wiki-s5-daily-receipts')
+ORDER BY jobname;
+
+SELECT j.jobname, r.status, r.start_time, r.end_time, r.return_message
+FROM cron.job j
+CROSS JOIN LATERAL (
+  SELECT status, start_time, end_time, return_message
+  FROM cron.job_run_details WHERE jobid = j.jobid ORDER BY runid DESC LIMIT 3
+) r
+WHERE j.jobname IN ('wiki-s5-minute-cleanup', 'wiki-s5-daily-receipts')
+ORDER BY r.start_time DESC;
+
+SELECT j.job, j.enabled, j.next_due_at, j.last_completed_at, j.consecutive_errors, j.last_error,
+       r.status AS latest_run_status, r.completed_at AS latest_run_at,
+       r.response - ARRAY['job','requestId','scheduledAt','status'] AS latest_run_result,
+       v.deleted_rows AS v4_kion_deleted, v.error_state AS v4_kion_sqlstate,
+       s.deleted_rows AS s5_kion_deleted, s.error_state AS s5_kion_sqlstate
+FROM ink_product.maintenance_jobs_v1 j
+LEFT JOIN LATERAL (
+  SELECT status, completed_at, response FROM ink_product.maintenance_runs_v1
+  WHERE job = j.job ORDER BY completed_at DESC LIMIT 1
+) r ON true
+LEFT JOIN private.v4_kion_cleanup_runs_v1 v ON j.job = 'daily_receipts' AND v.completed_at = j.last_completed_at
+LEFT JOIN ink_product.lobby_kion_cleanup_runs_v1 s ON j.job = 'daily_receipts' AND s.completed_at = j.last_completed_at
+ORDER BY j.job;
+
+SELECT (SELECT entry_open FROM private.pr63_drain_gate WHERE singleton) AS drain_open,
+       (SELECT enabled FROM duel_v4.public_entry_v1 WHERE singleton) AS v4_members_open,
+       (SELECT admission_enabled FROM ink_product.entry_policy_v1 WHERE channel = 'production') AS s5_members_open;
+
+COMMIT;
