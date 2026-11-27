@@ -1,4 +1,5 @@
 import "./s5Next.css";
+import ExplorationHintPanel from "../wiki-race/race/ExplorationHintPanel.jsx";
 import './phase2.css';
 import {Phase2Countdown} from './Phase2Panels.jsx';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -137,7 +138,7 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
   return <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
       target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
       lifecycle={lifecycle} enteredFromLobby={enteredFromLobby}
-      players={players} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
+      players={players} explorationHints={<ExplorationHintPanel mode="group_items" roomId={roomId} />} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
       kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>;
 }
 
@@ -278,6 +279,7 @@ function ProductRoom({ roomId, user, logout }) {
   } else if (room.phase === "playing") {
     content = <RaceFrame mode="group" label="아이템 그룹 관전">
       <RaceHud><HudBrand mode="그룹 아이템전" sub="관전" /><HudDoc kind="goal" label="목표 문서" title={room.target?.title} />{matchClock}</RaceHud>
+      <ExplorationHintPanel mode="group_items" roomId={roomId} />
       <section className="product-item-camp-panel" aria-labelledby="s5-spectator-title">
         <h1 id="s5-spectator-title">그룹 아이템전 관전</h1>
         <ul className="product-item-roster" aria-label="참가자와 현재 문서">

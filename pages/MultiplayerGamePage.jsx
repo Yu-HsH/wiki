@@ -1,3 +1,4 @@
+import ExplorationHintPanel from "../components/wiki-race/race/ExplorationHintPanel.jsx";
 import useRaceMotion from "../hooks/useRaceMotion.js";
 import useGameAudio from "../hooks/useGameAudio.js";
 import { audioManager } from "../services/audioManager.js";
@@ -2022,6 +2023,7 @@ function DuelGameSession() {
           </div>
           <HudExit label="나가기" onClick={requestExit} disabled={leaving || isResult} />
         </RaceHud>
+        {isPlaying && !useItems && <ExplorationHintPanel mode="duel" roomId={roomId} />}
 
         <div className="wr-race-strip" role="group" aria-label="상대 상태">
           <span className="wr-hud-label">상대</span>

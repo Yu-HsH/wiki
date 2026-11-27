@@ -429,3 +429,7 @@ verify_jwt = false
 
 [functions.duel-search-v4]
 verify_jwt = false
+
+# Auth verifies the bearer token before the service-only hint RPCs run.
+[functions.exploration-hints]
+verify_jwt = false

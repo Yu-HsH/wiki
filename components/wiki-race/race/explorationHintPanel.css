@@ -1,0 +1,24 @@
+.wr-exploration-hints {
+  align-self: start;
+  max-width: min(100%, 30rem);
+  padding: .45rem .85rem;
+}
+.wr-exploration-hints summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.wr-exploration-hints ul {
+  max-block-size: 8rem;
+  overflow: auto;
+  margin-block: .4rem 0;
+  padding-inline-start: 1.4rem;
+}
+.wr-exploration-hints p {
+  margin-block: .4rem 0;
+}
+.wr-exploration-hints__notice {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  margin-block-end: .3rem;
+}

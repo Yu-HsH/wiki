@@ -1,3 +1,4 @@
+import ExplorationHintPanel from "../components/wiki-race/race/ExplorationHintPanel.jsx";
 import useRaceMotion from "../hooks/useRaceMotion.js";
 import useGameAudio from "../hooks/useGameAudio.js";
 import { audioManager } from "../services/audioManager.js";
@@ -1884,6 +1885,7 @@ export default function GroupGamePage() {
                     <HudTimer label={isGroupPlaying ? deadline.label : "남은 시간"} seconds={isGroupPlaying ? remainingSeconds : deadline.seconds} state={isGroupPlaying ? deadline.state : "normal"} />
                     <HudExit label="나가기" onClick={requestExit} disabled={leaving} />
                 </RaceHud>
+                {isGroupPlaying && <ExplorationHintPanel mode="group" roomId={roomId} />}
 
                 <RaceRoomEmotes roomId={roomId} userId={user?.id} players={players} roomStatus={room?.status} active={isGroupPlaying} />
 
