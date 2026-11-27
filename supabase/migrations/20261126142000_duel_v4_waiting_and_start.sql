@@ -135,7 +135,10 @@ begin
     || jsonb_build_object('itemFeedback',duel_v4.recent_item_feedback(room.id,actor,at_time),
       'waitingClosedAt',room.waiting_closed_at,'waitingActionsVersion',1);
   if room.started_at>at_time then
-    return body || jsonb_build_object('inventory','[]'::jsonb,'nextSupplyAt',null,'supplyGrant',null);
+    -- A deployed client interprets any non-null startedAt as permission to
+    -- leave the lobby. Only the new countdown UI reads this additive field.
+    return body || jsonb_build_object('startedAt',null,'scheduledStartAt',room.started_at,
+      'inventory','[]'::jsonb,'nextSupplyAt',null,'supplyGrant',null);
   end if;
   select g.id into supply_grant from duel_v4.grants g where g.room_id=p_room and g.user_id=actor
     and g.supply_round=room.supply_round and g.consumed_at is null;

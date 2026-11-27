@@ -19,14 +19,13 @@ alter table ink_product.rooms
 alter table ink_product.members
   add column target_candidate_id uuid references ink_product.wiki_snapshots(id);
 
-create function private.s5_public_profile_v1(p_actor uuid) returns jsonb
+create function ink_product.s5_public_profile_v1(p_actor uuid) returns jsonb
 language sql stable security definer set search_path='' as $$
   select jsonb_build_object('profileId',id,'nickname',nickname)
   from public.profiles where id=p_actor
 $$;
-revoke all on function private.s5_public_profile_v1(uuid) from public, anon, authenticated, service_role;
-grant usage on schema private to ink_product_owner;
-grant execute on function private.s5_public_profile_v1(uuid) to ink_product_owner;
+revoke all on function ink_product.s5_public_profile_v1(uuid) from public, anon, authenticated, service_role;
+grant execute on function ink_product.s5_public_profile_v1(uuid) to ink_product_owner;
 grant create on schema public to ink_product_owner;
 set local role ink_product_owner;
 
@@ -264,7 +263,7 @@ begin
   select jsonb_build_object('snapshotId',id,'pageId',page_id,'revisionId',revision_id,'title',canonical_title)
     into strict goal_doc from ink_product.wiki_snapshots where id=coalesce(r.selected_goal_snapshot_id,policy.goal_snapshot_id);
   select coalesce(jsonb_agg((p.row || jsonb_build_object('host',m.actor_id=r.host_actor,'candidateId',m.target_candidate_id)
-    || coalesce(private.s5_public_profile_v1(m.actor_id),'{}'::jsonb)) order by p.ordinal),'[]'::jsonb)
+    || coalesce(ink_product.s5_public_profile_v1(m.actor_id),'{}'::jsonb)) order by p.ordinal),'[]'::jsonb)
   into people from jsonb_array_elements(body->'players') with ordinality p(row,ordinal)
   join ink_product.members m on m.room_id=r.id and m.participant_id=(p.row->>'participantId')::uuid;
   if r.phase='waiting' and r.scheduled_start_at is null then

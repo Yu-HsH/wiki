@@ -121,7 +121,8 @@ function Match({ roomId, user, logout }) {
   const me = state?.players.find((player) => player.id === userId);
   const opponent = state?.players.find((player) => player.id !== userId);
   const current = me?.page;
-  const scheduled = Boolean(state?.startedAt && Date.parse(state.serverTime) < Date.parse(state.startedAt));
+  const scheduledAt = state?.scheduledStartAt ?? state?.startedAt;
+  const scheduled = Boolean(scheduledAt && Date.parse(state.serverTime) < Date.parse(scheduledAt));
   const started = Boolean(state?.startedAt && !scheduled);
   const finished = Boolean(state?.finishedAt);
   const now = state ? Date.parse(state.serverTime) + Math.max(0, clock - state.receivedAt) : clock;
@@ -366,7 +367,7 @@ function Match({ roomId, user, logout }) {
   if (state.waitingClosedAt) return <RaceFrame mode="duel" label="1:1 아이템전">
     <RaceHold title="방장이 대기방을 닫았어요." actions={<Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>}/>
   </RaceFrame>;
-  if (scheduled) return <ScheduledItemCountdown roomId={roomId} startsAt={state.startedAt}
+  if (scheduled) return <ScheduledItemCountdown roomId={roomId} startsAt={scheduledAt}
     serverObservedAt={state.serverTime} startTitle={current?.title} targetTitle={state.target?.title}
     onBoundary={refresh}/>;
   if (finished) {
