@@ -375,6 +375,8 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         </div>
       </div>
       <div className="group-items-jungle-dock" data-s5-sticky-dock={finalAssets ? true : undefined} data-item-race-dock>
+        {finalAssets && <span className="gip-feedback-sr" role="status">{view?.finalVisual?.scenes
+          .filter(scene=>scene.key.startsWith("recipient:")).map(scene=>scene.label).join(" · ")}</span>}
         {finalAssets && <div className="s5-dock-warnings" ref={setWarningToolbar}/>}
         <div className="s5-dock-content">
         {kionDock}

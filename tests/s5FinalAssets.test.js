@@ -130,6 +130,32 @@ test('S5: recover a shield and a seal silently, release once at the server expir
   assert.deepEqual(heard,['link_censor/release']);
 });
 
+test('S5: use only fresh recipient feedback and keep the settled trap outcome', () => {
+  const heard=[];
+  const audio={play:asset=>heard.push(asset),stun(){},stop(){}};
+  const p=createFinalAssetPresentation({},()=>audio,()=>100);
+  const initial={presentation:{serverObservedAt:1000},itemFeedback:[
+    {id:'old',kind:'item_stolen',at:new Date(999).toISOString()},
+  ]};
+  const frame={now:1100,view:{viewer:{readOnly:false}},events:[]};
+  p.recover(initial);
+  assert.deepEqual(p.observe(initial,frame,true).scenes,[]);
+  const next={...initial,itemFeedback:[...initial.itemFeedback,
+    {id:'trap:1',kind:'trap_triggered',outcome:'blocked',at:new Date(1050).toISOString()},
+    {id:'theft:1',kind:'item_stolen',itemId:'ink',tier:'enhanced',at:new Date(1075).toISOString()},
+  ]};
+  const result=p.observe(next,frame,true).scenes;
+  assert.deepEqual(result.map(({kind,itemId,itemTier})=>({kind,itemId,itemTier})),[
+    {kind:'trap-reveal',itemId:undefined,itemTier:undefined},
+    {kind:'thief-loss',itemId:'ink',itemTier:'enhanced'},
+  ]);
+  assert.match(result[0].label,/편집보호로 차단/);
+  p.observe(next,frame,true);
+  assert.deepEqual(heard,['surprise_box/reveal','thief_hand/empty']);
+  p.recover({...next,presentation:{serverObservedAt:1100}});
+  assert.deepEqual(p.observe(next,frame,true).scenes,[]);
+});
+
 test('S5: selected sound, mute, volume and authorized stun-loop synchronization', () => {
   const played=[];
   const document=new EventTarget();

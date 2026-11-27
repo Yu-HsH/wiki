@@ -19,6 +19,7 @@ import { ItemRoomRoster } from "../components/wiki-race/ItemRoomLobby.jsx";
 import ItemDuelTarget from "../components/wiki-race/ItemDuelTarget.jsx";
 import ItemRaceSlots, { ItemRaceDescription } from "../components/wiki-race/race/ItemRaceSlots.jsx";
 import ItemRaceStart from "../components/wiki-race/race/ItemRaceStart.jsx";
+import ScheduledItemCountdown from "../components/wiki-race/race/ScheduledItemCountdown.jsx";
 import useItemSupplyArrival from "../hooks/useItemSupplyArrival.js";
 import { ConnectionDot, HudArrow, HudBrand, HudDoc, HudExit, HudStat, HudTimer, MobileRouteNotes, RaceFrame, RaceHold, RaceHud, RouteRail } from "../components/wiki-race/race/RaceParts.jsx";
 import { ResultActions, ResultCard, ResultOutcome, ResultRoute, ResultScreen, ResultStats, ResultXpRow } from "../components/wiki-race/result/ResultParts.jsx";
@@ -120,16 +121,23 @@ function Match({ roomId, user, logout }) {
   const me = state?.players.find((player) => player.id === userId);
   const opponent = state?.players.find((player) => player.id !== userId);
   const current = me?.page;
-  const started = Boolean(state?.startedAt);
+  const scheduledAt = state?.scheduledStartAt ?? state?.startedAt;
+  const scheduled = Boolean(scheduledAt && Date.parse(state.serverTime) < Date.parse(scheduledAt));
+  const started = Boolean(state?.startedAt && !scheduled);
   const finished = Boolean(state?.finishedAt);
   const now = state ? Date.parse(state.serverTime) + Math.max(0, clock - state.receivedAt) : clock;
-  const waiting = Boolean(state && !state.startedAt);
+  const waiting = Boolean(state && !state.waitingClosedAt && !started);
   useEffect(() => {
     if (waiting) {
       enteredFromLobby.current = true;
-      audioManager.prepare(["go", "itemReveal", "denied"]);
+      audioManager.prepare(["tick", "go", "itemReveal", "denied"]);
     }
   }, [waiting]);
+  useEffect(() => {
+    if (!waiting || scheduled) return;
+    const fallback = setInterval(refresh, 750);
+    return () => clearInterval(fallback);
+  }, [waiting, scheduled, refresh]);
 
   const nextSupplyMs = Date.parse(state?.nextSupplyAt);
   const startedMs = Date.parse(state?.startedAt);
@@ -137,6 +145,7 @@ function Match({ roomId, user, logout }) {
   const initialSupply = supplyRound === 0;
   const suppliedGrant = useItemSupplyArrival(state && {
     round:Number.isSafeInteger(supplyRound) && supplyRound >= 0 ? String(supplyRound) : null, initialRound:initialSupply,
+    grantId:state.supplyGrant?.round===String(supplyRound) ? state.supplyGrant.grantId : null,
     dueAt:initialSupply ? startedMs : nextSupplyMs-25_000,
     observedAt:Date.parse(state.serverTime), revision:Number(state.version),
     inventory:state.inventory.map(item=>item.id), live:started && !finished && (initialSupply || !activeWork.current) && !connectionError,
@@ -294,6 +303,7 @@ function Match({ roomId, user, logout }) {
         setScenes(feedback.current.scenes());
       }
       if (result.ok) {
+        if (operation === "leave_waiting") return true;
         if (operation === "item" && item?.itemId !== "parry") closeItem();
         if (result.roomId) navigate("/multiplayer/duel-v4/" + result.roomId);
       }
@@ -354,6 +364,12 @@ function Match({ roomId, user, logout }) {
     {documentError && <p>{documentError}</p>}
   </div>;
   const elapsed = started ? Math.max(0, Math.floor(((finished ? Date.parse(state.finishedAt) : now) - Date.parse(state.startedAt)) / 1000)) : 0;
+  if (state.waitingClosedAt) return <RaceFrame mode="duel" label="1:1 아이템전">
+    <RaceHold title="방장이 대기방을 닫았어요." actions={<Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>}/>
+  </RaceFrame>;
+  if (scheduled) return <ScheduledItemCountdown roomId={roomId} startsAt={scheduledAt}
+    serverObservedAt={state.serverTime} startTitle={current?.title} targetTitle={state.target?.title}
+    onBoundary={refresh}/>;
   if (finished) {
     const won = state.winnerId === userId;
     const detail = {
@@ -384,11 +400,14 @@ function Match({ roomId, user, logout }) {
     const players = state.players.map(player => ({
       key: player.id, userId: player.id, name: player.name, host: player.id === state.hostId,
     })).sort((a, b) => Number(b.host) - Number(a.host));
-    return <LobbyShell user={user} mode="duel" onNavigate={navigate} onLogout={async () => {
+    const leave = () => state.waitingActionsVersion ? run("leave_waiting", async () => ({})) : Promise.resolve(true);
+    const leaveTo = async destination => { if (await leave()) navigate(destination); };
+    return <LobbyShell user={user} mode="duel" onNavigate={leaveTo} onLogout={async () => {
+      if (!(await leave())) return;
       await logout();
       navigate("/");
     }}>
-      <LobbyHeader kicker="1:1 대전 준비" title="1:1 아이템전" onLeave={() => navigate("/play")} leaveLabel="플레이로 돌아가기">
+      <LobbyHeader kicker="1:1 대전 준비" title="1:1 아이템전" onLeave={() => void leaveTo("/play")} leaveLabel="방 나가기">
         <span className="wr-head-code" data-duel-v4-code><span>방 코드</span><CopyCodeButton code={state.code} compact /></span>
       </LobbyHeader>
       {notice}
@@ -404,7 +423,7 @@ function Match({ roomId, user, logout }) {
           {!opponent ? "상대의 입장을 기다리는 중" : !state.target ? "공통 목표를 선택해 주세요" : isHost ? "경기를 시작할 수 있어요" : "방장이 시작하기를 기다리는 중"}
         </p>
         {isHost && <button type="button" className="wr-btn wr-btn--primary wr-btn--lg" disabled={busy || targetSearching || !ready}
-          aria-describedby="item-duel-start-status" onClick={() => void run("start", async () => {
+          aria-describedby="item-duel-start-status" onClick={() => void run(state.waitingActionsVersion ? "start_scheduled" : "start", async () => {
             const title = await fetchDistinctRandomTitle(new Set([normalizeTitle(state.target.title)]));
             return { snapshotId: (await findSnapshot(title)).snapshotId };
           })}>게임 시작</button>}
