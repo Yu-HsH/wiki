@@ -87,11 +87,16 @@ async function rpc(user, name, args) {
 const start = { title: "S5v4 Start " + token, pageId: "90101", revisionId: "101" };
 const middle = { title: "S5v4 Middle " + token, pageId: "90102", revisionId: "102" };
 const goal = { title: "S5v4 Goal " + token, pageId: "90103", revisionId: "103" };
-const wiki = [start, middle, goal];
+const s5First = { title: "S5 첫 후보 " + token, pageId: "90111", revisionId: "111" };
+const s5Second = { title: "S5 둘째 후보 " + token, pageId: "90112", revisionId: "112" };
+const s5Candidates = [s5First, s5Second];
+const wiki = [start, middle, goal, ...s5Candidates];
+const outgoing = new Map([[start, middle], [middle, goal], [s5First, s5Second], [s5Second, s5First]]);
 for (const item of wiki) {
   item.snapshotId = randomUUID();
-  const next = wiki[Math.min(wiki.indexOf(item) + 1, 2)];
-  item.html = `<div class="mw-parser-output"><h2>테스트 문서</h2><p><a href="/wiki/${encodeURIComponent(next.title)}">${next.title}</a></p></div>`;
+  const next = outgoing.get(item);
+  const link = next ? `<p><a href="/wiki/${encodeURIComponent(next.title)}">${next.title}</a></p>` : "";
+  item.html = `<div class="mw-parser-output"><h2>테스트 문서</h2>${link}</div>`;
 }
 function seedWiki() {
   sql("begin; insert into public.wiki_pages(page_id,canonical_title) values " +
@@ -99,7 +104,7 @@ function seedWiki() {
     "insert into public.wiki_page_snapshots(id,page_id,revision_id,canonical_title_snapshot) values " +
     wiki.map(p => `(${[p.snapshotId,p.pageId,p.revisionId,p.title].map(quote).join(",")})`).join(",") + ";" +
     "insert into public.wiki_snapshot_links(snapshot_id,target_page_id,target_revision_id,target_title_snapshot,link_text,ordinal) values " +
-    [start,middle].map((p,i) => `(${[p.snapshotId,wiki[i+1].pageId,wiki[i+1].revisionId,wiki[i+1].title,wiki[i+1].title].map(quote).join(",")},0)`).join(",") + "; commit;");
+    [...outgoing].map(([from,to]) => `(${[from.snapshotId,to.pageId,to.revisionId,to.title,to.title].map(quote).join(",")},0)`).join(",") + "; commit;");
 }
 const binding = { namespace:"ink-s4-product", schemaVersion:"candidate-v3", rulesVersion:"ink-s5-test-v1",
   catalogVersion:"ink-s5-test-v1", modePolicyVersion:"wikipedia-s5-test-v1", policyDigest:"a".repeat(64) };
@@ -148,13 +153,13 @@ async function interceptWiki(context) {
     const request = new URL(route.request().url()), params = request.searchParams;
     const item = fixture(params.get("page") || params.get("titles") ||
       (request.pathname.includes("/page/summary/") ? decodeURIComponent(request.pathname.split("/").at(-1)) : ""));
-    const next = wiki[Math.min(wiki.indexOf(item)+1,2)];
+    const next = outgoing.get(item);
     let data;
     if (request.pathname === "/w/api.php" && params.get("list") === "random")
       data = {query:{random:[{id:start.pageId,title:start.title,ns:0}]}};
     else if (request.pathname === "/w/api.php" && params.get("prop") === "links")
       data = {query:{pages:{[item.pageId]:{pageid:item.pageId,title:item.title,
-        links:[{ns:0,title:next.title}]}}}};
+        links:next ? [{ns:0,title:next.title}] : []}}}};
     else if (request.pathname === "/w/api.php" && params.get("action") === "parse")
       data = {parse:{title:item.title,pageid:item.pageId,revid:item.revisionId,text:{"*":item.html}}};
     else if (request.pathname.includes("/page/summary/"))
@@ -197,6 +202,13 @@ async function joinItemRoom(actor, mode, room, code) {
 async function readyGroup(room,members,agents) {
   for(let i=0;i<members.length;i++){
     const page=agents[i].page;
+    const candidate=s5Candidates[i % s5Candidates.length];
+    const search=page.getByRole("search",{name:"내 문서 후보 검색"});
+    await search.getByRole("textbox").fill(candidate.title);
+    await search.getByRole("button",{name:"검색",exact:true}).click();
+    await page.getByRole("list",{name:"문서 후보 검색 결과"})
+      .getByRole("button").filter({hasText:candidate.title}).click();
+    await page.getByRole("button",{name:"후보 취소",exact:true}).waitFor({state:"visible"});
     await page.getByRole("button",{name:"준비",exact:true}).click({timeout:20000});
     await waitFor(()=>sql("select ready from ink_product.members where room_id="+quote(room)+
       " and actor_id="+quote(members[i].id))==="t",
@@ -204,7 +216,10 @@ async function readyGroup(room,members,agents) {
   }
 }
 async function verifyS5FinishAndRematch(count, room, members, agents) {
-  const link = a=>a.page.locator('article.article-content a[data-wiki-title="목표"]');
+  const started=await rpc(members[0],"get_group_items_product_room_v1",{p_room:room,p_binding:null});
+  assert.equal(started.freeWiki,true,"S5 browser flow must use a new free-Wikipedia room");
+  assert.ok(s5Candidates.some(candidate=>candidate.title===started.target?.title),"S5 must draw a submitted goal");
+  const link = a=>a.page.locator(`article.article-content a[data-wiki-title="${started.target.title}"]`);
   // Every player must reach the seeded goal through the actual article click,
   // not by direct SQL updates or a fabricated terminal state.
   for(let i=0;i<count;i++){
