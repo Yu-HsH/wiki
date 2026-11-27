@@ -5,6 +5,7 @@ import WikiRaceShell from "../components/wiki-race/WikiRaceShell";
 import ExpeditionDialog from "../components/wiki-race/ExpeditionDialog";
 import { LobbyIcon } from "../components/wiki-race/LobbyParts";
 import { getScopedMultiplayerMode, resolveMultiplayerMode } from "../utils/multiplayerModeSelection.js";
+import { configureExplorationHints } from "../services/explorationHintService.js";
 import { createRoom } from "../services/multiplayerService";
 import { createGroupRoom } from "../services/groupMultiplayerService";
 import { enterItemRoom, itemModeEnabled, itemRoomPath, readItemAdmission } from "../services/itemModeEntryService.js";
@@ -73,6 +74,8 @@ export default function MultiplayerPage() {
   const selectedMode = resolveMultiplayerMode(routeMode, manualMode);
   const [roomCode, setRoomCode] = useState("");
   const [groupCapacity, setGroupCapacity] = useState(6);
+  const [hintsEnabled, setHintsEnabled] = useState(true);
+  const pendingCreation = useRef(null);
   const [pending, setPending] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const submitting = useRef(false);
@@ -152,13 +155,20 @@ export default function MultiplayerPage() {
 
   function createSelectedRoom() {
     return submit(async () => {
-      if (useItems) return itemRoomPath(selectedMode, await enterItemRoom(selectedMode, actorId, "create"));
-      if (selectedMode === "duel") {
-        const room = await createRoom(actorId, { useItems: false, isPublic });
-        return `/multiplayer/room/${room.id}`;
+      const mode = useItems ? selectedMode + "_items" : selectedMode;
+      const key = JSON.stringify([actorId, mode, isPublic, groupCapacity]);
+      if (pendingCreation.current?.key !== key) {
+        let id;
+        if (useItems) id = await enterItemRoom(selectedMode, actorId, "create");
+        else if (selectedMode === "duel") id = (await createRoom(actorId, { useItems: false, isPublic })).id;
+        else id = (await createGroupRoom({ maxPlayers: groupCapacity, isPublic })).id;
+        pendingCreation.current = { key, id };
       }
-      const room = await createGroupRoom({ maxPlayers: groupCapacity, isPublic });
-      return `/multiplayer/group/room/${room.id}`;
+      const { id } = pendingCreation.current;
+      await configureExplorationHints(mode,id,hintsEnabled);
+      pendingCreation.current = null;
+      return useItems ? itemRoomPath(selectedMode,id)
+        : selectedMode === "duel" ? `/multiplayer/room/${id}` : `/multiplayer/group/room/${id}`;
     }, "방을 만들지 못했어요. 다시 시도해 주세요.");
   }
 
@@ -230,6 +240,10 @@ export default function MultiplayerPage() {
                 공개방으로 만들기 · 목록에서 참가 가능
               </label>
             </>}
+            <label className="mp-option">
+              <input type="checkbox" checked={hintsEnabled} onChange={event => setHintsEnabled(event.target.checked)} disabled={pending} />
+              탐험 힌트 사용 · 경기 시작 5분 뒤부터 공개
+            </label>
             <button type="button" className="mp-action-btn mp-action-btn--primary" disabled={pending || itemBlocked}
               onClick={createSelectedRoom}>{pending ? "처리 중…" : "방 생성"}</button>
           </section>}

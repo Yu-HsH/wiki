@@ -1,3 +1,4 @@
+import ExplorationHintPanel from "../components/wiki-race/race/ExplorationHintPanel.jsx";
 import React, { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../authContext.jsx";
@@ -454,6 +455,7 @@ function Match({ roomId, user, logout }) {
           supplySeconds={state.nextSupplyAt ? secondsLeft(state.nextSupplyAt, now) : null}
           select={(item, event) => { itemOpener.current = event.currentTarget; setSelected(item.key); }} />
       </RaceHud>
+      <ExplorationHintPanel mode="duel_items" roomId={roomId} />
       <div className="wr-race-strip" role="group" aria-label="상대 상태">
         <strong>{opponent?.name || "상대"}</strong>
         {opponent?.page?.title && <span>{opponent.page.title}</span>}

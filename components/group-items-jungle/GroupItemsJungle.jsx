@@ -39,7 +39,7 @@ function supplyDeadline(startedAt, supply) {
   return nextRound === 0 ? startedAt : startedAt + (20 + (nextRound - 1) * 25) * 1000;
 }
 
-function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
+function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, explorationHints, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
   const product = isProductS4Scope(scope);
   const s5 = isS5Scope(scope);
   const [view, setView] = useState(null);
@@ -359,6 +359,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         <HudStat label="이동" value={view?.self?.moveCount ?? "–"}/>{matchClock}
         {finalAssets && <div className="group-items-hud-slots" ref={setItemToolbar} />}
       </RaceHud>
+      {explorationHints}
       {roster && <details className="product-item-mobile-roster"><summary>참가자 {players.length}명</summary>{roster}</details>}
       <div className={roster ? "wr-race-body" : "wr-race-body is-wide"}>
         {roster && <aside className="wr-race-side product-item-race-roster">{roster}</aside>}
