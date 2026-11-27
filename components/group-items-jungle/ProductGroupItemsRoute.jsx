@@ -1,7 +1,11 @@
 import "./s5Next.css";
+import FreeWikiCandidateSearch from "./FreeWikiCandidateSearch.jsx";
+import { prepareFreeWikiDestination } from "./freeWikiDocument.js";
+import { ensureWikiSnapshot } from "../../services/wikiSnapshotService.js";
+import ExplorationHintPanel from "../wiki-race/race/ExplorationHintPanel.jsx";
 import './phase2.css';
 import {Phase2Countdown} from './Phase2Panels.jsx';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../authContext.jsx";
 import { supabase } from "../../supabaseClient.js";
@@ -19,8 +23,11 @@ import { FIXED_PRODUCT_WIKI_BINDING, readFixedProductWikiDocument } from "./prod
 import { loadProductWikiDocument } from "./productWikiDocument.js";
 import S5KionDock, { MODE_FOLLOWUP_ENABLED } from "./S5KionDock.jsx";
 import S5SpectatorDocument from "./S5SpectatorDocument.jsx";
-import { CopyCodeButton, LobbyHeader, LobbyShell, MeTag, StatusMark } from "../wiki-race/LobbyParts.jsx";
+import { CopyCodeButton, LobbyHeader, LobbyIcon, LobbyShell } from "../wiki-race/LobbyParts.jsx";
+import { ItemRoomRoster } from "../wiki-race/ItemRoomLobby.jsx";
+import { audioManager } from "../../services/audioManager.js";
 import { HudBrand, HudDoc, RaceFrame, RaceHold, RaceHud } from "../wiki-race/race/RaceParts.jsx";
+import ScheduledItemCountdown from "../wiki-race/race/ScheduledItemCountdown.jsx";
 import { GroupStandings, ResultActions, ResultCard, ResultOutcome, ResultScreen, ResultXpRow } from "../wiki-race/result/ResultParts.jsx";
 import "./groupItemsJungle.css";
 
@@ -38,13 +45,20 @@ function useRoomActions(binding, actorId) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
-  async function act(operation, roomId, version, payload = {}) {
+  async function act(operation, roomId, version, getLatestRoom, payload) {
     if (inFlight.current) return null;
     inFlight.current = true;
     setPending(true);
     setError("");
     try {
-      return await actGroupItemsRoom(binding, actorId, operation, roomId, version, payload);
+      try {
+        return await actGroupItemsRoom(binding, actorId, operation, roomId, version, payload);
+      } catch (failure) {
+        if (failure.message !== "PRODUCT_ROOM_STALE" || !failure.settled) throw failure;
+        const latest = await getLatestRoom();
+        if (latest.version === version || ![...latest.actions,...(latest.followupActions ?? [])].includes(operation)) throw failure;
+        return await actGroupItemsRoom(binding, actorId, operation, roomId, latest.version, payload);
+      }
     } catch (failure) {
       setError(failure.message ?? "PRODUCT_ROOM_UNAVAILABLE");
       return null;
@@ -56,7 +70,7 @@ function useRoomActions(binding, actorId) {
   return { pending, error, act };
 }
 
-function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, matchClock, roomActions }) {
+function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, matchClock, roomActions, lifecycle, enteredFromLobby, freeWiki }) {
   const { pathname } = useLocation();
   const previewAudio = import.meta.env.VITE_GROUP_ITEMS_INK_PREVIEW === "1";
   const fixedAudio = productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING);
@@ -67,17 +81,23 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
     binding.modePolicyVersion === "wikipedia-s5-test-v1";
   const audioPreference = finalAssets ? "group-items:final-asset-audio" : audioSetting;
   const volumePreference = "group-items:final-asset-volume";
-  const [audioEnabled, setAudioEnabled] = useState(()=>sessionStorage.getItem(audioPreference) === "on");
+  const sound = useSyncExternalStore(audioManager.subscribe, audioManager.getSnapshot, audioManager.getSnapshot);
+  const [audioEnabled, setAudioEnabled] = useState(()=>{
+    const preference = sessionStorage.getItem(audioPreference);
+    return preference === null ? finalAssets : preference === "on";
+  });
   const [volume, setVolume] = useState(()=>Number(sessionStorage.getItem(volumePreference) ?? 65));
   const audio = useRef(null);
   useEffect(()=>{
     const output = finalAssets ? createFinalAssetAudio(window) :
       fixedAudio && !previewAudio ? createPlaytestAudio(window) : createProductInkAudio(window,{preview:previewAudio});
     audio.current = output;
-    if (finalAssets) output.setVolume(Number(sessionStorage.getItem(volumePreference) ?? 65)/100);
-    if (sessionStorage.getItem(audioPreference) === "on") output.enable(true);
     return ()=>{ audio.current = null; output.dispose(); };
   },[fixedAudio,previewAudio,finalAssets,audioPreference]);
+  useEffect(() => {
+    if (finalAssets) audio.current?.setVolume(volume / 100 * sound.sfx);
+    audio.current?.enable(audioEnabled && (!finalAssets || sound.status === "ready" && !sound.muted && sound.sfx > 0));
+  }, [audioEnabled, finalAssets, fixedAudio, previewAudio, volume, sound.muted, sound.sfx, sound.status]);
   const itemPresentation = useMemo(()=>{
     const base = createProductItemPresentation({
       playInk: (pulse,view) => audio.current?.playPulse(pulse,view,{hidden:document.hidden}),
@@ -100,6 +120,10 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       if (!sameGroupItemsScope(document?.scope, scope)) throw new Error("TRANSPORT_SCOPE_MISMATCH");
       const body = await loadProductWikiDocument(payload, document.body, (identity, pinnedSignal)=>{
         if (productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING)) return readFixedProductWikiDocument(identity,pinnedSignal);
+        if (freeWiki && !document.body.documentHtml) {
+          return ensureWikiSnapshot({ ...identity, title: identity.canonicalTitle },
+            { includeDocument:true, signal:pinnedSignal, s5RoomId:roomId });
+        }
         return {
           pageId:document.body.pageId, revisionId:document.body.revisionId, canonicalTitle:document.body.canonicalTitle,
           snapshotId:document.body.wikiSnapshotId, documentHtml:document.body.documentHtml,
@@ -107,22 +131,21 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       }, documentSignal);
       return { scope:document.scope, body };
     },
-  }),[scope,roomId,sessionId,binding]);
+  }),[scope,roomId,sessionId,binding,freeWiki]);
   const audioControls = (fixedAudio || previewAudio || finalAssets) && <div className={finalAssets ? "s5-final-audio" : undefined}><button type="button" aria-pressed={audioEnabled} onClick={()=>{
       const enabled = !audioEnabled;
-      audio.current?.enable(enabled);
       sessionStorage.setItem(audioPreference,enabled ? "on" : "off");
       setAudioEnabled(enabled);
     }}>{finalAssets ? "아이템 효과음" : "먹물 효과음"}</button>
     {finalAssets && <label>효과음 볼륨 <input type="range" min="0" max="100" value={volume} onChange={event=>{
       const next = Number(event.target.value);
-      audio.current?.setVolume(next/100);
       sessionStorage.setItem(volumePreference,String(next));
       setVolume(next);
     }}/></label>}</div>;
   return <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
-      target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
-      players={players} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
+      prepareLink={freeWiki ? prepareFreeWikiDestination : undefined} target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
+      lifecycle={lifecycle} enteredFromLobby={enteredFromLobby}
+      players={players} explorationHints={<ExplorationHintPanel mode="group_items" roomId={roomId} />} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
       kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>;
 }
 
@@ -135,6 +158,7 @@ function ProductRoom({ roomId, user, logout }) {
   const [lastSync, setLastSync] = useState("initial");
   const binding = room?.binding ?? null;
   const roomRef = useRef(null), reloadRef = useRef(null), itemListeners = useRef(new Set());
+  const enteredFromLobby = useRef(false);
   const liveRef = useRef(false);
   const { pending, error, act } = useRoomActions(binding, actorId);
   const subscribe = useCallback(listener=>{
@@ -158,6 +182,10 @@ function ProductRoom({ roomId, user, logout }) {
         if (!abort.signal.aborted) {
           const confirmedBinding = knownBinding ?? readProductBinding(data?.binding);
           const next = readProductRoom(data, { roomId, actorId, binding:confirmedBinding }, roomRef.current);
+          if (next.phase === "waiting" && !enteredFromLobby.current) {
+            enteredFromLobby.current = true;
+            audioManager.prepare(["tick", "go", "itemReveal", "denied"]);
+          }
           roomRef.current = next;
           setRoom(next);
           setFailure("");
@@ -195,7 +223,10 @@ function ProductRoom({ roomId, user, logout }) {
         invalidate(liveRef.current ? "subscribed" : "polling", true);
       });
     const fallback = setInterval(()=>{
-      if (!liveRef.current && roomRef.current?.phase !== "finished") invalidate("polling", false);
+      const current = roomRef.current;
+      if (current?.phase === "waiting") {
+        if (!current.scheduledStartAt) void load("lobby-poll");
+      } else if (!liveRef.current && current?.phase !== "finished") invalidate("polling", false);
     }, fallbackIntervalMs);
     const heartbeat = setInterval(()=>{
       if (liveRef.current && roomRef.current?.phase !== "finished") invalidate("heartbeat", false);
@@ -214,9 +245,17 @@ function ProductRoom({ roomId, user, logout }) {
     };
   },[roomId,actorId]);
 
-  async function command(operation, destination = productPath) {
-    const result = await act(operation, roomId, room.version);
-    if (!result) return false;
+  async function command(operation, destination = productPath, payload) {
+    const result = await act(operation, roomId, room.version, async () => {
+      const identity = await readIdentity();
+      if (identity.actorId !== actorId) throw new Error("AUTH_REQUIRED");
+      const data = await rpc("get_group_items_product_room_v1", { p_room:roomId, p_binding:binding }, identity.accessToken);
+      return readProductRoom(data, { roomId, actorId, binding }, roomRef.current);
+    }, payload);
+    if (!result) {
+      void reloadRef.current?.();
+      return false;
+    }
     if (operation === "rematch") navigate(productPath+"/"+result.roomId);
     else if (operation === "leave" && room.phase === "waiting") {
       if (destination) navigate(destination);
@@ -231,7 +270,10 @@ function ProductRoom({ roomId, user, logout }) {
   </RaceFrame>;
   const labels = { ready: "준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기", rematch:"재경기" };
   const actions = room.actions.map(action => <button key={action} className="wr-race-btn" type="button" disabled={pending} onClick={()=>void command(action)}>{labels[action]}</button>);
-  const actionError = error && <p role="alert">요청을 완료하지 못했어요. 방 상태를 다시 확인해 주세요.</p>;
+  const actionError = error && <p role="alert">{error === "PRODUCT_CANDIDATE_PAIR_REQUIRED"
+    ? room.freeWiki ? "서로 다른 문서 후보가 두 개 필요해요." : "서로 이동할 수 있는 다른 문서 후보가 두 개 필요해요."
+    : error === "PRODUCT_CANDIDATE_REQUIRED" ? "먼저 Wikipedia 문서를 후보로 제출해 주세요."
+    : "요청을 완료하지 못했어요. 방 상태를 다시 확인해 주세요."}</p>;
   const matchClock = room.lifecycle && (room.phase2Policy
     ? <Phase2Countdown lifecycle={room.lifecycle} serverObservedAt={room.serverObservedAt}/>
     : <p aria-label="아이템전 경기 기한">최대 20분 · 3위 완주 후 최대 2분 유예{room.lifecycle.grace_ends_at && " · 유예 진행 중"}</p>);
@@ -240,10 +282,12 @@ function ProductRoom({ roomId, user, logout }) {
     content = <ProductMatch roomId={roomId} sessionId={room.sessionId}
       participantId={room.participantId} ownerEpoch={room.ownerEpoch} actorId={actorId} binding={binding}
       warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe} players={room.players}
-      matchClock={matchClock} roomActions={<>{actions}{actionError}</>}/>;
+      matchClock={matchClock} roomActions={<>{actions}{actionError}</>}
+      freeWiki={room.freeWiki} lifecycle={room.lifecycle} enteredFromLobby={enteredFromLobby.current}/>;
   } else if (room.phase === "playing") {
     content = <RaceFrame mode="group" label="아이템 그룹 관전">
       <RaceHud><HudBrand mode="그룹 아이템전" sub="관전" /><HudDoc kind="goal" label="목표 문서" title={room.target?.title} />{matchClock}</RaceHud>
+      <ExplorationHintPanel mode="group_items" roomId={roomId} />
       <section className="product-item-camp-panel" aria-labelledby="s5-spectator-title">
         <h1 id="s5-spectator-title">그룹 아이템전 관전</h1>
         <ul className="product-item-roster" aria-label="참가자와 현재 문서">
@@ -273,8 +317,22 @@ function ProductRoom({ roomId, user, logout }) {
         <ResultActions><Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>{actions}</ResultActions>
       </ResultCard>
     </ResultScreen>;
+  } else if (room.scheduledStartAt) {
+    content = <ScheduledItemCountdown roomId={roomId} startsAt={room.scheduledStartAt}
+      serverObservedAt={room.serverObservedAt} startTitle={room.startDocument?.title} targetTitle={room.target?.title}
+      onBoundary={() => void reloadRef.current?.("scheduled-start")}/>;
   } else {
     const leaveLobby = room.actions.includes("leave");
+    const self = room.players.find(player => player.participantId === room.participantId);
+    const ready = self?.ready;
+    const start = room.actions.includes("start");
+    const followup = room.followupActions ?? [];
+    const readyCount = room.players.filter(player => player.ready).length;
+    const roster = room.players.map(player => ({
+      key: player.participantId, name: player.nickname || player.name, ready: player.ready,
+      userId: player.participantId === room.participantId ? actorId : productId(player.profileId) ? player.profileId : null,
+      host: player.host ?? (start && player.participantId === room.participantId),
+    }));
     content = <LobbyShell user={user} mode="group"
       onNavigate={leaveLobby ? destination => void command("leave", destination) : undefined}
       onLogout={async () => {
@@ -282,22 +340,55 @@ function ProductRoom({ roomId, user, logout }) {
         await logout();
         navigate("/");
       }}>
-      <LobbyHeader kicker="ITEM RACE · GROUP" title="그룹 아이템전 대기실">
-        {room.roomCode && <CopyCodeButton code={room.roomCode} />}
+      <LobbyHeader kicker="탐험가 집결 캠프" title="그룹 아이템전 대기실"
+        onLeave={leaveLobby ? () => void command("leave", "/play") : undefined}>
+        {room.roomCode && <span className="wr-head-code"><span>방 코드</span><CopyCodeButton code={room.roomCode} compact /></span>}
       </LobbyHeader>
-      <section className="product-item-camp-panel" aria-label="참가 인원과 준비 상태">
-        <h2>참가자 {room.players.length} / {room.maximumPlayers}명</h2>
-        <p>최소 {room.minimumPlayers}명이 참여하고 모두 준비하면 방장이 시작할 수 있어요.</p>
-        <ul className="product-item-roster">
-          {room.players.map(player => <li key={player.participantId}>
-            <strong>{player.name}</strong>{player.participantId === room.participantId && <MeTag />}
-            <StatusMark tone={player.ready ? "ready" : "pending"}>{player.ready ? "준비 완료" : "대기 중"}</StatusMark>
-          </li>)}
-        </ul>
-        {MODE_FOLLOWUP_ENABLED && <S5KionDock mode="lobby" roomId={roomId} actorId={actorId}
-          players={room.players} label="대기방 키온 감정표현" />}
-        <div className="product-item-actions">{actions}</div>{actionError}
-      </section>
+      {actionError}
+      <div className="wr-group-layout">
+        <aside className="wr-group-mine" aria-labelledby="s5-ready-title">
+          <h2 id="s5-ready-title" className="wr-section-label">경기 준비</h2>
+          <p className={`wr65-camp-state ${ready ? "is-ready" : ""}`} role="status">{ready ? "준비 완료 · READY" : "코스를 확인하고 준비를 눌러 주세요"}</p>
+          {room.actions.includes("ready") && !ready && <button type="button" className="wr-btn wr-btn--primary wr-btn--block"
+            disabled={pending || (room.freeWiki && !room.myCandidateTitle)} onClick={() => void command("ready")}>준비</button>}
+          {ready && followup.includes("unready") && <button type="button" className="wr-btn wr-btn--block"
+            disabled={pending} onClick={() => void command("unready")}>준비 취소</button>}
+        </aside>
+        <div className="wr-group-main">
+          <ItemRoomRoster mode="group" players={roster} user={user} maxPlayers={room.maximumPlayers}
+            emotes={MODE_FOLLOWUP_ENABLED && <S5KionDock mode="lobby" roomId={roomId} actorId={actorId}
+              players={room.players} label="대기방 키온 감정표현" />} />
+          <section className="wr-course" aria-labelledby="s5-course-title">
+            <div className="wr-course-head"><h2 id="s5-course-title" className="wr-section-label">공통 코스</h2></div>
+            <div className="wr-course-route"><span className="wr-route-chip">{room.startDocument?.title || "서버 지정 출발 문서"}</span>
+              <span aria-hidden="true">→</span>
+              <strong className="wr-route-chip wr-route-chip--target"><LobbyIcon name="flag" />{room.target?.title || "서버 지정 목표 문서"}</strong>
+            </div>
+            {room.freeWiki ? <FreeWikiCandidateSearch selectedTitle={room.myCandidateTitle} disabled={pending}
+              onSelect={snapshotId => command("candidate", undefined, { snapshotId })} />
+            : followup.includes("candidate") && room.courseCandidates?.length > 0 ? <>
+              <label htmlFor="s5-course-candidate">목표 후보</label>
+              <select id="s5-course-candidate" value={self?.candidateId ?? ""} disabled={pending}
+                onChange={event => void command("candidate", undefined, { snapshotId: event.target.value || null })}>
+                <option value="">후보 없음</option>
+                {room.courseCandidates.map(candidate => <option key={candidate.snapshotId} value={candidate.snapshotId}>{candidate.title}</option>)}
+              </select>
+              <p className="wr-course-note">제출한 후보 중 연결된 두 문서를 출발과 목표로 추첨합니다. 후보가 없으면 공통 코스로 출발합니다.</p>
+            </> : <p className="wr-course-note">전원이 서버가 지정한 같은 코스로 경기합니다.</p>}
+          </section>
+        </div>
+      </div>
+      <div className="wr-lobby-actions wr-lobby-actions--group">
+        <p className="wr-lobby-status" id="s5-start-status" role="status">
+          <LobbyIcon name={start ? "check" : "pending"} />
+          {start ? "경기를 시작할 수 있어요" : room.players.length < room.minimumPlayers
+            ? `최소 ${room.minimumPlayers}명 필요` : readyCount < room.players.length
+              ? `참가자 준비 대기 · ${readyCount} / ${room.players.length}` : "방장이 시작하기를 기다리는 중"}
+        </p>
+        {start && <button className="wr-btn wr-btn--primary wr-btn--lg wr-start-btn" type="button"
+          disabled={pending} aria-describedby="s5-start-status"
+          onClick={() => void command(followup.includes("start_scheduled") ? "start_scheduled" : "start")}>경기 시작</button>}
+      </div>
     </LobbyShell>;
   }
   return <div data-product-group-phase={room.phase} data-product-sync={lastSync}

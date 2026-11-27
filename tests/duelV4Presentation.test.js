@@ -33,6 +33,21 @@ test('v4 distinguishes the server outcome for both participants', () => {
   }
   assert.equal(duelV4AttackFeedback(attack('thunder', 'reflected', 1, 'thunder'), 'B').cue.asset, 'thunder_judgment/parry');
   assert.equal(duelV4AttackFeedback(attack('censor', 'hit', 1, 'censor'), 'B').cue.asset, null);
+  assert.equal(duelV4AttackFeedback(attack('protected', 'blocked', 1), 'A').cue.kind, 'attack-defend');
+  assert.equal(duelV4AttackFeedback(attack('protected', 'blocked', 1), 'B').cue.kind, 'shield-block');
+});
+
+test('a later attack outcome does not interrupt the roulette result reveal', () => {
+  const { presenter, observe, audio } = capture();
+  observe(0, projection(0), 'A');
+  presenter.receipt({ id: 'roll', operation: 'item', itemId: 'roulette' }, { code: 'ROULETTE_WON' });
+  observe(200, projection(200, { attackResults: [attack('other', 'hit', 200)] }), 'A');
+  assert.deepEqual(presenter.scenes().map(scene => scene.kind), ['roulette-win', 'attack-hit']);
+  observe(2050, projection(2050), 'A');
+  assert.deepEqual(presenter.scenes().map(scene => scene.kind), ['roulette-win']);
+  observe(2900, projection(2900), 'A');
+  assert.deepEqual(presenter.scenes(), []);
+  assert.deepEqual(audio, ['chaos_roulette/win']);
 });
 
 test('v4 restores ongoing effects silently, deduplicates live events and never replays recent history after F5', () => {

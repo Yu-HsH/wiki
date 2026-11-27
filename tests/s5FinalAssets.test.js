@@ -50,7 +50,7 @@ test('S5: live receipt cues split confirmed branches and retain accepted failure
   assert.equal(cue('thunder','THUNDER_SELF_PENALTY').asset,'thunder_judgment/self');
   assert.equal(cue('thief','THIEF_NO_TRANSFERABLE_GRANT').asset,'thief_hand/empty');
   assert.equal(cue('thief','THIEF_RESOLVED',{success:true}).asset,'thief_hand/steal');
-  assert.equal(cue('thief','THIEF_RESOLVED',{success:false}).kind,'thief-loss');
+  assert.equal(cue('thief','THIEF_RESOLVED',{success:false}).kind,'thief-empty');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:false}).asset,'chaos_roulette/fail');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:true}).asset,'chaos_roulette/win');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:true,automaticChild:{id:'child'}}).asset,'chaos_roulette/boost');
@@ -103,15 +103,15 @@ test('S5: F5/retransmission suppresses one-shots, a new live ink sequence uses o
   const newMove={...move,moveId:'m2'};
   const landed={...state,lastForcedMove:newMove};
   p.pending('cannon',true);
-  assert.equal(p.observe(landed,frame,true).scene,null);
+  assert.deepEqual(p.observe(landed,frame,true).scenes,[]);
   p.receipt(receipt('cannon','CANNON_RESOLVED',{success:true,movement:newMove}),{live:true});
   p.pending('cannon',false);
   p.observe(landed,frame,true);
   assert.equal(heard.at(-1),'dimension_cannon/fire');
   mono+=799;
-  assert.equal(p.observe(landed,frame,true).scene.kind,'cannon-fire');
+  assert.equal(p.observe(landed,frame,true).scenes.at(-1).kind,'cannon-fire');
   mono++;
-  assert.equal(p.observe(landed,frame,true).scene.kind,'cannon-arrive');
+  assert.equal(p.observe(landed,frame,true).scenes.at(-1).kind,'cannon-arrive');
   p.observe(landed,frame,true);
   assert.deepEqual(heard,['ink_blind/three_splashes','dimension_cannon/fire','dimension_cannon/arrive']);
 });
@@ -125,9 +125,35 @@ test('S5: recover a shield and a seal silently, release once at the server expir
   p.recover(state);
   assert.equal(p.observe(state,frame,true).shieldActive,true);
   assert.deepEqual(heard,[]);
-  assert.equal(p.observe(state,{...frame,now:1200},true).scene.kind,'censor-release');
+  assert.equal(p.observe(state,{...frame,now:1200},true).scenes.at(-1).kind,'censor-release');
   assert.equal(p.observe(state,{...frame,now:1300},true).shieldActive,false);
   assert.deepEqual(heard,['link_censor/release']);
+});
+
+test('S5: use only fresh recipient feedback and keep the settled trap outcome', () => {
+  const heard=[];
+  const audio={play:asset=>heard.push(asset),stun(){},stop(){}};
+  const p=createFinalAssetPresentation({},()=>audio,()=>100);
+  const initial={presentation:{serverObservedAt:1000},itemFeedback:[
+    {id:'old',kind:'item_stolen',at:new Date(999).toISOString()},
+  ]};
+  const frame={now:1100,view:{viewer:{readOnly:false}},events:[]};
+  p.recover(initial);
+  assert.deepEqual(p.observe(initial,frame,true).scenes,[]);
+  const next={...initial,itemFeedback:[...initial.itemFeedback,
+    {id:'trap:1',kind:'trap_triggered',outcome:'blocked',at:new Date(1050).toISOString()},
+    {id:'theft:1',kind:'item_stolen',itemId:'ink',tier:'enhanced',at:new Date(1075).toISOString()},
+  ]};
+  const result=p.observe(next,frame,true).scenes;
+  assert.deepEqual(result.map(({kind,itemId,itemTier})=>({kind,itemId,itemTier})),[
+    {kind:'trap-reveal',itemId:undefined,itemTier:undefined},
+    {kind:'thief-loss',itemId:'ink',itemTier:'enhanced'},
+  ]);
+  assert.match(result[0].label,/편집보호로 차단/);
+  p.observe(next,frame,true);
+  assert.deepEqual(heard,['surprise_box/reveal','thief_hand/empty']);
+  p.recover({...next,presentation:{serverObservedAt:1100}});
+  assert.deepEqual(p.observe(next,frame,true).scenes,[]);
 });
 
 test('S5: selected sound, mute, volume and authorized stun-loop synchronization', () => {

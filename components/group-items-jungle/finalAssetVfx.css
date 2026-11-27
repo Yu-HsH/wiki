@@ -1,4 +1,4 @@
-.s5-final-viewport{position:fixed;z-index:3;pointer-events:none;overflow:hidden;isolation:isolate}
+.s5-final-viewport{position:fixed;z-index:36;pointer-events:none;overflow:hidden;isolation:isolate;container-type:size}
 .s5-final-motion,.s5-final-ink{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .s5-final-motion{z-index:3}
 .s5-final-ink{z-index:2}
@@ -24,7 +24,11 @@
 
 @media(max-width:600px){
   .group-items-jungle-dock[data-s5-sticky-dock]{position:sticky;bottom:0;z-index:41;background:#f6edda;overflow-anchor:none}
-  [data-s5-sticky-dock] .gip-attack-warnings{max-height:min(24dvh,160px);overflow:auto}
+  [data-s5-sticky-dock] .s5-dock-content{display:flex;flex-direction:column;max-block-size:min(25dvh,180px);overflow:auto;overscroll-behavior:contain}
+  [data-s5-sticky-dock] .s5-dock-content>*{flex:none}
+  [data-s5-sticky-dock] .gip-hud:has(.gip-panel){order:-2}
+  [data-s5-sticky-dock] .s5-panels:has(.s5-phase2-rewards){order:-1}
+  [data-s5-sticky-dock] .s5-dock-warnings .gip-attack-warnings{max-block-size:min(26dvh,156px);overflow:auto}
   [data-s5-sticky-dock] .gip-attack-warning{min-height:64px}
   [data-s5-sticky-dock] .gip-slot:has(.s5-final-slot-icon){position:relative;display:grid;justify-items:center;align-content:center;gap:.15rem;min-height:60px;padding:.25rem}
   [data-s5-sticky-dock] .gip-slot:has(.s5-final-slot-icon) .gip-slot-index{position:absolute;top:.25rem;left:.35rem}

@@ -4,12 +4,12 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - '.github/workflows/s5-migration-rehearsal.yml'
-      - 'scripts/verify-s5-migration-rehearsal-ci.mjs'
-      - 'scripts/open-pr63-ci-admission.psql'
-      - 'supabase/migrations/*_group_items_s5.sql'
-      - 'supabase/migrations/*_duel_items_v4.sql'
-      - 'supabase/migrations/*_duel_v4_*.sql'
+      # This historical rehearsal expects exactly the PR #63 migration history.
+      - 'supabase/migrations/20261120024414_group_items_s5.sql'
+      - 'supabase/migrations/20261120104117_duel_items_v4.sql'
+      - 'supabase/migrations/20261120113035_duel_v4_server_search.sql'
+      - 'supabase/migrations/20261120113647_duel_v4_reward_queue.sql'
+      - 'supabase/migrations/20261120114137_duel_v4_link_index.sql'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,9 @@ jobs:
       SUPABASE_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Manual reruns use the original 64-migration tree.
+          ref: ${{ github.event_name == 'workflow_dispatch' && '434ff836b7499dbcc9fde8aa6d5aaeef965a4e9b' || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

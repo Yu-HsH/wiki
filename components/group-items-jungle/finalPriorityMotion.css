@@ -49,10 +49,26 @@
 .s5-parry-sparks { animation:s5-parry-sparks 1.8s both }
 .s5-parry-counter { animation:s5-parry-counter 1.8s both; transform-origin:left center }
 .s5-parry-glints,.s5-parry-mark { animation:s5-parry-glint 1.8s both }
+.s5-final-priority[data-direction="from-opponent"] .s5-priority-art { scale:-1 1 }
+.s5-final-priority-label {
+  position:absolute; left:50%; top:min(70%, calc(100cqh - 17px)); transform:translate(-50%,-50%);
+  border:1px solid #8c7651; border-radius:999px; background:#fff7df; color:#3b4538;
+  padding:.24em .65em; white-space:nowrap; font-size:clamp(.75rem,2vw,1.05rem);
+}
+.s5-final-motion:has(.s5x-roulette-wheel) .s5-final-priority-label {
+  top: .25rem;
+  transform: translateX(-50%);
+  z-index: 3;
+}
 
 /* Only the article viewport shakes. HUD, parry controls, and input hit areas outside it stay put. */
-[data-s5-priority-vfx]:has(.s5-final-priority[data-item-vfx^="parry-"]) > .wr-race-main {
-  animation:s5-parry-screen-shake 1.8s both;
+[data-s5-priority-vfx]:has(> [data-item-document-motion]:not([data-item-document-motion=""])) > .wr-race-main {
+  animation: var(--s5-document-parry,none), var(--s5-document-trap,none), var(--s5-document-thunder,none),
+    var(--s5-document-fire,none), var(--s5-document-land,none);
+  animation-composition: add;
+}
+[data-s5-priority-vfx]:has(> :is([data-item-document-motion~="parry-reflect"], [data-item-document-motion~="parry-block"])) {
+  --s5-document-parry:s5-parry-screen-shake 1.8s both;
 }
 
 @keyframes s5-parry-back {
@@ -144,8 +160,8 @@
 .s5-jack-stars,.s5-jack-confetti { animation:s5-trap-confetti 2.9s both }
 .s5-final-priority[data-item-vfx="trap-reveal"] .s5-jack-flash { display:none }
 .s5-final-priority[data-item-vfx="trap-reveal"] .s5-jack-impact { --s5-trap-impact:.43 }
-[data-s5-priority-vfx]:has(.s5-final-priority[data-item-vfx="trap-hit"]) > .wr-race-main {
-  animation:s5-trap-screen-shake 2.9s both;
+[data-s5-priority-vfx]:has(> [data-item-document-motion~="trap-hit"]) {
+  --s5-document-trap:s5-trap-screen-shake 2.9s both;
 }
 
 @keyframes s5-trap-install {
@@ -333,7 +349,7 @@
   text-decoration:none;
 }
 [data-s5-priority-vfx] .wr-race-main .article-content a[data-wiki-title].duel-item-censored::after { content:none }
-[data-s5-priority-vfx]:has(.s5-final-priority[data-item-vfx^="censor"]) .wr-race-main a[data-wiki-title] {
+[data-s5-priority-vfx]:has(> :is([data-item-document-motion~="censor"], [data-item-document-motion~="censor-release"])) .wr-race-main a[data-wiki-title] {
   transition:background-size .26s ease-out, color .22s ease-out;
 }
 .s5-censor-confirmation { position:absolute;inset:0;animation:s5-censor-confirm 1.15s both }
@@ -345,9 +361,9 @@
 }
 
 @media(prefers-reduced-motion:reduce) {
-  [data-s5-priority-vfx]:has(.s5-final-priority) > .wr-race-main,
+  [data-s5-priority-vfx]:has(> [data-item-document-motion]:not([data-item-document-motion=""])) > .wr-race-main,
   .s5-final-priority .s5-priority-art,.s5-final-priority * { animation:none!important }
-  [data-s5-priority-vfx]:has(.s5-final-priority[data-item-vfx^="censor"]) .wr-race-main a[data-wiki-title] {
+  [data-s5-priority-vfx]:has(> :is([data-item-document-motion~="censor"], [data-item-document-motion~="censor-release"])) .wr-race-main a[data-wiki-title] {
     transition:none;
   }
   .s5-parry-back,.s5-parry-ring-a,.s5-parry-ring-b { opacity:.65 }

@@ -285,8 +285,10 @@ export function FinalPriorityMotion({scene, shieldActive = false}) {
   if (!showScene && !shieldActive) return null;
   return <>
     {shieldActive && <i className="s5-shield-active-rim" data-item-vfx="shield-active" aria-hidden="true"/>}
-    {showScene && <div key={scene.key} className="s5-final-priority" data-item-vfx={kind} aria-hidden="true">
+    {showScene && <div key={scene.key} className="s5-final-priority" data-item-vfx={kind} data-direction={scene.direction}
+      aria-hidden="true">
       <PriorityScene kind={kind}/>
+      {scene.label && <b className="s5-final-priority-label">{scene.label}</b>}
     </div>}
   </>;
 }

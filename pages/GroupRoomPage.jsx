@@ -1,3 +1,4 @@
+import GroupCandidateSearch from "../components/wiki-race/GroupCandidateSearch.jsx";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import useLobbyAudio from "../hooks/useLobbyAudio.js";
 import usePublicWaitingRoomHeartbeat from "../hooks/usePublicWaitingRoomHeartbeat.js";
@@ -415,60 +416,14 @@ export default function GroupRoomPage() {
     const roomCode = room?.room_code ?? roomId;
 
     const searchForm = (
-        <>
-            <form
-                className="wr-target-search wr-target-search--stack"
-                role="search"
-                aria-label="내 문서 후보 검색"
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSearch();
-                }}
-            >
-                <label className="wr-search-field">
-                    <LobbyIcon name="search" size={14} />
-                    <span className="wr-visually-hidden">문서 후보 검색어</span>
-                    <input
-                        className="mp-room-input"
-                        value={keywordInput}
-                        disabled={meReady || !isWaiting}
-                        placeholder="위키백과 문서 검색"
-                        onChange={(e) => {
-                            setKeywordInput(e.target.value);
-                            setSelectedTarget(null);
-                            setTargetSuggestions([]);
-                            setSubmitError("");
-                        }}
-                    />
-                </label>
-                <button
-                    type="submit"
-                    className="wr-btn wr-btn--secondary"
-                    disabled={isSearching || meReady || !keywordInput.trim()}
-                >
-                    {isSearching ? "검색 중..." : "검색"}
-                </button>
-            </form>
-            {targetSuggestions.length > 0 ? (
-                <ul className="wr-search-results room-target-suggestions group-suggestions" aria-label="문서 후보 검색 결과">
-                    {targetSuggestions.map((item) => (
-                        <li key={item.title}>
-                            <button
-                                type="button"
-                                onClick={() => handleSelectTarget(item)}
-                                className={`search-item ${selectedTarget?.title === item.title ? "active" : ""}`}
-                            >
-                                <span className="search-item-title">{item.title}</span>
-                                <span className="search-item-snippet" dangerouslySetInnerHTML={{ __html: item.snippet || "" }} />
-                                <span className="wr-search-pick" aria-hidden="true">선택</span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <span className="wr-target-help">예: 세종대왕 · 반도체 · 르네상스</span>
-            )}
-        </>
+        <GroupCandidateSearch query={keywordInput} candidates={targetSuggestions} selectedTitle={selectedTarget?.title}
+            searching={isSearching} disabled={meReady || !isWaiting} onSearch={handleSearch} onSelect={handleSelectTarget}
+            onQueryChange={value => {
+                setKeywordInput(value);
+                setSelectedTarget(null);
+                setTargetSuggestions([]);
+                setSubmitError("");
+            }} />
     );
 
     return (

@@ -8,13 +8,25 @@ SELECT set_config('wiki_launch.target', :'release_target', true),
 SET LOCAL lock_timeout = '5s';
 
 DO $guard$
+DECLARE
+  applied_count integer;
+  item_followup_count integer;
 BEGIN
+  SELECT count(*),
+         count(*) FILTER (WHERE version IN ('20261126142000', '20261126142100'))
+    INTO applied_count, item_followup_count
+    FROM supabase_migrations.schema_migrations;
   IF current_user <> 'postgres' OR current_database() <> 'postgres'
      OR current_setting('wiki_launch.target') NOT IN ('isolated', 'ctdpyrmitljgrcgfvndn')
      OR current_setting('wiki_launch.action') NOT IN ('stage', 'start_jobs', 'open_modes', 'close_modes')
      OR (current_setting('wiki_launch.target') = 'isolated' AND inet_server_addr() IS NOT NULL)
      OR (current_setting('wiki_launch.target') <> 'isolated' AND inet_server_addr() IS NULL)
-     OR (SELECT count(*) FROM supabase_migrations.schema_migrations) <> 68
+     OR NOT (
+       (applied_count, item_followup_count) IN ((68, 0), (70, 2))
+       OR (applied_count = 72 AND item_followup_count = 2
+           AND (SELECT count(*) FROM supabase_migrations.schema_migrations
+                WHERE version IN ('20261127013759','20261127014804')) = 2)
+     )
      OR NOT EXISTS (SELECT FROM supabase_migrations.schema_migrations WHERE version = '20261126043359')
   THEN RAISE EXCEPTION 'RELEASE_TARGET_OR_VERSION_MISMATCH'; END IF;
 END

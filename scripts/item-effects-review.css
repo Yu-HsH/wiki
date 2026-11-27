@@ -1,0 +1,18 @@
+:root{font:16px/1.55 system-ui,sans-serif;color:#2c2820;background:#e9e1d2}
+*{box-sizing:border-box}
+body{margin:0}
+.review-header{position:sticky;top:0;z-index:42;background:#fff9ed;padding:.6rem max(1rem,calc((100vw - 1030px)/2));box-shadow:0 3px 10px #46372131}
+.review-header h1{font-size:1.25rem;margin:0}
+.review-header p{margin:.15rem 0 .45rem}
+.review-header h1+p{font-size:.82rem;color:#66553d}
+.review-controls{display:flex;gap:.45rem;align-items:end;flex-wrap:wrap}
+.review-controls label{font-size:.78rem;display:grid;gap:.15rem}
+.review-controls select,.review-controls button{min-height:40px;font:inherit;max-width:100%;padding:.35rem;border:1px solid #7b694f;border-radius:.4rem;background:#fff;color:#2c2820}
+.review-controls .review-play{background:#24534d;color:white;font-weight:700;padding-inline:.85rem}
+.review-controls .review-sound{display:flex;min-height:40px;align-items:center;padding-inline:.25rem}
+.review-rule{display:flex;gap:.4rem;align-items:center;font-size:.82rem}
+.review-rule img{object-fit:contain;width:30px;height:30px}
+.duel-v4-document{width:min(100%,1030px);margin:auto;background:#fffef8}
+.duel-v4-document .article-content{margin:auto;padding:.5rem clamp(1rem,4vw,3rem);min-height:100vh}
+.duel-v4-document .article-content h2{border-bottom:1px solid #a6947b;padding-bottom:.3rem}
+.duel-v4-document .article-content a{color:#285c9d}

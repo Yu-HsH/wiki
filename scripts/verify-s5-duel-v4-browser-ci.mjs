@@ -87,11 +87,16 @@ async function rpc(user, name, args) {
 const start = { title: "S5v4 Start " + token, pageId: "90101", revisionId: "101" };
 const middle = { title: "S5v4 Middle " + token, pageId: "90102", revisionId: "102" };
 const goal = { title: "S5v4 Goal " + token, pageId: "90103", revisionId: "103" };
-const wiki = [start, middle, goal];
+const s5First = { title: "S5 첫 후보 " + token, pageId: "90111", revisionId: "111" };
+const s5Second = { title: "S5 둘째 후보 " + token, pageId: "90112", revisionId: "112" };
+const s5Candidates = [s5First, s5Second];
+const wiki = [start, middle, goal, ...s5Candidates];
+const outgoing = new Map([[start, middle], [middle, goal], [s5First, s5Second], [s5Second, s5First]]);
 for (const item of wiki) {
   item.snapshotId = randomUUID();
-  const next = wiki[Math.min(wiki.indexOf(item) + 1, 2)];
-  item.html = `<div class="mw-parser-output"><h2>테스트 문서</h2><p><a href="/wiki/${encodeURIComponent(next.title)}">${next.title}</a></p></div>`;
+  const next = outgoing.get(item);
+  const link = next ? `<p><a href="/wiki/${encodeURIComponent(next.title)}">${next.title}</a></p>` : "";
+  item.html = `<div class="mw-parser-output"><h2>테스트 문서</h2>${link}</div>`;
 }
 function seedWiki() {
   sql("begin; insert into public.wiki_pages(page_id,canonical_title) values " +
@@ -99,7 +104,7 @@ function seedWiki() {
     "insert into public.wiki_page_snapshots(id,page_id,revision_id,canonical_title_snapshot) values " +
     wiki.map(p => `(${[p.snapshotId,p.pageId,p.revisionId,p.title].map(quote).join(",")})`).join(",") + ";" +
     "insert into public.wiki_snapshot_links(snapshot_id,target_page_id,target_revision_id,target_title_snapshot,link_text,ordinal) values " +
-    [start,middle].map((p,i) => `(${[p.snapshotId,wiki[i+1].pageId,wiki[i+1].revisionId,wiki[i+1].title,wiki[i+1].title].map(quote).join(",")},0)`).join(",") + "; commit;");
+    [...outgoing].map(([from,to]) => `(${[from.snapshotId,to.pageId,to.revisionId,to.title,to.title].map(quote).join(",")},0)`).join(",") + "; commit;");
 }
 const binding = { namespace:"ink-s4-product", schemaVersion:"candidate-v3", rulesVersion:"ink-s5-test-v1",
   catalogVersion:"ink-s5-test-v1", modePolicyVersion:"wikipedia-s5-test-v1", policyDigest:"a".repeat(64) };
@@ -148,13 +153,13 @@ async function interceptWiki(context) {
     const request = new URL(route.request().url()), params = request.searchParams;
     const item = fixture(params.get("page") || params.get("titles") ||
       (request.pathname.includes("/page/summary/") ? decodeURIComponent(request.pathname.split("/").at(-1)) : ""));
-    const next = wiki[Math.min(wiki.indexOf(item)+1,2)];
+    const next = outgoing.get(item);
     let data;
     if (request.pathname === "/w/api.php" && params.get("list") === "random")
       data = {query:{random:[{id:start.pageId,title:start.title,ns:0}]}};
     else if (request.pathname === "/w/api.php" && params.get("prop") === "links")
       data = {query:{pages:{[item.pageId]:{pageid:item.pageId,title:item.title,
-        links:[{ns:0,title:next.title}]}}}};
+        links:next ? [{ns:0,title:next.title}] : []}}}};
     else if (request.pathname === "/w/api.php" && params.get("action") === "parse")
       data = {parse:{title:item.title,pageid:item.pageId,revid:item.revisionId,text:{"*":item.html}}};
     else if (request.pathname.includes("/page/summary/"))
@@ -177,16 +182,44 @@ async function actor(user, width=390) {
 async function navigate(actor, relative) {
   await actor.page.goto(url + relative, {waitUntil:"domcontentloaded",timeout:60000});
 }
-async function s5Action(user, operation, roomId, payload={}) {
-  const room = roomId ? await rpc(user,"get_group_items_product_room_v1",{p_room:roomId,p_binding:null}) : null;
-  const result = await rpc(user,"act_group_items_product_room_v1",{p_operation:operation,p_room:roomId??null,
-    p_request:randomUUID(),p_expected_version:room?.version??null,p_binding:binding,p_payload:payload});
-  assert.equal(result.ok,true,`${operation}: ${JSON.stringify(result)}`);
-  return result;
+async function createItemRoom(actor, mode) {
+  const segment = mode === "duel" ? "duel-v4" : "group-items";
+  await navigate(actor,"/multiplayer?mode="+mode);
+  await actor.page.getByRole("checkbox",{name:"아이템전으로 진행"}).check({timeout:20000});
+  await actor.page.getByRole("button",{name:"방 생성",exact:true}).click();
+  await actor.page.waitForURL(new RegExp("/multiplayer/"+segment+"/[a-f0-9-]{36}$"),{timeout:20000});
+  const code = actor.page.locator(".wr-room-code-value");
+  await code.waitFor({state:"visible",timeout:20000});
+  return { code:(await code.innerText()).trim(), roomId:actor.page.url().split("/").at(-1) };
 }
-
+async function joinItemRoom(actor, mode, room, code) {
+  const segment = mode === "duel" ? "duel-v4" : "group-items";
+  await navigate(actor,"/multiplayer?mode="+mode);
+  await actor.page.getByRole("textbox",{name:"방 코드"}).fill(code);
+  await actor.page.getByRole("button",{name:"참가",exact:true}).click();
+  await actor.page.waitForURL("**/multiplayer/"+segment+"/"+room,{timeout:20000});
+}
+async function readyGroup(room,members,agents) {
+  for(let i=0;i<members.length;i++){
+    const page=agents[i].page;
+    const candidate=s5Candidates[i % s5Candidates.length];
+    const search=page.getByRole("search",{name:"내 문서 후보 검색"});
+    await search.getByRole("textbox").fill(candidate.title);
+    await search.getByRole("button",{name:"검색",exact:true}).click();
+    await page.getByRole("list",{name:"문서 후보 검색 결과"})
+      .getByRole("button").filter({hasText:candidate.title}).click();
+    await page.getByRole("button",{name:"후보 취소",exact:true}).waitFor({state:"visible"});
+    await page.getByRole("button",{name:"준비",exact:true}).click({timeout:20000});
+    await waitFor(()=>sql("select ready from ink_product.members where room_id="+quote(room)+
+      " and actor_id="+quote(members[i].id))==="t",
+      `S5 player ${i+1} ready acknowledged`,75,300);
+  }
+}
 async function verifyS5FinishAndRematch(count, room, members, agents) {
-  const link = a=>a.page.locator('article.article-content a[data-wiki-title="목표"]');
+  const started=await rpc(members[0],"get_group_items_product_room_v1",{p_room:room,p_binding:null});
+  assert.equal(started.freeWiki,true,"S5 browser flow must use a new free-Wikipedia room");
+  assert.ok(s5Candidates.some(candidate=>candidate.title===started.target?.title),"S5 must draw a submitted goal");
+  const link = a=>a.page.locator(`article.article-content a[data-wiki-title="${started.target.title}"]`);
   // Every player must reach the seeded goal through the actual article click,
   // not by direct SQL updates or a fabricated terminal state.
   for(let i=0;i<count;i++){
@@ -243,25 +276,8 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   assert.equal(next.phase,"waiting");
   assert.equal(next.players.length,1,"S5 rematch starts with host, no implicit member rejoin");
   assert.equal(sql("select previous_room_id from ink_product.rooms where id="+quote(nextRoom)),room);
-  const code=next.roomCode;
-  for(let i=1;i<count;i++){
-    const p=agents[i].page;
-    await p.goto(url+"/multiplayer/group-items",{waitUntil:"domcontentloaded"});
-    await p.getByLabel("아이템 방 코드").fill(code);
-    await p.getByRole("button",{name:"입장",exact:true}).click();
-    await p.waitForURL(new RegExp("/multiplayer/group-items/"+nextRoom+"$"),{timeout:20000});
-  }
-  // Room-ready commands use expected_version. Each prior ready increments that
-  // version, so refresh each real browser before the next player clicks ready.
-  for(let i=0;i<count;i++){
-    const page=agents[i].page;
-    await page.reload({waitUntil:"domcontentloaded"});
-    await page.getByRole("button",{name:"준비",exact:true}).waitFor({state:"visible",timeout:20000});
-    await page.getByRole("button",{name:"준비",exact:true}).click();
-    await waitFor(()=>sql("select ready from ink_product.members where room_id="+quote(nextRoom)+
-      " and actor_id="+quote(members[i].id))==="t",
-      `S5 ${count} rematch player ${i+1} ready acknowledged`,75,300);
-  }
+  for(const guest of agents.slice(1)) await joinItemRoom(guest,"group",nextRoom,next.roomCode);
+  await readyGroup(nextRoom,members,agents);
   assert.equal(Number(sql("select count(*) from ink_product.members where room_id="+quote(nextRoom)+
     " and status='waiting' and ready")),count);
   await host.reload({waitUntil:"domcontentloaded"});
@@ -337,18 +353,15 @@ async function verifyS5LatencyBrowser() {
 
 async function groupRound(count) {
   const members=users.slice(0,count);
-  const created=await s5Action(members[0],"create",null);
-  const room=created.roomId;
-  const code=sql("select code from ink_product.rooms where id="+quote(room));
-  for(const user of members.slice(1)) await s5Action(user,"join",null,{roomCode:code});
-  for(const user of members) await s5Action(user,"ready",room);
-  await s5Action(members[0],"start",room);
-  const session=sql("select session_id from ink_product.rooms where id="+quote(room));
   const agents=[];
   for(let i=0;i<count;i++) {
     const a=await actor(members[i],i===0?390:1280); agents.push(a);
-    await navigate(a,"/multiplayer/group-items/"+room);
   }
+  const {roomId:room,code}=await createItemRoom(agents[0],"group");
+  for(const guest of agents.slice(1)) await joinItemRoom(guest,"group",room,code);
+  await readyGroup(room,members,agents);
+  await agents[0].page.getByRole("button",{name:"경기 시작",exact:true}).click({timeout:20000});
+  const session=await waitFor(()=>sql("select session_id from ink_product.rooms where id="+quote(room)), "S5 initialized room");
   for(const a of agents) {
     await a.page.locator('[data-product-group-phase="playing"]').waitFor({state:"visible",timeout:40000});
     await a.page.getByRole("button",{name:"키온 보내기"}).waitFor({state:"visible",timeout:40000});
@@ -389,19 +402,17 @@ async function duelRound() {
   sql("insert into duel_v4.admission(user_id,expires_at) values "+
     members.map(u=>`(${quote(u.id)},clock_timestamp()+interval '1 hour')`).join(",")+";");
   const agents=[];
-  for(let i=0;i<2;i++){const a=await actor(members[i],390); agents.push(a); await navigate(a,"/multiplayer/duel-v4");}
+  for(let i=0;i<2;i++) agents.push(await actor(members[i],390));
   const host=agents[0].page, guest=agents[1].page;
-  await host.getByRole("button",{name:"방 만들기"}).click();
-  await host.waitForURL(/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/, {timeout:20000});
-  const room=host.url().split("/").at(-1);
-  const code=await host.locator("[data-duel-v4-code]").innerText();
-  await guest.getByLabel("방 코드").fill(code);
-  await guest.getByRole("button",{name:"입장"}).click();
-  await guest.waitForURL(new RegExp("/multiplayer/duel-v4/"+room+"$"),{timeout:20000});
+  const {roomId:room,code}=await createItemRoom(agents[0],"duel");
+  await joinItemRoom(agents[1],"duel",room,code);
   log("duel v4 actual UI create and join with two distinct Auth users");
   // The normal client UI exercises both snapshot preparation and target/start commands.
-  await host.getByLabel("목표 문서").fill(goal.title);
-  await host.getByRole("button",{name:"목표 저장"}).click();
+  const search=host.getByRole("search",{name:"목표 문서 검색"});
+  await search.getByRole("textbox").fill(goal.title);
+  await search.getByRole("button",{name:"검색",exact:true}).click();
+  await host.getByRole("list",{name:"목표 문서 검색 결과"})
+    .getByRole("button",{name:goal.title,exact:true}).click();
   await waitFor(async()=>!(await host.getByRole("button",{name:"게임 시작"}).isEnabled())?false:true,
     "duel v4 target saved",55,350);
   await host.getByRole("button",{name:"게임 시작"}).click();

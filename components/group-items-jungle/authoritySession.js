@@ -136,11 +136,18 @@ function decodeState(body,scope,elapsed) {
     protectionEnds>time(protection.startsAt)),"INVALID_PROTECTION");
   const supply = body.supply;
   requireValue(supply === null || (version(supply?.lastClosedRound) && version(supply.round) &&
-    ["granted","discarded_full"].includes(supply.outcome) && Number.isFinite(time(supply.logicalDueAt))),"INVALID_SUPPLY");
+    ["granted","discarded_full"].includes(supply.outcome) && Number.isFinite(time(supply.logicalDueAt)) &&
+    (supply.grantId==null || productId(supply.grantId))),"INVALID_SUPPLY");
+  const itemFeedback = body.itemFeedback ?? [];
+  requireValue(Array.isArray(itemFeedback) && itemFeedback.every(event=>value(event?.id) &&
+    ['item_stolen','trap_triggered'].includes(event.kind) && typeof itemName(event.itemId)==='string' &&
+    ['normal','enhanced','weakened'].includes(event.tier) && Number.isFinite(time(event.at)) &&
+    (event.kind==='item_stolen' ? event.outcome==='transferred' : ['triggered','blocked'].includes(event.outcome))),
+    "INVALID_RECIPIENT_FEEDBACK");
   const move = body.lastForcedMove;
   const lastForcedMove = s5 && ['lost_link','cannon'].includes(move?.operation) && value(move.moveId) &&
     move.pageId === self.currentPageId && move.revisionId === self.currentRevisionId && move.progressVersion === self.progressVersion ? move : null;
-  return { terminal:false, self, inventory, warnings, targets, bookmark, supply, itemEffects, s5:s5State, lastForcedMove, trapArmed:s4 && body.trapArmed,
+  return { terminal:false, self, inventory, warnings, targets, bookmark, supply, itemEffects, itemFeedback, s5:s5State, lastForcedMove, trapArmed:s4 && body.trapArmed,
     presentation:{ scope:presentationScope, interaction:"group_items", self, stateRevision:BigInt(body.stateRevision),
       recipientEventSeq:BigInt(self.recipientEventSeq), serverObservedAt:time(body.serverObservedAt), transportElapsedMs:elapsed,
       inventoryVersion:self.inventoryVersion,
@@ -208,6 +215,10 @@ export function createGroupItemsSession({ scope, transport, journal, makeRequest
         if (isProductS4Scope(scope)) {
           requireValue(input.snapshotId === self.currentSnapshotId && wikiId(input.targetPageId),"STALE_DOCUMENT");
           payload.expectedSnapshotId = self.currentSnapshotId;
+          if (input.targetSnapshotId != null) {
+            requireValue(productId(input.targetSnapshotId), "INVALID_WIKI_FRAME");
+            payload.targetSnapshotId = input.targetSnapshotId;
+          }
         }
         break;
       case "parry": {

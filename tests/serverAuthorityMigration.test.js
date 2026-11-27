@@ -94,14 +94,14 @@ test("위키 snapshot은 같은 page/revision을 재사용하고 본문은 요�
   assert.match(snapshotFunction, /\.range\(offset, offset \+ pageSize - 1\)/);
 });
 
-test("본문 HTML은 관전 경로만 요청한다", () => {
+test("본문 HTML은 명시적 문서 조회에서만 요청한다", () => {
   // 기본값이 false여야 나머지 호출부가 warm 시 Wikipedia를 0건으로 끝낸다.
   assert.match(
     snapshotService,
-    /\{ requestId = createRequestId\(\), includeDocument = false \} = \{\}/
+    /\bincludeDocument = false\b/
   );
   assert.match(snapshotService, /includeDocument,/);
-  // 관전만 명시적으로 켠다.
+  // 일반 그룹의 관전은 본문 요청을 명시한다.
   assert.match(spectatorService, /snapshotLoader\(identity, \{ includeDocument: true \}\)/);
   // 본문이 비면 관전은 조용히 넘어가지 않고 실패해야 한다.
   assert.match(spectatorService, /SPECTATOR_DOCUMENT_UNAVAILABLE/);

@@ -11,7 +11,9 @@ import { createS25InkPresentation } from "../group-items-playtest/s25InkPresenta
 import { createGroupItemsSession, hasS4Effects, selectGroupItemRoute, s4CensoredPageIds } from "./authoritySession.js";
 import { isProductS4Scope } from "./productContract.js";
 import { preloadProductInkArt, ProductInkVfx, ProductItemMotion } from "./ProductItemVfx.jsx";
-import { FinalAssetOverlay, FinalItemIcon, preloadFinalInk } from "./FinalAssetVfx.jsx";
+import { FinalAssetOverlay, preloadFinalInk } from "./FinalAssetVfx.jsx";
+import ItemRaceStart from "../wiki-race/race/ItemRaceStart.jsx";
+import useItemSupplyArrival from "../../hooks/useItemSupplyArrival.js";
 import { nextProductInkPulseDelay, productCueDuration } from "./productPresentation.js";
 import "../../css/wikiRaceGroupItemsPlaytest.css";
 import "./groupItemsJungle.css";
@@ -24,13 +26,20 @@ const commandFailureMessage = "아이템 경기 요청을 완료하지 못했어
 const commandRejectionMessages = {
   STALE_INVENTORY: "가방이 갱신됐어요. 사용할 아이템을 다시 선택해 주세요.",
   STALE_PROGRESS: "현재 문서가 갱신됐어요. 이동할 링크를 다시 선택해 주세요.",
+  LINK_SNAPSHOT_MISSING: "연결할 문서를 준비하지 못했어요. 링크를 다시 선택해 주세요.",
   LINK_CENSORED: "검열이 풀리면 이 링크로 이동할 수 있어요.",
   PARRY_WINDOW_CLOSED: "패링 시간이 지났어요.",
 };
 
 const isScopeFailure = error => ["AUTH_REQUIRED","TRANSPORT_SCOPE_MISMATCH","RECEIPT_SCOPE_MISMATCH"].includes(error?.message);
 
-function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, gameAudioRoute, audioControls }) {
+function supplyDeadline(startedAt, supply) {
+  const nextRound = supply ? Number(supply.lastClosedRound) + 1 : 0;
+  // S5 closes round zero at start, then round one after 20s and subsequent rounds every 25s.
+  return nextRound === 0 ? startedAt : startedAt + (20 + (nextRound - 1) * 25) * 1000;
+}
+
+function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, explorationHints, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
   const product = isProductS4Scope(scope);
   const s5 = isS5Scope(scope);
   const [view, setView] = useState(null);
@@ -44,13 +53,31 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   const seenReceipts = useRef(new Set());
   const [trapChoices, setTrapChoices] = useState(null);
   const [s5Pending,setS5Pending] = useState(false);
+  const [itemToolbar, setItemToolbar] = useState(null);
+  const [warningToolbar, setWarningToolbar] = useState(null);
   const active = useRef(null);
+  const preparingLink = useRef(false);
 
   const finalAssets = s5 && itemPresentation?.finalAssets;
   useEffect(() => {
     if (finalAssets) preloadFinalInk();
     else if (product) preloadProductInkArt();
   }, [finalAssets,product]);
+
+  const supply = view?.supply;
+  const startedAt = Date.parse(lifecycle?.started_at);
+  const supplyAt = supplyDeadline(startedAt, supply);
+  const deadlineAt = Date.parse(lifecycle?.deadline_at);
+  const endAt = Math.min(deadlineAt, lifecycle?.grace_ends_at ? Date.parse(lifecycle.grace_ends_at) : Infinity);
+  const supplySeconds = Number.isFinite(supplyAt) && view && supplyAt < endAt
+    ? Math.max(0, Math.ceil((supplyAt - view.now) / 1000)) : null;
+  const suppliedGrant = useItemSupplyArrival(finalAssets && view && {
+    round:supply?.lastClosedRound, initialRound:supply?.lastClosedRound==='0',
+    outcome:supply?.outcome, grantId:supply?.lastClosedRound===supply?.round ? supply?.grantId : null,
+    observedAt:view.now, dueAt:Date.parse(supply?.logicalDueAt), revision:Number(view.view.inventoryVersion),
+    inventory:view.view.inventory.filter(Boolean).map(item=>item.grantId),
+    live:!disconnected && !view.view.viewer.readOnly,
+  },scope.sessionId,enteredFromLobby);
 
   useEffect(() => {
     const session = createGroupItemsSession({ scope, transport, journal, makeRequestId });
@@ -64,6 +91,8 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     let shownResult = null;
     let resultCursor = null;
     let pulseTimer = null;
+    let deadline = null;
+    let deadlineTimer = null;
     const entry = { session, refresh, stop };
     active.current = entry;
 
@@ -75,6 +104,18 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
       const frame = presentation.frame();
       const self = frame.view;
       if (!self) return;
+      if (finalAssets && streamConnected && !self.viewer.readOnly) {
+        const supplyAt = supplyDeadline(startedAt, state.supply);
+        const boundaries = self.warnings.map(warning=>warning.dueAt);
+        if (Number.isFinite(supplyAt) && supplyAt < deadlineAt) boundaries.push(supplyAt);
+        const next = Math.min(...boundaries.filter(at=>at > state.presentation.serverObservedAt));
+        if (next !== deadline) {
+          clearTimeout(deadlineTimer);
+          deadline = next;
+          if (Number.isFinite(next)) deadlineTimer = setTimeout(()=>void refresh(),
+            Math.max(0,next-(self.warningNow??frame.now)+80));
+        }
+      }
       const nextPulse = product ? nextProductInkPulseDelay(self) : null;
       if (nextPulse !== null) pulseTimer = setTimeout(draw,nextPulse);
       const bookmark = state.bookmark;
@@ -121,6 +162,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
       failed = true;
       itemPresentation?.stop?.();
       clearTimeout(pulseTimer);
+      clearTimeout(deadlineTimer);
       session.close();
       setView(null);
       setDocument(null);
@@ -175,13 +217,15 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
       streamConnected = connected;
       if (connected) void refresh(recovering);
       else {
+        clearTimeout(deadlineTimer);
+        deadline = null;
         presentation.suspend();
         itemPresentation?.stop?.();
         setDisconnected(true);
       }
     });
-    return () => { alive=false; itemPresentation?.stop?.(); session.close(); active.current=null; clearInterval(render); clearInterval(poll); clearTimeout(pulseTimer); unsubscribe?.(); };
-  },[scope,transport,journal,makeRequestId,refreshMs,onPulse,subscribe,itemPresentation,product,s5]);
+    return () => { alive=false; itemPresentation?.stop?.(); session.close(); active.current=null; clearInterval(render); clearInterval(poll); clearTimeout(pulseTimer); clearTimeout(deadlineTimer); unsubscribe?.(); };
+  },[scope,transport,journal,makeRequestId,refreshMs,onPulse,subscribe,itemPresentation,product,s5,finalAssets,startedAt,deadlineAt]);
 
   const pageId = view?.self?.currentPageId;
   const revisionId = view?.self?.currentRevisionId;
@@ -228,7 +272,9 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     if (panelCommand && s5Pending) return;
     if (panelCommand) setS5Pending(true);
     if (operation === "trap_options") setTrapChoices(null);
-    const warningItem = operation === "parry" ? entry.session.snapshot()?.warnings?.find(warning=>warning.childId===input.childId)?.itemId : null;
+    const snapshot = entry.session.snapshot();
+    const warningItem = operation === "parry" ? snapshot?.warnings?.find(warning=>warning.childId===input.childId)?.itemId : null;
+    const itemId = snapshot?.inventory?.find(grant=>grant.grantId===input.grantId)?.itemId;
     setFailure("");
     itemPresentation?.pending?.(operation,true);
     entry.session.dispatch(operation,input).then(receipt=>{
@@ -237,7 +283,8 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
       let cue = null;
       if (itemPresentation && receipt && !seenReceipts.current.has(receipt.receiptId)) {
         seenReceipts.current.add(receipt.receiptId);
-        cue = itemPresentation.receipt(receipt,{live:!finalAssets || !entry.session.snapshot()?.terminal,warningItem,retransmitted:entry.session.isRetransmission(receipt)});
+        cue = itemPresentation.receipt(receipt,{live:!finalAssets || !entry.session.snapshot()?.terminal,itemId,warningItem,
+          retransmitted:entry.session.isRetransmission(receipt)});
         if (cue) setLiveCue(cue);
       }
       if (receipt?.ok === false && !cue) {
@@ -278,16 +325,31 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     ? search.lastResult.query : null;
   const censoredTitles = (article?.links ?? []).filter(link=>censoredPages.has(link.pageId))
     .map(link=>link.canonicalTitle ?? link.title);
-  const onLinkClick = title => {
+  const onLinkClick = async title => {
     const matches = article?.links.filter(row=>normalizeTitle(row.canonicalTitle ?? row.title) === normalizeTitle(title));
     const link = matches?.[0];
     if (matches?.some(row=>row.pageId!==link.pageId)) return;
     if (link && !view?.stunned && !censoredPages.has(link.pageId)) {
-      run("normal_link",{ pageId:article.pageId, revisionId:article.revisionId, snapshotId:article.snapshotId, targetPageId:link.pageId });
+      const input = { pageId: article.pageId, revisionId: article.revisionId,
+        snapshotId: article.snapshotId, targetPageId: link.pageId };
+      if (!prepareLink) { run("normal_link", input); return; }
+      if (preparingLink.current) return;
+      preparingLink.current = true;
+      const entry = active.current;
+      try {
+        const targetSnapshotId = await prepareLink(link);
+        if (entry === active.current) run("normal_link", { ...input, targetSnapshotId });
+      } catch (error) {
+        if (entry === active.current) setFailure(error?.code ?? "LINK_SNAPSHOT_MISSING");
+      } finally {
+        preparingLink.current = false;
+      }
     }
   };
   return <div className="group-items-jungle">
     <RaceFrame mode="group" label="그룹 아이템 경기">
+      {view && <ItemRaceStart matchKey={scope.sessionId} startedAt={lifecycle?.started_at}
+        now={view.now} enteredFromLobby={enteredFromLobby} />}
       <RaceHud>
         <HudBrand mode="그룹 아이템전"/>
         <div className="product-item-race-course">
@@ -295,7 +357,9 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           <HudArrow/><HudDoc kind="goal" label="목표 문서" title={target?.title}/>
         </div>
         <HudStat label="이동" value={view?.self?.moveCount ?? "–"}/>{matchClock}
+        {finalAssets && <div className="group-items-hud-slots" ref={setItemToolbar} />}
       </RaceHud>
+      {explorationHints}
       {roster && <details className="product-item-mobile-roster"><summary>참가자 {players.length}명</summary>{roster}</details>}
       <div className={roster ? "wr-race-body" : "wr-race-body is-wide"}>
         {roster && <aside className="wr-race-side product-item-race-roster">{roster}</aside>}
@@ -310,9 +374,13 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
             </div>}
           </main>
           {frame && !readOnly && <>
-            <AttackWarningEdge view={frame} events={view.events} running windowMs={warningWindowMs}/>
-            {finalAssets ? <FinalAssetOverlay value={view.finalVisual} pulse={view.pulse} frame={view}/> : product ? <ProductInkVfx pulse={view.pulse} frame={view}/> :
-              <ItemImpactEffect view={frame} pulse={view.pulse} events={view.events} running/>}
+            {finalAssets ? <FinalAssetOverlay value={view.finalVisual} pulse={view.pulse} frame={view}>
+              <AttackWarningEdge view={frame} events={view.events} running windowMs={warningWindowMs}/>
+            </FinalAssetOverlay> : <>
+              <AttackWarningEdge view={frame} events={view.events} running windowMs={warningWindowMs}/>
+              {product ? <ProductInkVfx pulse={view.pulse} frame={view}/> :
+                <ItemImpactEffect view={frame} pulse={view.pulse} events={view.events} running/>}
+            </>}
             {product && !finalAssets && <>
               <ProductItemMotion key={view.defense?.key} cue={view.defense}/>
               <ProductItemMotion key={liveCue?.key} cue={liveCue}/>
@@ -322,7 +390,11 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           </>}
         </div>
       </div>
-      <div className="group-items-jungle-dock" data-s5-sticky-dock={finalAssets ? true : undefined}>
+      <div className="group-items-jungle-dock" data-s5-sticky-dock={finalAssets ? true : undefined} data-item-race-dock>
+        {finalAssets && <span className="gip-feedback-sr" role="status">{view?.finalVisual?.scenes
+          .filter(scene=>scene.key.startsWith("recipient:")).map(scene=>scene.label).join(" · ")}</span>}
+        {finalAssets && <div className="s5-dock-warnings" ref={setWarningToolbar}/>}
+        <div className="s5-dock-content">
         {kionDock}
         {frame && !readOnly && <div className="group-items-jungle-supply" role="status">
           {view.supply ? `보급 ${view.supply.lastClosedRound} · ${view.supply.outcome === "granted" ? "받음" : "가방이 가득 차 건너뜀"}` : "보급 기록 없음"}
@@ -333,7 +405,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           {view.sealed && <span> · 천둥으로 아이템이 봉인됐어요</span>}
         </div>}
         <PlaytestItemsHud view={frame} numberSlots={s5} visible={Boolean(frame) && !readOnly} enhancedFeedback running warningWindowMs={warningWindowMs}
-          renderItemIcon={finalAssets ? item=><FinalItemIcon item={item}/> : undefined}
+          toolbar={finalAssets ? itemToolbar : null} warningToolbar={warningToolbar} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant}
           onParry={warning=>run("parry",{ childId:warning.childId })} onReturn={rightId=>run("bookmark_return",{ rightId })}
           onUse={input=>run(input.action,input)}/>
         {s5 && frame && !readOnly && <S5Panels state={view.s5} inventory={frame.inventory.filter(Boolean)} now={view.now} slots={frame.inventory.filter(slot=>!slot).length}
@@ -360,6 +432,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           {roomActions && <div className="product-item-actions">{roomActions}</div>}
         </div>}
         {frame?.viewer.readOnly && <p role="status">경기가 종료됐어요.</p>}
+        </div>
       </div>
     </RaceFrame>
   </div>;
