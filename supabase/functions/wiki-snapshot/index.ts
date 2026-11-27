@@ -1,3 +1,6 @@
+import { parse, serialize } from "npm:parse5@7.3.0";
+import { buildSearchDocument } from "../duel-search/document.mjs";
+import { readLinkSections } from "../duel-search-v4/sections.mjs";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { mapWikiIdentityBatchesOrdered } from "./identityBatchQueue.js";
 import { extractSnapshotBodyLinks, buildSnapshotLinkRows, auditSnapshotLinkRows } from "./snapshotLinkGraph.js";
@@ -161,6 +164,21 @@ async function loadCachedSnapshot(pageId: string, revisionId: string) {
   };
 }
 
+async function prepareS5Document(request: Request, room: unknown, snapshotId: string, title: string,
+  html: string, links: { pageId: string; title: string }[]) {
+  if (typeof room !== "string" || !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(room) || !html) return;
+  const token = request.headers.get("Authorization")?.match(/^Bearer (\S+)$/i)?.[1];
+  if (!token) return;
+  const { data: { user } } = await supabase.auth.getUser(token);
+  if (!user || user.is_anonymous) return;
+  const doc = buildSearchDocument(html, { currentTitle:title, links }, { parse, serialize });
+  const sections = readLinkSections(doc.documentHtml, parse);
+  await supabase.rpc("prepare_s5_wiki_document_v1", {
+    p_room:room, p_actor:user.id, p_snapshot:snapshotId, p_html:html, p_nodes:doc.textNodes,
+    p_sections:Object.fromEntries(links.map(link => [link.pageId, sections[link.title] ?? "본문"])),
+  });
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -184,6 +202,7 @@ Deno.serve(async (req) => {
     // 나머지 9개 호출부는 반환값을 통째로 버리므로 기본값은 false다 — 그래야 warm 경로에서
     // pinned parse 1건까지 없앨 수 있다. HTML은 DB에 없어서 요청할 때만 Wikipedia를 탄다.
     const includeDocument = body?.includeDocument === true;
+    const prepareItemIndex = includeDocument && typeof body?.s5RoomId === "string";
     if (!requestedTitle) return json({ code: "INVALID_TITLE" }, 400);
 
     // warm + HTML 불필요 → Wikipedia 요청 0건.
@@ -253,6 +272,10 @@ Deno.serve(async (req) => {
     // 여기서 아끼는 것이 요청의 대부분이다 (parse 2 + info ~30 = 32 → 1~2).
     const cachedAfterParse = await loadCachedSnapshot(pageId, revisionId);
     if (cachedAfterParse) {
+      if (prepareItemIndex) {
+        await prepareS5Document(req, body.s5RoomId, cachedAfterParse.snapshotId, canonicalTitle,
+          parsedPage?.text?.["*"] ?? "", cachedAfterParse.links).catch(() => {});
+      }
       return json({
         snapshotId: cachedAfterParse.snapshotId,
         pageId,
@@ -290,6 +313,10 @@ Deno.serve(async (req) => {
     if (snapshotError) throw snapshotError;
     const snapshot = Array.isArray(snapshotData) ? snapshotData[0] : snapshotData;
     if (!snapshot?.id) throw new Error("SNAPSHOT_REPLACEMENT_FAILED");
+    if (prepareItemIndex) {
+      await prepareS5Document(req, body.s5RoomId, snapshot.id, canonicalTitle, parsedPage?.text?.["*"] ?? "",
+        links.map(row => ({ pageId:row.targetPageId, title:row.targetTitle }))).catch(() => {});
+    }
 
     return json({
       snapshotId: snapshot.id,

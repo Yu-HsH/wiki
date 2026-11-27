@@ -215,6 +215,10 @@ export function createGroupItemsSession({ scope, transport, journal, makeRequest
         if (isProductS4Scope(scope)) {
           requireValue(input.snapshotId === self.currentSnapshotId && wikiId(input.targetPageId),"STALE_DOCUMENT");
           payload.expectedSnapshotId = self.currentSnapshotId;
+          if (input.targetSnapshotId != null) {
+            requireValue(productId(input.targetSnapshotId), "INVALID_WIKI_FRAME");
+            payload.targetSnapshotId = input.targetSnapshotId;
+          }
         }
         break;
       case "parry": {

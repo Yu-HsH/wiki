@@ -81,7 +81,7 @@ export async function enterItemRoom(mode, actorId, operation, code) {
   if (!entry.available) throw new Error("ITEM_ENTRY_CLOSED");
   if (mode === "group") {
     const receipt = await actGroupItemsRoom(entry.binding, actorId, operation, null, null,
-      operation === "join" ? { roomCode: code } : {});
+      operation === "join" ? { roomCode: code } : entry.freeWiki === true ? { freeWiki: true } : {});
     return receipt.roomId;
   }
   if (operation === "join") return duelV4.join(code);

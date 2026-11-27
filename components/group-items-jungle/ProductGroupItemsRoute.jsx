@@ -1,4 +1,7 @@
 import "./s5Next.css";
+import FreeWikiCandidateSearch from "./FreeWikiCandidateSearch.jsx";
+import { prepareFreeWikiDestination } from "./freeWikiDocument.js";
+import { ensureWikiSnapshot } from "../../services/wikiSnapshotService.js";
 import './phase2.css';
 import {Phase2Countdown} from './Phase2Panels.jsx';
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -66,7 +69,7 @@ function useRoomActions(binding, actorId) {
   return { pending, error, act };
 }
 
-function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, matchClock, roomActions, lifecycle, enteredFromLobby }) {
+function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, matchClock, roomActions, lifecycle, enteredFromLobby, freeWiki }) {
   const { pathname } = useLocation();
   const previewAudio = import.meta.env.VITE_GROUP_ITEMS_INK_PREVIEW === "1";
   const fixedAudio = productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING);
@@ -116,6 +119,10 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       if (!sameGroupItemsScope(document?.scope, scope)) throw new Error("TRANSPORT_SCOPE_MISMATCH");
       const body = await loadProductWikiDocument(payload, document.body, (identity, pinnedSignal)=>{
         if (productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING)) return readFixedProductWikiDocument(identity,pinnedSignal);
+        if (freeWiki && !document.body.documentHtml) {
+          return ensureWikiSnapshot({ ...identity, title: identity.canonicalTitle },
+            { includeDocument:true, signal:pinnedSignal, s5RoomId:roomId });
+        }
         return {
           pageId:document.body.pageId, revisionId:document.body.revisionId, canonicalTitle:document.body.canonicalTitle,
           snapshotId:document.body.wikiSnapshotId, documentHtml:document.body.documentHtml,
@@ -123,7 +130,7 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       }, documentSignal);
       return { scope:document.scope, body };
     },
-  }),[scope,roomId,sessionId,binding]);
+  }),[scope,roomId,sessionId,binding,freeWiki]);
   const audioControls = (fixedAudio || previewAudio || finalAssets) && <div className={finalAssets ? "s5-final-audio" : undefined}><button type="button" aria-pressed={audioEnabled} onClick={()=>{
       const enabled = !audioEnabled;
       sessionStorage.setItem(audioPreference,enabled ? "on" : "off");
@@ -135,7 +142,7 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
       setVolume(next);
     }}/></label>}</div>;
   return <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
-      target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
+      prepareLink={freeWiki ? prepareFreeWikiDestination : undefined} target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
       lifecycle={lifecycle} enteredFromLobby={enteredFromLobby}
       players={players} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
       kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>;
@@ -263,7 +270,8 @@ function ProductRoom({ roomId, user, logout }) {
   const labels = { ready: "준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기", rematch:"재경기" };
   const actions = room.actions.map(action => <button key={action} className="wr-race-btn" type="button" disabled={pending} onClick={()=>void command(action)}>{labels[action]}</button>);
   const actionError = error && <p role="alert">{error === "PRODUCT_CANDIDATE_PAIR_REQUIRED"
-    ? "서로 이동할 수 있는 다른 문서 후보가 두 개 필요해요."
+    ? room.freeWiki ? "서로 다른 문서 후보가 두 개 필요해요." : "서로 이동할 수 있는 다른 문서 후보가 두 개 필요해요."
+    : error === "PRODUCT_CANDIDATE_REQUIRED" ? "먼저 Wikipedia 문서를 후보로 제출해 주세요."
     : "요청을 완료하지 못했어요. 방 상태를 다시 확인해 주세요."}</p>;
   const matchClock = room.lifecycle && (room.phase2Policy
     ? <Phase2Countdown lifecycle={room.lifecycle} serverObservedAt={room.serverObservedAt}/>
@@ -274,7 +282,7 @@ function ProductRoom({ roomId, user, logout }) {
       participantId={room.participantId} ownerEpoch={room.ownerEpoch} actorId={actorId} binding={binding}
       warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe} players={room.players}
       matchClock={matchClock} roomActions={<>{actions}{actionError}</>}
-      lifecycle={room.lifecycle} enteredFromLobby={enteredFromLobby.current}/>;
+      freeWiki={room.freeWiki} lifecycle={room.lifecycle} enteredFromLobby={enteredFromLobby.current}/>;
   } else if (room.phase === "playing") {
     content = <RaceFrame mode="group" label="아이템 그룹 관전">
       <RaceHud><HudBrand mode="그룹 아이템전" sub="관전" /><HudDoc kind="goal" label="목표 문서" title={room.target?.title} />{matchClock}</RaceHud>
@@ -340,7 +348,7 @@ function ProductRoom({ roomId, user, logout }) {
           <h2 id="s5-ready-title" className="wr-section-label">경기 준비</h2>
           <p className={`wr65-camp-state ${ready ? "is-ready" : ""}`} role="status">{ready ? "준비 완료 · READY" : "코스를 확인하고 준비를 눌러 주세요"}</p>
           {room.actions.includes("ready") && !ready && <button type="button" className="wr-btn wr-btn--primary wr-btn--block"
-            disabled={pending} onClick={() => void command("ready")}>준비</button>}
+            disabled={pending || (room.freeWiki && !room.myCandidateTitle)} onClick={() => void command("ready")}>준비</button>}
           {ready && followup.includes("unready") && <button type="button" className="wr-btn wr-btn--block"
             disabled={pending} onClick={() => void command("unready")}>준비 취소</button>}
         </aside>
@@ -354,7 +362,9 @@ function ProductRoom({ roomId, user, logout }) {
               <span aria-hidden="true">→</span>
               <strong className="wr-route-chip wr-route-chip--target"><LobbyIcon name="flag" />{room.target?.title || "서버 지정 목표 문서"}</strong>
             </div>
-            {followup.includes("candidate") && room.courseCandidates?.length > 0 ? <>
+            {room.freeWiki ? <FreeWikiCandidateSearch selectedTitle={room.myCandidateTitle} disabled={pending}
+              onSelect={snapshotId => command("candidate", undefined, { snapshotId })} />
+            : followup.includes("candidate") && room.courseCandidates?.length > 0 ? <>
               <label htmlFor="s5-course-candidate">목표 후보</label>
               <select id="s5-course-candidate" value={self?.candidateId ?? ""} disabled={pending}
                 onChange={event => void command("candidate", undefined, { snapshotId: event.target.value || null })}>

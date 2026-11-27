@@ -1,3 +1,4 @@
+import { ensureWikiSnapshot } from "../../services/wikiSnapshotService.js";
 import React, { useEffect, useState } from "react";
 import { productId, wikiId } from "./productContract.js";
 import { sanitizeWikiDocumentHtml } from "./S5WikiSanitizer.js";
@@ -17,7 +18,7 @@ function readReply(value, roomId, sessionId, targetId) {
     throw new Error("SPECTATOR_DOCUMENT_SCOPE_MISMATCH");
   }
   return {
-    eligible, title: value.canonicalTitle,
+    eligible, title: value.canonicalTitle, pageId:value.pageId, revisionId:value.revisionId,
     html: value.documentHtml ? sanitizeWikiDocumentHtml(value.documentHtml, { currentTitle: value.canonicalTitle, apiLinks: [] }) : "",
   };
 }
@@ -62,6 +63,11 @@ export default function S5SpectatorDocument({ room, actorId, readIdentity, rpc }
           p_room: roomId, p_session: sessionId, p_binding: binding, p_target_participant: selected || null,
         }, identity.accessToken, abort.signal);
         const data = readReply(value, roomId, sessionId, selected);
+        if (room.freeWiki && selected && !data.html) {
+          const pinned = await ensureWikiSnapshot(data, { includeDocument:true, signal:abort.signal });
+          if (pinned.pageId !== data.pageId || pinned.revisionId !== data.revisionId) throw new Error("STALE_DOCUMENT");
+          data.html = sanitizeWikiDocumentHtml(pinned.documentHtml, { currentTitle:data.title, apiLinks:[] });
+        }
         if (!abort.signal.aborted) setResult({ key: requestKey, ...data });
       } catch (error) {
         if (abort.signal.aborted) return;
@@ -79,7 +85,7 @@ export default function S5SpectatorDocument({ room, actorId, readIdentity, rpc }
     }
     void load();
     return () => abort.abort();
-  }, [actorId, binding, readIdentity, requestKey, roomId, rpc, selected, sessionId, storageKey]);
+  }, [actorId, binding, readIdentity, requestKey, roomId, room.freeWiki, rpc, selected, sessionId, storageKey]);
 
   if (!targets.length && !notice) return null;
   return <section className="s5-spectator-document" aria-label="상대 문서 관전">

@@ -40,6 +40,8 @@ export function readProductRoom(body, { roomId, actorId, binding }, previous = n
       ["candidate","unready","start_scheduled"].includes(action)), "INVALID_PRODUCT_ROOM_ACTIONS");
   if (body.courseCandidates != null) assert(Array.isArray(body.courseCandidates) &&
     body.courseCandidates.every(row => productId(row?.snapshotId) && typeof row.title==="string"), "INVALID_PRODUCT_CANDIDATES");
+  if (body.freeWiki != null) assert(typeof body.freeWiki === "boolean" &&
+    (body.myCandidateTitle == null || typeof body.myCandidateTitle === "string"), "INVALID_PRODUCT_CANDIDATES");
   if (body.scheduledStartAt != null) assert(Number.isFinite(Date.parse(body.scheduledStartAt)) &&
     Number.isFinite(Date.parse(body.serverObservedAt)), "INVALID_PRODUCT_START");
   if (body.phase === "waiting") assert(body.sessionId === null && body.role === "player", "INVALID_PRODUCT_WAITING_ROOM");

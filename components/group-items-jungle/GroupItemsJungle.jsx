@@ -26,6 +26,7 @@ const commandFailureMessage = "아이템 경기 요청을 완료하지 못했어
 const commandRejectionMessages = {
   STALE_INVENTORY: "가방이 갱신됐어요. 사용할 아이템을 다시 선택해 주세요.",
   STALE_PROGRESS: "현재 문서가 갱신됐어요. 이동할 링크를 다시 선택해 주세요.",
+  LINK_SNAPSHOT_MISSING: "연결할 문서를 준비하지 못했어요. 링크를 다시 선택해 주세요.",
   LINK_CENSORED: "검열이 풀리면 이 링크로 이동할 수 있어요.",
   PARRY_WINDOW_CLOSED: "패링 시간이 지났어요.",
 };
@@ -38,7 +39,7 @@ function supplyDeadline(startedAt, supply) {
   return nextRound === 0 ? startedAt : startedAt + (20 + (nextRound - 1) * 25) * 1000;
 }
 
-function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
+function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
   const product = isProductS4Scope(scope);
   const s5 = isS5Scope(scope);
   const [view, setView] = useState(null);
@@ -55,6 +56,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   const [itemToolbar, setItemToolbar] = useState(null);
   const [warningToolbar, setWarningToolbar] = useState(null);
   const active = useRef(null);
+  const preparingLink = useRef(false);
 
   const finalAssets = s5 && itemPresentation?.finalAssets;
   useEffect(() => {
@@ -323,12 +325,25 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     ? search.lastResult.query : null;
   const censoredTitles = (article?.links ?? []).filter(link=>censoredPages.has(link.pageId))
     .map(link=>link.canonicalTitle ?? link.title);
-  const onLinkClick = title => {
+  const onLinkClick = async title => {
     const matches = article?.links.filter(row=>normalizeTitle(row.canonicalTitle ?? row.title) === normalizeTitle(title));
     const link = matches?.[0];
     if (matches?.some(row=>row.pageId!==link.pageId)) return;
     if (link && !view?.stunned && !censoredPages.has(link.pageId)) {
-      run("normal_link",{ pageId:article.pageId, revisionId:article.revisionId, snapshotId:article.snapshotId, targetPageId:link.pageId });
+      const input = { pageId: article.pageId, revisionId: article.revisionId,
+        snapshotId: article.snapshotId, targetPageId: link.pageId };
+      if (!prepareLink) { run("normal_link", input); return; }
+      if (preparingLink.current) return;
+      preparingLink.current = true;
+      const entry = active.current;
+      try {
+        const targetSnapshotId = await prepareLink(link);
+        if (entry === active.current) run("normal_link", { ...input, targetSnapshotId });
+      } catch (error) {
+        if (entry === active.current) setFailure(error?.code ?? "LINK_SNAPSHOT_MISSING");
+      } finally {
+        preparingLink.current = false;
+      }
     }
   };
   return <div className="group-items-jungle">
