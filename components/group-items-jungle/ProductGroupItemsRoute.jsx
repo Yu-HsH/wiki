@@ -9,7 +9,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExtern
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../authContext.jsx";
 import { supabase } from "../../supabaseClient.js";
-import { actGroupItemsRoom, itemModeRpc as rpc, makeRequestId, readIdentity } from "../../services/itemModeEntryService.js";
+import { actGroupItemsRoom, itemModeRpc as rpc, joinS5Rematch, makeRequestId, readIdentity, readS5Rematch } from "../../services/itemModeEntryService.js";
+import RematchResultAction from "../RematchResultAction.jsx";
 import GroupItemsJungle from "./GroupItemsJungle.jsx";
 import { createPlaytestAudio } from "../group-items-playtest/playtestAudio.js";
 import { createGroupItemsContainerAdapters } from "./containerAdapters.js";
@@ -26,12 +27,23 @@ import S5SpectatorDocument from "./S5SpectatorDocument.jsx";
 import { CopyCodeButton, LobbyHeader, LobbyIcon, LobbyShell } from "../wiki-race/LobbyParts.jsx";
 import { ItemRoomRoster } from "../wiki-race/ItemRoomLobby.jsx";
 import { audioManager } from "../../services/audioManager.js";
-import { HudBrand, HudDoc, RaceFrame, RaceHold, RaceHud } from "../wiki-race/race/RaceParts.jsx";
+import { HudBrand, HudDoc, HudExit, RaceFrame, RaceHold, RaceHud } from "../wiki-race/race/RaceParts.jsx";
 import ScheduledItemCountdown from "../wiki-race/race/ScheduledItemCountdown.jsx";
-import { GroupStandings, ResultActions, ResultCard, ResultOutcome, ResultScreen, ResultXpRow } from "../wiki-race/result/ResultParts.jsx";
+import { GroupStandings, ResultActions, ResultCard, ResultCourse, ResultOutcome, ResultScene, ResultScreen, ResultStats, ResultXpRow } from "../wiki-race/result/ResultParts.jsx";
+import { GroupResultA, RouteCompare } from "../wiki-race/race/GroupRaceParts.jsx";
+import GroupPickOverlay from "../GroupPickOverlay.jsx";
+import ResultXp from "../ResultXp.jsx";
+import FinishEffect from "../FinishEffect.jsx";
+import useMatchExpression from "../../hooks/useMatchExpression.js";
+import useProfileCards from "../../hooks/useProfileCards.js";
+import { useExitGuard } from "../ExitGuard.jsx";
+import { useDisplayNow } from "../group-items-playtest/useDisplayNow.js";
+import { formatDuration } from "../../services/wikiService.js";
+import { groupItemsRoster } from "./groupItemsRoster.js";
 import "./groupItemsJungle.css";
 
 const productPath = "/multiplayer/group-items";
+const productRoomPath = roomId => `${productPath}/${roomId}`;
 const fallbackIntervalMs = 750;
 const heartbeatIntervalMs = 4500;
 const audioSetting = "group-items-product:ink-audio";
@@ -70,7 +82,7 @@ function useRoomActions(binding, actorId) {
   return { pending, error, act };
 }
 
-function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, matchClock, roomActions, lifecycle, enteredFromLobby, freeWiki }) {
+function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, binding, warningWindowMs, target, subscribe, players, roster, matchClock, roomActions, lifecycle, enteredFromLobby, freeWiki }) {
   const { pathname } = useLocation();
   const previewAudio = import.meta.env.VITE_GROUP_ITEMS_INK_PREVIEW === "1";
   const fixedAudio = productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING);
@@ -145,7 +157,7 @@ function ProductMatch({ roomId, sessionId, participantId, ownerEpoch, actorId, b
   return <GroupItemsJungle room={room} supported={room} scope={scope} {...adapters} journal={journal} makeRequestId={makeRequestId}
       prepareLink={freeWiki ? prepareFreeWikiDestination : undefined} target={target} warningWindowMs={warningWindowMs} subscribe={subscribe} itemPresentation={itemPresentation}
       lifecycle={lifecycle} enteredFromLobby={enteredFromLobby}
-      players={players} explorationHints={<ExplorationHintPanel mode="group_items" roomId={roomId} />} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
+      players={players} roomRoster={roster} explorationHints={<ExplorationHintPanel mode="group_items" roomId={roomId} />} matchClock={matchClock} roomActions={roomActions} gameAudioRoute={pathname} audioControls={audioControls}
       kionDock={<S5KionDock roomId={roomId} actorId={actorId} players={players}/>}/>;
 }
 
@@ -156,9 +168,19 @@ function ProductRoom({ roomId, user, logout }) {
   const [room, setRoom] = useState(null);
   const [failure, setFailure] = useState("");
   const [lastSync, setLastSync] = useState("initial");
+  const [watch, setWatch] = useState(() => {
+    try { return sessionStorage.getItem(`s5-watch:${roomId}:${actorId}`) === "1"; } catch { return false; }
+  });
+  const [routeOpen, setRouteOpen] = useState(false);
   const binding = room?.binding ?? null;
+  const roomVersion = room?.version;
+  const rematch = useMemo(() => ({
+    fetch:readS5Rematch, join:joinS5Rematch, path:productRoomPath,
+    create:async source => (await actGroupItemsRoom(binding, actorId, "rematch", source, roomVersion)).roomId,
+  }), [actorId, binding, roomVersion]);
   const roomRef = useRef(null), reloadRef = useRef(null), itemListeners = useRef(new Set());
   const enteredFromLobby = useRef(false);
+  const sawRace = useRef(false);
   const liveRef = useRef(false);
   const { pending, error, act } = useRoomActions(binding, actorId);
   const subscribe = useCallback(listener=>{
@@ -182,7 +204,8 @@ function ProductRoom({ roomId, user, logout }) {
         if (!abort.signal.aborted) {
           const confirmedBinding = knownBinding ?? readProductBinding(data?.binding);
           const next = readProductRoom(data, { roomId, actorId, binding:confirmedBinding }, roomRef.current);
-          if (next.phase === "waiting" && !enteredFromLobby.current) {
+          if (next.phase === "playing" && next.role === "player") sawRace.current = true;
+          if (next.phase === "waiting" && !next.scheduledStartAt && !enteredFromLobby.current) {
             enteredFromLobby.current = true;
             audioManager.prepare(["tick", "go", "itemReveal", "denied"]);
           }
@@ -245,6 +268,18 @@ function ProductRoom({ roomId, user, logout }) {
     };
   },[roomId,actorId]);
 
+  const ownPlayer = room?.players.find(player => player.participantId === room.participantId);
+  const personalFinish = room?.phase === "playing" && ownPlayer?.status === "finished";
+  useEffect(() => {
+    if (personalFinish && sawRace.current && !document.hidden) void audioManager.play("finish", { key:`s5-arrival:${roomId}:${actorId}` });
+  }, [actorId, personalFinish, roomId]);
+  const profiles = useProfileCards(room?.players.map(player => player.profileId) ?? []);
+  const roster = useMemo(() => groupItemsRoster(room?.players ?? [], profiles), [room?.players, profiles]);
+  const matchExpression = useMatchExpression(room?.phase !== "waiting" && ownPlayer?.status === "finished" ? actorId : null);
+  const resultNow = useDisplayNow(Date.parse(room?.serverObservedAt), room?.phase === "playing" && room.role === "spectator" && !watch);
+  const { requestExit, dialog:exitDialog } = useExitGuard({ enabled:room?.phase === "playing" && room.role === "player",
+    onConfirm:() => command("leave", null) });
+
   async function command(operation, destination = productPath, payload) {
     const result = await act(operation, roomId, room.version, async () => {
       const identity = await readIdentity();
@@ -256,8 +291,7 @@ function ProductRoom({ roomId, user, logout }) {
       void reloadRef.current?.();
       return false;
     }
-    if (operation === "rematch") navigate(productPath+"/"+result.roomId);
-    else if (operation === "leave" && room.phase === "waiting") {
+    if (operation === "leave" && room.phase === "waiting") {
       if (destination) navigate(destination);
     }
     else void reloadRef.current?.();
@@ -268,8 +302,9 @@ function ProductRoom({ roomId, user, logout }) {
     <RaceHold title={failure ? "아이템 방을 불러오지 못했어요." : "아이템 방을 확인하는 중…"}
       actions={failure && <button type="button" className="wr-race-btn" onClick={()=>void reloadRef.current?.()}>다시 확인</button>} />
   </RaceFrame>;
-  const labels = { ready: "준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기", rematch:"재경기" };
-  const actions = room.actions.map(action => <button key={action} className="wr-race-btn" type="button" disabled={pending} onClick={()=>void command(action)}>{labels[action]}</button>);
+  const labels = { ready: "준비", start:"경기 시작", leave:room.phase === "waiting" ? "방 나가기" : "경기 포기" };
+  const actions = room.actions.filter(action => action in labels).map(action =>
+    <HudExit key={action} label={labels[action]} disabled={pending} onClick={room.phase === "playing" ? requestExit : () => void command(action)} />);
   const actionError = error && <p role="alert">{error === "PRODUCT_CANDIDATE_PAIR_REQUIRED"
     ? room.freeWiki ? "서로 다른 문서 후보가 두 개 필요해요." : "서로 이동할 수 있는 다른 문서 후보가 두 개 필요해요."
     : error === "PRODUCT_CANDIDATE_REQUIRED" ? "먼저 Wikipedia 문서를 후보로 제출해 주세요."
@@ -282,44 +317,72 @@ function ProductRoom({ roomId, user, logout }) {
     content = <ProductMatch roomId={roomId} sessionId={room.sessionId}
       participantId={room.participantId} ownerEpoch={room.ownerEpoch} actorId={actorId} binding={binding}
       warningWindowMs={room.warningWindowMs} target={room.target} subscribe={subscribe} players={room.players}
-      matchClock={matchClock} roomActions={<>{actions}{actionError}</>}
+      roster={roster} matchClock={matchClock} roomActions={<>{actions}{actionError}</>}
       freeWiki={room.freeWiki} lifecycle={room.lifecycle} enteredFromLobby={enteredFromLobby.current}/>;
+  } else if (room.phase === "playing" && (!watch || ownPlayer?.status === "left")) {
+    const result = roster.entries.find(({ player }) => player.user_id === room.participantId)?.player;
+    const endAt = Date.parse(room.lifecycle?.grace_ends_at || room.lifecycle?.deadline_at);
+    const remaining = Number.isFinite(endAt) ? Math.max(0, Math.ceil((endAt-resultNow)/1000)) : 0;
+    const retired = ownPlayer?.status === "left";
+    content = <GroupResultA result={result} resultKey={`${roomId}:${actorId}`} modeLabel="그룹 아이템전"
+      size={room.players.length} finishedCount={roster.counts.finished} pendingCount={roster.counts.active}
+      startTitle={room.startDocument?.title} targetTitle={room.target?.title} path={result?.path_titles ?? []}
+      deadline={{ state:remaining ? "active" : "ended", seconds:remaining, grace:Boolean(room.lifecycle?.grace_ends_at) }}
+      retired={retired} motionEligible={sawRace.current && !retired} finishEffect={<FinishEffect effect={matchExpression.finish_effect} />}
+      onSpectate={MODE_FOLLOWUP_ENABLED ? () => {
+        setWatch(true);
+        try { sessionStorage.setItem(`s5-watch:${roomId}:${actorId}`, "1"); } catch { /* optional */ }
+      } : null} onLeave={() => navigate("/play")} routeOpen={routeOpen} onToggleRoute={() => setRouteOpen(open => !open)} />;
   } else if (room.phase === "playing") {
     content = <RaceFrame mode="group" label="아이템 그룹 관전">
       <RaceHud><HudBrand mode="그룹 아이템전" sub="관전" /><HudDoc kind="goal" label="목표 문서" title={room.target?.title} />{matchClock}</RaceHud>
       <ExplorationHintPanel mode="group_items" roomId={roomId} />
-      <section className="product-item-camp-panel" aria-labelledby="s5-spectator-title">
-        <h1 id="s5-spectator-title">그룹 아이템전 관전</h1>
-        <ul className="product-item-roster" aria-label="참가자와 현재 문서">
-          {room.players.map(player => <li key={player.participantId}><strong>{player.name}</strong><span>{player.currentTitle || "현재 문서 정보 없음"}</span></li>)}
-        </ul>
-      </section>
+      <h1 id="s5-spectator-title">그룹 아이템전 관전</h1>
       {MODE_FOLLOWUP_ENABLED && <S5SpectatorDocument room={room} actorId={actorId}
-        readIdentity={readIdentity} rpc={rpc} />}
+        roster={roster} readIdentity={readIdentity} rpc={rpc} />}
       <div className="group-items-jungle-dock group-items-jungle-dock--spectator">
         <S5KionDock roomId={roomId} actorId={actorId} players={room.players} spectator/>
         {actionError}
       </div>
     </RaceFrame>;
   } else if (room.phase === "finished") {
-    const standings = [...room.results].sort((a,b)=>a.rank-b.rank).map(row => ({
-      key: row.participantId, rank: row.rank, name: row.name,
-      isMe: row.participantId === room.participantId, isWinner: row.rank === 1 && row.status === "finished",
-      retired: row.status === "left", status: row.status === "left" ? "기권/시간 초과" : row.status === "finished" ? "완주" : "경기 종료",
-    }));
+    const standings = [...room.results].sort((a,b)=>a.rank-b.rank).map(row => {
+      const player = room.players.find(player => player.participantId === row.participantId);
+      return {
+        key:row.participantId, userId:player?.profileId, rank:row.status === "left" ? null : row.rank, name:player?.nickname || row.name,
+        time:Number.isFinite(player?.elapsedSeconds) ? formatDuration(player.elapsedSeconds) : "–",
+        moves:Number.isFinite(player?.moveCount) ? `${player.moveCount}회` : "–",
+        isMe:row.participantId === room.participantId, isWinner:row.rank === 1 && row.status === "finished",
+        retired:row.status === "left", status:row.status === "left" ? "기권/시간 초과" : row.status === "finished" ? "완주" : "경기 종료",
+      };
+    });
     const selfResult = room.results.find(row => row.participantId === room.participantId);
-    content = <ResultScreen mode="group" tone="neutral" titleId="s5-final-result" resultKey={roomId} testId="s5-final-result">
+    content = <ResultScreen mode="group" tone="neutral" cinematic="group" titleId="s5-final-result" resultKey={roomId}
+      motionEligible={sawRace.current} confirmed={room.results.length>0} testId="s5-final-result">
+      <ResultScene variant="group-final" podiumRows={standings} reached={selfResult?.status === "finished"}
+        destination={room.target?.title} recordedAt={room.lifecycle?.closed_at} />
       <ResultCard label="아이템 그룹 결과">
-        <ResultOutcome kicker="그룹 아이템전" title="최종 경기 결과" titleId="s5-final-result" />
-        {selfResult && <ResultXpRow><strong>{selfResult.xp === null ? "XP 정산 대기" : "+" + selfResult.xp + " XP"}</strong></ResultXpRow>}
-        <GroupStandings rows={standings} showMetrics={false} finishedCount={room.results.filter(row => row.status === "finished").length} retiredCount={standings.filter(row => row.retired).length} />
+        <ResultOutcome kicker="그룹 아이템전" title="최종 경기 결과" titleId="s5-final-result"
+          detail={selfResult?.status === "finished" ? `${selfResult.rank}위 완주` : selfResult?.status === "left" ? "리타이어" : null} />
+        <ResultStats items={[{label:"공통 코스",wide:true,value:<ResultCourse start={room.startDocument?.title} target={room.target?.title} />}]} />
+        {selfResult && <ResultXpRow><ResultXp scope="group_items" sourceId={selfResult.participantId} userId={actorId} motionEligible={sawRace.current} /></ResultXpRow>}
+        {selfResult?.status === "finished" && sawRace.current && <FinishEffect effect={matchExpression.finish_effect} />}
+        <GroupStandings rows={standings} finishedCount={room.results.filter(row => row.status === "finished").length} retiredCount={standings.filter(row => row.retired).length} />
+        <RouteCompare entries={roster.entries} myUserId={room.participantId} startTitle={room.startDocument?.title} targetTitle={room.target?.title} />
         {actionError}
-        <ResultActions><Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>{actions}</ResultActions>
+        <ResultActions><Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>
+          <RematchResultAction sourceRoomId={roomId} mode="group" isHost={room.actions.includes("rematch")}
+            enabled={Boolean(room.participantId)} adapter={rematch} />
+        </ResultActions>
       </ResultCard>
     </ResultScreen>;
   } else if (room.scheduledStartAt) {
     content = <ScheduledItemCountdown roomId={roomId} startsAt={room.scheduledStartAt}
       serverObservedAt={room.serverObservedAt} startTitle={room.startDocument?.title} targetTitle={room.target?.title}
+      intro={enteredFromLobby.current && <GroupPickOverlay sceneKey={`s5:${roomId}:${room.scheduledStartAt}:${actorId}`}
+        presentationDuration={3500} startTitle={room.startDocument?.title} targetTitle={room.target?.title}
+        players={room.players.map(player => ({ user_id:player.profileId ?? player.participantId,
+          nickname_snapshot:player.nickname || player.name }))} />}
       onBoundary={() => void reloadRef.current?.("scheduled-start")}/>;
   } else {
     const leaveLobby = room.actions.includes("leave");
@@ -348,7 +411,7 @@ function ProductRoom({ roomId, user, logout }) {
       <div className="wr-group-layout">
         <aside className="wr-group-mine" aria-labelledby="s5-ready-title">
           <h2 id="s5-ready-title" className="wr-section-label">경기 준비</h2>
-          <p className={`wr65-camp-state ${ready ? "is-ready" : ""}`} role="status">{ready ? "준비 완료 · READY" : "코스를 확인하고 준비를 눌러 주세요"}</p>
+          <p className={`wr65-camp-state ${ready ? "is-ready" : ""}`} role="status">{ready ? "준비 완료 · READY" : room.freeWiki ? "내 문서 후보를 제출하고 준비를 눌러 주세요" : "코스를 확인하고 준비를 눌러 주세요"}</p>
           {room.actions.includes("ready") && !ready && <button type="button" className="wr-btn wr-btn--primary wr-btn--block"
             disabled={pending || (room.freeWiki && !room.myCandidateTitle)} onClick={() => void command("ready")}>준비</button>}
           {ready && followup.includes("unready") && <button type="button" className="wr-btn wr-btn--block"
@@ -359,13 +422,16 @@ function ProductRoom({ roomId, user, logout }) {
             emotes={MODE_FOLLOWUP_ENABLED && <S5KionDock mode="lobby" roomId={roomId} actorId={actorId}
               players={room.players} label="대기방 키온 감정표현" />} />
           <section className="wr-course" aria-labelledby="s5-course-title">
-            <div className="wr-course-head"><h2 id="s5-course-title" className="wr-section-label">공통 코스</h2></div>
-            <div className="wr-course-route"><span className="wr-route-chip">{room.startDocument?.title || "서버 지정 출발 문서"}</span>
+            <div className="wr-course-head"><h2 id="s5-course-title" className="wr-section-label">{room.freeWiki ? "출발·목표 문서 후보" : "공통 코스"}</h2></div>
+            {!room.freeWiki && <div className="wr-course-route"><span className="wr-route-chip">{room.startDocument?.title || "서버 지정 출발 문서"}</span>
               <span aria-hidden="true">→</span>
               <strong className="wr-route-chip wr-route-chip--target"><LobbyIcon name="flag" />{room.target?.title || "서버 지정 목표 문서"}</strong>
-            </div>
-            {room.freeWiki ? <FreeWikiCandidateSearch selectedTitle={room.myCandidateTitle} disabled={pending}
-              onSelect={snapshotId => command("candidate", undefined, { snapshotId })} />
+            </div>}
+            {room.freeWiki ? <>
+              <p className="wr-course-note">경기를 시작할 때 제출한 후보에서 서로 다른 출발·목표 문서를 추첨합니다.</p>
+              <FreeWikiCandidateSearch selectedTitle={room.myCandidateTitle} disabled={pending}
+                onSelect={snapshotId => command("candidate", undefined, { snapshotId })} />
+            </>
             : followup.includes("candidate") && room.courseCandidates?.length > 0 ? <>
               <label htmlFor="s5-course-candidate">목표 후보</label>
               <select id="s5-course-candidate" value={self?.candidateId ?? ""} disabled={pending}
@@ -385,6 +451,7 @@ function ProductRoom({ roomId, user, logout }) {
             ? `최소 ${room.minimumPlayers}명 필요` : readyCount < room.players.length
               ? `참가자 준비 대기 · ${readyCount} / ${room.players.length}` : "방장이 시작하기를 기다리는 중"}
         </p>
+        <span className="wr-start-rules">시작 조건 · {room.minimumPlayers}명 이상 · 전원 READY{room.freeWiki ? " · 서로 다른 후보 2개 이상" : ""} · 시작은 방장만</span>
         {start && <button className="wr-btn wr-btn--primary wr-btn--lg wr-start-btn" type="button"
           disabled={pending} aria-describedby="s5-start-status"
           onClick={() => void command(followup.includes("start_scheduled") ? "start_scheduled" : "start")}>경기 시작</button>}
@@ -392,7 +459,7 @@ function ProductRoom({ roomId, user, logout }) {
     </LobbyShell>;
   }
   return <div data-product-group-phase={room.phase} data-product-sync={lastSync}
-    data-product-document-source={productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING) ? "fixed" : "wikipedia"}>{content}</div>;
+    data-product-document-source={productBindingMatches(binding,FIXED_PRODUCT_WIKI_BINDING) ? "fixed" : "wikipedia"}>{content}{exitDialog}</div>;
 }
 
 export default function ProductGroupItemsRoute() {

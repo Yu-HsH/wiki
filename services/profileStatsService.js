@@ -85,14 +85,15 @@ export async function fetchGroupStats(userId) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from("group_match_history")
-      .select("rank")
-      .eq("user_id", userId);
+    const [{ data, error }, itemPodium] = await Promise.all([
+      supabase.from("group_match_history").select("rank").eq("user_id", userId),
+      supabase.rpc("get_s5_item_profile_podium_v1", { p_user:userId }),
+    ]);
 
     if (error) throw error;
 
-    const stats = { first: 0, second: 0, third: 0 };
+    if (itemPodium.error && itemPodium.error.code !== "PGRST202") throw itemPodium.error;
+    const stats = { first:itemPodium.data?.first ?? 0, second:itemPodium.data?.second ?? 0, third:itemPodium.data?.third ?? 0 };
     if (data) {
       data.forEach((row) => {
         if (row.rank === 1) stats.first += 1;

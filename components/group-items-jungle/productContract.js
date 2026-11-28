@@ -61,7 +61,8 @@ export function readProductRoom(body, { roomId, actorId, binding }, previous = n
   if (previous) {
     assert(productBindingMatches(body.binding, previous.binding) &&
       (!previous.sessionId || !body.sessionId || body.sessionId === previous.sessionId), "PRODUCT_ROOM_BINDING_CHANGED");
-    if (BigInt(body.version) <= BigInt(previous.version)) return previous;
+    if (BigInt(body.version) < BigInt(previous.version) ||
+      (body.version === previous.version && !(Date.parse(body.serverObservedAt) > Date.parse(previous.serverObservedAt)))) return previous;
     assert(phases.indexOf(body.phase) >= phases.indexOf(previous.phase), "PRODUCT_PHASE_REGRESSION");
     if (previous.phase === "playing" && previous.role === "player" && body.phase === "playing" && body.role === "player") {
       assert(body.participantId === previous.participantId && body.ownerEpoch === previous.ownerEpoch &&

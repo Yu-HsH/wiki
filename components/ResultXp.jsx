@@ -36,7 +36,7 @@ async function loadSingle({ sourceId, userId, scope = "single", roomId }) {
       return null;
     }),
     fetchXpSummary(userId).catch(() => null),
-    loadAchievements(scope, scope === "group" ? roomId : sourceId),
+    scope === "group_items" ? null : loadAchievements(scope, scope === "group" ? roomId : sourceId),
   ]);
   return { entries, summary, achievements };
 }
@@ -88,7 +88,7 @@ async function loadLevelBefore({ scope, entries, summary, achievements }) {
  * 금액으로 판정하고(판정 9), XP 아래에 업적 reveal을 그린다.
  *
  * @param {object} props
- * @param {"single"|"duel"|"group"} props.scope
+ * @param {"single"|"duel"|"group"|"group_items"} props.scope
  * @param {boolean} [props.isGuest]
  * @param {string|null} [props.userId]
  * @param {string|null} [props.sourceId] 싱글: `game_records.id`, 그룹: `group_match_results.id`
@@ -106,6 +106,7 @@ export default function ResultXp({
   tone = "light",
   unavailable = false,
   onAchievementsLoaded = null,
+  motionEligible = true,
 }) {
   const [data, setData] = useState(null);
   const recordsVisible = useContext(DuelEndRecordsVisible);
@@ -147,7 +148,7 @@ export default function ResultXp({
         setFailed(!Array.isArray(loaded.entries));
         if (Array.isArray(loaded.entries) && loaded.entries.length > 0) {
           const identity = `xp:${scope}:${userId}:${scope === "duel" ? roomId : sourceId}`;
-          try { if (claimResultMotion(window.localStorage, identity)) setMotionKey(identity); } catch { /* static */ }
+          try { if (claimResultMotion(window.localStorage, identity) && motionEligible) setMotionKey(identity); } catch { /* static */ }
         }
         onAchievementsLoadedRef.current?.(buildResultReveal(loaded.achievements)?.items.length ?? 0);
       })
@@ -159,7 +160,7 @@ export default function ResultXp({
     return () => {
       cancelled = true;
     };
-  }, [scope, isGuest, userId, sourceId, roomId]);
+  }, [scope, isGuest, userId, sourceId, roomId, motionEligible]);
 
   // Phase 4 — 조회할 키가 없으면 영원히 "확인하는 중"에 머물지 않는다 (표시만, 원장·지급 경로 무변경).
   // 로그인 사용자가 없으면 게스트 계약(XP_GUEST_NOTE)을 그대로 쓰고, 결과 행이 없으면 지급 내역이 없다고 말한다.

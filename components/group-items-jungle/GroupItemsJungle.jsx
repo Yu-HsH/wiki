@@ -21,6 +21,12 @@ import "./s5HeadScoped.css";
 import S5Panels from './S5Panels.jsx';
 import { isS5Scope } from './s5UiContract.js';
 import useGameAudio from '../../hooks/useGameAudio.js';
+import useRaceMotion from "../../hooks/useRaceMotion.js";
+import useItemRaceTarget from "../../hooks/useItemRaceTarget.js";
+import { ParticipantRoster } from "../wiki-race/race/GroupRaceParts.jsx";
+import { MobileRouteNotes, RouteRail } from "../wiki-race/race/RaceParts.jsx";
+import PageLoadingOverlay from "../PageLoadingOverlay.jsx";
+import ScrollToTopButton from "../ScrollToTopButton.jsx";
 
 const commandFailureMessage = "아이템 경기 요청을 완료하지 못했어요. 연결과 경기 상태를 확인해 주세요.";
 const commandRejectionMessages = {
@@ -39,9 +45,11 @@ function supplyDeadline(startedAt, supply) {
   return nextRound === 0 ? startedAt : startedAt + (20 + (nextRound - 1) * 25) * 1000;
 }
 
-function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], matchClock, roomActions, explorationHints, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
+function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], roomRoster, matchClock, roomActions, explorationHints, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
   const product = isProductS4Scope(scope);
   const s5 = isS5Scope(scope);
+  const [moveMotion, approveMoveMotion] = useRaceMotion();
+  const targetBrief = useItemRaceTarget(product ? target?.title : null);
   const [view, setView] = useState(null);
   const [document, setDocument] = useState(null);
   const [failure, setFailure] = useState("");
@@ -53,6 +61,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   const seenReceipts = useRef(new Set());
   const [trapChoices, setTrapChoices] = useState(null);
   const [s5Pending,setS5Pending] = useState(false);
+  const [rewardGrants,setRewardGrants] = useState([]);
   const [itemToolbar, setItemToolbar] = useState(null);
   const [warningToolbar, setWarningToolbar] = useState(null);
   const active = useRef(null);
@@ -280,6 +289,14 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     entry.session.dispatch(operation,input).then(receipt=>{
       if (active.current !== entry) return;
       if (receipt) setLastReceipt(receipt);
+      if (receipt && !entry.session.isRetransmission(receipt)) {
+        const grants = receipt.code === "REWARD_CLAIMED" ? [receipt.grantId] : receipt.grants?.map(item=>item.grantId);
+        if (grants?.some(Boolean)) setRewardGrants(grants.filter(Boolean));
+        if (product && receipt.ok && operation === "normal_link") {
+          approveMoveMotion(`${scope.sessionId}:${receipt.receiptId}`, true);
+          window.scrollTo({ top:0, behavior:"instant" });
+        }
+      }
       let cue = null;
       if (itemPresentation && receipt && !seenReceipts.current.has(receipt.receiptId)) {
         seenReceipts.current.add(receipt.receiptId);
@@ -307,15 +324,23 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   }
 
   const frame = view?.view;
+  const names = new Map(players.map(player => [player.participantId, player.nickname || player.name]));
+  const itemFrame = frame && {
+    ...frame,
+    targets:frame.targets.map(target => ({ ...target, displayName:names.get(target.participantId) || target.displayName })),
+    warnings:frame.warnings.map(warning => ({ ...warning, sourceLabel:names.get(warning.sourceParticipantId) || warning.sourceLabel })),
+  };
   const readOnly = disconnected || (frame?.viewer.readOnly ?? true);
   useGameAudio({ identity: "s5:" + scope.sessionId + ":" + scope.actorId, route: gameAudioRoute,
     playing: Boolean(gameAudioRoute && !readOnly), ended: Boolean(frame?.viewer.readOnly),
     connection: gameAudioRoute && disconnected ? "lost" : null });
-  const roster = players.length > 0 && <section aria-label="참가자와 현재 문서">
+  const ownPath = players.find(player => player.participantId === scope.participantId)?.pathTitles ?? [];
+  const roster = roomRoster ? <ParticipantRoster entries={roomRoster.entries} counts={roomRoster.counts} myUserId={scope.participantId} />
+    : players.length > 0 && <section aria-label="참가자와 현재 문서">
     <h2>참가자</h2>
     <ul className="product-item-roster">
       {players.map(player => <li key={player.participantId}>
-        <strong>{player.name}{player.participantId === scope.participantId ? " · 나" : ""}</strong>
+        <strong>{player.nickname || player.name}{player.participantId === scope.participantId ? " · 나" : ""}</strong>
         {player.currentTitle && <span>{player.currentTitle}</span>}
       </li>)}
     </ul>
@@ -347,7 +372,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     }
   };
   return <div className="group-items-jungle">
-    <RaceFrame mode="group" label="그룹 아이템 경기">
+    <RaceFrame mode="group" label="그룹 아이템 경기" motion={moveMotion}>
       {view && <ItemRaceStart matchKey={scope.sessionId} startedAt={lifecycle?.started_at}
         now={view.now} enteredFromLobby={enteredFromLobby} />}
       <RaceHud>
@@ -357,17 +382,37 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           <HudArrow/><HudDoc kind="goal" label="목표 문서" title={target?.title}/>
         </div>
         <HudStat label="이동" value={view?.self?.moveCount ?? "–"}/>{matchClock}
-        {finalAssets && <div className="group-items-hud-slots" ref={setItemToolbar} />}
+        {finalAssets && <div className="group-items-hud-slots item-race-anchor" ref={setItemToolbar} />}
       </RaceHud>
+      {(kionDock || audioControls || roomActions) && <div className="item-race-utility">
+        {kionDock}
+        {(audioControls || roomActions) && <details className="item-race-settings"><summary>경기 설정</summary>
+          {audioControls}{roomActions}
+        </details>}
+      </div>}
       {explorationHints}
+      {roomRoster && <MobileRouteNotes path={ownPath} />}
+      {s5 && frame && !readOnly && <S5Panels state={view.s5} inventory={frame.inventory.filter(Boolean)} now={view.now} slots={frame.inventory.filter(slot=>!slot).length}
+        inputsDisabled={s5Pending || view.stunned || view.sealed || !article} movementDisabled={view.stunned || !article}
+        onAct={run} onLink={onLinkClick} censoredPages={censoredPages} lastReceipt={lastReceipt}/>}
+      {frame && !readOnly && trapChoices && <div className="s5-panels" role="group" aria-label="깜짝상자 링크 선택">
+        {trapChoices.options.map(option=><button key={option.pageId} type="button"
+          onClick={()=>run("trap_install",{ ...trapChoices.input, selectionToken:option.selectionToken })}>
+          {article?.links.find(link => link.pageId === option.pageId)?.title ?? option.pageId}
+        </button>)}
+        {trapChoices.options.length===0 && <p role="status">설치할 수 있는 링크가 없어요.</p>}
+        <button type="button" onClick={()=>setTrapChoices(null)}>취소</button>
+      </div>}
       {roster && <details className="product-item-mobile-roster"><summary>참가자 {players.length}명</summary>{roster}</details>}
       <div className={roster ? "wr-race-body" : "wr-race-body is-wide"}>
-        {roster && <aside className="wr-race-side product-item-race-roster">{roster}</aside>}
+        {roster && <aside className="wr-race-side product-item-race-roster">{roster}
+          {roomRoster && <RouteRail path={ownPath} currentTitle={article?.title} />}</aside>}
         <div className="gip-document" data-product-vfx={product && !finalAssets} data-s5-priority-vfx={finalAssets ? true : undefined}>
           <main className="wr-race-main" aria-label="문서 읽기 영역">
-            <WikiViewer target={target} currentTitle={article?.title ?? ""} currentSummary="" currentDocumentHtml={article?.html ?? ""}
+            {roomRoster && pageId && !article && !documentFailure && <PageLoadingOverlay />}
+            <WikiViewer target={roomRoster ? targetBrief : target} currentTitle={article?.title ?? ""} currentSummary="" currentDocumentHtml={article?.html ?? ""}
               links={article?.links ?? []} isLoading={Boolean(pageId && !article && !documentFailure)}
-              censoredTitles={censoredTitles} authorizedSearchQuery={s5 ? verifiedSearchQuery : undefined} onLinkClick={onLinkClick} readOnly={readOnly || !article || view?.stunned} showTargetBrief={false}/>
+              censoredTitles={censoredTitles} authorizedSearchQuery={s5 ? verifiedSearchQuery : undefined} onLinkClick={onLinkClick} readOnly={readOnly || !article || view?.stunned} showTargetBrief={Boolean(roomRoster)}/>
             {documentFailure && <div>
               <p role="status">현재 문서를 불러오지 못했습니다.</p>
               <button type="button" onClick={()=>setDocumentAttempt(attempt=>attempt+1)}>문서 다시 불러오기</button>
@@ -375,7 +420,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           </main>
           {frame && !readOnly && <>
             {finalAssets ? <FinalAssetOverlay value={view.finalVisual} pulse={view.pulse} frame={view}>
-              <AttackWarningEdge view={frame} events={view.events} running windowMs={warningWindowMs}/>
+              <AttackWarningEdge view={itemFrame} events={view.events} running windowMs={warningWindowMs}/>
             </FinalAssetOverlay> : <>
               <AttackWarningEdge view={frame} events={view.events} running windowMs={warningWindowMs}/>
               {product ? <ProductInkVfx pulse={view.pulse} frame={view}/> :
@@ -390,50 +435,27 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           </>}
         </div>
       </div>
-      <div className="group-items-jungle-dock" data-s5-sticky-dock={finalAssets ? true : undefined} data-item-race-dock>
+      <div className={finalAssets ? "group-item-alerts" : "group-items-jungle-dock"} data-item-race-dock>
         {finalAssets && <span className="gip-feedback-sr" role="status">{view?.finalVisual?.scenes
           .filter(scene=>scene.key.startsWith("recipient:")).map(scene=>scene.label).join(" · ")}</span>}
         {finalAssets && <div className="s5-dock-warnings" ref={setWarningToolbar}/>}
         <div className="s5-dock-content">
-        {kionDock}
-        {frame && !readOnly && <div className="group-items-jungle-supply" role="status">
-          {view.supply ? `보급 ${view.supply.lastClosedRound} · ${view.supply.outcome === "granted" ? "받음" : "가방이 가득 차 건너뜀"}` : "보급 기록 없음"}
-          {frame.protection.length>0 && <span> · 편집보호 활성</span>}
-          {view.trapArmed && <span> · 현재 문서에 깜짝상자 장착됨</span>}
-          {view.stunned && <span> · {view.stunSource === 'thunder' ? '천둥에 감전됐어요' :
-            view.stunSource === 'cannon' ? '대포 착지로 기절했어요' : '깜짝상자에 걸렸어요'}</span>}
-          {view.sealed && <span> · 천둥으로 아이템이 봉인됐어요</span>}
-        </div>}
-        <PlaytestItemsHud view={frame} numberSlots={s5} visible={Boolean(frame) && !readOnly} enhancedFeedback running warningWindowMs={warningWindowMs}
-          toolbar={finalAssets ? itemToolbar : null} warningToolbar={warningToolbar} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant}
+        <PlaytestItemsHud view={itemFrame} numberSlots={s5} visible={Boolean(frame) && !readOnly} enhancedFeedback running warningWindowMs={warningWindowMs}
+          toolbar={finalAssets ? itemToolbar : null} warningToolbar={warningToolbar} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant} rewardGrants={rewardGrants}
           onParry={warning=>run("parry",{ childId:warning.childId })} onReturn={rightId=>run("bookmark_return",{ rightId })}
           onUse={input=>run(input.action,input)}/>
-        {s5 && frame && !readOnly && <S5Panels state={view.s5} inventory={frame.inventory.filter(Boolean)} now={view.now} slots={frame.inventory.filter(slot=>!slot).length}
-          inputsDisabled={s5Pending || view.stunned || view.sealed || !article} movementDisabled={view.stunned || !article}
-          onAct={run} onLink={onLinkClick} censoredPages={censoredPages} lastReceipt={lastReceipt}/>}
-        {frame && !readOnly && trapChoices && <div role="group" aria-label="깜짝상자 링크 선택">
-          {trapChoices.options.map(option=><button key={option.pageId} type="button"
-            onClick={()=>run("trap_install",{ ...trapChoices.input, selectionToken:option.selectionToken })}>
-            {option.pageId}
-          </button>)}
-          {trapChoices.options.length===0 && <p role="status">설치할 수 있는 링크가 없어요.</p>}
-          <button type="button" onClick={()=>setTrapChoices(null)}>취소</button>
-        </div>}
         {!itemPresentation && lastReceipt?.code==="TRAP_INSTALLED" && <p role="status">깜짝상자를 설치했어요.</p>}
         {[...(view?.cues ?? []), ...(liveCue ? [liveCue] : [])].map(cue=><React.Fragment key={cue.key}>
           {itemPresentation?.renderCue?.(cue) ?? <p role="status" data-item-cue={cue.kind}>{cue.message}</p>}
         </React.Fragment>)}
-        {disconnected && <button type="button" onClick={()=>void active.current?.refresh(true)}>아이템 상태 다시 확인</button>}
+        {disconnected && <p role="status">경기 연결을 다시 확인하고 있어요. <button type="button" onClick={()=>void active.current?.refresh(true)}>경기 상태 다시 확인</button></p>}
         {failure && <p className="group-items-jungle-status" role="status">
           {Object.hasOwn(commandRejectionMessages, failure) ? commandRejectionMessages[failure] : commandFailureMessage}
         </p>}
-        {(audioControls || roomActions) && <div className="product-item-dock-controls">
-          {audioControls && <details><summary>아이템 소리 설정</summary>{audioControls}</details>}
-          {roomActions && <div className="product-item-actions">{roomActions}</div>}
-        </div>}
         {frame?.viewer.readOnly && <p role="status">경기가 종료됐어요.</p>}
         </div>
       </div>
+      {roomRoster && article && <ScrollToTopButton race />}
     </RaceFrame>
   </div>;
 }

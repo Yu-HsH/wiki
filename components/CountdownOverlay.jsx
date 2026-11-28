@@ -5,6 +5,15 @@ import { audioManager } from '../services/audioManager.js';
 
 const STEPS = [3, 2, 1, "시작!"];
 
+export function CountdownJournal({ value, startTitle, targetTitle, sequence = false, arrival = false }) {
+  return <div className={`countdown-journal${startTitle && targetTitle ? " has-course" : ""}${sequence ? " is-start-sequence" : ""}`}>
+    {!arrival && <span className="wr-start-kicker">탐험 출발 준비</span>}
+    {(startTitle || targetTitle) && <StartCourse startTitle={startTitle} targetTitle={targetTitle} />}
+    <div className="countdown-number" key={value}>{value}</div>
+    {!arrival && <span className="countdown-note">본문 링크를 따라 목표 문서로</span>}
+  </div>;
+}
+
 export default function CountdownOverlay({ onComplete, startTitle, targetTitle, sceneKey = null, mode = "", motionEligible = true }) {
   const sequence = useSceneSequence(sceneKey && `scene:start:${mode}:${sceneKey}`, { eligible: motionEligible, confirmed: Boolean(startTitle && targetTitle) });
   const [stepIndex, setStepIndex] = useState(0);
@@ -45,14 +54,7 @@ export default function CountdownOverlay({ onComplete, startTitle, targetTitle, 
 
   return (
     <div className="countdown-overlay wr-page wr-start-overlay" aria-live="assertive" aria-atomic="true">
-      <div className={`countdown-journal${startTitle && targetTitle ? " has-course" : ""}${sequence ? " is-start-sequence" : ""}`}>
-      <span className="wr-start-kicker">탐험 출발 준비</span>
-      {(startTitle || targetTitle) && <StartCourse startTitle={startTitle} targetTitle={targetTitle} />}
-      <div className="countdown-number" key={stepIndex}>
-        {STEPS[stepIndex]}
-      </div>
-      <span className="countdown-note">본문 링크를 따라 목표 문서로</span>
-      </div>
+      <CountdownJournal value={STEPS[stepIndex]} startTitle={startTitle} targetTitle={targetTitle} sequence={sequence} />
     </div>
   );
 }

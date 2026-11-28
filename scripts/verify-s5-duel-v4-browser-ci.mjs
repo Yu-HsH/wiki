@@ -241,6 +241,19 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
     await waitFor(()=>sql("select status from ink_product.members where room_id="+quote(room)+
       " and actor_id="+quote(members[i].id))==="finished",
       `S5 ${count} player ${i+1} real goal completion`,70,300);
+    if(i===0){
+      const first=agents[0].page;
+      await first.getByRole("heading",{name:"1위 완주"}).waitFor({state:"visible"});
+      await first.getByRole("button",{name:/관전하기/}).click();
+      const watching=first.getByRole("region",{name:"상대 문서 관전"});
+      await watching.getByRole("heading",{name:"경로 비교"}).waitFor({state:"visible"});
+      assert.equal(await first.locator(".item-race-slots").count(),0);
+      const progress=await rpc(members[0],"get_group_items_product_room_v1",{p_room:room,p_binding:null});
+      const own=progress.players.find(player=>player.participantId===progress.participantId);
+      assert.equal(own.rank,1);
+      assert.equal(own.pathTitles.at(-1),progress.target.title);
+      assert.ok(progress.players.filter(player=>player.status==="playing").every(player=>player.pathTitles==null));
+    }
   }
   await waitFor(()=>sql("select phase from ink_product.rooms where id="+quote(room))==="finished",
     `S5 ${count} authoritative terminal`,100,400);
@@ -262,13 +275,15 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
     assert.equal(ownRoom.phase,"finished");
     const own=ownRoom.results.find(row=>row.participantId===ownRoom.participantId);
     assert.equal(own?.xp,expectedXp,`S5 ${count} member ${i+1} XP`);
+    assert.ok(ownRoom.players.every(player=>player.status==="finished" && player.moveCount>=1));
+    assert.ok(ownRoom.players.every(player=>player.pathTitles?.at(-1)===ownRoom.target.title));
   }
   await agents[0].page.reload({waitUntil:"domcontentloaded"});
   await agents[0].page.locator('section[aria-label="아이템 그룹 결과"]').waitFor({state:"visible",timeout:20000});
   log(`S5 ${count} real goal clicks, result DOM, all ranks/XP and F5 verified`);
   const before={results:resultCount(),projection:projected(),xp:xpCount()};
   const host=agents[0].page;
-  await host.getByRole("button",{name:"재경기"}).click();
+  await host.getByRole("button",{name:"같은 멤버로 다시 준비하기"}).click();
   await host.waitForURL(next=>/\/multiplayer\/group-items\/[a-f0-9-]{36}$/.test(next.pathname) && next.pathname!=="/multiplayer/group-items/"+room,{timeout:20000});
   const nextRoom=host.url().split("/").at(-1);
   assert.notEqual(nextRoom,room,"S5 rematch room must be new");
@@ -276,7 +291,13 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   assert.equal(next.phase,"waiting");
   assert.equal(next.players.length,1,"S5 rematch starts with host, no implicit member rejoin");
   assert.equal(sql("select previous_room_id from ink_product.rooms where id="+quote(nextRoom)),room);
-  for(const guest of agents.slice(1)) await joinItemRoom(guest,"group",nextRoom,next.roomCode);
+  assert.equal(sql(`select enabled from private.exploration_hint_options_v1 where mode='group_items' and room_id=${quote(nextRoom)}`),"t");
+  assert.equal(sql(`select count(*) from private.exploration_hint_documents_v1 where room_id=${quote(nextRoom)}`),"0");
+  for(const guest of agents.slice(1)) {
+    await guest.page.getByRole("button",{name:"재경기 준비방 참가",exact:true}).click({timeout:25000});
+    await guest.page.waitForURL("**/multiplayer/group-items/"+nextRoom,{timeout:15000});
+  }
+  assert.equal(sql(`select count(*) from ink_product.members where room_id=${quote(nextRoom)} and (ready or target_candidate_id is not null)`),"0");
   await readyGroup(nextRoom,members,agents);
   assert.equal(Number(sql("select count(*) from ink_product.members where room_id="+quote(nextRoom)+
     " and status='waiting' and ready")),count);
@@ -493,11 +514,11 @@ async function duelRound() {
   await host.reload({waitUntil:"domcontentloaded"});
   await host.locator('section[aria-label="경기 결과"]').waitFor({state:"visible",timeout:20000});
   const old={history:history(),xp:ledger()};
-  await host.getByRole("button",{name:"재경기"}).click();
+  await host.getByRole("button",{name:"같은 멤버로 다시 준비하기"}).click();
   await host.waitForURL(next=>/\/multiplayer\/duel-v4\/[a-f0-9-]{36}$/.test(next.pathname) && next.pathname!=="/multiplayer/duel-v4/"+room,{timeout:20000});
   const nextRoom=host.url().split("/").at(-1);
   assert.notEqual(nextRoom,room);
-  await guest.getByRole("button",{name:"재경기"}).click();
+  await guest.getByRole("button",{name:"재경기 준비방 참가",exact:true}).click({timeout:25000});
   await guest.waitForURL(new RegExp("/multiplayer/duel-v4/"+nextRoom+"$"),{timeout:20000});
   assert.equal(Number(sql("select count(*) from duel_v4.members where room_id="+quote(nextRoom))),2);
   assert.equal(Number(sql("select count(*) from duel_v4.grants where room_id="+quote(nextRoom))),0);

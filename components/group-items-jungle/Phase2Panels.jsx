@@ -1,13 +1,15 @@
 import React,{useEffect,useState}from'react';
 import{itemName,tierLabel}from'./s5UiContract.js';
 import{remainingTime}from'./countdown.js';
+import{FinalItemIcon}from'./FinalAssetVfx.jsx';
 export function Phase2Rewards({state,now,inventory,disabled,onAct}){
  const offers=state.jokerOffers.flatMap(o=>o.candidates).filter(c=>Date.parse(c.expiresAt)>now).sort((a,b)=>a.sequence-b.sequence);
  if(!offers.length)return null;const head=offers[0],free=inventory.length<2;
  return <section className="s5-phase2-rewards" aria-label="임시 보상함">
   <h3>임시 보상함 · {offers.length}개</h3>
   <p>먼저 받은 보상부터 선택해 주세요. {Math.max(0,Math.ceil((Date.parse(head.expiresAt)-now)/1000))}초 남음</p>
-  <p>{[tierLabel(head.tier),itemName(head.itemId)].filter(Boolean).join(' ')}</p>
+  <p className="item-race-reward"><FinalItemIcon item={{itemId:head.itemId,effectiveTier:head.tier}}/>
+   {[tierLabel(head.tier),itemName(head.itemId)].filter(Boolean).join(' ')}</p>
   {free&&<button type="button" disabled={disabled} onClick={()=>onAct('reward_claim',{candidateId:head.candidateId})}>보상 받기</button>}
   {inventory.map(g=><button type="button" key={g.grantId} disabled={disabled} onClick={()=>onAct('reward_claim',{candidateId:head.candidateId,replaceGrantId:g.grantId})}>
    {itemName(g.itemId)} 대신 받기

@@ -2,6 +2,9 @@ import { ensureWikiSnapshot } from "../../services/wikiSnapshotService.js";
 import React, { useEffect, useState } from "react";
 import { productId, wikiId } from "./productContract.js";
 import { sanitizeWikiDocumentHtml } from "./S5WikiSanitizer.js";
+import { ParticipantRoster, RouteCompare } from "../wiki-race/race/GroupRaceParts.jsx";
+import PageLoadingOverlay from "../PageLoadingOverlay.jsx";
+import ScrollToTopButton from "../ScrollToTopButton.jsx";
 import "./s5SpectatorDocument.css";
 
 function readReply(value, roomId, sessionId, targetId) {
@@ -27,7 +30,7 @@ function saveSelection(key, participant) {
   try { sessionStorage.setItem(key, participant); } catch { /* Session storage can be blocked. */ }
 }
 
-export default function S5SpectatorDocument({ room, actorId, readIdentity, rpc }) {
+export default function S5SpectatorDocument({ room, actorId, roster, readIdentity, rpc }) {
   const { roomId, sessionId, binding, version } = room;
   const storageKey = "s5-spectator-target:" + sessionId + ":" + actorId;
   const [selected, setSelected] = useState(() => {
@@ -41,7 +44,11 @@ export default function S5SpectatorDocument({ room, actorId, readIdentity, rpc }
   const [notice, setNotice] = useState("");
   const requestKey = [sessionId, selected, version, retry].join(":");
   const current = result?.key === requestKey ? result : null;
-  const targets = room.players.filter(player => result?.eligible.includes(player.participantId));
+  const select = participant => {
+    setSelected(participant);
+    setNotice("");
+    saveSelection(storageKey, participant);
+  };
 
   useEffect(() => {
     const recover = () => { if (!document.hidden) setRetry(value => value + 1); };
@@ -63,6 +70,10 @@ export default function S5SpectatorDocument({ room, actorId, readIdentity, rpc }
           p_room: roomId, p_session: sessionId, p_binding: binding, p_target_participant: selected || null,
         }, identity.accessToken, abort.signal);
         const data = readReply(value, roomId, sessionId, selected);
+        if (!selected && data.eligible.length && !abort.signal.aborted) {
+          setSelected(data.eligible[0]);
+          saveSelection(storageKey, data.eligible[0]);
+        }
         if (room.freeWiki && selected && !data.html) {
           const pinned = await ensureWikiSnapshot(data, { includeDocument:true, signal:abort.signal });
           if (pinned.pageId !== data.pageId || pinned.revisionId !== data.revisionId) throw new Error("STALE_DOCUMENT");
@@ -80,35 +91,28 @@ export default function S5SpectatorDocument({ room, actorId, readIdentity, rpc }
           }
           return;
         }
-        setResult(previous => previous ? { key: requestKey, eligible: previous.eligible, failed: true } : null);
+        setResult(previous => ({ key:requestKey, eligible:previous?.eligible ?? [], failed:true }));
       }
     }
     void load();
     return () => abort.abort();
   }, [actorId, binding, readIdentity, requestKey, roomId, room.freeWiki, rpc, selected, sessionId, storageKey]);
 
-  if (!targets.length && !notice) return null;
   return <section className="s5-spectator-document" aria-label="상대 문서 관전">
-    {targets.length > 0 && <label>따라볼 탐험가{" "}
-      <select value={selected} onChange={event => {
-        const participant = event.target.value;
-        setSelected(participant);
-        setNotice("");
-        saveSelection(storageKey, participant);
-      }}>
-        <option value="">탐험가 선택</option>
-        {targets.map(player => <option key={player.participantId} value={player.participantId}>{player.name}</option>)}
-      </select>
-    </label>}
+    <ParticipantRoster entries={roster.entries} counts={roster.counts} myUserId={room.participantId}
+      spectating watchedId={selected} onSelect={select} />
     {notice && <p role="status">{notice}</p>}
     {current?.failed && <p>이 탐험가의 문서를 확인하지 못했어요.{" "}
       <button type="button" onClick={() => setRetry(value => value + 1)}>다시 보기</button></p>}
-    {selected && (!current ? <p role="status">문서를 불러오는 중…</p>
+    {selected && (!current ? <PageLoadingOverlay />
       : current.title && <article className="s5-spectator-document__body" key={current.title}>
         <h2>{current.title}</h2>
         {current.html
           ? <div dangerouslySetInnerHTML={{ __html: current.html }} />
           : <p>이 문서의 본문을 불러올 수 없어요.</p>}
       </article>)}
+    <RouteCompare entries={roster.entries} myUserId={room.participantId} watchedId={selected} onWatch={select}
+      startTitle={room.startDocument?.title} targetTitle={room.target?.title} />
+    {current?.title && <ScrollToTopButton race />}
   </section>;
 }

@@ -7,7 +7,7 @@ import { createRematchRoom, fetchRematchRoom, joinRematchRoom } from "../service
  * finished room. The host explicitly creates a new private waiting room.
  * Former guests can choose to join; neither is made READY implicitly.
  */
-export default function RematchResultAction({ sourceRoomId, mode, isHost, enabled }) {
+export default function RematchResultAction({ sourceRoomId, mode, isHost, enabled, adapter }) {
   const navigate = useNavigate();
   const [nextRoomId, setNextRoomId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function RematchResultAction({ sourceRoomId, mode, isHost, enable
       if (cancelled || busy || document.hidden) return;
       busy = true;
       try {
-        const id = await fetchRematchRoom(sourceRoomId);
+        const id = await (adapter?.fetch ?? fetchRematchRoom)(sourceRoomId);
         if (!cancelled) setNextRoomId(id);
       } catch (error) {
         if (!cancelled && !String(error?.message || "").includes("Could not find the function")) {
@@ -43,13 +43,13 @@ export default function RematchResultAction({ sourceRoomId, mode, isHost, enable
       document.removeEventListener("visibilitychange", onFocus);
       window.removeEventListener("focus", onFocus);
     };
-  }, [enabled, sourceRoomId]);
+  }, [adapter, enabled, sourceRoomId]);
 
   const enterRoom = useCallback((id) => {
-    navigate(mode === "group"
+    navigate(adapter ? adapter.path(id) : mode === "group"
       ? `/multiplayer/group/room/${id}`
       : `/multiplayer/room/${id}`);
-  }, [mode, navigate]);
+  }, [adapter, mode, navigate]);
 
   const handleRematch = async () => {
     if (!enabled || loading || inFlightRef.current) return;
@@ -58,7 +58,7 @@ export default function RematchResultAction({ sourceRoomId, mode, isHost, enable
     setErrorMessage("");
     try {
       // Host creation is idempotent; non-hosts explicitly accept the invite.
-      const id = isHost
+      const id = adapter ? await (isHost ? adapter.create : adapter.join)(sourceRoomId) : isHost
         ? await createRematchRoom(sourceRoomId)
         : await joinRematchRoom(sourceRoomId);
       if (!id) throw new Error("REMATCH_NOT_READY");

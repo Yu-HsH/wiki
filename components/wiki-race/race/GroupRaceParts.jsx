@@ -14,9 +14,9 @@ const nameOf = (player) => player?.nickname_snapshot || "참가자";
 const movesOf = (player) => (Number.isFinite(player?.move_count) ? `${player.move_count} 이동` : "이동 확인 중");
 const timeOf = (player) => (Number.isFinite(player?.elapsed_seconds) ? formatDuration(player.elapsed_seconds) : null);
 
-function Avatar({ player }) {
+function Avatar({ player, card }) {
   return <ProfileAvatar
-    card={buildProfileCard({ userId: player.user_id, nickname: player.nickname_snapshot, legacyImageUrl: player.profile_image_snapshot, source: "snapshot" })}
+    card={card ?? buildProfileCard({ userId: player.user_id, nickname: player.nickname_snapshot, legacyImageUrl: player.profile_image_snapshot, source: "snapshot" })}
     size="xs"
     nameFallback={NAME_FALLBACK.PARTICIPANT}
   />;
@@ -71,7 +71,7 @@ export function ParticipantRoster({
         }${watched ? " · 관전 대상" : ""}`;
         const body = <>
           <span className="wr-prow-rank">{state === PARTICIPANT_STATE.FINISHED ? `${player.rank ?? "–"}위` : state === PARTICIPANT_STATE.RETIRED ? "–" : ""}</span>
-          <Avatar player={player} />
+          <Avatar player={player} card={player.profileCard} />
           <span className="wr-prow-name">
             {isMe && <span className="wr-prow-me-dot" aria-hidden="true" />}
             <span>{nameOf(player)}</span>
@@ -125,7 +125,7 @@ export function RouteCompare({ entries, myUserId, watchedId, onWatch, startTitle
         <span>{state === PARTICIPANT_STATE.DISCONNECTED ? "마지막" : "현재"} {player.current_title || "문서 없음"} · {movesOf(player)}</span>
         {player.user_id === watchedId
           ? <span className="wr-prow-state is-watch"><RaceIcon name="spectator" size={13} />보는 중</span>
-          : <button type="button" className="wr-race-btn wr-race-btn--ghost" onClick={() => onWatch?.(player.user_id)}>관전 →</button>}
+          : onWatch && <button type="button" className="wr-race-btn wr-race-btn--ghost" onClick={() => onWatch(player.user_id)}>관전 →</button>}
       </div>)}
     </div>
   </section>;
@@ -200,7 +200,7 @@ export function GroupSheet({ deadline, meLabel, counts, open, onToggle, status, 
  * 그룹은 진행 중 수와 남은 마감만. 다른 참가자의 순위는 보이지 않는다.
  * 관전하기를 눌러야 관전으로 들어간다. 경기가 최종 확정되면 기존 흐름이 B(최종 결과)로 옮긴다.
  */
-export function GroupResultA({ result, size, finishedCount, pendingCount, deadline, startTitle, targetTitle, path, onSpectate, onLeave, leaving, routeOpen, onToggleRoute, syncMessage, resultKey = null, motionEligible = true }) {
+export function GroupResultA({ result, size, finishedCount, pendingCount, deadline, startTitle, targetTitle, path, onSpectate, onLeave, leaving, routeOpen, onToggleRoute, syncMessage, resultKey = null, motionEligible = true, retired = false, modeLabel = "그룹 레이스", finishEffect = null }) {
   const sequence = useSceneSequence(resultKey && `sheet:group-personal:${resultKey}`, { eligible: motionEligible, confirmed: Boolean(result?.has_finished || result?.result_status === "finished" || Number.isInteger(result?.rank)) });
   const rank = Number.isInteger(result?.rank) ? result.rank : null;
   const time = Number.isFinite(result?.elapsed_seconds) ? formatDuration(result.elapsed_seconds) : "확정 중";
@@ -209,15 +209,15 @@ export function GroupResultA({ result, size, finishedCount, pendingCount, deadli
     <main className="wr-result-a-frame" aria-labelledby="wr-result-a-title">
       <div className={`wr-result-a-scene ${rank === 1 ? "is-first" : rank && rank <= 3 ? "is-podium" : ""}`} aria-hidden="true">
         <span className="wr-journal-heading"><small>MY FIELD NOTES</small><strong>개인 탐험 기록</strong></span>
-        <span className="wr-journal-seal is-complete">개인 완주</span>
+        <span className={`wr-journal-seal${retired ? "" : " is-complete"}`}>{retired ? "개인 기록" : "개인 완주"}</span>
       </div>
       <section className="wr-result-card">
         <header className="wr-result-row wr-result-head">
           <span className="wr-hud-label">MY RESULT · 내 기록</span>
           <div className="wr-result-headline">
-            <h1 id="wr-result-a-title">{rank ? `${rank}위 완주` : "완주 · 순위 확정 중"}</h1>
-            <span>그룹 레이스 · {size}인</span>
-            {rank && <Pill tone="gold" filled icon="flag">목표 도달 · {rank}번째</Pill>}
+            <h1 id="wr-result-a-title">{retired ? "리타이어" : rank ? `${rank}위 완주` : "완주 · 순위 확정 중"}</h1>
+            <span>{modeLabel} · {size}인</span>
+            {!retired && rank && <Pill tone="gold" filled icon="flag">목표 도달 · {rank}번째</Pill>}
           </div>
         </header>
         <div className="wr-result-row wr-result-strip" role="status">
@@ -231,6 +231,7 @@ export function GroupResultA({ result, size, finishedCount, pendingCount, deadli
             <small>{deadline.grace ? "경기 마감까지 · 3위 완주 후 최대 2분" : "경기 마감까지 · 제한 20:00"}</small>
           </span>}
         </div>
+        {sequence && finishEffect}
         <div className="wr-result-row wr-result-stats">
           <div><span className="wr-hud-label">시간</span><strong>{time}</strong></div>
           <div><span className="wr-hud-label">이동</span><strong>{moves}</strong></div>
@@ -240,10 +241,10 @@ export function GroupResultA({ result, size, finishedCount, pendingCount, deadli
           <div className="wr-roster-foot-head"><span className="wr-hud-label">내 경로</span><small>{Math.max(0, path.length - 1)} 이동</small>
             <button type="button" className="wr-race-link" aria-expanded={routeOpen} onClick={onToggleRoute}>{routeOpen ? "접기 ▴" : "펼치기 ▾"}</button>
           </div>
-          {routeOpen ? <RouteChain path={path} reachedTarget max={99} /> : <RouteChain path={path} reachedTarget />}
+          <RouteChain path={path} reachedTarget={!retired} max={routeOpen ? 99 : 5} />
         </div>
         <div className="wr-result-row wr-result-actions">
-          {pendingCount > 0 && <button type="button" className="wr-race-btn wr-race-btn--primary wr-race-btn--lg" onClick={onSpectate}>관전하기 →</button>}
+          {!retired && onSpectate && pendingCount > 0 && <button type="button" className="wr-race-btn wr-race-btn--primary wr-race-btn--lg" onClick={onSpectate}>관전하기 →</button>}
           <button type="button" className="wr-race-btn" aria-expanded={routeOpen} onClick={onToggleRoute}>내 경로 보기</button>
           <button type="button" className="wr-race-link wr-result-leave" onClick={onLeave} disabled={leaving}>{leaving ? "게임 정리 중..." : "그룹 로비로"}</button>
         </div>

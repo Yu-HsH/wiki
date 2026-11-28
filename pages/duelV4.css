@@ -10,7 +10,7 @@
     grid-template: "brand moves timer exit" auto "course course course course" auto "items items items items" auto
       / minmax(0, 1fr) max-content max-content max-content;
   }
-  .duel-v4 .item-race-slots { grid-area: items; }
+  .duel-v4 .duel-v4-hud-items { grid-area: items; }
   .duel-v4 .wr-race-hud .wr-duel-hud-course > .wr-hud-doc { flex-direction: column; align-items: flex-start; padding: .3rem .5rem; }
   .duel-v4 .wr-race-hud .wr-duel-hud-course > .wr-hud-arrow { align-self: center; }
   .duel-v4 .wr-race-hud .wr-hud-stat-value { font-size: 1.1rem; }

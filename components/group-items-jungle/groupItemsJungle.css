@@ -9,6 +9,15 @@
   overflow-anchor: none;
 }
 .group-items-jungle-dock--spectator { margin-top: auto; }
+.group-items-jungle .gip-hud--compact { display: contents; }
+.group-item-alerts {
+  position: fixed; inset: auto 0 0; z-index: 44; width: min(100%, 45rem); margin-inline: auto;
+  padding-bottom: env(safe-area-inset-bottom, 0px); pointer-events: none;
+}
+.group-item-alerts:has(.gip-attack-warning) { background: #fff8e9; box-shadow: 0 -.2rem 1rem #332c2633; }
+.group-item-alerts :is(button,.gip-attack-warnings) { pointer-events: auto; }
+.group-item-alerts .gip-attack-warnings { max-height: min(24dvh, 158px); overflow: auto; }
+.group-item-alerts .gip-attack-warning { min-height: 64px; }
 .group-items-jungle-supply, .group-items-jungle-status {
   display: block;
   margin: 0;

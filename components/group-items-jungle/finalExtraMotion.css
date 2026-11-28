@@ -106,7 +106,7 @@
 [data-item-vfx="roulette-fail"] { --s5x-roulette-stop: 1545deg; }
 [data-item-vfx="roulette-boost"] { --s5x-roulette-stop: 1590deg; }
 .s5x-effect:has(> .s5x-roulette-wheel) {
-  --s5x-roulette-size: max(0px, min(238px, 60cqw, calc((100cqh - 50px) * .77)));
+  --s5x-roulette-size: max(0px, min(320px, 74cqw, calc(100cqh - 58px)));
   --s5x-y: calc((100cqh - 34px) / 2);
 }
 .s5x-roulette-wheel {

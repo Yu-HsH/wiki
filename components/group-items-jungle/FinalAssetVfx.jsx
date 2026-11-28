@@ -71,7 +71,7 @@ export function FinalAssetOverlay({value,pulse,frame,children}) {
     const header=shell?.querySelector('.wr-race-hud');
     const dock=shell?.querySelector('[data-item-race-dock], [data-s5-sticky-dock]');
     const viewport=window.visualViewport;
-    let pending=null;
+    let pending=null, outline=null;
     function measure() {
       pending=null;
       const rect=article.getBoundingClientRect();
@@ -81,7 +81,16 @@ export function FinalAssetOverlay({value,pulse,frame,children}) {
       const top=Math.max(y,rect.top,header?.getBoundingClientRect().bottom??y);
       const width=Math.max(0,Math.min(right,rect.right)-left);
       const dockBounds=dock?.getBoundingClientRect();
-      const height=Math.max(0,Math.min(bottom,rect.bottom,dockBounds?.height ? dockBounds.top : bottom)-top);
+      const nav=article.querySelector('.wiki-nav-rail');
+      if (outline!==nav) {
+        if (outline) size?.unobserve(outline);
+        if (nav) size?.observe(nav);
+        outline=nav;
+      }
+      const navBounds=nav?.getBoundingClientRect();
+      const navTop=navBounds?.height && navBounds.width>=width*.45 && getComputedStyle(nav).position==='fixed'
+        ? navBounds.top : bottom;
+      const height=Math.max(0,Math.min(bottom,rect.bottom,dockBounds?.height ? dockBounds.top : bottom,navTop)-top);
       setBounds(previous=>previous?.left===left && previous.top===top && previous.width===width && previous.height===height
         ? previous : {left,top,width,height});
     }

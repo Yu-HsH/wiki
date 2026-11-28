@@ -29,12 +29,13 @@ export function RaceRoomEmotesView({
   cooldownRemaining = false,
   feedback = "",
   hidden = false,
+  compact = false,
   onToggleHidden = () => {},
   onSend = () => {},
 }) {
   return (
-    <section className="wr-race-emotes" aria-label={label}>
-      <span className="wr-race-emotes__title">키온</span>
+    <section className={compact ? "wr-race-emotes wr-race-emotes--compact" : "wr-race-emotes"} aria-label={label}>
+      {!compact && <span className="wr-race-emotes__title">키온</span>}
       <div className="wr-race-emotes__reactions" aria-label="참가자 감정표현" aria-live="off">
         {!hidden && visible.length > 0
           ? visible.map((event) => {
@@ -49,19 +50,19 @@ export function RaceRoomEmotesView({
                 </span>
               );
             })
-          : <span className="wr-race-emotes__empty">
+          : !compact && <span className="wr-race-emotes__empty">
               {hidden ? "감정표현 표시를 숨겼습니다." : "키온으로 응원하거나 반응해보세요."}
             </span>}
       </div>
       <div className="wr-race-emotes__actions">
-        <button
+        {(!compact || hidden || visible.length>0) && <button
           type="button"
           className="wr-race-emotes__mute"
           aria-pressed={hidden}
           onClick={onToggleHidden}
         >
           {hidden ? "표시하기" : "숨기기"}
-        </button>
+        </button>}
         <KionEmotePicker
           presets={KION_EMOTE_PRESETS}
           onSend={onSend}
