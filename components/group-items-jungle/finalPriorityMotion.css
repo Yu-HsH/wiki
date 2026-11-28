@@ -9,8 +9,8 @@
   position:absolute;
   top:min(45%, 38dvh);
   left:50%;
-  width:min(94%, 600px);
-  max-height:74%;
+  width:min(96%, 680px);
+  max-height:82%;
   transform:translate(-50%, -50%);
   overflow:visible;
 }

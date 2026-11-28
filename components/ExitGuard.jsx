@@ -27,8 +27,11 @@ export function useExitGuard({ enabled, onConfirm, message = '지금 나가면 �
     setIsOpen(false);
     bypassRef.current = true;
     try {
-      await onConfirm?.();
-      if (blocker.state === "blocked") blocker.proceed();
+      const accepted = await onConfirm?.();
+      if (blocker.state === "blocked") {
+        if (accepted === false) blocker.reset();
+        else blocker.proceed();
+      }
     } finally {
       // proceed()가 완료되면 컴포넌트가 사라지지만, 네비게이션 실패에도
       // 다음 이탈 시 guard가 다시 작동하도록 원복한다.

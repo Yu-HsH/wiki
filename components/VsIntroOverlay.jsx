@@ -11,16 +11,18 @@ import { audioManager } from '../services/audioManager.js';
 const DUEL_START_AUDIO = [{ id: 'vs-impact', at: 880, sound: 'impact' }];
 import { CinematicStage, CinematicSkip, CourseDocument, InkParticles } from "./cinematic/CinematicParts.jsx";
 
-export default function VsIntroOverlay({ myName, opponentName, startTitle, targetTitle, myInitial, opponentInitial, sceneKey = null, myPlayer = null, opponentPlayer = null, startedAt = null, motionEligible = true }) {
+export default function VsIntroOverlay({ myName, opponentName, startTitle, targetTitle, myInitial, opponentInitial, sceneKey = null, myPlayer = null, opponentPlayer = null, startedAt = null, motionEligible = true, presentationDuration = 5000 }) {
   const root = useRef(null), [skipped, setSkipped] = useState(false);
   const freshEntry = useRef(!startedAt || (Number.isFinite(Date.parse(startedAt)) && Date.now() - Date.parse(startedAt) < 5000));
   const cards = useProfileCards([myPlayer?.user_id, opponentPlayer?.user_id]);
   const cardFor = (player, nickname) => mergeRewardSlots(buildProfileCard({ userId: player?.user_id, nickname, legacyImageUrl: player?.profile_image_snapshot, source: "snapshot" }), cards[player?.user_id]);
-  const sequence = useSceneSequence(sceneKey && `scene:start:duel:${sceneKey}`, { confirmed: Boolean(startTitle && targetTitle), eligible: motionEligible && freshEntry.current, duration: 5000, stopped: skipped });
+  const sequence = useSceneSequence(sceneKey && `scene:start:duel:${sceneKey}`, { confirmed: Boolean(startTitle && targetTitle), eligible: motionEligible && freshEntry.current, duration:presentationDuration, stopped: skipped });
   const soundFrame = useAudioCues(`duel-start:${sceneKey}`, DUEL_START_AUDIO);
   useEffect(() => { if (sequence) audioManager.prepare(['impact']); }, [sequence]);
   useEffect(() => { if (skipped) audioManager.stopEffects(); }, [skipped]);
-  useCinematicFrame(root, sequence, drawDuel, 5000, soundFrame);
+  const pace = 5000 / presentationDuration;
+  useCinematicFrame(root, sequence, (element,time,reduced) => drawDuel(element,time*pace,reduced),
+    presentationDuration, (elapsed,active) => soundFrame(elapsed*pace,active));
   const player = (value, name, initial, right) => {
     const card = cardFor(value, name);
     return <section className={`duel-player ${right ? "right" : "left"}`}>

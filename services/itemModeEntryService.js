@@ -92,3 +92,13 @@ export async function enterItemRoom(mode, actorId, operation, code) {
   sessionStorage.removeItem(key);
   return roomId;
 }
+
+export async function readS5Rematch(sourceRoomId) {
+  const { accessToken } = await readIdentity();
+  return itemModeRpc("get_s5_item_rematch_v1", { p_source_room:sourceRoomId }, accessToken);
+}
+
+export async function joinS5Rematch(sourceRoomId) {
+  const { accessToken } = await readIdentity();
+  return itemModeRpc("join_s5_item_rematch_v1", { p_source_room:sourceRoomId, p_request:makeRequestId() }, accessToken);
+}

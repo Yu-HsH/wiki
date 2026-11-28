@@ -56,11 +56,11 @@ export function GroupEndCinematic({ rows }) {
           <span className="podium-rank">{group.rank}</span>
           <div className="podium-avatar"><ProfileAvatar size="lg" card={mergeRewardSlots(buildProfileCard({userId:group.rows[0].userId,nickname:group.rows[0].name,source:"snapshot"}),cards[group.rows[0].userId])} /></div>
           <strong className={group.rows.length > 1 ? "tied-names" : ""}>{group.rows.map(row=>row.name).join(" · ")}</strong>
-          <small>{group.rows.length > 1 ? `공동 ${group.rank}위` : `${group.rows[0].time} · ${group.rows[0].moves}`}</small>
+          <small>{group.rows.length > 1 ? `공동 ${group.rank}위` : [group.rows[0].time, group.rows[0].moves].filter(Boolean).join(" · ")}</small>
           <div className="podium-plinth">{group.rows.length > 1 ? "공동 " : ""}{group.rank}위 · 완주</div>
         </div>
       </div>)}</div><InkParticles />
-      {mine && <div className="my-record"><span>내 기록 · {mine.name}</span><span>{mine.rank ? `${mine.rank}위 · ` : ""}{mine.status} · {mine.time} · {mine.moves}</span></div>}
+      {mine && <div className="my-record"><span>내 기록 · {mine.name}</span><span>{[mine.rank && `${mine.rank}위`,mine.status,mine.time,mine.moves].filter(Boolean).join(" · ")}</span></div>}
       <div className="result-transition"><CinematicSkip onClick={skip} label="전체 기록" /></div>
     </div></section>
     <p className="wr-sr-only" role="status" aria-live="polite">{groups.filter(group=>revealed.includes(group.rank)).map(group=>`${group.rank}위 ${group.rows.map(row=>row.name).join(", ")}`).join(" · ")}</p>

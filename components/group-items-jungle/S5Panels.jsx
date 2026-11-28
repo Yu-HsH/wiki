@@ -42,14 +42,16 @@ export default function S5Panels({ state, now, slots, inventory=[], lastReceipt,
   const search = state.search?.expiresAt > now ? state.search : null;
   const linkIndex = state.linkIndex?.expiresAt > now ? state.linkIndex : null;
   const modifiers = state.modifiers.filter(effect => effect.startsAt <= now && (effect.expiresAt===null || now < effect.expiresAt));
+  const failure = ['ENHANCEMENT_CHANCE_FAILED','WEAKENING_CHANCE_FAILED'].includes(lastReceipt?.code);
+  const rewards = state.phase2Policy ? state.jokerOffers.some(offer => offer.candidates.some(candidate => Date.parse(candidate.expiresAt)>now)) : state.jokerOffers.length>0;
+  if (!search && !linkIndex && !modifiers.length && !state.rouletteSupplyWeakened && !failure && !rewards) return null;
   return <aside className="s5-panels" aria-label="아이템 효과 및 보상">
-    <p>적용 중인 아이템 효과</p>
     {(modifiers.length > 0 || state.rouletteSupplyWeakened) && <p aria-label="보유 효과">
       {modifiers.map(effect => `${itemName(effect.kind)} ${effect.remainingCharges}회${effect.pendingCharges ? ` (대기 ${effect.pendingCharges})` : ''}`).join(' · ')}
       {modifiers.length > 0 && state.rouletteSupplyWeakened ? ' · ' : ''}
       {state.rouletteSupplyWeakened ? '다음 실제 보급 약화' : ''}
     </p>}
-    {['ENHANCEMENT_CHANCE_FAILED','WEAKENING_CHANCE_FAILED'].includes(lastReceipt?.code) &&
+    {failure &&
       <p role="status">아이템 사용에 실패했어요.</p>}
     {search && <SearchForm key={search.windowId} search={search} disabled={inputsDisabled} onSearch={onAct}
       missed={lastReceipt?.code === 'SEARCH_NOT_FOUND'}/>}

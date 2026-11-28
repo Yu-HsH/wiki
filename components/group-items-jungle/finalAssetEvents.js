@@ -132,7 +132,7 @@ export function finalInkPlacement(effectId,width,height) {
   };
   const topSafe=clamp(height*.13,14,89);
   const bottomSafe=clamp(height*.04,6,42);
-  const base=clamp(Math.min(width*.40,height*.39),36,292);
+  const base=clamp(Math.min(width*.46,height*.45),36,328);
   return anchors.map(([x,y])=>{
     const edgeSize=base*(.88+random()*.20);
     const size=Math.min(edgeSize,width*.68,Math.max(1,height-topSafe-bottomSafe));

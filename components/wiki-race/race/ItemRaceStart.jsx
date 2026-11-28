@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { audioManager } from "../../../services/audioManager.js";
+import { CountdownJournal } from "../../CountdownOverlay.jsx";
 
 const cueMs = 1400;
 
@@ -13,5 +14,7 @@ export default function ItemRaceStart({ matchKey, startedAt, now, enteredFromLob
     played.current = matchKey;
     void audioManager.play("go", { key: `item-race-go:${matchKey}` });
   }, [matchKey, visible]);
-  return visible && <span className="item-race-start" role="status" data-server-start-at={startedAt}>시작!</span>;
+  return visible && <div className="wr-page wr-start-overlay item-race-go" role="status" data-server-start-at={startedAt}>
+    <CountdownJournal value="시작!" sequence arrival />
+  </div>;
 }

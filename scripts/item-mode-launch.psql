@@ -11,10 +11,12 @@ DO $guard$
 DECLARE
   applied_count integer;
   item_followup_count integer;
+  free_wiki_count integer;
 BEGIN
   SELECT count(*),
-         count(*) FILTER (WHERE version IN ('20261126142000', '20261126142100'))
-    INTO applied_count, item_followup_count
+         count(*) FILTER (WHERE version IN ('20261126142000', '20261126142100')),
+         count(*) FILTER (WHERE version IN ('20261127013759', '20261127014804'))
+    INTO applied_count, item_followup_count, free_wiki_count
     FROM supabase_migrations.schema_migrations;
   IF current_user <> 'postgres' OR current_database() <> 'postgres'
      OR current_setting('wiki_launch.target') NOT IN ('isolated', 'ctdpyrmitljgrcgfvndn')
@@ -23,9 +25,10 @@ BEGIN
      OR (current_setting('wiki_launch.target') <> 'isolated' AND inet_server_addr() IS NULL)
      OR NOT (
        (applied_count, item_followup_count) IN ((68, 0), (70, 2))
-       OR (applied_count = 72 AND item_followup_count = 2
-           AND (SELECT count(*) FROM supabase_migrations.schema_migrations
-                WHERE version IN ('20261127013759','20261127014804')) = 2)
+       OR (item_followup_count = 2 AND free_wiki_count = 2 AND (
+         applied_count = 72 OR (applied_count = 73
+           AND EXISTS (SELECT FROM supabase_migrations.schema_migrations WHERE version = '20261127093952'))
+       ))
      )
      OR NOT EXISTS (SELECT FROM supabase_migrations.schema_migrations WHERE version = '20261126043359')
   THEN RAISE EXCEPTION 'RELEASE_TARGET_OR_VERSION_MISMATCH'; END IF;
@@ -194,8 +197,8 @@ DECLARE before_grant record;
 BEGIN
   SELECT * INTO before_grant FROM pg_temp.launch_owner_restore;
   IF FOUND THEN
-    EXECUTE format('GRANT ink_product_owner TO postgres WITH INHERIT %s', before_grant.inherit_option);
-    EXECUTE format('GRANT ink_product_owner TO postgres WITH SET %s', before_grant.set_option);
+    EXECUTE format('GRANT ink_product_owner TO postgres WITH INHERIT %s', before_grant.inherit_option::text);
+    EXECUTE format('GRANT ink_product_owner TO postgres WITH SET %s', before_grant.set_option::text);
   ELSE
     REVOKE ink_product_owner FROM postgres GRANTED BY CURRENT_USER;
   END IF;

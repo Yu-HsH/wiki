@@ -31,7 +31,7 @@ export default function S5KionDock({ roomId, actorId, players = [], spectator = 
   const [clock, setClock] = useState(() => Date.now());
   const inFlight = useRef(false);
   const namesByUserId = useMemo(() => new Map(players.map(player => [
-    player.participantId ?? player.id, player.name || "탐험가",
+    player.participantId ?? player.id, player.nickname || player.name || "탐험가",
   ])), [players]);
 
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function S5KionDock({ roomId, actorId, players = [], spectator = 
 
   return <div className={"s5-kion-dock" + (spectator ? " s5-kion-dock--spectator" : "") +
     (mode !== "race" ? " s5-kion-dock--inline" : "")}>
-    <RaceRoomEmotesView label={label} visible={getVisibleRaceEmotes(events, clock, hidden, roomId)}
+    <RaceRoomEmotesView compact={mode!=="lobby"} label={label} visible={getVisibleRaceEmotes(events, clock, hidden, roomId)}
       namesByUserId={namesByUserId} connected={connected} sending={sending}
       cooldownRemaining={clock < cooldownUntil} feedback={feedback} hidden={hidden}
       onToggleHidden={() => setHidden(current => !current)} onSend={onSend}/>

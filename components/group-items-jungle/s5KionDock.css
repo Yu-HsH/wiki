@@ -53,3 +53,11 @@
   width: min(510px, 100%);
   margin-block: 8px;
 }
+
+.s5-kion-dock .wr-race-emotes--compact {
+  position: relative; inset: auto; z-index: 2; min-height: 0; width: auto; padding: 0;
+  margin: 0; background: transparent; box-shadow: none; border: 0;
+}
+.s5-kion-dock .wr-race-emotes--compact .wr-race-emotes__reactions:empty { display: none; }
+.s5-kion-dock .wr-race-emotes--compact .wr-race-emotes__actions { min-width: 0; gap: .25rem; }
+.s5-kion-dock .wr-race-emotes--compact .wr-kion-picker__panel { inset-inline: 0 auto; z-index: 10; }

@@ -10,7 +10,7 @@ export function ItemRaceDescription({ itemId, tier, mode = "group" }) {
   return <><strong>{itemName(itemId)} · {grade}</strong><span>{effect}</span><small>{condition}</small></>;
 }
 
-export default function ItemRaceSlots({ items, selected, supplySeconds, select, expanded, panelId, duel = false, suppliedGrant }) {
+export default function ItemRaceSlots({ items, selected, supplySeconds, select, expanded, panelId, duel = false, suppliedGrant, rewardGrants = [] }) {
   const id = useId();
   return <div className="item-race-slots" role="group" aria-label="보급과 아이템 슬롯">
     <div className="item-race-slot-list">
@@ -24,7 +24,8 @@ export default function ItemRaceSlots({ items, selected, supplySeconds, select, 
           onClick={event => item && select(item, event)}>
           <span className="item-race-slot-number" aria-hidden="true">{index + 1}</span>
           {item ? <FinalItemIcon item={{ itemId: item.itemId, effectiveTier: item.tier }} /> : <span aria-hidden="true">—</span>}
-          {item && item.key===suppliedGrant && <i className="item-race-slot-arrival" key={suppliedGrant} aria-hidden="true"/>}
+          {item && (item.key===suppliedGrant || rewardGrants.includes(item.key)) && <i className="item-race-slot-arrival" key={item.key}
+            data-reward={rewardGrants.includes(item.key) || undefined} aria-hidden="true"/>}
         </button>
         {item && <span className="item-race-tooltip" id={`${id}-${index}`} role="tooltip">
           <ItemRaceDescription itemId={item.itemId} tier={item.tier} mode={duel?"duel":"group"} />
