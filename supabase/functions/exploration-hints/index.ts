@@ -16,17 +16,21 @@ Deno.serve(async request => {
   if (request.method !== "POST") return reply({ code:"INVALID_REQUEST" },405);
   const token = request.headers.get("Authorization")?.match(/^Bearer (\S+)$/i)?.[1];
   if (!token) return reply({ code:"AUTH_REQUIRED" },401);
-  const { data:{ user }, error: authError } = await service.auth.getUser(token);
-  if (authError || !user || user.is_anonymous) return reply({ code:"AUTH_REQUIRED" },401);
-
   try {
+    const { data:{ user }, error: authError } = await service.auth.getUser(token);
+    if (authError && (![400,401,403,404].includes(authError.status ?? 0))) {
+      return reply({ code:"HINTS_AUTH_UNAVAILABLE" },503);
+    }
+    if (authError || !user || user.is_anonymous) return reply({ code:"AUTH_REQUIRED" },401);
+
     const { mode, roomId } = await request.json();
     if (!["duel","group","duel_items","group_items"].includes(mode) || !uuid.test(roomId)) {
       return reply({ code:"INVALID_REQUEST" },400);
     }
     const scope = { p_mode:mode, p_room:roomId, p_actor:user.id };
     const { data, error } = await service.rpc("read_exploration_hints_v1",scope);
-    if (error) return reply({ code:"HINTS_UNAVAILABLE" },error.code==="42501" ? 403 : 503);
+    if (error) return error.code === "42501" ? reply({ code:"HINTS_MEMBER_REQUIRED" },403)
+      : reply({ code:"HINTS_UNAVAILABLE" },503);
     const { claim, ...visible } = data;
     if (!claim) return reply(visible);
 

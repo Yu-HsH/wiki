@@ -118,7 +118,7 @@ export function RouteCompare({ entries, myUserId, watchedId, onWatch, startTitle
       </div>)}
       {resolved.length === 0 && <p className="wr-reaction-note">아직 결과가 확정된 참가자가 없습니다.</p>}
     </div>
-    <div>
+    {active.length > 0 && <div>
       <span className="wr-hud-label">진행 중 · 경로는 결과가 확정된 뒤 표시됩니다</span>
       {active.map(({ player, state }) => <div className="wr-compare-active" key={player.user_id}>
         <strong>{nameOf(player)}</strong>
@@ -127,7 +127,7 @@ export function RouteCompare({ entries, myUserId, watchedId, onWatch, startTitle
           ? <span className="wr-prow-state is-watch"><RaceIcon name="spectator" size={13} />보는 중</span>
           : onWatch && <button type="button" className="wr-race-btn wr-race-btn--ghost" onClick={() => onWatch(player.user_id)}>관전 →</button>}
       </div>)}
-    </div>
+    </div>}
   </section>;
 }
 

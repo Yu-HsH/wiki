@@ -12,17 +12,13 @@ export function ItemRoomRoster({ mode, players, user, maxPlayers, emotes }) {
   const cards = useProfileCards(players.map(player => player.userId));
   const duel = mode === "duel";
   const ready = players.filter(player => player.ready).length;
-  const seats = [...players, ...Array(Math.max(0, maxPlayers - players.length)).fill(null)];
+  const seats = duel ? [players[0], players[1]] : players;
 
   function renderSeat(player, index) {
-    if (!player) return duel
-      ? <li key={index} className="wr-duel-player wr-duel-player--empty">
-        <span className="wr-duel-empty-title">참가자 대기 중</span>
-        <StatusMark tone="pending">입장 대기</StatusMark>
-      </li>
-      : <li key={index} className="wr-roster-row wr-roster-row--empty" aria-hidden="true">
-        <span className="wr-empty-dot" />빈 자리
-      </li>;
+    if (!player) return <li key={index} className="wr-duel-player wr-duel-player--empty">
+      <span className="wr-duel-empty-title">참가자 대기 중</span>
+      <StatusMark tone="pending">입장 대기</StatusMark>
+    </li>;
     const isMe = player.userId === user.id;
     const tags = <>{player.host && <HostTag />}{isMe && <MeTag />}</>;
     const card = mergeRewardSlots(buildProfileCard({
@@ -46,6 +42,7 @@ export function ItemRoomRoster({ mode, players, user, maxPlayers, emotes }) {
 
   return <>
     {duel ? <div className="wr-duel-stage">
+      {emotes}
       <ul className="wr-duel-players" aria-label={`참가자 ${players.filter(Boolean).length} / 2`}>
         {renderSeat(seats[0], 0)}
         <li className="wr-duel-center" aria-hidden="true">
@@ -53,7 +50,6 @@ export function ItemRoomRoster({ mode, players, user, maxPlayers, emotes }) {
         </li>
         {renderSeat(seats[1], 1)}
       </ul>
-      {emotes}
     </div> : <div className="wr-party">
       <div className="wr-party-head">
         <span className="wr-party-count" aria-hidden="true">{players.length}<small> / {maxPlayers}</small></span>

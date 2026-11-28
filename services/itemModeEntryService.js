@@ -1,6 +1,7 @@
 import { supabase } from "../supabaseClient.js";
 import { readProductBinding, readProductRoomAction } from "../components/group-items-jungle/productContract.js";
 import { duelV4 } from "./duelV4Service.js";
+import { itemRaceFailure } from "./itemRaceRecovery.js";
 
 const env = import.meta.env;
 const entryChannel = env.MODE === "s4-product-candidate" ? "review" : "production";
@@ -22,7 +23,9 @@ export function makeRequestId() {
 }
 
 export async function readIdentity() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const session = data?.session;
   if (!session?.user?.id || !session.access_token) throw new Error("AUTH_REQUIRED");
   return {
     actorId: session.user.id,
@@ -31,18 +34,38 @@ export async function readIdentity() {
   };
 }
 
+let sessionCheck;
+
+export function checkItemRaceSession(actorId) {
+  if (!supabase || !actorId) return;
+  if (sessionCheck?.actorId === actorId) return sessionCheck.promise;
+  const check = { actorId };
+  sessionCheck = check;
+  check.promise = (async () => {
+    const identity = await readIdentity();
+    if (identity.actorId !== actorId) return;
+    const { data, error } = await supabase.auth.getUser(identity.accessToken);
+    if (data?.user?.id === actorId || itemRaceFailure(error).kind !== "auth") return;
+    const current = await readIdentity();
+    if (current.accessToken === identity.accessToken) await supabase.auth.signOut({ scope: "local" });
+  })().catch(() => { /* A failed validation request does not end the session. */ }).finally(() => {
+    if (sessionCheck === check) sessionCheck = null;
+  });
+  return check.promise;
+}
+
 export async function itemModeRpc(name, args, accessToken, signal) {
   let query = supabase.rpc(name, args).setHeader("Authorization", "Bearer " + accessToken);
   if (signal) query = query.abortSignal(signal);
-  const { data, error } = await query;
-  if (error) throw error;
+  const { data, error, status } = await query;
+  if (error) throw Object.assign(new Error(error.message), error, { status });
   return data;
 }
 
 export async function readItemAdmission(mode, actorId, signal) {
   if (!itemModeEnabled(mode)) return { available: false };
   if (mode === "duel") {
-    const entry = await duelV4.entry();
+    const entry = await duelV4.entry(signal);
     if (typeof entry?.available !== "boolean") throw new Error("ITEM_ENTRY_UNAVAILABLE");
     return entry;
   }

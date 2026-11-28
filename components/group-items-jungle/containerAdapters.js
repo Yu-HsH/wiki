@@ -1,6 +1,7 @@
 import { sanitizeWikiDocumentHtml } from "./S5WikiSanitizer.js";
 import { sameGroupItemsScope } from "./authoritySession.js";
 import { isProductS4Scope } from "./productContract.js";
+import { itemRaceFailure } from "../../services/itemRaceRecovery.js";
 
 const nonEmpty = value => typeof value === "string" && value.trim().length > 0;
 const assert = (valid, code) => { if (!valid) throw new Error(code); };
@@ -18,12 +19,7 @@ export function createGroupItemsContainerAdapters({ scope, readIdentity, invoke 
   });
 
   async function activeIdentity() {
-    let identity;
-    try {
-      identity = await readIdentity();
-    } catch {
-      throw new Error("AUTH_REQUIRED");
-    }
+    const identity = await readIdentity();
     assert(nonEmpty(identity?.actorId) && nonEmpty(identity?.authenticationEpoch) && nonEmpty(identity?.accessToken), "AUTH_REQUIRED");
     assert(identity.actorId === bound.actorId, "TRANSPORT_SCOPE_MISMATCH");
     return { authenticationEpoch: identity.authenticationEpoch, accessToken: identity.accessToken };
@@ -39,8 +35,8 @@ export function createGroupItemsContainerAdapters({ scope, readIdentity, invoke 
       reply = await invoke({ operation, scope: bound, payload, accessToken: identity.accessToken, signal });
     } catch (error) {
       signal?.throwIfAborted();
-      if (error?.message === "TRANSPORT_SCOPE_MISMATCH") throw error;
-      throw new Error("JUNGLE_GATEWAY_UNAVAILABLE");
+      if (itemRaceFailure(error).kind !== "connection") throw error;
+      throw new Error("JUNGLE_GATEWAY_UNAVAILABLE", { cause:error });
     }
     signal?.throwIfAborted();
     const current = await activeIdentity();
@@ -51,7 +47,7 @@ export function createGroupItemsContainerAdapters({ scope, readIdentity, invoke 
   }
 
   const transport = Object.freeze({
-    state: caller => call("state", caller, null),
+    state: caller => call("state", caller, null, AbortSignal.timeout(8000)),
     act: (caller, command) => call("act", caller, command),
     receipt: (caller, requestId) => call("receipt", caller, { requestId }),
   });

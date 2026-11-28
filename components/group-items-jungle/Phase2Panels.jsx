@@ -25,6 +25,6 @@ export function Phase2Countdown({lifecycle,serverObservedAt}){
  const remaining=remainingTime(lifecycle,anchor.server,elapsed);if(!remaining)return null;
  const {end,seconds,grace}=remaining,clock=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
  return <section className="s5-phase2-countdown" aria-label="아이템전 경기 기한" data-server-end-at={new Date(end).toISOString()}>
-  <span>{grace?'세 번째 완주 후 유예':'전체 경기'}</span><strong aria-label="종료까지 남은 시간">{clock}</strong>
+  <span>{grace?'유예 남은 시간':'전체 경기 남은 시간'}</span><strong aria-label="종료까지 남은 시간">{clock}</strong>
  </section>;
 }

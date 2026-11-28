@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import WikiViewer from "./S5WikiViewer.jsx";
 import { normalizeTitle } from "../../services/wikiService.js";
+import { itemRaceFailure, itemRaceFailureMessage } from "../../services/itemRaceRecovery.js";
 import { HudArrow, HudBrand, HudDoc, HudStat, RaceFrame, RaceHud } from "./S5RaceParts.jsx";
 import PlaytestItemsHud from "../group-items-playtest/PlaytestItemsHud.jsx";
 import ItemImpactEffect from "../group-items-playtest/ItemImpactEffect.jsx";
@@ -35,9 +36,18 @@ const commandRejectionMessages = {
   LINK_SNAPSHOT_MISSING: "연결할 문서를 준비하지 못했어요. 링크를 다시 선택해 주세요.",
   LINK_CENSORED: "검열이 풀리면 이 링크로 이동할 수 있어요.",
   PARRY_WINDOW_CLOSED: "패링 시간이 지났어요.",
+  PARRY_CLOSED: "패링 시간이 지났어요.",
+  WARNING_NOT_OWNED: "이 공격의 패링 알림이 갱신됐어요.",
+  PARRY_ALREADY_ATTEMPTED: "이 공격에는 이미 패링을 시도했어요.",
+  PARRY_NOT_AVAILABLE: "지금 이 공격을 패링할 수 없어요.",
+  PARRY_FAILED: "패링에 실패했어요.",
+  S5_REFLECTION_TIER_UNAVAILABLE: "이 공격에는 강화 반사를 사용할 수 없어요.",
+  GRANT_NOT_OWNED: "이미 사용했거나 보유하지 않은 아이템이에요.",
+  PARTICIPANT_READ_ONLY: "경기 진행이 종료됐어요.",
+  ITEM_SEALED: "봉인이 풀리면 아이템을 사용할 수 있어요.",
 };
 
-const isScopeFailure = error => ["AUTH_REQUIRED","TRANSPORT_SCOPE_MISMATCH","RECEIPT_SCOPE_MISMATCH"].includes(error?.message);
+const isScopeFailure = error => ["denied","closed"].includes(itemRaceFailure(error).kind);
 
 function supplyDeadline(startedAt, supply) {
   const nextRound = supply ? Number(supply.lastClosedRound) + 1 : 0;
@@ -45,7 +55,7 @@ function supplyDeadline(startedAt, supply) {
   return nextRound === 0 ? startedAt : startedAt + (20 + (nextRound - 1) * 25) * 1000;
 }
 
-function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], roomRoster, matchClock, roomActions, explorationHints, gameAudioRoute, audioControls, lifecycle, enteredFromLobby }) {
+function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, prepareLink, target, warningWindowMs, refreshMs, onPulse, subscribe, itemPresentation, kionDock, players = [], roomRoster, matchClock, roomActions, explorationHints, gameAudioRoute, audioControls, lifecycle, enteredFromLobby, connectionFailure, onAuthFailure, onRoomRefresh, onItemReady }) {
   const product = isProductS4Scope(scope);
   const s5 = isS5Scope(scope);
   const [moveMotion, approveMoveMotion] = useRaceMotion();
@@ -57,10 +67,22 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
   const [documentAttempt, setDocumentAttempt] = useState(0);
   const [lastReceipt, setLastReceipt] = useState(null);
   const [liveCue, setLiveCue] = useState(null);
-  const [disconnected, setDisconnected] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
+  const disconnected = Boolean(connectionFailure || connectionError);
+  const itemPaused = useRef(product);
+  const roomPaused = useRef(connectionFailure);
+  roomPaused.current = connectionFailure;
+  const reportItemConnection = useCallback(reason => {
+    itemPaused.current = Boolean(reason);
+    onItemReady?.(scope, !reason);
+    setConnectionError(reason);
+  }, [scope, onItemReady]);
+  const staleDocumentRetry = useRef(null);
   const seenReceipts = useRef(new Set());
   const [trapChoices, setTrapChoices] = useState(null);
   const [s5Pending,setS5Pending] = useState(false);
+  const parryInFlight = useRef(false);
+  const [parryPending, setParryPending] = useState(false);
   const [rewardGrants,setRewardGrants] = useState([]);
   const [itemToolbar, setItemToolbar] = useState(null);
   const [warningToolbar, setWarningToolbar] = useState(null);
@@ -97,6 +119,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     let queuedRecovery = false;
     let streamConnected = !subscribe;
     let failed = false;
+    let recoveringRead = false;
     let shownResult = null;
     let resultCursor = null;
     let pulseTimer = null;
@@ -104,6 +127,10 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     let deadlineTimer = null;
     const entry = { session, refresh, stop };
     active.current = entry;
+    if (product) {
+      itemPaused.current = true;
+      onItemReady?.(scope, false);
+    }
 
     function draw() {
       clearTimeout(pulseTimer);
@@ -169,6 +196,8 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
     function stop(error) {
       if (!alive) return;
       failed = true;
+      itemPaused.current = true;
+      onItemReady?.(scope, false);
       itemPresentation?.stop?.();
       clearTimeout(pulseTimer);
       clearTimeout(deadlineTimer);
@@ -186,6 +215,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         return;
       }
       refreshing = true;
+      recovering ||= recoveringRead;
       try {
         const restored = recovering ? await session.recover() : null;
         const state = recovering ? session.snapshot() : await session.refresh();
@@ -197,7 +227,8 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           shownResult = null;
           setLiveCue(null);
         }
-        setDisconnected(!streamConnected);
+        recoveringRead = false;
+        if (streamConnected) reportItemConnection(null);
         if (restored?.some(Boolean)) {
           const observed = restored.filter(Boolean);
           for (const receipt of observed) seenReceipts.current.add(receipt.receiptId);
@@ -205,10 +236,13 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         }
         draw();
       } catch (error) {
-        if (product && error?.message === "JUNGLE_GATEWAY_UNAVAILABLE" && alive) {
+        const reason = itemRaceFailure(error);
+        if (product && alive && !isScopeFailure(error)) {
+          recoveringRead = true;
           presentation.suspend();
           itemPresentation?.stop?.();
-          setDisconnected(true);
+          reportItemConnection(reason);
+          if (reason.kind === "auth") void onAuthFailure?.(scope.actorId);
         } else stop(error);
       } finally {
         refreshing = false;
@@ -230,11 +264,11 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         deadline = null;
         presentation.suspend();
         itemPresentation?.stop?.();
-        setDisconnected(true);
+        reportItemConnection({ kind:"connection" });
       }
     });
     return () => { alive=false; itemPresentation?.stop?.(); session.close(); active.current=null; clearInterval(render); clearInterval(poll); clearTimeout(pulseTimer); clearTimeout(deadlineTimer); unsubscribe?.(); };
-  },[scope,transport,journal,makeRequestId,refreshMs,onPulse,subscribe,itemPresentation,product,s5,finalAssets,startedAt,deadlineAt]);
+  },[scope,transport,journal,makeRequestId,refreshMs,onPulse,subscribe,itemPresentation,product,s5,finalAssets,startedAt,deadlineAt,onAuthFailure,onItemReady,reportItemConnection]);
 
   const pageId = view?.self?.currentPageId;
   const revisionId = view?.self?.currentRevisionId;
@@ -251,13 +285,29 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
       if (result?.pageId !== pageId || result.revisionId !== revisionId || !Array.isArray(result.links) ||
           (product && (result.snapshotId !== snapshotId || result.progressVersion !== progressVersion))) throw new Error("STALE_DOCUMENT");
       setDocument(result);
-    }).catch(error=>{
+    }).catch(async error => {
       if (abort.signal.aborted) return;
+      const reason = itemRaceFailure(error);
+      if (reason.kind === "auth") void onAuthFailure?.(scope.actorId);
+      if (reason.kind === "stale-document" && product) {
+        setDocumentFailure(reason.kind);
+        const entry = active.current;
+        await entry?.refresh();
+        if (abort.signal.aborted || !entry || active.current !== entry) return;
+        const current = entry.session.snapshot()?.self;
+        if (current?.progressVersion !== progressVersion || current?.currentSnapshotId !== snapshotId) return;
+        const frameKey = snapshotId + ":" + progressVersion;
+        if (staleDocumentRetry.current !== frameKey) {
+          staleDocumentRetry.current = frameKey;
+          setDocumentAttempt(attempt => attempt + 1);
+        }
+        return;
+      }
       if (isScopeFailure(error)) active.current?.stop(error);
-      else setDocumentFailure(true);
+      setDocumentFailure(reason.kind);
     });
     return () => abort.abort();
-  },[pageId,revisionId,snapshotId,progressVersion,loadDocument,product,documentAttempt]);
+  },[pageId,revisionId,snapshotId,progressVersion,loadDocument,product,documentAttempt,onAuthFailure,scope.actorId]);
 
   useEffect(()=>{
     if (!liveCue) return;
@@ -275,10 +325,16 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
 
   function run(operation, input) {
     const entry = active.current;
-    if (!entry || disconnected) return;
+    if (!entry || roomPaused.current || itemPaused.current) return;
     const panelCommand = s5 && ['search_execute','joker_claim','reward_claim','reward_discard'].includes(operation);
     if (s5 && operation!=='correction' && (view?.stunned || (view?.sealed && operation!=='normal_link'))) return;
     if (panelCommand && s5Pending) return;
+    const parrying = operation === "parry";
+    if (parrying && parryInFlight.current) return;
+    if (parrying) {
+      parryInFlight.current = true;
+      setParryPending(true);
+    }
     if (panelCommand) setS5Pending(true);
     if (operation === "trap_options") setTrapChoices(null);
     const snapshot = entry.session.snapshot();
@@ -304,7 +360,7 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
           retransmitted:entry.session.isRetransmission(receipt)});
         if (cue) setLiveCue(cue);
       }
-      if (receipt?.ok === false && !cue) {
+      if ((receipt?.ok === false || receipt?.code === "PARRY_FAILED") && !cue) {
         setFailure(receipt.code);
       }
       if (operation === "trap_install" && receipt) setTrapChoices(null);
@@ -314,11 +370,22 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
       void entry.refresh();
     }).catch(error=>{
       if (active.current !== entry) return;
+      const reason = itemRaceFailure(error);
       if (isScopeFailure(error)) entry.stop(error);
-      else setFailure(error?.message ?? "REQUEST_FAILED");
+      else {
+        if (reason.kind === "auth") {
+          reportItemConnection(reason);
+          void onAuthFailure?.(scope.actorId);
+        }
+        setFailure(error?.message ?? "REQUEST_FAILED");
+      }
     }).finally(()=>{
       itemPresentation?.pending?.(operation,false);
       if (panelCommand && active.current === entry) setS5Pending(false);
+      if (parrying) {
+        parryInFlight.current = false;
+        if (active.current === entry) setParryPending(false);
+      }
     });
     return { ok:true };
   }
@@ -383,14 +450,21 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         </div>
         <HudStat label="이동" value={view?.self?.moveCount ?? "–"}/>{matchClock}
         {finalAssets && <div className="group-items-hud-slots item-race-anchor" ref={setItemToolbar} />}
+        {(explorationHints || kionDock || audioControls || roomActions || disconnected) && <div className="item-race-utility">
+          {explorationHints}
+          {kionDock && React.cloneElement(kionDock, { disabled:disconnected })}
+          {(audioControls || roomActions) && <details className="item-race-settings"><summary>경기 설정</summary>
+            {audioControls}{roomActions}
+          </details>}
+          {!disconnected && view?.finalVisual?.notices?.map(notice =>
+            <p key={notice.key} className="item-race-status" role="status">{notice.label}</p>)}
+          {disconnected && <p className="item-race-status" role="status">
+            {itemRaceFailureMessage(connectionFailure ?? connectionError)}{" "}
+            <button className="wr-race-btn" type="button"
+              onClick={connectionFailure ? onRoomRefresh : () => void active.current?.refresh(true)}>다시 확인</button>
+          </p>}
+        </div>}
       </RaceHud>
-      {(kionDock || audioControls || roomActions) && <div className="item-race-utility">
-        {kionDock}
-        {(audioControls || roomActions) && <details className="item-race-settings"><summary>경기 설정</summary>
-          {audioControls}{roomActions}
-        </details>}
-      </div>}
-      {explorationHints}
       {roomRoster && <MobileRouteNotes path={ownPath} />}
       {s5 && frame && !readOnly && <S5Panels state={view.s5} inventory={frame.inventory.filter(Boolean)} now={view.now} slots={frame.inventory.filter(slot=>!slot).length}
         inputsDisabled={s5Pending || view.stunned || view.sealed || !article} movementDisabled={view.stunned || !article}
@@ -412,9 +486,9 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
             {roomRoster && pageId && !article && !documentFailure && <PageLoadingOverlay />}
             <WikiViewer target={roomRoster ? targetBrief : target} currentTitle={article?.title ?? ""} currentSummary="" currentDocumentHtml={article?.html ?? ""}
               links={article?.links ?? []} isLoading={Boolean(pageId && !article && !documentFailure)}
-              censoredTitles={censoredTitles} authorizedSearchQuery={s5 ? verifiedSearchQuery : undefined} onLinkClick={onLinkClick} readOnly={readOnly || !article || view?.stunned} showTargetBrief={Boolean(roomRoster)}/>
+              censoredTitles={censoredTitles} authorizedSearchQuery={s5 ? verifiedSearchQuery : undefined} onLinkClick={onLinkClick} readOnly={readOnly || !article || Boolean(documentFailure) || view?.stunned} showTargetBrief={Boolean(roomRoster)}/>
             {documentFailure && <div>
-              <p role="status">현재 문서를 불러오지 못했습니다.</p>
+              <p role="status">{documentFailure === "connection" ? "현재 문서를 불러오지 못했어요." : itemRaceFailureMessage({ kind:documentFailure })}</p>
               <button type="button" onClick={()=>setDocumentAttempt(attempt=>attempt+1)}>문서 다시 불러오기</button>
             </div>}
           </main>
@@ -437,10 +511,10 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
       </div>
       <div className={finalAssets ? "group-item-alerts" : "group-items-jungle-dock"} data-item-race-dock>
         {finalAssets && <span className="gip-feedback-sr" role="status">{view?.finalVisual?.scenes
-          .filter(scene=>scene.key.startsWith("recipient:")).map(scene=>scene.label).join(" · ")}</span>}
+          .filter(scene=>scene.key.startsWith("recipient:") && scene.kind === "thief-loss").map(scene=>scene.label).join(" · ")}</span>}
         {finalAssets && <div className="s5-dock-warnings" ref={setWarningToolbar}/>}
         <div className="s5-dock-content">
-        <PlaytestItemsHud view={itemFrame} numberSlots={s5} visible={Boolean(frame) && !readOnly} enhancedFeedback running warningWindowMs={warningWindowMs}
+        <PlaytestItemsHud view={itemFrame} numberSlots={s5} visible={Boolean(frame) && (finalAssets || !readOnly)} paused={disconnected} enhancedFeedback running warningWindowMs={warningWindowMs} parryPending={parryPending}
           toolbar={finalAssets ? itemToolbar : null} warningToolbar={warningToolbar} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant} rewardGrants={rewardGrants}
           onParry={warning=>run("parry",{ childId:warning.childId })} onReturn={rightId=>run("bookmark_return",{ rightId })}
           onUse={input=>run(input.action,input)}/>
@@ -448,11 +522,10 @@ function PlayingGroup({ scope, transport, journal, makeRequestId, loadDocument, 
         {[...(view?.cues ?? []), ...(liveCue ? [liveCue] : [])].map(cue=><React.Fragment key={cue.key}>
           {itemPresentation?.renderCue?.(cue) ?? <p role="status" data-item-cue={cue.kind}>{cue.message}</p>}
         </React.Fragment>)}
-        {disconnected && <p role="status">경기 연결을 다시 확인하고 있어요. <button type="button" onClick={()=>void active.current?.refresh(true)}>경기 상태 다시 확인</button></p>}
         {failure && <p className="group-items-jungle-status" role="status">
-          {Object.hasOwn(commandRejectionMessages, failure) ? commandRejectionMessages[failure] : commandFailureMessage}
+          {commandRejectionMessages[failure] ?? (isScopeFailure(new Error(failure)) ? itemRaceFailureMessage(itemRaceFailure(new Error(failure))) : commandFailureMessage)}
         </p>}
-        {frame?.viewer.readOnly && <p role="status">경기가 종료됐어요.</p>}
+        {frame?.viewer.readOnly && !disconnected && <p role="status">경기가 종료됐어요.</p>}
         </div>
       </div>
       {roomRoster && article && <ScrollToTopButton race />}

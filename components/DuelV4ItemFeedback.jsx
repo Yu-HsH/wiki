@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { trapInstallerNotice } from "./group-items-jungle/finalAssetEvents.js";
 
 const COPY = Object.freeze({
   item_stolen: "도둑의 손에 아이템을 빼앗겼어요.",
-  trap_triggered: "설치한 깜짝상자가 작동했어요.",
+  trap_triggered: trapInstallerNotice,
 });
 const DISPLAY_DURATION_MS = 5_000;
 
@@ -33,8 +34,8 @@ export default function DuelV4ItemFeedback({ scope, events, now }) {
     setSeen(nextSeen);
     setShown((current) => [
       ...current.filter((entry) => entry.until > now),
-      ...fresh.map(({ id, kind, expiresAt }) => ({
-        id, kind, until: Math.min(now + DISPLAY_DURATION_MS, Date.parse(expiresAt)),
+      ...fresh.map(({ id, kind, outcome, expiresAt }) => ({
+        id, kind, outcome, until: Math.min(now + DISPLAY_DURATION_MS, Date.parse(expiresAt)),
       })),
     ]);
     try {
@@ -44,6 +45,8 @@ export default function DuelV4ItemFeedback({ scope, events, now }) {
     }
   }, [events, key, now, seen]);
 
-  return shown.filter((entry) => entry.until > now).map(({ id, kind }) =>
-    <p key={id} className="duel-v4-item-feedback">{COPY[kind]}</p>);
+  return shown.filter((entry) => entry.until > now).map(({ id, kind, outcome }) =>
+    <p key={id} className="duel-v4-item-feedback item-race-status" role="status">
+      {kind === "trap_triggered" ? trapInstallerNotice(outcome) : COPY[kind]}
+    </p>);
 }

@@ -1,16 +1,17 @@
 import { supabase } from "../supabaseClient.js";
 
-async function call(name, args) {
-  const { data, error } = await supabase.rpc(name, args);
-  if (error) throw error;
+async function call(name, args, signal) {
+  const query = supabase.rpc(name, args);
+  const { data, error, status } = await (signal ? query.abortSignal(signal) : query);
+  if (error) throw Object.assign(new Error(error.message), error, { status });
   return data;
 }
 
 export const duelV4 = {
-  entry: () => call("get_duel_v4_entry"),
+  entry: (signal) => call("get_duel_v4_entry", undefined, signal),
   create: (requestId) => call("create_duel_v4_room", { p_request: requestId }),
   join: (code) => call("join_duel_v4_room", { p_code: code }),
-  state: (roomId) => call("get_duel_v4_state", { p_room: roomId }),
+  state: (roomId, signal) => call("get_duel_v4_state", { p_room: roomId }, signal),
   async prepareSearch(roomId, windowId, signal) {
     const { data, error } = await supabase.functions.invoke("duel-search-v4", {
       body: { roomId, windowId }, signal,

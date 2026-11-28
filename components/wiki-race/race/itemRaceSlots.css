@@ -47,26 +47,31 @@
 }
 .item-race-anchor .item-race-popover .gip-choices { align-items: stretch; flex-wrap: wrap; }
 .item-race-anchor .item-race-popover .gip-use { position: sticky; bottom: 0; min-height: 44px; }
-.item-race-bookmark { margin: 0 .5rem .2rem auto; display: block; font-size: .75rem; }
+.item-race-bookmark { margin: 0 .5rem .2rem auto; display: block; font-size: .75rem; min-height: 34px; }
 .item-race-reward { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
 .item-race-reward .s5-final-slot-icon { width: 46px; height: 46px; }
-.item-race-utility { display: flex; flex-wrap: wrap; gap: .4rem; align-items: flex-start; padding: 0 .65rem; }
+.wr-race .wr-race-hud:has(> .item-race-utility) { flex-wrap: wrap; position: sticky; top: 0; }
+.item-race-utility {
+  display: flex; flex-wrap: wrap; flex-basis: 100%; min-width: 0; grid-area: utility;
+  gap: .25rem .55rem; align-items: center; padding: 0 .65rem;
+  border-top: 1px solid var(--wr-divider, #c8bfa9);
+}
+.item-race-utility > .wr-exploration-hints { font-size: .84rem; padding: .15rem 0; }
+.item-race-utility > .s5-kion-dock { flex: 1; min-width: 0; }
+.item-race-utility > .item-race-status {
+  flex-basis: 100%; color: #283e32; margin: 0; padding: .3rem 0; font-size: .82rem;
+}
 .item-race-settings { margin-inline-start: auto; font-size: .8rem; padding: .35rem; }
 .item-race-settings summary { cursor: pointer; min-height: 34px; align-content: center; }
 .wr-start-overlay.item-race-countdown { --item-race-tick-size: min(clamp(5rem,17vw,8rem),20dvh); }
 .wr-start-overlay.item-race-countdown .countdown-number { font-size:var(--item-race-tick-size); }
 .item-race-intro { position:absolute; inset:0; isolation:isolate; z-index:0; }
 .item-race-intro > .wr-cinematic-stage.wr-start-overlay {
-  position:absolute; inset:0 0 calc(var(--item-race-tick-size) * 1.1 + 1rem); z-index:0;
+  position:absolute; inset:0; z-index:0;
   height:auto; min-height:0;
 }
 .item-race-intro .departure { visibility:hidden !important; }
-.wr-start-overlay.item-race-countdown .item-race-intro-tick {
-  position:absolute; inset:auto 0 max(.4rem,env(safe-area-inset-bottom)) 0; text-align:center;
-  z-index:1; margin:0; line-height:1.1; pointer-events:none;
-  animation:item-race-intro-tick .36s ease-out both;
-}
-@keyframes item-race-intro-tick { from { transform:scale(.78); opacity:.4; } to { transform:none; opacity:1; } }
+.item-race-start-check { position: absolute; inset: auto 1rem 1rem; text-align: center; }
 .duel-v4 .page-loading-overlay, .group-items-jungle .page-loading-overlay,
 .s5-spectator-document .page-loading-overlay { pointer-events:none; z-index:15; }
 .wr-start-overlay.item-race-go { z-index: 38; background: transparent; pointer-events: none; }

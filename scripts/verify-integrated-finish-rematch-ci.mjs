@@ -9,38 +9,19 @@ import { spawn } from "node:child_process";
 import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import {
-  EXPECTED_CLI_VERSION, TARGET_PROJECT_ID, expectedDbContainer, inspectContainer,
-  readProjectId, repoRoot, runCli, runPsql,
-} from "./supabase-runtime-common.mjs";
+import { repoRoot, runPsql } from "./supabase-runtime-common.mjs";
+import { itemRaceBrowserRuntime } from "./item-race-review-runtime.mjs";
 
-if (process.env.CI !== "true" || process.env.GITHUB_ACTIONS !== "true" ||
-    process.env.SUPABASE_DB_CONTAINER || process.env.WIKI_VALIDATION_WORKDIR ||
-    readProjectId() !== TARGET_PROJECT_ID) {
-  throw Error("REFUSED: disposable GitHub Actions + pinned local database only");
-}
-const version = runCli(["--version"]);
-assert.equal(version.status,0);
-assert.equal(version.stdout.trim(),EXPECTED_CLI_VERSION);
-const dbContainer = expectedDbContainer();
-const check=inspectContainer(dbContainer);
-assert.equal(check.status,0);
-assert.equal(JSON.parse(check.stdout).State?.Health?.Status,"healthy");
-const envResult=runCli(["--workdir",repoRoot,"status","-o","env"]);
-assert.equal(envResult.status,0);
-const values=Object.fromEntries(envResult.stdout.split(/\r?\n/).flatMap(line=>{
-  const m=line.match(/^([A-Z0-9_]+)=(.*)$/);
-  return m?[[m[1],m[2].replace(/^['"]|['"]$/g,"")]]:[];
-}));
+const localReview = process.argv[2] === "--review-local";
+const { container:dbContainer, env:values, evidenceRoot } = itemRaceBrowserRuntime(localReview);
 const api=values.API_URL, publicKey=values.ANON_KEY||values.PUBLISHABLE_KEY, adminKey=values.SERVICE_ROLE_KEY;
-assert.equal(api,"http://127.0.0.1:54321");
-assert.ok(publicKey && adminKey);
-const browserUrl="http://127.0.0.1:5185";
+const browserPort=localReview ? "59315" : "5185";
+const browserUrl="http://127.0.0.1:"+browserPort;
 const runId=randomUUID().slice(0,8);
 const admin=createClient(api,adminKey,{auth:{persistSession:false,autoRefreshToken:false}});
 const people=[],rooms=[],contexts=[];
 let server,browser;
-const folder=path.join(repoRoot,"test-results","integrated-finish-rematch");
+const folder=path.join(evidenceRoot,"integrated-finish-rematch");
 fs.mkdirSync(folder,{recursive:true});
 const sqlQuote=value=>"'"+String(value).replaceAll("'","''")+"'";
 function sql(source){
@@ -279,7 +260,7 @@ try{
   makeFixture();
   for(let i=0;i<3;i++)await addUser(i+1);
   const env={...process.env,VITE_SUPABASE_URL:api,VITE_SUPABASE_ANON_KEY:publicKey,VITE_MAINTENANCE:""};
-  server=spawn("npm",["run","dev","--","--host","127.0.0.1","--port","5185","--strictPort"],
+  server=spawn(process.execPath,[path.join(repoRoot,"node_modules","vite","bin","vite.js"),"--host","127.0.0.1","--port",browserPort,"--strictPort"],
     {cwd:repoRoot,env,stdio:"ignore"});
   await waitForServer();
   browser=await chromium.launch({headless:true});

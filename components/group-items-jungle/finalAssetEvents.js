@@ -23,6 +23,16 @@ export function attackMotion(itemId, phase, direction, label) {
   return {kind:'attack-'+phase,itemId,direction,label:`${itemName(itemId)} · ${label}`,asset};
 }
 
+export function weakeningHitSignal() {
+  return { ...signal('weakening','weakening_curse/apply'), direction:'incoming',label:'약화저주에 맞았어요' };
+}
+
+export function trapInstallerNotice(outcome) {
+  return outcome === 'blocked' ? '설치한 상자가 편집보호로 차단됐어요.'
+    : outcome === 'triggered' || outcome === 'hit' ? '설치한 상자가 적중했어요.'
+    : '설치한 깜짝상자가 작동했어요.';
+}
+
 export function finalReceiptSignal(receipt,warningItem) {
   if (!receipt?.receiptId) return null;
   const {operation,code,success}=receipt;
@@ -82,7 +92,7 @@ export function finalResultSignal(result,participantId) {
     if (hit) return signal('thunder-hit','thunder_judgment/hit');
     if (protectedResult) return signal('thunder-guard','thunder_judgment/guard');
   }
-  if (hit && result.itemId==='weakening') return signal('weakening','weakening_curse/apply');
+  if (hit && result.itemId==='weakening') return weakeningHitSignal();
   if (hit && result.itemId==='censor') return signal('censor',null);
   if (protectedResult) return signal('shield-block','edit_protection/block');
   if (!source && !target) return null;

@@ -1,4 +1,4 @@
-import { attackMotion, finalMovementSignal, finalReceiptSignal, finalResultSignal } from './finalAssetEvents.js';
+import { attackMotion, finalMovementSignal, finalReceiptSignal, finalResultSignal, trapInstallerNotice, weakeningHitSignal } from './finalAssetEvents.js';
 
 const sceneDuration={ 'trap-reveal':2900,'trap-hit':2900,correction:2200,'correction-fail':2200,
   'roulette-win':2900,'roulette-fail':2900,'roulette-boost':2900,
@@ -8,7 +8,7 @@ const cannonLaunchMs=800;
 const liveWindowMs=2500;
 
 export function createFinalAssetPresentation(fallback,getAudio,now=()=>performance.now()) {
-  let scenes=[], movementId=null, cannonUntil=null, cannonPending=false, connected=false;
+  let scenes=[], notices=[], movementId=null, cannonUntil=null, cannonPending=false, connected=false;
   let cannonImpact=null;
   let censors=[];
   let feedbackAnchor=null;
@@ -31,6 +31,7 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
   }
   function stop() {
     scenes=[];
+    notices=[];
     cannonUntil=null;
     cannonPending=false;
     cannonImpact=null;
@@ -100,12 +101,23 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
         receivedFeedback.add(event.id);
         const at=Date.parse(event.at);
         if (at<=feedbackAnchor || frame.now-at>=6000) continue;
-        const cue=event.kind==='item_stolen'
-          ? {kind:'thief-loss',itemId:event.itemId,itemTier:event.tier,asset:'thief_hand/empty',label:'아이템을 빼앗겼어요'}
-          : {kind:'trap-reveal',asset:'surprise_box/reveal',
-            label:event.outcome==='blocked'?'설치한 상자 · 편집보호로 차단':'설치한 상자 발동'};
-        emit(`recipient:${event.id}`,cue);
+        if (event.kind === 'trap_triggered') {
+          notices.push({ key:event.id, label:trapInstallerNotice(event.outcome), until:now()+4200 });
+        } else emit(`recipient:${event.id}`,{
+          kind:'thief-loss',itemId:event.itemId,itemTier:event.tier,asset:'thief_hand/empty',label:'아이템을 빼앗겼어요',
+        });
       }
+      for (const event of state.weakeningHits ?? []) {
+        const key = `weakening:${event.id}`;
+        if (receivedFeedback.has(key)) continue;
+        receivedFeedback.add(key);
+        const at = Date.parse(event.at);
+        if (at <= feedbackAnchor || frame.now-at >= liveWindowMs) continue;
+        const cue = weakeningHitSignal();
+        emit(`recipient:${key}`, cue);
+        notices.push({ key, label:cue.label, until:now()+4200 });
+      }
+      notices = notices.filter(notice => notice.until > now());
       const stun=state.itemEffects?.find(row=>row.kind==='stun' && row.source==='thunder' &&
         row.startsAt<=frame.now && frame.now<row.expiresAt);
       getAudio()?.stun(stun?.effectId);
@@ -146,7 +158,7 @@ export function createFinalAssetPresentation(fallback,getAudio,now=()=>performan
       }
       const protection=state.presentation.projection?.protection;
       const shieldActive=Boolean(protection && protection.startsAt<=frame.now && frame.now<protection.expiresAt);
-      return { scenes:currentScenes(), thunder:Boolean(stun), lost:Boolean(warning), shieldActive };
+      return { scenes:currentScenes(), notices, thunder:Boolean(stun), lost:Boolean(warning), shieldActive };
     },
   };
 }

@@ -19,7 +19,7 @@ const errorCopy = {
   SENDER_NOT_ACTIVE: "지금은 감정표현을 보낼 수 없어요.",
 };
 
-export default function S5KionDock({ roomId, actorId, players = [], spectator = false, mode = "race", label }) {
+export default function S5KionDock({ roomId, actorId, players = [], spectator = false, mode = "race", lobby = mode === "lobby", disabled = false, label }) {
   const transport = transports[mode];
   const request = useRef(null);
   const [events, setEvents] = useState([]);
@@ -90,7 +90,7 @@ export default function S5KionDock({ roomId, actorId, players = [], spectator = 
   }, [roomId, actorId, mode, transport]);
 
   async function onSend(emoteId) {
-    if (!connected || sending || inFlight.current || Date.now() < cooldownUntil) return;
+    if (disabled || !connected || sending || inFlight.current || Date.now() < cooldownUntil) return;
     inFlight.current = true;
     setSending(true);
     setFeedback("");
@@ -124,9 +124,9 @@ export default function S5KionDock({ roomId, actorId, players = [], spectator = 
   }
 
   return <div className={"s5-kion-dock" + (spectator ? " s5-kion-dock--spectator" : "") +
-    (mode !== "race" ? " s5-kion-dock--inline" : "")}>
-    <RaceRoomEmotesView compact={mode!=="lobby"} label={label} visible={getVisibleRaceEmotes(events, clock, hidden, roomId)}
-      namesByUserId={namesByUserId} connected={connected} sending={sending}
+    (lobby ? " s5-kion-dock--lobby" : " s5-kion-dock--race")}>
+    <RaceRoomEmotesView compact={!lobby} label={label} visible={getVisibleRaceEmotes(events, clock, hidden, roomId)}
+      namesByUserId={namesByUserId} connected={connected && !disabled} sending={sending}
       cooldownRemaining={clock < cooldownUntil} feedback={feedback} hidden={hidden}
       onToggleHidden={() => setHidden(current => !current)} onSend={onSend}/>
   </div>;

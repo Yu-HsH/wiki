@@ -9,6 +9,8 @@ const messages = {
   trap_installed: "깜짝상자를 설치했어요.",
   trap_triggered: "깜짝상자가 발동했어요.",
   trap_blocked: "편집보호로 깜짝상자를 막았어요.",
+  thunder_recoil: "천둥 실패 · 자신이 감전되고 아이템이 봉인됐어요.",
+  thunder_weakened: "천둥 성공 · 약화되어 자신이 2초 감전됐어요.",
 };
 
 export function productInkPlacement(effectId) {
@@ -75,6 +77,8 @@ export function createProductItemPresentation({ renderCue, playInk } = {}) {
       if (receipt.operation === "correction" && receipt.code === "CORRECTION_APPLIED" && receipt.closedEffectId) kind = "correction_applied";
       if (receipt.operation === "protect" && receipt.code === "PROTECTION_ACTIVE") kind = "protection_active";
       if (receipt.operation === "trap_install" && receipt.code === "TRAP_INSTALLED" && receipt.trapId) kind = "trap_installed";
+      if (receipt.operation === "thunder" && receipt.code === "THUNDER_SELF_PENALTY") kind = "thunder_recoil";
+      if (receipt.operation === "thunder" && receipt.code === "THUNDER_SELF_STUN") kind = "thunder_weakened";
       if (receipt.operation === "normal_link") {
         if (receipt.code === "TRAP_STOPPED" || (receipt.code === "MOVED" && receipt.trapOutcome === "arrival" && receipt.stunEventSeq)) kind = "trap_triggered";
         if (receipt.code === "MOVED" && receipt.trapOutcome === "blocked") kind = "trap_blocked";

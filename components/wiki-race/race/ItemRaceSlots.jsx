@@ -10,12 +10,12 @@ export function ItemRaceDescription({ itemId, tier, mode = "group" }) {
   return <><strong>{itemName(itemId)} · {grade}</strong><span>{effect}</span><small>{condition}</small></>;
 }
 
-export default function ItemRaceSlots({ items, selected, supplySeconds, select, expanded, panelId, duel = false, suppliedGrant, rewardGrants = [] }) {
+export default function ItemRaceSlots({ items, selected, supplySeconds, select, expanded, panelId, duel = false, suppliedGrant, rewardGrants = [], readOnly = false }) {
   const id = useId();
   return <div className="item-race-slots" role="group" aria-label="보급과 아이템 슬롯">
     <div className="item-race-slot-list">
       {items.map((item, index) => <div className="item-race-slot-wrap" key={index}>
-        <button type="button" className="item-race-slot" disabled={!item} data-available={item?.available}
+        <button type="button" className="item-race-slot" disabled={!item || readOnly} data-available={item?.available}
           aria-expanded={item ? expanded && selected === item.key : undefined}
           aria-controls={item && expanded && selected === item.key ? panelId : undefined}
           aria-label={item ? `${index + 1}번 슬롯 ${itemName(item.itemId)} ${tierLabel(item.tier) || "일반"}` : `${index + 1}번 빈 슬롯`}
