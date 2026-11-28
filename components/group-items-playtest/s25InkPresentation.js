@@ -1,4 +1,5 @@
 import { INK_AUDIO_MAX_LATENESS_MS } from "./pulseAudioGate.js";
+import { createItemRaceClock } from "../../services/itemRaceClock.js";
 
 // These are S2's art offsets. The server supplies the effect interval and its elapsed pulse count.
 const PULSE_OFFSETS_MS = Object.freeze([0, 180, 360]);
@@ -9,17 +10,13 @@ function sameScope(left, right) {
 }
 
 export function createS25InkPresentation({ presentationNow = () => performance.now(), viewerLabel = "나", onPulseDecision, useReactionClock = false } = {}) {
-  let current = null, anchor = null, warningAnchor = null, suspended = false;
+  let current = null, anchor = null, suspended = false;
+  const warningClock = createItemRaceClock();
   const warningIds = new Set(), effectStates = new Map();
   let warningCues = [];
 
   function estimate(at) {
     return anchor === null ? null : anchor.server + Math.max(0, at - anchor.local);
-  }
-  // Display-only S5 reaction time: exclude transport latency before the server observed the state.
-  // The conservative effect/audio clock remains unchanged. Server alone judges parry deadlines.
-  function estimateWarning(at) {
-    return warningAnchor === null ? null : warningAnchor.server + Math.max(0, at - warningAnchor.local);
   }
 
   function accept(snapshot, { recovering = false } = {}) {
@@ -36,9 +33,7 @@ export function createS25InkPresentation({ presentationNow = () => performance.n
     if (snapshot.serverObservedAt !== null) {
       // Use a conservative RTT bound so delay cannot move a displayed deadline later.
       anchor = { local: at, server: Math.max(estimate(at) ?? 0, snapshot.serverObservedAt + snapshot.transportElapsedMs) };
-      if (useReactionClock) warningAnchor = {
-        local: at, server: Math.max(estimateWarning(at) ?? snapshot.serverObservedAt, snapshot.serverObservedAt),
-      };
+      if (useReactionClock) warningClock.observe(snapshot.serverObservedAt, snapshot.transportElapsedMs, at);
     }
     current = snapshot;
     suspended = false;
@@ -70,10 +65,10 @@ export function createS25InkPresentation({ presentationNow = () => performance.n
     if (!current) return { now: null, view: null, pulse: null, events: [], pulseEvents: [] };
     const processedMonoMs = presentationNow();
     const now = estimate(processedMonoMs);
-    const warningNow = useReactionClock ? estimateWarning(processedMonoMs) : null;
+    const warningNow = useReactionClock ? warningClock.now(processedMonoMs) : null;
     const { scope, projection, self } = current;
     const events = warningCues.filter(event => !suspended && projection.warnings.some(
-      warning => warning.childId === event.childId && warning.dueAt > now));
+      warning => warning.childId === event.childId && warning.dueAt > (warningNow ?? now)));
     warningCues = [];
     const pulseEvents = [];
     const effects = projection.effects.map(effect => {

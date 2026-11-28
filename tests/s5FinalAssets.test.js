@@ -54,6 +54,7 @@ test('S5: live receipt cues split confirmed branches and retain accepted failure
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:false}).asset,'chaos_roulette/fail');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:true}).asset,'chaos_roulette/win');
   assert.equal(cue('roulette','ROULETTE_RESOLVED',{success:true,automaticChild:{id:'child'}}).asset,'chaos_roulette/boost');
+  assert.equal(cue('weakening','WEAKENING_APPLIED',{tier:'weakened'}).asset,'weakening_curse/apply');
 });
 
 test('S5: protection and parry are distinguishable without inferring missing server fields', () => {
@@ -144,16 +145,29 @@ test('S5: use only fresh recipient feedback and keep the settled trap outcome', 
     {id:'trap:1',kind:'trap_triggered',outcome:'blocked',at:new Date(1050).toISOString()},
     {id:'theft:1',kind:'item_stolen',itemId:'ink',tier:'enhanced',at:new Date(1075).toISOString()},
   ]};
-  const result=p.observe(next,frame,true).scenes;
-  assert.deepEqual(result.map(({kind,itemId,itemTier})=>({kind,itemId,itemTier})),[
-    {kind:'trap-reveal',itemId:undefined,itemTier:undefined},
+  const result=p.observe(next,frame,true);
+  assert.deepEqual(result.scenes.map(({kind,itemId,itemTier})=>({kind,itemId,itemTier})),[
     {kind:'thief-loss',itemId:'ink',itemTier:'enhanced'},
   ]);
-  assert.match(result[0].label,/편집보호로 차단/);
-  p.observe(next,frame,true);
-  assert.deepEqual(heard,['surprise_box/reveal','thief_hand/empty']);
+  assert.match(result.notices[0].label,/편집보호로 차단/);
+  assert.equal(p.observe(next,frame,true).notices.length,1);
+  assert.deepEqual(heard,['thief_hand/empty']);
   p.recover({...next,presentation:{serverObservedAt:1100}});
   assert.deepEqual(p.observe(next,frame,true).scenes,[]);
+});
+
+test('S5: committed recipient curse hit is shown once and recovery suppresses its replay', () => {
+  const heard=[];
+  const p=createFinalAssetPresentation({},()=>({play:asset=>heard.push(asset),stun(){},stop(){}}),()=>100);
+  const state={presentation:{serverObservedAt:1000}};
+  const frame={now:1100,view:{viewer:{readOnly:false}},events:[]};
+  p.observe(state,frame,true);
+  const hit={...state,weakeningHits:[{id:'right',at:new Date(1050).toISOString()}]};
+  assert.equal(p.observe(hit,frame,true).scenes[0].direction,'incoming');
+  assert.equal(p.observe(hit,frame,true).notices.length,1);
+  assert.deepEqual(heard,['weakening_curse/apply']);
+  p.recover(hit);
+  assert.deepEqual(p.observe(hit,frame,true).scenes,[]);
 });
 
 test('S5: selected sound, mute, volume and authorized stun-loop synchronization', () => {

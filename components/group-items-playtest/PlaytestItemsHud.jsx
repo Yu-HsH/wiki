@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import ItemRaceSlots, { ItemRaceDescription } from "../wiki-race/race/ItemRaceSlots.jsx";
 
 /** Small presenter only: availability, effect outcomes and deadlines come from C. */
-export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onReturn,enhancedFeedback=false,running=false,warningWindowMs,numberSlots=false,toolbar,warningToolbar,supplySeconds,suppliedGrant,rewardGrants}){
+export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onReturn,enhancedFeedback=false,running=false,warningWindowMs,numberSlots=false,toolbar,warningToolbar,supplySeconds,suppliedGrant,rewardGrants,parryPending=false,paused=false}){
  const id=useId(),panel=useRef(null),toggle=useRef(null),opener=useRef(null);
  const [open,setOpen]=useState(false),[grantId,setGrantId]=useState(null),[targetIds,setTargetIds]=useState([]);
  const selected=view?.inventory?.find(item=>item&&item.grantId===grantId);
@@ -22,7 +22,7 @@ export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onRetu
  if(!view)return <section className="gip-hud" role="status">경기 상태를 확인해 주세요.</section>;
  const close=()=>{setOpen(false);requestAnimationFrame(()=>(opener.current&&!opener.current.disabled?opener.current:toggle.current)?.focus());};
  const show=event=>{opener.current=event.currentTarget;setOpen(true);};
- const readOnly=view.viewer.readOnly;
+ const readOnly=paused || view.viewer.readOnly;
  const slots=[view.inventory?.[0]||null,view.inventory?.[1]||null];
  const startSelection=(item,event)=>{
    setTargetIds([]);
@@ -31,12 +31,12 @@ export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onRetu
    show(event);
  };
  const productSlots = slots.map(item=>item && {
-   key:item.grantId,itemId:item.itemId,tier:item.effectiveTier,available:item.canSelect,
+   key:item.grantId,itemId:item.itemId,tier:item.effectiveTier,available:!readOnly && item.canSelect,
  });
  const incoming=<AttackWarning warnings={warnings} now={view.warningNow ?? view.now} windowMs={warningWindowMs}
-   running={running} readOnly={readOnly} onParry={onParry}/>;
+   running={running} readOnly={readOnly} parryPending={parryPending} onParry={onParry}/>;
  const sheet=open&&!readOnly&&(!toolbar||selected)&&<div className={`gip-panel${toolbar?' item-race-popover':''}`} id={id} ref={panel}>
-   <div className="gip-panel-head"><strong>{selected?.label||"도구와 대상"}</strong><button type="button" onClick={close} aria-label="도구 선택 닫기">닫기 ×</button></div>
+   <div className="gip-panel-head"><strong>{selected?.label||"도구와 대상"}</strong><button type="button" className={toolbar ? "wr-race-btn wr-race-btn--ghost" : undefined} onClick={close} aria-label="도구 선택 닫기">닫기</button></div>
    {toolbar && selected && <p className="gip-item-details"><ItemRaceDescription itemId={selected.itemId} tier={selected.effectiveTier}/></p>}
    {selected?.action==="parry"&&<p className="gip-right">공격을 받으면 아래 패링 버튼으로 사용할 수 있어요.</p>}<div className="gip-choices">{selectingBoost && <fieldset><legend>강화할 아이템</legend>
     {boostTargets.map(item=><label key={item.grantId}><input type="checkbox"
@@ -45,14 +45,14 @@ export default function PlaytestItemsHud({view,visible=true,onUse,onParry,onRetu
       <span>{item.label}</span></label>)}
     {boostTargets.length===0 && <p>다음 보급 아이템에 적용해요.</p>}
    </fieldset>}{selected?.requiresTarget && <fieldset><legend>사용할 대상</legend>{view.targets.map(target=><label key={target.participantId}><input type="checkbox" disabled={!target.canSelect||(!chosen.includes(target.participantId)&&chosen.length>=selected.targetLimit)} checked={chosen.includes(target.participantId)} onChange={event=>setTargetIds(old=>event.target.checked?[...old,target.participantId]:old.filter(id=>id!==target.participantId))}/><span>{target.displayName}</span></label>)}</fieldset>}
-   <button className="gip-use" type="button" disabled={!selected?.canSelect||(selectingBoost&&selectedBoost.length!==requiredBoost)||(selected.requiresTarget&&(!chosen.length||chosen.length>selected.targetLimit||(selected.action==="attack"&&!view.controls.canAttack)))||selected.requiresWarning} onClick={async()=>{const result=await onUse?.({grantId:selected.grantId,targetIds:selected.requiresTarget?chosen:[],targetGrantIds:selectedBoost,action:selected.action});if(result?.ok)close();}}>사용하기</button></div>
+   <button className={toolbar ? "gip-use wr-race-btn wr-race-btn--primary" : "gip-use"} type="button" disabled={!selected?.canSelect||(selectingBoost&&selectedBoost.length!==requiredBoost)||(selected.requiresTarget&&(!chosen.length||chosen.length>selected.targetLimit||(selected.action==="attack"&&!view.controls.canAttack)))||selected.requiresWarning} onClick={async()=>{const result=await onUse?.({grantId:selected.grantId,targetIds:selected.requiresTarget?chosen:[],targetGrantIds:selectedBoost,action:selected.action});if(result?.ok)close();}}>사용하기</button></div>
   </div>;
  return <section className={toolbar?'gip-hud gip-hud--compact':'gip-hud'} aria-label="아이템 도구" onKeyDown={event=>{if(open&&event.key==="Escape"){event.preventDefault();close();}}}>
-  {toolbar && !readOnly && createPortal(<>
+  {toolbar && createPortal(<>
     <ItemRaceSlots items={productSlots} selected={grantId}
       select={(item,event)=>startSelection(slots.find(slot=>slot?.grantId===item.key),event)}
-      expanded={open} panelId={id} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant} rewardGrants={rewardGrants}/>
-    {view.bookmarkRight && <button type="button" className="item-race-bookmark" disabled={!view.bookmarkRight.canReturn}
+      expanded={open && !readOnly} panelId={id} readOnly={readOnly} supplySeconds={supplySeconds} suppliedGrant={suppliedGrant} rewardGrants={rewardGrants}/>
+    {view.bookmarkRight && <button type="button" className="wr-race-btn item-race-bookmark" disabled={readOnly || !view.bookmarkRight.canReturn}
       onClick={()=>onReturn?.(view.bookmarkRight.rightId)}>책갈피 복귀</button>}
     {sheet}
   </>, toolbar)}

@@ -4,7 +4,7 @@ import {useDisplayNow} from "./useDisplayNow.js";
 import {warningEventDecision} from "./effectPresentation.js";
 import {warningDisplay} from "./attackFeedback.js";
 /** A presentation clock only: deadline and eligibility are always supplied by C. */
-export default function AttackWarning({warnings=[],now=0,windowMs,running=false,readOnly=false,onParry,itemPresentation={name:"먹물",icon:"ink"}}){
+export default function AttackWarning({warnings=[],now=0,windowMs,running=false,readOnly=false,parryPending=false,onParry,itemPresentation={name:"먹물",icon:"ink"}}){
  const displayNow=useDisplayNow(now,running);
  if(readOnly||!warnings.length)return null;
  const ordered=[...warnings].sort((a,b)=>a.dueAt-b.dueAt);
@@ -24,9 +24,9 @@ export default function AttackWarning({warnings=[],now=0,windowMs,running=false,
      <span className="gip-warning-hint">{display.expired?"마감 · 판정 확인 중":urgent?"마감 임박":warning.canParry?"패링으로 반격하세요":"지금 패링할 수 없어요"}</span>
     </span>
     {multiple&&<span className="gip-warning-short" aria-hidden="true">{index+1}. {source}</span>}
-    <button type="button" className="gip-parry gip-parry-dial" aria-label="패링" aria-describedby={"warning-"+warning.childId+" reaction-"+warning.childId} disabled={!display.canReact} onClick={()=>onParry?.(warning)}>
+    <button type="button" className="gip-parry gip-parry-dial" aria-label="패링" aria-describedby={"warning-"+warning.childId+" reaction-"+warning.childId} disabled={parryPending || !display.canReact} onClick={()=>onParry?.(warning)}>
      <svg viewBox="0 0 64 64" aria-hidden="true"><circle className="gip-dial-track" cx="32" cy="32" r="28"/><circle className="gip-dial-time" cx="32" cy="32" r="28" pathLength="1" strokeDasharray="1" strokeDashoffset={1-display.fraction}/></svg>
-     <span>패링</span><small id={"reaction-"+warning.childId}>{display.expired?"마감":(urgent?"임박 ":"")+display.label+"초"}</small>
+     <span>패링</span><small id={"reaction-"+warning.childId}>{parryPending?"확인 중":display.expired?"마감":(urgent?"임박 ":"")+display.label+"초"}</small>
     </button>
    </div>;
   })}</div>

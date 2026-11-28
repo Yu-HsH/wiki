@@ -7,7 +7,7 @@
   .duel-v4[data-duel-v4-version] .wr-race .wr-race-shell > .wr-race-hud {
     position: sticky;
     top: 0;
-    grid-template: "brand moves timer exit" auto "course course course course" auto "items items items items" auto
+    grid-template: "brand moves timer exit" auto "course course course course" auto "items items items items" auto "utility utility utility utility" auto
       / minmax(0, 1fr) max-content max-content max-content;
   }
   .duel-v4 .duel-v4-hud-items { grid-area: items; }

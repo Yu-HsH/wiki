@@ -10,7 +10,12 @@ export async function configureExplorationHints(mode, roomId, enabled) {
 
 export async function getExplorationHints(mode, roomId, signal) {
   const { data,error } = await supabase.functions.invoke("exploration-hints",{ body:{ mode,roomId }, signal });
-  if (error) throw error;
+  if (error) {
+    const response = error.context;
+    if (!response?.json) throw error;
+    const body = await response.json().catch(() => null);
+    throw Object.assign(new Error(body?.code ?? "HINTS_UNAVAILABLE"), { status:response.status });
+  }
   if (data?.enabled === false) return null;
   if (data?.enabled !== true || !Array.isArray(data.titles) ||
       !data.titles.every(title => typeof title === "string" && title.trim() && title.length <= 240)) throw new Error("HINTS_UNAVAILABLE");

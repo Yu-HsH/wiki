@@ -8,6 +8,9 @@ import { FinalAssetOverlay, FinalItemIcon, preloadFinalInk } from "../components
 import { createFinalAssetAudio } from "../components/group-items-jungle/finalAssetAudio.js";
 import { itemName, tierLabel } from "../components/group-items-jungle/s5UiContract.js";
 import { duelV4 } from "../services/duelV4Service.js";
+import { checkItemRaceSession } from "../services/itemModeEntryService.js";
+import { createItemRaceReader, itemRaceFailure, itemRaceFailureMessage } from "../services/itemRaceRecovery.js";
+import { createItemRaceClock } from "../services/itemRaceClock.js";
 import DuelV4ItemFeedback from "../components/DuelV4ItemFeedback.jsx";
 import S5KionDock, { MODE_FOLLOWUP_ENABLED } from "../components/group-items-jungle/S5KionDock.jsx";
 import { activeV4Effects, appendDuelV4Notice, createDuelV4Presentation, effectLabels, effectTime, V4_PARRY_WINDOW_MS } from "../services/duelV4Presentation.js";
@@ -47,6 +50,9 @@ const messages = {
   DUEL_V4_MEMBER_REQUIRED: "이 방의 참가자만 경기 상태를 열 수 있습니다.",
   DUEL_V4_ROOM_NOT_AVAILABLE: "방 코드를 확인해주세요.",
   PARRY_WINDOW_CLOSED: "패링 시간이 지났습니다.",
+  PARRY_TARGET_CHANGED: "반사 대상이 바뀌어 패링이 적용되지 않았습니다.",
+  WAITING_ROOM_CLOSED: "이미 닫힌 방이에요.",
+  MATCH_STARTING: "시작 신호를 기다려 주세요.",
   LOST_LINK_NO_DESTINATION: "상대 문서에 이동 가능한 경로가 없습니다.",
   THIEF_NO_TRANSFERABLE_GRANT: "상대가 훔칠 수 있는 아이템을 보유하고 있지 않습니다.",
   CANNON_DESTINATION_UNAVAILABLE: "상대가 다른 문서에 있을 때 차원 대포를 사용할 수 있습니다.",
@@ -110,7 +116,7 @@ function Match({ roomId, user, logout }) {
   const [searchError, setSearchError] = useState(false);
   const [searchAttempt, setSearchAttempt] = useState(0);
   const [error, setError] = useState("");
-  const [connectionError, setConnectionError] = useState("");
+  const [connectionError, setConnectionError] = useState(null);
   const [moveMotion, approveMoveMotion] = useRaceMotion();
   const [documentAttempt, setDocumentAttempt] = useState(0);
   const [documentError, setDocumentError] = useState("");
@@ -120,11 +126,14 @@ function Match({ roomId, user, logout }) {
   const [trapLink, setTrapLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [retry, setRetry] = useState(null);
-  const [clock, setClock] = useState(Date.now);
+  const [clock, setClock] = useState(() => performance.now());
   const [notices, setNotices] = useState([]);
   const [scenes, setScenes] = useState([]);
   const [liveInkId, setLiveInkId] = useState(null);
   const activeWork = useRef(false);
+  const latestState = useRef(null);
+  const readFailure = useRef(null);
+  const reader = useRef(null);
   const audio = useRef(null);
   const feedback = useRef(null);
   const mounted = useRef(false);
@@ -137,19 +146,7 @@ function Match({ roomId, user, logout }) {
   const activeMatch = useRef(0);
   const sound = useSyncExternalStore(audioManager.subscribe, audioManager.getSnapshot, audioManager.getSnapshot);
 
-  const refresh = useCallback(async () => {
-    try {
-      const next = await duelV4.state(roomId);
-      if (!mounted.current) return;
-      setConnectionError("");
-      setState((previous) => previous && (previous.version > next.version ||
-        (previous.version === next.version && Date.parse(previous.serverTime) > Date.parse(next.serverTime))) ? previous
-        : { ...next, receivedAt: Date.now() });
-      return next;
-    } catch (cause) {
-      if (mounted.current) setConnectionError(explanation(cause.message));
-    }
-  }, [roomId]);
+  const refresh = useCallback((options) => reader.current?.(options), []);
 
   const me = state?.players.find((player) => player.id === userId);
   const opponent = state?.players.find((player) => player.id !== userId);
@@ -158,7 +155,8 @@ function Match({ roomId, user, logout }) {
   const scheduled = Boolean(scheduledAt && Date.parse(state.serverTime) < Date.parse(scheduledAt));
   const started = Boolean(state?.startedAt && !scheduled);
   const finished = Boolean(state?.finishedAt);
-  const now = state ? Date.parse(state.serverTime) + Math.max(0, clock - state.receivedAt) : clock;
+  const now = state ? state.displayServerTime + Math.max(0, clock - state.receivedAt) : Date.now();
+  const unavailable = Boolean(connectionError);
   const waiting = Boolean(state && !state.waitingClosedAt && !started);
   const targetBrief = useItemRaceTarget(scheduled || started ? state?.target?.title : null);
   const profiles = useProfileCards([me?.id, opponent?.id]);
@@ -172,11 +170,6 @@ function Match({ roomId, user, logout }) {
       audioManager.prepare(["tick", "go", "itemReveal", "denied"]);
     }
   }, [scheduled, waiting]);
-  useEffect(() => {
-    if (!waiting || scheduled) return;
-    const fallback = setInterval(refresh, 750);
-    return () => clearInterval(fallback);
-  }, [waiting, scheduled, refresh]);
 
   const nextSupplyMs = Date.parse(state?.nextSupplyAt);
   const startedMs = Date.parse(state?.startedAt);
@@ -232,19 +225,64 @@ function Match({ roomId, user, logout }) {
     feedback.current = createDuelV4Presentation(() => output, notice =>
       setNotices(previous => appendDuelV4Notice(previous, notice, Date.now())));
     preloadFinalInk();
+    const lifetime = new AbortController();
+    const serverClock = createItemRaceClock();
+    reader.current = createItemRaceReader(async signal => {
+      const sent = performance.now();
+      try {
+        const next = await duelV4.state(roomId, signal);
+        if (lifetime.signal.aborted) return;
+        const previous = latestState.current;
+        const observedAt = Date.parse(next.serverTime);
+        if (previous && (previous.version > next.version ||
+          (previous.version === next.version && Date.parse(previous.serverTime) > observedAt))) return previous;
+        const receivedAt = performance.now();
+        const displayServerTime = serverClock.observe(observedAt, receivedAt - sent, receivedAt);
+        const accepted = { ...next, receivedAt, displayServerTime };
+        latestState.current = accepted;
+        readFailure.current = null;
+        setConnectionError(null);
+        setState(accepted);
+        return accepted;
+      } catch (cause) {
+        if (lifetime.signal.aborted) return;
+        const failure = itemRaceFailure(cause);
+        readFailure.current = failure;
+        setConnectionError(failure);
+        if (failure.kind === "auth") void checkItemRaceSession(userId);
+      }
+    }, lifetime.signal);
     void refresh();
-    const unsubscribe = duelV4.subscribe(roomId, userId, refresh);
-    const poll = setInterval(refresh, 4500);
-    const ticker = setInterval(() => setClock(Date.now()), 100);
-    window.addEventListener("online", refresh);
+    const unsubscribe = duelV4.subscribe(roomId, userId, () => refresh({ trailing:true }));
+    let poll;
+    function pollState() {
+      const current = latestState.current;
+      if (!current?.finishedAt && !current?.waitingClosedAt) void refresh();
+      poll = setTimeout(pollState, current?.startedAt ? 4500 : 1250);
+    }
+    poll = setTimeout(pollState, 1250);
+    const ticker = setInterval(() => setClock(performance.now()), 100);
+    const resume = () => { if (!window.document.hidden) void refresh({ trailing:true }); };
+    const offline = () => {
+      const failure = { kind:"connection" };
+      readFailure.current = failure;
+      setConnectionError(failure);
+    };
+    window.addEventListener("online", resume);
+    window.addEventListener("offline", offline);
+    window.document.addEventListener("visibilitychange", resume);
     const stop = () => output.stop();
     window.addEventListener("pagehide", stop);
     return () => {
       mounted.current = false;
       unsubscribe();
-      clearInterval(poll);
+      lifetime.abort();
+      reader.current = null;
+      clearTimeout(poll);
       clearInterval(ticker);
-      window.removeEventListener("online", refresh);
+      window.removeEventListener("online", resume);
+      window.removeEventListener("offline", offline);
+      window.document.removeEventListener("visibilitychange", resume);
       window.removeEventListener("pagehide", stop);
       output.dispose();
     };
@@ -268,10 +306,10 @@ function Match({ roomId, user, logout }) {
     ...(state?.effects.filter((effect) => effect.kind === "censor")
       .flatMap((effect) => [effect.startsAt, effect.expiresAt]) || []),
   ].filter((value) => value && effectTime(value) > Date.parse(state?.serverTime)).sort((a, b) => effectTime(a) - effectTime(b))[0];
-  const skew = state ? Date.parse(state.serverTime) - state.receivedAt : 0;
+  const skew = state ? state.displayServerTime - state.receivedAt : 0;
   useEffect(() => {
     if (!boundary || finished) return undefined;
-    const timeout = setTimeout(refresh, Math.max(80, Date.parse(boundary) - (Date.now() + skew) + 120));
+    const timeout = setTimeout(refresh, Math.max(80, Date.parse(boundary) - (performance.now() + skew) + 120));
     return () => clearTimeout(timeout);
   }, [boundary, finished, refresh, skew]);
 
@@ -320,13 +358,14 @@ function Match({ roomId, user, logout }) {
   }, [highlightedQuery]);
 
   async function run(operation, makeInput, previousRequest, item) {
-    if (activeWork.current) return;
+    if (activeWork.current || readFailure.current) return;
     activeWork.current = true;
     setBusy(true);
     setError("");
     let request = previousRequest;
     try {
       request ??= { id: crypto.randomUUID(), operation, input: await makeInput(), itemId: item?.itemId, slot: item?.slot, sentAt: Date.now() };
+      if (!mounted.current || readFailure.current) return;
       let result;
       if (operation === "search") result = await duelV4.search(roomId, { ...request.input, id: request.id });
       else if (operation === "reward") result = await duelV4.reward(roomId, request);
@@ -351,28 +390,37 @@ function Match({ roomId, user, logout }) {
         if (operation === "item" && item?.itemId !== "parry") closeItem();
         if (result.roomId) navigate("/multiplayer/duel-v4/" + result.roomId);
       }
-      const next = await refresh();
+      const next = await refresh({ trailing:true });
       if (needsState && mounted.current) {
         feedback.current.receipt(request, result, next);
         setScenes(feedback.current.scenes());
       }
       return result.ok;
     } catch (cause) {
-      setRetry(request && !cause.code ? request : null);
-      setError(explanation(cause.message));
+      if (!mounted.current) return;
+      const failure = itemRaceFailure(cause);
+      setRetry(request && failure.kind === "connection" ? request : null);
+      if (failure.kind !== "connection" || !messages[cause.message]) {
+        setError(itemRaceFailureMessage(failure));
+        if (failure.kind === "auth") void checkItemRaceSession(userId);
+      } else setError(explanation(cause.message));
     } finally {
       activeWork.current = false;
       if (mounted.current) setBusy(false);
     }
   }
 
-  if (!state) return <RaceFrame mode="duel" label="1:1 아이템전">
-    <RaceHold title={connectionError || "경기를 불러오는 중…"}
-      actions={<Link className="wr-race-btn" to="/play">모드 선택</Link>} />
+  if (!state || ["denied","closed"].includes(connectionError?.kind)) return <RaceFrame mode="duel" label="1:1 아이템전">
+    <RaceHold title={connectionError ? itemRaceFailureMessage(connectionError) : "경기를 불러오는 중…"}
+      actions={<>{connectionError && <button type="button" className="wr-race-btn" onClick={refresh}>다시 확인</button>}
+        <Link className="wr-race-btn" to="/play">모드 선택</Link></>} />
   </RaceFrame>;
 
   const documentReady = searchReady || document?.id === current?.snapshotId;
   const useItem = (item, attackId) => run("item", async () => {
+    if (attackId && effectTime(warning?.dueAt) <= state.displayServerTime + performance.now() - state.receivedAt) {
+      throw new Error("PARRY_WINDOW_CLOSED");
+    }
     const other = item.itemId === "enhancement" && state.inventory.find((row) => row.id !== item.id && !row.enhanced);
     const input = { grantId: item.id, ...(attackId ? { attackId } : {}), ...(other ? { targetGrantId: other.id } : {}) };
     if (item.itemId === "link_index" && item.tier === "enhanced") {
@@ -401,11 +449,10 @@ function Match({ roomId, user, logout }) {
 
   const feedbackScope = roomId + ":" + userId;
   const notice = <div className="duel-v4-messages" aria-live="polite">
-    {MODE_FOLLOWUP_ENABLED && <DuelV4ItemFeedback key={feedbackScope} scope={feedbackScope}
-      events={state.itemFeedback} now={now} />}
-    {(error || connectionError) && <p>{error || connectionError}</p>}
-    {retry && <button type="button" className="wr-race-btn" onClick={() => run(retry.operation, null, retry)} disabled={busy}>같은 요청 재시도</button>}
-    {connectionError && <button type="button" className="wr-race-btn" onClick={refresh}>경기 상태 다시 확인</button>}
+    {connectionError && !started && <p role="status">{itemRaceFailureMessage(connectionError)}</p>}
+    {error && <p>{error}</p>}
+    {retry && <button type="button" className="wr-race-btn" onClick={() => run(retry.operation, null, retry)} disabled={busy || unavailable}>같은 요청 재시도</button>}
+    {connectionError && !started && <button type="button" className="wr-race-btn" onClick={refresh}>경기 상태 다시 확인</button>}
     {documentError && <p role="alert">{documentError} <button type="button" className="wr-race-btn" onClick={() => setDocumentAttempt(value => value+1)}>문서 다시 불러오기</button></p>}
   </div>;
   const elapsed = started ? Math.max(0, Math.floor(((finished ? Date.parse(state.finishedAt) : now) - Date.parse(state.startedAt)) / 1000)) : 0;
@@ -413,10 +460,10 @@ function Match({ roomId, user, logout }) {
     <RaceHold title="방장이 대기방을 닫았어요." actions={<Link className="wr-race-btn" to="/play">플레이로 돌아가기</Link>}/>
   </RaceFrame>;
   if (scheduled) return <ScheduledItemCountdown roomId={roomId} startsAt={scheduledAt}
-    serverObservedAt={state.serverTime} startTitle={current?.title} targetTitle={state.target?.title}
+    serverObservedAt={state.serverTime} clockAnchor={{ server:state.displayServerTime, local:state.receivedAt }} startTitle={current?.title} targetTitle={state.target?.title}
     intro={enteredFromLobby.current && me && opponent && <VsIntroOverlay sceneKey={`v4:${roomId}:${scheduledAt}:${userId}`}
       myName={me.name} opponentName={opponent.name} startTitle={current?.title} targetTitle={state.target?.title}
-      myPlayer={{ user_id:me.id }} opponentPlayer={{ user_id:opponent.id }} presentationDuration={3500} />}
+      myPlayer={{ user_id:me.id }} opponentPlayer={{ user_id:opponent.id }} />}
     onBoundary={refresh}/>;
   if (finished) {
     const won = state.winnerId === userId;
@@ -469,9 +516,9 @@ function Match({ roomId, user, logout }) {
       </LobbyHeader>
       {notice}
       <ItemRoomRoster mode="duel" players={players} user={user} maxPlayers={2} emotes={MODE_FOLLOWUP_ENABLED && me &&
-        <S5KionDock key={feedbackScope} mode="duel" roomId={roomId} actorId={userId}
-          players={state.players} label="대기방 키온 감정표현" />} />
-      <ItemDuelTarget title={state.target?.title} isHost={isHost} busy={busy} onSearchBusy={setTargetSearching}
+        <S5KionDock key={feedbackScope} mode="duel" lobby roomId={roomId} actorId={userId}
+          players={state.players} disabled={unavailable} label="대기방 키온 감정표현" />} />
+      <ItemDuelTarget title={state.target?.title} isHost={isHost} busy={busy || unavailable} onSearchBusy={setTargetSearching}
         onSelect={title => run("target", async () => ({ snapshotId: (await findSnapshot(title)).snapshotId }))} />
       <div className="wr-lobby-actions">
         <span className="wr-lobby-count">{players.length} / 2</span>
@@ -479,7 +526,7 @@ function Match({ roomId, user, logout }) {
           <LobbyIcon name={ready ? "check" : "pending"} />
           {!opponent ? "상대의 입장을 기다리는 중" : !state.target ? "공통 목표를 선택해 주세요" : isHost ? "경기를 시작할 수 있어요" : "방장이 시작하기를 기다리는 중"}
         </p>
-        {isHost && <button type="button" className="wr-btn wr-btn--primary wr-btn--lg" disabled={busy || targetSearching || !ready}
+        {isHost && <button type="button" className="wr-btn wr-btn--primary wr-btn--lg" disabled={busy || unavailable || targetSearching || !ready}
           aria-describedby="item-duel-start-status" onClick={() => void run(state.waitingActionsVersion ? "start_scheduled" : "start", async () => {
             const title = await fetchDistinctRandomTitle(new Set([normalizeTitle(state.target.title)]));
             return { snapshotId: (await findSnapshot(title)).snapshotId };
@@ -496,8 +543,9 @@ function Match({ roomId, user, logout }) {
   const slots = [1, 2].map(slot => {
     const item = state.inventory.find(row => row.slot === slot);
     return item && { key: item.id, itemId: item.itemId, tier: item.tier,
-      available: !busy && !sealed && (item.itemId !== "parry" || Boolean(warning)) };
+      available: !busy && !unavailable && !sealed && (item.itemId !== "parry" || Boolean(warning)) };
   });
+  const liveNotices = notices.filter(notice => notice.until > Date.now());
   return <div className="duel-v4" data-duel-v4-version={state.version}>
     <RaceFrame motion={moveMotion} mode="duel" strip label="1:1 아이템 경기">
       {exitDialog}
@@ -512,38 +560,49 @@ function Match({ roomId, user, logout }) {
         </div>
         <HudStat label="이동" value={(me?.moves ?? 0) + "회"} />
         <HudTimer label="경과" seconds={elapsed} />
-        <HudExit label="기권" onClick={requestExit} disabled={busy} />
+        <HudExit label="기권" onClick={requestExit} disabled={busy || unavailable} />
         <div className="item-race-anchor duel-v4-hud-items" onKeyDown={event => { if (chosen && event.key === "Escape") closeItem(); }}>
-        <ItemRaceSlots items={slots} selected={selected} expanded={Boolean(chosen)} panelId={itemPanelId} duel suppliedGrant={suppliedGrant} rewardGrants={rewardGrant ? [rewardGrant] : []}
+        <ItemRaceSlots items={slots} selected={selected} expanded={Boolean(chosen)} panelId={itemPanelId} duel readOnly={unavailable} suppliedGrant={suppliedGrant} rewardGrants={rewardGrant ? [rewardGrant] : []}
           supplySeconds={state.nextSupplyAt ? secondsLeft(state.nextSupplyAt, now) : null}
           select={(item, event) => { itemOpener.current = event.currentTarget; setSelected(item.key); }} />
         {chosen && <aside className="duel-v4-sheet item-race-popover" id={itemPanelId} aria-label="아이템 사용">
           <div className="duel-v4-item-details"><ItemRaceDescription itemId={chosen.itemId} tier={chosen.tier} mode="duel" /></div>
-          <button type="button" ref={itemPanelClose} onClick={closeItem}>닫기</button>
+          <button type="button" className="wr-race-btn wr-race-btn--ghost" ref={itemPanelClose} onClick={closeItem}>닫기</button>
           {chosen.itemId === "trap" && <label>설치할 링크
             <select value={trapLink} onChange={(event) => setTrapLink(event.target.value)}>
               <option value="">링크 선택</option>
               {state.trapOptions.map((link) => <option value={link.pageId} key={link.pageId}>{link.title}</option>)}
             </select>
           </label>}
-          {chosen.itemId !== "parry" && <button onClick={() => useItem(chosen)}
-            disabled={busy || sealed || (chosen.itemId === "trap" && !trapLink)}>사용</button>}
+          {chosen.itemId !== "parry" && <button type="button" className="wr-race-btn wr-race-btn--primary" onClick={() => useItem(chosen)}
+            disabled={busy || unavailable || sealed || (chosen.itemId === "trap" && !trapLink)}>사용</button>}
         </aside>}
+          {bookmark && bookmark.page.snapshotId !== current?.snapshotId &&
+            <button type="button" className="wr-race-btn item-race-bookmark" onClick={() => run("bookmark", async () => ({}))}
+              disabled={busy || unavailable}>책갈피 복귀</button>}
+        </div>
+        <div className="item-race-utility">
+          <ExplorationHintPanel mode="duel_items" roomId={roomId} />
+          {MODE_FOLLOWUP_ENABLED && me && <S5KionDock key={feedbackScope} mode="duel" roomId={roomId}
+            actorId={userId} players={state.players} disabled={unavailable} label="경기 중 키온 감정표현" />}
+          {liveNotices.filter(notice => notice.key.startsWith("weakening:")).map(notice =>
+            <p key={notice.key} className="item-race-status" role="status">{notice.text}</p>)}
+          {MODE_FOLLOWUP_ENABLED && <DuelV4ItemFeedback key={feedbackScope} scope={feedbackScope} events={state.itemFeedback} now={now} />}
+          {connectionError && <p className="item-race-status" role="status">{itemRaceFailureMessage(connectionError)}
+            {" "}<button type="button" className="wr-race-btn" onClick={refresh}>다시 확인</button>
+          </p>}
         </div>
       </RaceHud>
-      <ExplorationHintPanel mode="duel_items" roomId={roomId} />
       {reward && <section className="duel-v4-reward item-race-reward" aria-label="보상 아이템">
         <FinalItemIcon item={{ itemId: reward.itemId, effectiveTier: reward.tier }} />
         <strong>{itemName(reward.itemId)} {tierLabel(reward.tier)}</strong>
         {state.inventory.length < 2
-          ? <button onClick={() => resolveReward(true)} disabled={busy}>보상 받기</button>
-          : state.inventory.map((item) => <button key={item.id} onClick={() => resolveReward(true, item.id)} disabled={busy}>
+          ? <button onClick={() => resolveReward(true)} disabled={busy || unavailable}>보상 받기</button>
+          : state.inventory.map((item) => <button key={item.id} onClick={() => resolveReward(true, item.id)} disabled={busy || unavailable}>
             {itemName(item.itemId)} 교체
           </button>)}
-        <button onClick={() => resolveReward(false)} disabled={busy}>보상 버리기</button>
+        <button onClick={() => resolveReward(false)} disabled={busy || unavailable}>보상 버리기</button>
       </section>}
-        {bookmark && bookmark.page.snapshotId !== current?.snapshotId &&
-        <button onClick={() => run("bookmark", async () => ({}))} disabled={busy}>책갈피로 돌아가기</button>}
       <div className="wr-race-strip" role="group" aria-label="상대 상태">
         <strong>{opponent?.name || "상대"}</strong>
         {opponent?.page?.title && <span>{opponent.page.title}</span>}
@@ -552,11 +611,9 @@ function Match({ roomId, user, logout }) {
         {connectionError && <ConnectionDot ok={false} label="경기 연결 확인 필요" />}
       </div>
       {notice}
-      {MODE_FOLLOWUP_ENABLED && me && <S5KionDock key={feedbackScope} mode="duel"
-        roomId={roomId} actorId={userId} players={state.players} label="경기 중 키온 감정표현" />}
       <MobileRouteNotes path={ownPath} />
       <div className="duel-v4-feedback" aria-live="polite" aria-relevant="additions text">
-        {notices.filter(notice => notice.until > clock).map(notice =>
+        {liveNotices.filter(notice => !notice.key.startsWith("weakening:")).map(notice =>
           <p key={notice.key} className="wr-pill" data-item-result={notice.tone}>{notice.text}</p>)}
       </div>
       {(effects.some(effect => effectLabels[effect.kind]) || searchTimed || bookmark) && <ul className="duel-v4-effects" aria-label="현재 적용 중인 아이템 효과">
@@ -580,7 +637,7 @@ function Match({ roomId, user, logout }) {
             void run("search", async () => ({ windowId: search.id, query: searchQuery.trim(), documentHash: searchDocument.documentHash }));
           }}>
             <label>문서 검색어 <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} maxLength={4096} /></label>
-            <button disabled={busy || sealed || !searchQuery.trim()}>검색</button>
+            <button disabled={busy || unavailable || sealed || !searchQuery.trim()}>검색</button>
           </form>}
           {searchResult && <p role="status">{searchResult.count === null ? "검색 결과를 확인 중입니다."
             : `“${searchResult.query}” ${searchResult.count}개 발견`}</p>}
@@ -592,14 +649,14 @@ function Match({ roomId, user, logout }) {
         <WikiViewer target={targetBrief} currentTitle={current?.title} currentSummary={documentReady ? document?.summary : ""}
           currentDocumentHtml={searchReady ? searchDocument.documentHtml : documentReady ? document?.html : ""}
           links={documentReady ? document?.links : []} authorizedSearchQuery={highlightedQuery}
-          isLoading={!documentReady && !documentError} readOnly={busy || !documentReady || stunned} onLinkClick={navigateLink}
+          isLoading={!documentReady && !documentError} readOnly={busy || unavailable || !documentReady || stunned} onLinkClick={navigateLink}
           censoredTitles={state.censoredTitles} />
       </section>
-        <FinalAssetOverlay pulse={pulse} frame={frame} value={{ shieldActive: protectedByShield, thunder,
-          lost: warning?.itemId === "lost_link", scenes }} />
+        {!unavailable && <FinalAssetOverlay pulse={pulse} frame={frame} value={{ shieldActive: protectedByShield, thunder,
+          lost: warning?.itemId === "lost_link", scenes }} />}
       </div>
       </div>
-      {linkIndex && <LinkList key={linkIndex.id} index={linkIndex} disabled={busy || stunned} onLink={navigateLink} />}
+      {linkIndex && <LinkList key={linkIndex.id} index={linkIndex} disabled={busy || unavailable || stunned} onLink={navigateLink} />}
       {state.rouletteSupplyWeakened && <p role="status">다음에 실제로 받는 보급 아이템이 약화됩니다.</p>}
       <footer className="duel-v4-dock" data-item-race-dock aria-label="아이템 대응">
         {warning && <div className="duel-v4-warning" role="status">
@@ -610,7 +667,7 @@ function Match({ roomId, user, logout }) {
               <span>{(Math.ceil(warningMs / 100) / 10).toFixed(1)}초</span>
             </div>
           </div>
-          {parry && <button className="duel-v4-parry" onClick={() => useItem(parry, warning.id)} disabled={busy || sealed}>패링</button>}
+          {parry && <button className="duel-v4-parry" onClick={() => useItem(parry, warning.id)} disabled={busy || unavailable || sealed}>패링</button>}
         </div>}
       </footer>
       {documentReady && <ScrollToTopButton race />}

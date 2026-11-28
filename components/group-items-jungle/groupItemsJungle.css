@@ -1,4 +1,10 @@
 .group-items-jungle .wr-race-body { min-height: 0; }
+.s5-lobby-ready { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; align-items: center; }
+.s5-lobby-ready p { margin: 0; }
+.wr-room--group .s5-lobby-emotes { padding: .15rem clamp(.6rem, 2vw, 1.65rem); }
+@media (max-width: 760px) {
+  .wr-room--group .wr-group-main.s5-lobby-candidates { order: 0; }
+}
 .group-items-jungle .gip-document > .wr-race-main { flex: 1; min-width: 0; overflow: auto; }
 .group-items-jungle-dock { flex: none; min-width: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
 [data-product-group-phase="playing"] .group-items-jungle .group-items-jungle-dock {
@@ -65,7 +71,7 @@
   [data-product-group-phase="playing"] .group-items-jungle .wr-race .wr-race-shell > .wr-race-hud {
     position: sticky;
     top: 0;
-    display: grid; grid-template: "brand moves clock" auto "course course course" auto "items items items" auto / max-content auto minmax(0, 1fr);
+    display: grid; grid-template: "brand moves clock" auto "course course course" auto "items items items" auto "utility utility utility" auto / max-content auto minmax(0, 1fr);
   }
   .group-items-hud-slots { grid-area: items; }
   .group-items-jungle .wr-race-hud > .wr-hud-brand { grid-area: brand; padding-block: .4rem; }

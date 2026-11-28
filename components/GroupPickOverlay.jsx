@@ -14,19 +14,19 @@ const GROUP_START_AUDIO = [{ id: 'roster', at: 0, sound: 'open' },
   { id: 'departure', at: 4000, sound: 'go' }];
 const SCHEDULED_GROUP_START_AUDIO = GROUP_START_AUDIO.filter(cue => cue.sound !== "go");
 
-export default function GroupPickOverlay({ startTitle, targetTitle, players = [], sceneKey = null, startedAt = null, motionEligible = true, onComplete, presentationDuration = 5400 }) {
+export default function GroupPickOverlay({ startTitle, targetTitle, players = [], sceneKey = null, startedAt = null, motionEligible = true, onComplete, presentationDuration = 5400, scheduledElapsedMs = 0 }) {
   const completeRef = useRef(onComplete), root = useRef(null);
   useEffect(() => { completeRef.current = onComplete; }, [onComplete]);
   const cards = useProfileCards(players.map(p => p.user_id));
   const [skipped, setSkipped] = useState(false);
   const freshEntry = useRef(!startedAt || (Number.isFinite(Date.parse(startedAt)) && Date.now() - Date.parse(startedAt) < 5400));
-  const sequence = useSceneSequence(sceneKey && `scene:start:group:${sceneKey}`, { eligible: motionEligible && freshEntry.current, confirmed: Boolean(startTitle && targetTitle && players.length >= 3), duration:presentationDuration, stopped: skipped });
+  const sequence = useSceneSequence(sceneKey && `scene:start:group:${sceneKey}`, { eligible: motionEligible && freshEntry.current, confirmed: Boolean(startTitle && targetTitle && players.length >= 3), duration:presentationDuration - scheduledElapsedMs, stopped: skipped });
   const soundFrame = useAudioCues(`group-start:${sceneKey}`, presentationDuration === 5400 ? GROUP_START_AUDIO : SCHEDULED_GROUP_START_AUDIO);
   useEffect(() => { if (sequence) audioManager.prepare(['open', 'reveal', 'go']); }, [sequence]);
   useEffect(() => { if (skipped) audioManager.stopEffects(); }, [skipped]);
   const pace = 5400 / presentationDuration;
   useCinematicFrame(root, sequence, (element,time,reduced) => drawGroupStart(element,time*pace,reduced),
-    presentationDuration, (elapsed,active) => soundFrame(elapsed*pace,active));
+    presentationDuration, (elapsed,active) => soundFrame(elapsed*pace,active), scheduledElapsedMs);
   useEffect(() => { const timer = setTimeout(() => completeRef.current?.(), presentationDuration); return () => clearTimeout(timer); }, [presentationDuration]);
   return <CinematicStage stageRef={root} scene="group-start" active={sequence} className={`group-pick-overlay wr-start-overlay wr-group-departure${players.length > 5 ? " eight" : ""}${sequence ? " is-group-sequence" : ""}${Math.max(startTitle?.length || 0, targetTitle?.length || 0) > 45 ? " long" : ""}`} label="원정대 출발 안내">
     <section className="group-composition">

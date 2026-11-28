@@ -31,6 +31,22 @@ declare
   viewer ink_product.members;
   m ink_product_engine.ink_members_v1;
   opponent ink_product_engine.ink_members_v1;
+  caster ink_product_engine.ink_members_v1;
+  roulette_grant uuid;
+  roulette_request uuid:=gen_random_uuid();
+  failed_curse_grant uuid:=gen_random_uuid();
+  failed_curse_request uuid:=gen_random_uuid();
+  curse_grant uuid;
+  curse_request uuid:=gen_random_uuid();
+  curse_payload jsonb;
+  curse_event jsonb;
+  attack_grant uuid;
+  parry_grant uuid;
+  parry_request uuid;
+  parry_tier text;
+  parry_deadline timestamptz;
+  parry_child uuid;
+  parry_round integer:=40;
   lost_grant uuid;
   item_payload jsonb;
   v text;
@@ -109,6 +125,7 @@ begin
   select version::text into v from ink_product.rooms where id=r.id;
   reply:=public.act_group_items_product_room_v1('start_scheduled',r.id,gen_random_uuid(),v,b,'{}');
   assert reply->>'ok'='true',reply::text;
+  assert (select scheduled_start_at > clock_timestamp()+interval '7 seconds' from ink_product.rooms where id=r.id);
   assert (select count(*) from ink_product.free_wiki_pages_v1 f where f.room_id=r.id)=2;
   update ink_product.rooms set scheduled_start_at=clock_timestamp()-interval '1 second' where id=r.id;
   reply:=public.get_group_items_product_room_v1(r.id,b);
@@ -126,6 +143,74 @@ begin
 
   assert cardinality(ink_product_engine.ink_s5_lost_link_candidates_v1(m,clock_timestamp()))=0,'cold document has no v4-style cached landing';
   select * into strict opponent from ink_product_engine.ink_members_v1 where session_id=sid and user_id=users[2];
+  select * into strict caster from ink_product_engine.ink_members_v1 where session_id=sid and user_id=users[3];
+  update ink_product_engine.ink_grants_v1 set item_id='roulette',base_tier='normal'
+    where session_id=sid and owner_participant_id=opponent.participant_id and consumed_at is null returning grant_id into roulette_grant;
+  perform set_config('request.jwt.claim.sub',users[2]::text,true);
+  -- The public RPC chooses a private random receipt. Roll back the fixture's
+  -- unwanted outcomes so the real failed draw is the one that commits.
+  for attempt in 1..30 loop
+    begin
+      reply:=public.act_group_items_product_v1(r.id,sid,b,roulette_request,'roulette',
+        jsonb_build_object('grantId',roulette_grant,'expectedInventoryVersion',opponent.inventory_version::text))->'body';
+      if reply->>'success'='true' then raise exception using errcode='P1901'; end if;
+      exit;
+    exception when sqlstate 'P1901' then null;
+    end;
+  end loop;
+  assert reply->>'code'='ROULETTE_RESOLVED' and reply->>'success'='false',reply::text;
+  assert exists(select from ink_product_engine.ink_s5_modifiers_v1
+    where session_id=sid and participant_id=opponent.participant_id and source_receipt=(reply->>'receiptId')::uuid and kind='weakening');
+  assert exists(select from ink_product_engine.ink_s5_roulette_supply_v1
+    where session_id=sid and participant_id=opponent.participant_id and applied_grant_id is null);
+  assert (public.get_group_items_product_state_v1(r.id,sid,b))#>'{body,weakeningHits}'='[]'::jsonb,
+    'roulette self-weakening must not project an incoming curse';
+  assert not exists(select from ink_product_engine.ink_grants_v1
+    where session_id=sid and owner_participant_id=opponent.participant_id and consumed_at is null);
+  raise notice 'PASS failed roulette reserves real self-weakening without incoming feedback';
+
+  update ink_product_engine.ink_grants_v1 set item_id='weakening',base_tier='normal'
+    where session_id=sid and owner_participant_id=caster.participant_id and consumed_at is null returning grant_id into curse_grant;
+  insert into ink_product_engine.ink_grants_v1(session_id,grant_id,owner_participant_id,owner_epoch,item_id,base_tier,slot_index,granted_at)
+    values(sid,failed_curse_grant,caster.participant_id,caster.owner_epoch,'weakening','weakened',1,clock_timestamp());
+  update ink_product_engine.ink_members_v1 set inventory_version=inventory_version+1
+    where session_id=sid and participant_id=caster.participant_id returning * into caster;
+  perform set_config('request.jwt.claim.sub',users[3]::text,true);
+  for attempt in 1..30 loop
+    begin
+      reply:=public.act_group_items_product_v1(r.id,sid,b,failed_curse_request,'weakening',
+        jsonb_build_object('grantId',failed_curse_grant,'expectedInventoryVersion',caster.inventory_version::text,
+          'targetParticipantId',opponent.participant_id))->'body';
+      if reply->>'code'='WEAKENING_APPLIED' then raise exception using errcode='P1901'; end if;
+      exit;
+    exception when sqlstate 'P1901' then null;
+    end;
+  end loop;
+  assert reply->>'code'='WEAKENING_CHANCE_FAILED',reply::text;
+  select * into strict caster from ink_product_engine.ink_members_v1 where session_id=sid and user_id=users[3];
+  curse_payload:=jsonb_build_object('grantId',curse_grant,'expectedInventoryVersion',caster.inventory_version::text,
+    'targetParticipantId',opponent.participant_id);
+  perform set_config('request.jwt.claim.sub',users[3]::text,true);
+  reply:=public.act_group_items_product_v1(r.id,sid,b,gen_random_uuid(),'weakening',
+    curse_payload||jsonb_build_object('targetParticipantId',caster.participant_id))->'body';
+  assert reply->>'ok'='false',reply::text;
+  perform set_config('request.jwt.claim.sub',users[2]::text,true);
+  assert (public.get_group_items_product_state_v1(r.id,sid,b))#>'{body,weakeningHits}'='[]'::jsonb;
+  perform set_config('request.jwt.claim.sub',users[3]::text,true);
+  reply:=public.act_group_items_product_v1(r.id,sid,b,curse_request,'weakening',curse_payload)->'body';
+  assert reply->>'code'='WEAKENING_APPLIED' and reply->>'pendingCharges'='1',reply::text;
+  assert (public.get_group_items_product_state_v1(r.id,sid,b))#>'{body,weakeningHits}'='[]'::jsonb;
+  assert (public.act_group_items_product_v1(r.id,sid,b,curse_request,'weakening',curse_payload)->'body')->>'receiptId'=reply->>'receiptId';
+  perform set_config('request.jwt.claim.sub',users[2]::text,true);
+  curse_event:=(public.get_group_items_product_state_v1(r.id,sid,b))#>'{body,weakeningHits}';
+  assert jsonb_array_length(curse_event)=1 and (curse_event->0->>'id')::uuid in
+    (select right_id from ink_product_engine.ink_s5_modifiers_v1
+     where session_id=sid and participant_id=opponent.participant_id and kind='weakening' and source_receipt=(reply->>'receiptId')::uuid),
+    curse_event::text;
+  assert (public.get_group_items_product_state_v1(r.id,sid,b))#>'{body,weakeningHits}'=curse_event;
+  perform set_config('request.jwt.claim.sub',users[1]::text,true);
+  assert (public.get_group_items_product_state_v1(r.id,sid,b))#>'{body,weakeningHits}'='[]'::jsonb;
+  raise notice 'PASS invalid and chance-failed curses have no feedback; committed pending curse projects one stable event to its target';
   update ink_product_engine.ink_grants_v1 set item_id='lost_link',base_tier='normal'
     where session_id=sid and owner_participant_id=m.participant_id and consumed_at is null returning grant_id into lost_grant;
   item_payload:=jsonb_build_object('grantId',lost_grant,'expectedInventoryVersion',m.inventory_version::text,
@@ -144,6 +229,45 @@ begin
   perform public.get_group_items_product_state_v1(r.id,sid,b);
   assert (select current_page_id='98830003' from ink_product_engine.ink_members_v1 where session_id=sid and user_id=users[2]);
   raise notice 'PASS cached landing uses a verified outgoing link only';
+
+  -- Deterministic local grants leave the production supply rules untouched.
+  foreach parry_tier in array array['normal','enhanced','weakened','late'] loop
+    attack_grant:=gen_random_uuid();
+    parry_grant:=gen_random_uuid();
+    parry_request:=gen_random_uuid();
+    parry_round:=parry_round+1;
+    select * into strict m from ink_product_engine.ink_members_v1 where session_id=sid and user_id=users[1];
+    insert into ink_product_engine.ink_grants_v1(session_id,grant_id,owner_participant_id,owner_epoch,
+      item_id,base_tier,slot_index,granted_at,source_round)
+    values (sid,attack_grant,m.participant_id,m.owner_epoch,'ink','normal',0,clock_timestamp(),parry_round),
+      (sid,parry_grant,caster.participant_id,caster.owner_epoch,'parry',
+        case when parry_tier='late' then 'normal' else parry_tier end,0,clock_timestamp(),parry_round);
+    perform set_config('request.jwt.claim.sub',users[1]::text,true);
+    reply:=public.act_group_items_product_v1(r.id,sid,b,gen_random_uuid(),'attack',jsonb_build_object(
+      'grantId',attack_grant,'expectedInventoryVersion',m.inventory_version::text,
+      'targetParticipantIds',jsonb_build_array(caster.participant_id)))->'body';
+    assert reply->>'code'='ATTACK_ACCEPTED',reply::text;
+    parry_deadline:=(reply->>'dueAt')::timestamptz;
+    parry_child:=(reply#>>'{children,0,childId}')::uuid;
+    if parry_tier='late' then
+      perform pg_sleep(greatest(0,extract(epoch from (parry_deadline-clock_timestamp())))+0.155);
+    end if;
+    perform set_config('request.jwt.claim.sub',users[3]::text,true);
+    reply:=public.act_group_items_product_v1(r.id,sid,b,parry_request,'parry',
+      jsonb_build_object('grantId',parry_grant,'childId',parry_child))->'body';
+    if parry_tier='late' then
+      assert reply->>'code'='PARRY_CLOSED',reply::text;
+      assert (reply->>'authorityReceivedAt')::timestamptz >= parry_deadline,reply::text;
+    else
+      assert reply->>'code'='PARRY_ACCEPTED',reply::text;
+      assert reply->>'outcome'=case when parry_tier='weakened' then 'blocked' else 'reflected' end,reply::text;
+      assert (reply->>'authorityReceivedAt')::timestamptz < parry_deadline,reply::text;
+    end if;
+    assert (public.act_group_items_product_v1(r.id,sid,b,parry_request,'parry',
+      jsonb_build_object('grantId',parry_grant,'childId',parry_child))->'body')->>'receiptId'=reply->>'receiptId';
+  end loop;
+  raise notice 'PASS actual RPC parry normal/enhanced reflect, weakened block, late rejection and idempotent retry';
+  perform set_config('request.jwt.claim.sub',users[1]::text,true);
   select * into strict viewer from ink_product.members where ink_product.members.room_id=r.id and actor_id=users[1];
   frame:=jsonb_build_object('pageId',a.page_id,'revisionId',a.revision_id,'snapshotId',a.id,'progressVersion',viewer.progress_version::text);
   reply:=public.get_group_items_product_document_v1(r.id,sid,b,frame);
@@ -159,6 +283,13 @@ begin
   assert reply->>'code'='MOVED' and reply->>'pageId'='98830003',reply::text;
   select * into strict viewer from ink_product.members where ink_product.members.room_id=r.id and actor_id=users[1];
   assert viewer.snapshot_id=(ink_product.course_document(sid,'98830003')).id;
+  begin
+    perform public.get_group_items_product_document_v1(r.id,sid,b,jsonb_build_object(
+      'pageId',a.page_id,'revisionId',a.revision_id,'snapshotId',a.id,'progressVersion','0'));
+    assert false,'old frame cannot be read after movement';
+  exception when invalid_parameter_value then
+    assert sqlerrm='STALE_DOCUMENT',sqlerrm;
+  end;
   assert public.prepare_s5_wiki_document_v1(r.id,users[1],move_snap,'<p>Free</p>',array['Free'],'{}');
   assert exists(select from ink_product_engine.ink_s5_search_documents_v1 s where s.snapshot_id=viewer.snapshot_id);
   assert not has_function_privilege('authenticated','public.prepare_s5_wiki_document_v1(uuid,uuid,uuid,text,text[],jsonb)','EXECUTE');

@@ -289,7 +289,8 @@ export function AuthProvider({ children }) {
     setTutorialSignupUserId(null);
     if (isSupabaseConfigured) {
       clearLocalUser();
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) throw error;
       setUser(null);
       return;
     }

@@ -1,63 +1,42 @@
-/* Players: a normal row in the sticky item dock. No overlap with parry or
-   item selectors, even when the article is scrolled to the final link. */
-.group-items-jungle-dock .s5-kion-dock .wr-race-emotes {
-  position: relative;
-  right: auto;
-  bottom: auto;
-  width: 100%;
-  min-height: 50px;
-  margin: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 4px 10px;
-}
-.group-items-jungle-dock .s5-kion-dock .wr-race-emotes__reactions {
-  min-height: 42px;
-}
-.s5-kion-dock .wr-race-emotes__reaction .wr-kion-sticker {
-  --wr-kion-size: 42px !important;
-}
-.s5-kion-dock--spectator .wr-race-emotes {
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-}
-@media (max-width: 760px) {
-  .group-items-jungle-dock .s5-kion-dock .wr-race-emotes {
-    padding: 3px 8px;
-    gap: 6px;
-  }
-  .s5-kion-dock--spectator .wr-race-emotes {
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-@media (max-width: 600px) {
-  [data-s5-sticky-dock] .s5-dock-content .wr-race-emotes:has(.wr-kion-picker__panel) {
-    flex-wrap: wrap;
-  }
-  [data-s5-sticky-dock] .s5-dock-content .wr-race-emotes__actions:has(.wr-kion-picker__panel) {
-    flex: 1 0 100%;
-    align-items: flex-start;
-    justify-content: flex-end;
-  }
-  [data-s5-sticky-dock] .s5-dock-content .wr-kion-picker__panel {
-    position: static;
-    width: min(274px, calc(100vw - 72px));
-    margin-top: 4px;
-  }
-}
-
-/* Inline lobby and v4 reactions never cover navigation or item controls. */
-.s5-kion-dock--inline .wr-race-emotes {
+.s5-kion-dock--lobby .wr-race-emotes {
   position: relative;
   inset: auto;
-  width: min(510px, 100%);
-  margin-block: 8px;
+  width: min(100%, 510px);
+  margin-block: .4rem;
 }
-
 .s5-kion-dock .wr-race-emotes--compact {
-  position: relative; inset: auto; z-index: 2; min-height: 0; width: auto; padding: 0;
-  margin: 0; background: transparent; box-shadow: none; border: 0;
+  position: relative;
+  inset: auto;
+  z-index: 2;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .s5-kion-dock .wr-race-emotes--compact .wr-race-emotes__reactions:empty { display: none; }
-.s5-kion-dock .wr-race-emotes--compact .wr-race-emotes__actions { min-width: 0; gap: .25rem; }
-.s5-kion-dock .wr-race-emotes--compact .wr-kion-picker__panel { inset-inline: 0 auto; z-index: 10; }
+.s5-kion-dock .wr-race-emotes--compact .wr-race-emotes__actions { margin-inline-start: auto; }
+.s5-kion-dock .wr-race-emotes__reaction .wr-kion-sticker { --wr-kion-size: 52px !important; }
+.s5-kion-dock .wr-race-emotes__sender { font-size: .75rem; }
+.item-race-utility .s5-kion-dock .wr-race-emotes:has(.wr-kion-picker__panel) { flex-wrap: wrap; }
+.item-race-utility .s5-kion-dock .wr-race-emotes__actions:has(.wr-kion-picker__panel) {
+  display: grid;
+  justify-items: end;
+  flex: 1 0 100%;
+}
+.item-race-utility .s5-kion-dock .wr-kion-picker__panel {
+  position: static;
+  width: min(18rem, calc(100vw - 2rem));
+  max-block-size: 22dvh;
+  overflow: auto;
+  margin-block-start: .2rem;
+}
+.item-race-utility > .s5-kion-dock { flex-basis: 8rem; }
+.item-race-utility > .s5-kion-dock:has(.wr-race-emotes__reaction) { flex-basis: 14rem; }
+.item-race-utility:has(.s5-kion-dock .wr-kion-picker__panel) > .s5-kion-dock { flex-basis: 100%; }
+@media (max-width: 760px) {
+  .s5-kion-dock .wr-race-emotes__reaction { gap: .2rem; }
+  .s5-kion-dock .wr-race-emotes__reaction .wr-kion-sticker { --wr-kion-size: 46px !important; }
+}

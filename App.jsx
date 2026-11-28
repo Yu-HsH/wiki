@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AudioControls from "./components/AudioControls.jsx";
 import TutorialAppHost, { TutorialBlockedRoute, useTutorialApp } from "./components/TutorialAppHost.jsx";
 import TutorialPracticePage from "./pages/TutorialPracticePage.jsx";
@@ -18,6 +18,8 @@ import { AuthProvider, useAuth } from "./authContext";
 import { saveGameRecord } from "./rankingService";
 import GamePage from "./pages/GamePage";
 import LoginPage from "./pages/LoginPage";
+import { checkItemRaceSession } from "./services/itemModeEntryService.js";
+import { itemRaceReturnPath } from "./services/itemRaceRecovery.js";
 import MainPage from "./pages/MainPage";
 import RankingPage from "./pages/RankingPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -72,9 +74,25 @@ function ProtectedRoute({ children }) {
  * 온라인 입장·대기실 화면 — 로그인 사용자 전용 (확정 계약: 게스트는 싱글만).
  * 로컬 게스트는 PLAY로 돌려보낸다. PLAY에서 온라인 모드는 "로그인 후 이용 가능"으로 표시된다.
  */
-function OnlineRoute({ children }) {
+function OnlineRoute({ children, resumeItemRoom = false }) {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
   const access = getOnlineAccess({ loading, user });
+  const roomPath = resumeItemRoom ? itemRaceReturnPath(pathname) : null;
+  const actorId = user?.id;
+  useEffect(() => {
+    if (!roomPath || !actorId || access !== "allowed") return undefined;
+    const check = () => { if (!document.hidden) void checkItemRaceSession(actorId); };
+    check();
+    const poll = setInterval(check, 30000);
+    window.addEventListener("online", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(poll);
+      window.removeEventListener("online", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [access, actorId, roomPath]);
 
   if (access === "loading") {
     return (
@@ -83,17 +101,18 @@ function OnlineRoute({ children }) {
       </div>
     );
   }
-  if (access === "login") return <Navigate to={LOGIN_PATH} replace />;
+  if (access === "login") return <Navigate to={LOGIN_PATH} replace state={roomPath ? { itemRaceReturn: roomPath } : null} />;
   if (access === "guest") return <Navigate to="/play" replace />;
-  return children;
+  return resumeItemRoom ? <React.Fragment key={actorId}>{children}</React.Fragment> : children;
 }
 
 function LoginRoute() {
   const { user, loading } = useAuth();
-  const { search } = useLocation();
+  const { search, state } = useLocation();
+  const resume = itemRaceReturnPath(state?.itemRaceReturn);
   if (loading) return null;
-  if (user) return <Navigate to={postLoginTutorialPath(search)} replace />;
-  return <LoginPage />;
+  if (user) return <Navigate to={(!user.isGuest && resume) || postLoginTutorialPath(search)} replace />;
+  return <LoginPage resumeTo={resume} />;
 }
 
 function LobbyRoute({ view = "home" }) {
@@ -229,7 +248,7 @@ function AppRoutes() {
     <Routes>
       {DuelV4Route && (
         <Route path="/multiplayer/duel-v4/:roomId?" element={
-          <OnlineRoute>
+          <OnlineRoute resumeItemRoom>
             <React.Suspense fallback={<p role="status">1:1 아이템전 준비 중…</p>}>
               <DuelV4Route />
             </React.Suspense>
@@ -238,7 +257,7 @@ function AppRoutes() {
       )}
       {ProductGroupItemsRoute && (
         <Route path="/multiplayer/group-items/:roomId?" element={
-          <OnlineRoute>
+          <OnlineRoute resumeItemRoom>
             <React.Suspense fallback={<p role="status">아이템전 준비 중…</p>}>
               <ProductGroupItemsRoute />
             </React.Suspense>

@@ -12,21 +12,25 @@ DECLARE
   applied_count integer;
   item_followup_count integer;
   free_wiki_count integer;
+  playtest_count integer;
 BEGIN
   SELECT count(*),
          count(*) FILTER (WHERE version IN ('20261126142000', '20261126142100')),
-         count(*) FILTER (WHERE version IN ('20261127013759', '20261127014804'))
-    INTO applied_count, item_followup_count, free_wiki_count
+         count(*) FILTER (WHERE version IN ('20261127013759', '20261127014804')),
+         count(*) FILTER (WHERE version IN ('20261128055613', '20261128075609'))
+    INTO applied_count, item_followup_count, free_wiki_count, playtest_count
     FROM supabase_migrations.schema_migrations;
   IF current_user <> 'postgres' OR current_database() <> 'postgres'
      OR current_setting('wiki_launch.target') NOT IN ('isolated', 'ctdpyrmitljgrcgfvndn')
      OR current_setting('wiki_launch.action') NOT IN ('stage', 'start_jobs', 'open_modes', 'close_modes')
      OR (current_setting('wiki_launch.target') = 'isolated' AND inet_server_addr() IS NOT NULL)
      OR (current_setting('wiki_launch.target') <> 'isolated' AND inet_server_addr() IS NULL)
+     -- The new release requires both playtest versions after the rematch migration.
      OR NOT (
-       (applied_count, item_followup_count) IN ((68, 0), (70, 2))
+       (playtest_count = 0 AND (applied_count, item_followup_count) IN ((68, 0), (70, 2)))
        OR (item_followup_count = 2 AND free_wiki_count = 2 AND (
-         applied_count = 72 OR (applied_count = 73
+         (applied_count, playtest_count) = (72, 0)
+         OR ((applied_count, playtest_count) IN ((73, 0), (75, 2))
            AND EXISTS (SELECT FROM supabase_migrations.schema_migrations WHERE version = '20261127093952'))
        ))
      )

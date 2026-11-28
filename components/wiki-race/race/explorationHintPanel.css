@@ -1,42 +1,28 @@
 .wr-exploration-hints {
   align-self: start;
   max-width: min(100%, 30rem);
-  padding: .45rem .85rem;
+  padding: .35rem .6rem;
+  color: #283e32;
 }
 .wr-exploration-hints summary {
   cursor: pointer;
   font-weight: 700;
+  min-height: 34px;
+  align-content: center;
 }
-.wr-exploration-hints ul {
-  max-block-size: 8rem;
+.wr-exploration-hints__body {
+  max-block-size: min(16dvh, 9rem);
   overflow: auto;
-  margin-block: .4rem 0;
-  padding-inline-start: 1.4rem;
+  overscroll-behavior: contain;
 }
-.wr-exploration-hints p {
-  margin-block: .4rem 0;
-}
-.wr-exploration-hints__notice {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  margin-block-end: .3rem;
-}
-.wr-exploration-hints__notice.is-animated {
-  position: fixed; inset: min(30dvh, 14rem) 12px auto auto; z-index: 42;
-  max-width: calc(100vw - 24px); padding: .35rem .65rem;
-  background: #fff8e9; border: 1px solid #a18a61; border-radius: .6rem;
-  color: #204b3c; box-shadow: 0 .2rem .8rem #332c262a; pointer-events: none;
-  animation: wr-hint-arrive .48s cubic-bezier(.18,.78,.26,1.15) both;
-}
-.wr-exploration-hints [data-new-hint] {
-  border-inline-start: 3px solid #348169; background: #d8eee2; color: #174d3d;
-  padding: .3rem .5rem; border-radius: .25rem; font-weight: 650;
-  animation: wr-hint-arrive .55s cubic-bezier(.18,.78,.26,1.15) both;
-}
-.wr-exploration-hints [data-new-hint] + [data-new-hint] { animation-delay: .09s; }
-.wr-exploration-hints [data-new-hint] + [data-new-hint] + [data-new-hint] { animation-delay: .18s; }
-@keyframes wr-hint-arrive { from { opacity: 0; transform: translateY(-10px) scale(.95); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) {
-  .wr-exploration-hints__notice.is-animated, .wr-exploration-hints [data-new-hint] { animation: none; }
+.wr-exploration-hints ul { margin-block: .3rem 0; padding-inline-start: 1.4rem; }
+.wr-exploration-hints p { margin-block: .3rem 0; }
+.wr-exploration-hints__new {
+  display: inline-block;
+  margin-inline-start: .35rem;
+  padding: .18rem .4rem;
+  border-radius: .35rem;
+  background: #d8eee2;
+  color: #174d3d;
+  font-size: .8em;
 }

@@ -131,13 +131,14 @@ test('v4 keeps S5 lost-link and censor cues bound to a newly observed attack or 
   assert.equal(presenter.scene().kind, 'lost-arrive');
 });
 
-test('a failed roulette does not announce or play a second weakening cue', () => {
+test('v4 plays curse impact once from a recipient event, independent of roulette or inventory changes', () => {
   const { observe, audio } = capture();
   observe(1000, projection(1000, { inventory: [{ id: 'grant', weakened: false }] }));
   observe(1100, projection(1100, { inventory: [{ id: 'grant', weakened: true }], rouletteSupplyWeakened: true }));
   assert.deepEqual(audio, []);
-  observe(1200, projection(1200, { inventory: [{ id: 'new', weakened: false }] }));
-  observe(1300, projection(1300, { inventory: [{ id: 'new', weakened: true }] }));
+  const observedHit = { id:'curse', kind:'weakening_hit', expiresAt:stamp(31_200) };
+  observe(1300, projection(1300, { itemFeedback:[observedHit], rouletteSupplyWeakened:true }));
+  observe(1400, projection(1400, { itemFeedback:[observedHit] }));
   assert.deepEqual(audio, ['weakening_curse/apply']);
 });
 

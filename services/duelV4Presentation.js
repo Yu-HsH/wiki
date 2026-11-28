@@ -1,4 +1,4 @@
-import { attackMotion, finalMovementSignal, finalReceiptSignal, finalResultSignal } from '../components/group-items-jungle/finalAssetEvents.js';
+import { attackMotion, finalMovementSignal, finalReceiptSignal, finalResultSignal, weakeningHitSignal } from '../components/group-items-jungle/finalAssetEvents.js';
 import { createFinalAssetPresentation } from '../components/group-items-jungle/finalAssetPresentation.js';
 import { itemName } from '../components/group-items-jungle/s5UiContract.js';
 
@@ -54,11 +54,11 @@ const receiptMessages = {
   TRAP_ARRIVAL: '깜짝상자 적중 · 도착 뒤 이동 제한', CANNON_LANDED: '차원 대포 성공 · 상대 문서 도착',
   CANNON_RETURNED: '차원 대포 실패 · 시작 문서로 복귀', ROULETTE_FAILED: '혼돈 룰렛 실패 · 다음 보급 약화',
   ROULETTE_WON: '혼돈 룰렛 성공 · 보상 확인', ROULETTE_BOOSTED: '혼돈 룰렛 강화 성공 · 보상 확인',
-  THUNDER_SELF_STUN: '천둥 심판 실패 · 자신이 감전', THUNDER_SELF_PENALTY: '천둥 심판 실패 · 자신에게 페널티',
+  THUNDER_SELF_STUN: '천둥 성공 · 약화되어 자신이 2초 감전', THUNDER_SELF_PENALTY: '천둥 실패 · 자신이 감전되고 아이템이 봉인됐어요',
   SEARCH_OPENED: '문서 검색 열림 · 첫 검색 때 소모', SEARCH_SUBMITTED: '문서 검색 완료',
 };
 
-const failedReceipts = new Set(['ITEM_CHANCE_FAILED', 'THIEF_EMPTY', 'ROULETTE_FAILED', 'THUNDER_SELF_PENALTY', 'THUNDER_SELF_STUN', 'CANNON_RETURNED']);
+const failedReceipts = new Set(['ITEM_CHANCE_FAILED', 'THIEF_EMPTY', 'ROULETTE_FAILED', 'THUNDER_SELF_PENALTY', 'CANNON_RETURNED']);
 
 export function duelV4AttackFeedback(row, userId) {
   const attacker = row.actor_id === userId;
@@ -217,11 +217,12 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
         if (!claim(`item-feedback:${event.id}`) || recovered || happenedAt <= initialServerTime ||
             now - happenedAt >= resultWindowMs) continue;
         const stolen=event.kind==='item_stolen' && previousState?.inventory.find(item=>`item-stolen:${item.id}`===event.id);
-        const cue = {
-          item_stolen: { kind:'thief-loss',itemId:stolen?.itemId,itemTier:stolen?.tier },
-          trap_triggered: { kind:'trap-reveal',label:'설치한 상자 발동' },
-        }[event.kind];
-        final.playCue(event.id, cue);
+        if (event.kind === 'item_stolen') {
+          final.playCue(event.id, { kind:'thief-loss',itemId:stolen?.itemId,itemTier:stolen?.tier });
+        } else if (event.kind === 'weakening_hit') {
+          const cue = weakeningHitSignal();
+          show(event.id, { tone:'danger', text:cue.label, cue });
+        }
       }
       if (previousSelf?.progressVersion === self?.progressVersion &&
           !state.effects?.some(effect => effect.kind === 'censor' && effectTime(effect.expiresAt) > now)) {
@@ -229,12 +230,7 @@ export function createDuelV4Presentation(getAudio, onNotice, clock = Date.now) {
           now - effectTime(effect.expiresAt) < resultWindowMs && claim(`expiry:${effect.id}`));
         if (ended) show(`censor-release:${ended.id}`, { cue: { kind: 'censor-release', asset: 'link_censor/release' } });
       }
-      if (previousState !== state) {
-        const weakened = state.inventory.some(item => item.weakened && previousState?.inventory.some(old => old.id === item.id && !old.weakened));
-        if (weakened && !state.rouletteSupplyWeakened) show(`weakening:${state.version}`, { tone: 'danger', text: '내 아이템 약화',
-          cue: finalReceiptSignal({ receiptId: state.version, operation: 'weakening', code: 'WEAKENING_APPLIED' }) });
-        previousState = state;
-      }
+      previousState = state;
     },
   };
 }

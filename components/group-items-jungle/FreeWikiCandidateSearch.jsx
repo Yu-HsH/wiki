@@ -31,7 +31,11 @@ export default function FreeWikiCandidateSearch({ selectedTitle, disabled, onSel
     setSaving(true);
     setMessage("");
     try {
-      await onSelect(await prepareFreeWikiDestination(candidate));
+      const accepted = await onSelect(await prepareFreeWikiDestination(candidate));
+      if (accepted) {
+        setCandidates([]);
+        setQuery("");
+      }
     } catch {
       setMessage("문서 후보를 준비하지 못했어요. 다시 시도해 주세요.");
     } finally {

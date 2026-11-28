@@ -113,7 +113,7 @@ function getFriendlyAuthError(error, mode) {
   return `회원가입에 실패했습니다. 이미 사용 중인 아이디이거나 입력값이 올바르지 않습니다.`;
 }
 
-export default function LoginPage({ isEmbedded = false, initialMode = "signin" }) {
+export default function LoginPage({ isEmbedded = false, initialMode = "signin", resumeTo = null }) {
   const navigate = useNavigate();
   const { search } = useLocation();
   const destination = postLoginTutorialPath(search);
@@ -157,7 +157,7 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
         const parsed = signinSchema.safeParse(values);
         if (!parsed.success) { applyZodErrors(parsed, setError); return; }
         await loginWithUsername({ username: parsed.data.username, password: parsed.data.password });
-        navigate(destination);
+        navigate(resumeTo ?? destination, { replace: Boolean(resumeTo) });
         return;
       }
 
@@ -195,6 +195,7 @@ export default function LoginPage({ isEmbedded = false, initialMode = "signin" }
         <div className="auth-card" style={isEmbedded ? { border: "none", boxShadow: "none", background: "transparent" } : {}}>
           <p className="auth-badge">Wiki Race</p>
           <h1 id="wr-auth-title">{isSupabaseConfigured ? (mode === "signin" ? "탐험가 로그인" : "새 탐험가 등록") : "데모 탐험 시작"}</h1>
+          {resumeTo && <p role="status">같은 계정으로 로그인하면 원래 경기의 상태를 다시 불러와요.</p>}
           <p className="auth-subtitle">
             {isSupabaseConfigured
               ? (mode === "signin" ? "기록을 저장하고 모든 탐험 모드에 참여하세요." : "위키 레이스에 합류하고 첫 탐험을 시작하세요.")

@@ -13,22 +13,45 @@ function sample({observed,rtt,seq=1,due=101250}){
   };
 }
 
-test("S5 slow→fast RTT keeps the actual 1.5-second reaction warning visible",()=>{
+for (const recovering of [false, true]) {
+  test(`S5 shows a new warning after the first slow read (${recovering ? "recovery" : "cold"})`, () => {
+    let mono = 7000;
+    const presentation = createS25InkPresentation({presentationNow:()=>mono,useReactionClock:true});
+    if (recovering) presentation.suspend();
+    presentation.accept(sample({observed:107000,rtt:7000,due:107000}),{recovering});
+    mono = 7020;
+    presentation.accept(sample({observed:107010,rtt:20,seq:2,due:107000}));
+    mono = 10010;
+    presentation.accept(sample({observed:110000,rtt:20,seq:3,due:111500}));
+    const { warningNow, warnings } = presentation.frame().view;
+    assert.equal(warnings[0].canParry, true);
+    assert.equal(warnings[0].dueAt - warningNow, 1490);
+  });
+}
+
+test("S5 uses a fast sample to keep the warning visible through upstream delay",()=>{
   let mono=0;
   const p=createS25InkPresentation({presentationNow:()=>mono,useReactionClock:true});
-  p.accept(sample({observed:100000,rtt:1400}));
-  assert.equal(p.frame().view.now,101400,"effect upper bound stays conservative");
-  assert.equal(p.frame().view.warningNow,100000,"reaction excludes RTT before observation");
-  mono=40;
-  p.accept(sample({observed:100040,rtt:40,seq:2}));
+  p.accept(sample({observed:98590,rtt:20}));
+  mono=1400;
+  p.accept(sample({observed:99990,rtt:1400,seq:2}));
   const view=p.frame().view;
-  assert.equal(view.now,101440);
-  assert.equal(view.warningNow,100040);
-  assert.ok(view.warningNow<view.warnings[0].dueAt,"warning must not close early");
-  mono=1249;
+  assert.equal(view.now,101390,"effect upper bound stays conservative");
+  assert.equal(view.warningNow,100000,"upstream wait did not consume the displayed window twice");
+  mono=2649;
   assert.equal(p.frame().view.warningNow,101249);
-  mono=1250;
+  mono=2650;
   assert.equal(p.frame().view.warningNow,101250,"deadline is not extended");
+});
+
+test("S5 includes return delay when an observed warning arrives late",()=>{
+  let mono=0;
+  const p=createS25InkPresentation({presentationNow:()=>mono,useReactionClock:true});
+  p.accept(sample({observed:99990,rtt:20}));
+  mono=155;
+  const view=p.accept(sample({observed:100004,rtt:155,due:100145,seq:2})) && p.frame().view;
+  assert.equal(view.warningNow,100155);
+  assert.ok(view.warningNow>=view.warnings[0].dueAt);
 });
 
 test("S5 reaction display estimate never rewinds on an older server observation",()=>{
@@ -40,7 +63,7 @@ test("S5 reaction display estimate never rewinds on an older server observation"
   p.accept(sample({observed:100050,rtt:20,seq:2}));
   assert.equal(p.frame().view.warningNow,before);
   mono=500;
-  assert.equal(p.frame().view.warningNow,100500);
+  assert.equal(p.frame().view.warningNow,100505);
 });
 
 test("S5 F5/offline recovery leaves reaction time monotonic and eligibility server-defined",()=>{

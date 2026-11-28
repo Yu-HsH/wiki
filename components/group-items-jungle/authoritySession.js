@@ -144,10 +144,13 @@ function decodeState(body,scope,elapsed) {
     ['normal','enhanced','weakened'].includes(event.tier) && Number.isFinite(time(event.at)) &&
     (event.kind==='item_stolen' ? event.outcome==='transferred' : ['triggered','blocked'].includes(event.outcome))),
     "INVALID_RECIPIENT_FEEDBACK");
+  const weakeningHits = body.weakeningHits ?? [];
+  requireValue(Array.isArray(weakeningHits) && weakeningHits.every(event =>
+    productId(event?.id) && Number.isFinite(time(event.at))), "INVALID_WEAKENING_HITS");
   const move = body.lastForcedMove;
   const lastForcedMove = s5 && ['lost_link','cannon'].includes(move?.operation) && value(move.moveId) &&
     move.pageId === self.currentPageId && move.revisionId === self.currentRevisionId && move.progressVersion === self.progressVersion ? move : null;
-  return { terminal:false, self, inventory, warnings, targets, bookmark, supply, itemEffects, itemFeedback, s5:s5State, lastForcedMove, trapArmed:s4 && body.trapArmed,
+  return { terminal:false, self, inventory, warnings, targets, bookmark, supply, itemEffects, itemFeedback, weakeningHits, s5:s5State, lastForcedMove, trapArmed:s4 && body.trapArmed,
     presentation:{ scope:presentationScope, interaction:"group_items", self, stateRevision:BigInt(body.stateRevision),
       recipientEventSeq:BigInt(self.recipientEventSeq), serverObservedAt:time(body.serverObservedAt), transportElapsedMs:elapsed,
       inventoryVersion:self.inventoryVersion,
@@ -196,7 +199,12 @@ export function createGroupItemsSession({ scope, transport, journal, makeRequest
     await refresh();
     const ids = journal.list(journalKey);
     const restored = await Promise.all(ids.map(lookup));
-    for (const [index, result] of restored.entries()) if (!result) unresolvedAfterReload.add(ids[index]);
+    for (const [index, result] of restored.entries()) {
+      const requestId = ids[index];
+      const saved = [...uncertain].find(([, command]) => command.requestId === requestId);
+      if (result && saved) uncertain.delete(saved[0]);
+      if (!result && !saved) unresolvedAfterReload.add(requestId);
+    }
     return restored;
   }
   const retransmittedReceipts = new WeakSet();

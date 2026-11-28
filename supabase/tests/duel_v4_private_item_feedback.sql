@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(29);
 
 insert into auth.users(id,aud,role,email,raw_app_meta_data,raw_user_meta_data)
 select id,'authenticated','authenticated','e-feedback-'||seat||'@example.com','{}','{}'
@@ -120,7 +120,8 @@ select is(jsonb_path_query_array(pg_temp.feedback(),'$[*].kind'),'["item_stolen"
   'trap target never sees the installer message');
 select pg_temp.actor(1);
 select is(jsonb_path_query_array(pg_temp.feedback(),'$[*].kind'),'["trap_triggered"]'::jsonb,
-  'only the installer receives the neutral trigger confirmation');
+  'only the installer receives the trigger confirmation');
+select is(pg_temp.feedback()->0->>'outcome','hit','installer receives the settled hit outcome');
 create temp table trap_seen as select pg_temp.feedback() as payload;
 select pg_temp.actor(2);
 select is(pg_temp.command(receipt.operation,receipt.input,receipt.request_id),receipt.result,'same trap move repeats its original receipt')
@@ -131,6 +132,35 @@ select is(jsonb_array_length(duel_v4.recent_item_feedback((select id from feedba
   0,'trap feedback expires outside the recovery window');
 select is(public.get_duel_v4_state(public.create_duel_v4_room(gen_random_uuid()))->'itemFeedback','[]'::jsonb,
   'the same actor starts with no feedback when reading a different room');
+
+-- A shielded trap produces a different notice for the installer only.
+select pg_sleep(3.05); -- Let the first trap stun expire before testing a normal shield.
+insert into duel_v4.grants(room_id,user_id,slot,item_id,granted_at)
+select id,auth.uid(),2,'trap',clock_timestamp() from feedback_room;
+select is(pg_temp.command('item',jsonb_build_object('grantId',g.id,'destinationPageId','e-feedback-link',
+  'expectedTargetSnapshotId','e4500000-0000-4000-8000-000000000010','expectedTargetProgressVersion',0))->>'code',
+  'TRAP_INSTALLED','installer can put a second trap on the same verified path')
+from duel_v4.grants g where g.room_id=(select id from feedback_room) and g.item_id='trap' and g.consumed_at is null;
+select pg_temp.actor(2);
+insert into duel_v4.grants(room_id,user_id,slot,item_id,granted_at)
+select id,auth.uid(),1,'shield',clock_timestamp() from feedback_room;
+select is(pg_temp.command('item',jsonb_build_object('grantId',g.id))->>'code','SHIELD_ACTIVE','target activates a shield')
+from duel_v4.grants g where g.room_id=(select id from feedback_room) and g.user_id=auth.uid() and g.consumed_at is null;
+select pg_temp.command('move','{"snapshotId":"e4500000-0000-4000-8000-000000000020","fromSnapshotId":"e4500000-0000-4000-8000-000000000010","expectedProgressVersion":0}');
+select pg_temp.actor(1);
+select is(jsonb_path_query_array(pg_temp.feedback(),'$[*] ? (@.kind == "trap_triggered").outcome'),
+  '["hit","blocked"]'::jsonb,'installer can distinguish an actual hit from a blocked trap');
+
+-- A committed curse is visible to its target even when no inventory slot is occupied.
+insert into duel_v4.grants(room_id,user_id,slot,item_id,granted_at)
+select id,auth.uid(),2,'weakening',clock_timestamp() from feedback_room;
+select is(pg_temp.command('item',jsonb_build_object('grantId',g.id))->>'code','ITEM_WEAKENED','normal curse is committed')
+from duel_v4.grants g where g.room_id=(select id from feedback_room) and g.item_id='weakening' and g.consumed_at is null;
+select is(jsonb_path_query_array(pg_temp.feedback(),'$[*] ? (@.kind == "weakening_hit")'),'[]'::jsonb,
+  'caster cannot see the victim-only event');
+select pg_temp.actor(2);
+select is(jsonb_path_query_array(pg_temp.feedback(),'$[*] ? (@.kind == "weakening_hit").outcome'),
+  '["applied"]'::jsonb,'victim sees one committed success regardless of inventory');
 
 select * from finish();
 rollback;
