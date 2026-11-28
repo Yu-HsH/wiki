@@ -282,6 +282,11 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
   }
   await agents[0].page.reload({waitUntil:"domcontentloaded"});
   await agents[0].page.locator('section[aria-label="아이템 그룹 결과"]').waitFor({state:"visible",timeout:20000});
+  assert.equal(await agents[0].page.locator(".wr-standings-list .wr-srow").first().evaluate(row=>{
+    const time=row.querySelector(".wr-srow-time").getBoundingClientRect();
+    const moves=row.querySelector(".wr-srow-moves").getBoundingClientRect();
+    return time.right<=moves.left || moves.right<=time.left || time.bottom<=moves.top || moves.bottom<=time.top;
+  }),true,"S5 result time and moves must not share a cell");
   log(`S5 ${count} real goal clicks, result DOM, all ranks/XP and F5 verified`);
   const before={results:resultCount(),projection:projected(),xp:xpCount()};
   const host=agents[0].page;

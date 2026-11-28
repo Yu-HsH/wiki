@@ -61,7 +61,6 @@
 .gip-item-details, .duel-v4-item-details { display: grid; gap: .2rem; }
 .group-items-jungle .gip-document { min-width: 0; }
 [data-product-group-phase="playing"] .wr-race-hud > .s5-phase2-countdown { width: auto; min-width: 0; gap: .35rem; margin: 0; padding: .25rem .5rem; }
-[data-product-group-phase="finished"] .wr-srow { grid-template-columns: 44px minmax(0, 1fr) minmax(6rem, 9rem); }
 @media (max-width: 760px) {
   [data-product-group-phase="playing"] .group-items-jungle .wr-race .wr-race-shell > .wr-race-hud {
     position: sticky;
@@ -79,6 +78,5 @@
   .product-item-race-course .wr-hud-arrow { align-self: center; }
   .group-items-jungle .product-item-race-roster { display: none; }
   .group-items-jungle .product-item-mobile-roster { display: block; padding: .4rem .75rem; background: var(--wr-paper, #fffdf5); }
-  [data-product-group-phase="finished"] .wr-srow { grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-areas: "rank name state"; }
   .product-item-mobile-roster summary { cursor: pointer; min-height: 44px; align-content: center; }
 }
