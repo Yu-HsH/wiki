@@ -512,8 +512,8 @@ async function duelRound() {
   assert.equal(winner.xp,50);
   assert.equal(loser.xp,25);
   assert.equal(winner.players.find(p=>p.id===members[0].id).moves,2);
-  assert.match(await host.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \+50/);
-  assert.match(await guest.locator('section[aria-label="경기 결과"]').innerText(),/획득 XP \+25/);
+  await host.getByTestId("result-xp").getByText("+50 XP",{exact:true}).waitFor({state:"visible"});
+  await guest.getByTestId("result-xp").getByText("+25 XP",{exact:true}).waitFor({state:"visible"});
   const resultRoom=sql("select result_room_id from duel_v4.rooms where id="+quote(room));
   const history=()=>Number(sql("select count(*) from public.match_history where room_id="+quote(resultRoom)));
   const ledger=()=>Number(sql("select count(*) from public.xp_ledger where source_id in ("+
@@ -548,7 +548,7 @@ try {
   for(let i=0;i<8;i++) await createUser(i+1);
   server=spawn("npm",["run","dev","--","--host","127.0.0.1","--port","5187","--strictPort","--mode","s4-product-candidate"],{
     cwd:repoRoot,env:{...process.env,VITE_SUPABASE_URL:env.API_URL,VITE_SUPABASE_ANON_KEY:env.ANON_KEY,
-      VITE_DUEL_ITEMS_V4_ENTRY:"1",VITE_GROUP_ITEMS_S5_ENTRY:"1",VITE_MAINTENANCE:""},stdio:"ignore"});
+      VITE_DUEL_ITEMS_V4_ENTRY:"1",VITE_GROUP_ITEMS_S5_ENTRY:"1",VITE_ENABLE_MODE_SERVER_FOLLOWUP:"1",VITE_MAINTENANCE:""},stdio:"ignore"});
   await waitFor(async()=>{try{return(await fetch(url+"/login")).status<500}catch{return false}},"Vite QA host",100,300);
   browser=await chromium.launch({headless:true});
   const failures=[];
