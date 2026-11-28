@@ -270,6 +270,8 @@ async function verifyS5FinishAndRematch(count, room, members, agents) {
     const a=agents[i];
     await a.page.locator('[data-product-group-phase="finished"]').waitFor({state:"visible",timeout:30000});
     await a.page.locator('section[aria-label="아이템 그룹 결과"]').waitFor({state:"visible"});
+    const times=await a.page.locator(".wr-standings-list .wr-srow-time").allTextContents();
+    assert.ok(times.length===count && times.every(time=>/^\d{2}:\d{2}$/.test(time)),JSON.stringify(times));
     const expectedXp=[70,55,45][i]??35;
     const ownRoom=await rpc(members[i],"get_group_items_product_room_v1",{p_room:room,p_binding:null});
     assert.equal(ownRoom.phase,"finished");
@@ -382,6 +384,13 @@ async function groupRound(count) {
   for(const guest of agents.slice(1)) await joinItemRoom(guest,"group",room,code);
   await readyGroup(room,members,agents);
   await agents[0].page.getByRole("button",{name:"경기 시작",exact:true}).click({timeout:20000});
+  await agents[0].page.waitForFunction(()=>{
+    const stage=document.querySelector(".item-race-intro .wr-cinematic-stage");
+    const tick=document.querySelector(".item-race-intro-tick");
+    if(!stage || !tick || !/^[123]$/.test(tick.textContent)) return false;
+    const visible=tick.getBoundingClientRect();
+    return visible.top>=stage.getBoundingClientRect().bottom && visible.bottom<=innerHeight && Number(getComputedStyle(tick).opacity)>.75;
+  },null,{timeout:6000});
   const session=await waitFor(()=>sql("select session_id from ink_product.rooms where id="+quote(room)), "S5 initialized room");
   for(const a of agents) {
     await a.page.locator('[data-product-group-phase="playing"]').waitFor({state:"visible",timeout:40000});

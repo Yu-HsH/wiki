@@ -9,7 +9,7 @@ export function groupItemsRoster(players, profileCards) {
     rank:player.rank,
     current_title:player.currentTitle,
     move_count:player.moveCount,
-    elapsed_seconds:player.elapsedSeconds,
+    elapsed_seconds:Number.isFinite(player.elapsedSeconds) ? Math.floor(player.elapsedSeconds) : null,
     path_titles:player.pathTitles ?? [],
     profileCard:mergeRewardSlots(buildProfileCard({ userId:player.profileId, nickname:player.nickname || player.name,
       source:"snapshot" }), profileCards[player.profileId]),

@@ -350,7 +350,7 @@ function ProductRoom({ roomId, user, logout }) {
       const player = room.players.find(player => player.participantId === row.participantId);
       return {
         key:row.participantId, userId:player?.profileId, rank:row.status === "left" ? null : row.rank, name:player?.nickname || row.name,
-        time:Number.isFinite(player?.elapsedSeconds) ? formatDuration(player.elapsedSeconds) : "–",
+        time:Number.isFinite(player?.elapsedSeconds) ? formatDuration(Math.floor(player.elapsedSeconds)) : "–",
         moves:Number.isFinite(player?.moveCount) ? `${player.moveCount}회` : "–",
         isMe:row.participantId === room.participantId, isWinner:row.rank === 1 && row.status === "finished",
         retired:row.status === "left", status:row.status === "left" ? "기권/시간 초과" : row.status === "finished" ? "완주" : "경기 종료",
